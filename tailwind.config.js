@@ -1,31 +1,38 @@
 /** @type {import('tailwindcss').Config} */
+// Values here are pulled from src/styles/tokens.css via CSS custom properties,
+// so the token file stays the single source of truth — update a value once,
+// there, and both Tailwind utilities and hand-written CSS pick it up.
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
-        primary: '#1061EC',
-        navy: '#071A52',
-        accent: '#2F80FF',
-        bg: '#FFFFFF',
-        'bg-soft': '#F7FAFF',
+        primary: 'rgb(var(--color-primary-rgb) / <alpha-value>)',
+        navy: 'rgb(var(--color-navy-rgb) / <alpha-value>)',
+        accent: 'rgb(var(--color-primary-accent-rgb) / <alpha-value>)',
+        bg: 'var(--color-bg)',
+        'bg-soft': 'rgb(var(--color-bg-soft-rgb) / <alpha-value>)',
       },
       fontFamily: {
-        display: ['"Plus Jakarta Sans"', 'sans-serif'],
-        body: ['Inter', 'sans-serif'],
+        display: ['var(--font-display)'],
+        body: ['var(--font-body)'],
       },
       borderRadius: {
-        xl2: '24px',
-        xl3: '32px',
+        xl2: 'var(--radius-lg)',
+        xl3: 'var(--radius-2xl)',
       },
       boxShadow: {
-        soft: '0 8px 30px rgba(16,97,236,.08)',
-        softer: '0 4px 16px rgba(16,97,236,.06)',
-        glow: '0 0 0 1px rgba(16,97,236,.08), 0 20px 60px -10px rgba(16,97,236,.18)',
+        soft: 'var(--shadow-soft)',
+        softer: 'var(--shadow-softer)',
+        glow: 'var(--shadow-glow)',
+      },
+      maxWidth: {
+        page: 'var(--container-page)',
+        narrow: 'var(--container-narrow)',
       },
       backgroundImage: {
-        'grad-primary': 'linear-gradient(135deg, #1061EC 0%, #2F80FF 100%)',
-        'grad-navy': 'linear-gradient(135deg, #071A52 0%, #1061EC 100%)',
+        'grad-primary': 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-accent) 100%)',
+        'grad-navy': 'linear-gradient(135deg, var(--color-navy) 0%, var(--color-primary) 100%)',
         'grad-radial-soft': 'radial-gradient(circle at 50% 0%, rgba(47,128,255,.10), rgba(255,255,255,0) 60%)',
       },
     },

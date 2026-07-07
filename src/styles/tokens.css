@@ -1,0 +1,58 @@
+/**
+ * BGrowth Design Tokens
+ * ---------------------
+ * Single source of truth for color, spacing, radius, shadow, and container
+ * values. tailwind.config.js reads these via var(--token-name) so Tailwind
+ * utilities and any hand-written CSS always agree. Change a value once,
+ * here, and it propagates everywhere.
+ */
+
+:root {
+  /* Color */
+  --color-primary: #1061EC;
+  --color-primary-rgb: 16 97 236;
+  --color-primary-accent: #2F80FF;
+  --color-primary-accent-rgb: 47 128 255;
+  --color-navy: #0A1B4D;
+  --color-navy-rgb: 10 27 77;
+  --color-bg: #FFFFFF;
+  --color-bg-soft: #F7FAFF;
+  --color-bg-soft-rgb: 247 250 255;
+  --color-card: #FFFFFF;
+  --color-border: rgba(16, 97, 236, 0.08);
+  --color-shadow: rgba(16, 97, 236, 0.08);
+
+  /* Typography */
+  --font-display: 'Plus Jakarta Sans', sans-serif;
+  --font-body: 'Inter', sans-serif;
+
+  /* Spacing scale (used for section/page rhythm) */
+  --space-xs: 0.5rem;
+  --space-sm: 1rem;
+  --space-md: 1.5rem;
+  --space-lg: 2.5rem;
+  --space-xl: 4rem;
+  --space-2xl: 6rem;
+
+  /* Radius */
+  --radius-sm: 12px;
+  --radius-md: 16px;
+  --radius-lg: 24px;
+  --radius-xl: 28px;
+  --radius-2xl: 32px;
+
+  /* Shadow */
+  --shadow-soft: 0 8px 30px rgba(16, 97, 236, 0.08);
+  --shadow-softer: 0 4px 16px rgba(16, 97, 236, 0.06);
+  --shadow-glow: 0 0 0 1px rgba(16, 97, 236, 0.08), 0 20px 60px -10px rgba(16, 97, 236, 0.18);
+
+  /* Container widths */
+  --container-page: 1280px; /* max-w-7xl */
+  --container-narrow: 768px; /* max-w-3xl, product FAQ etc. */
+
+  /* Motion */
+  --ease-standard: cubic-bezier(0.16, 1, 0.3, 1);
+  --duration-fast: 0.3s;
+  --duration-base: 0.6s;
+  --duration-slow: 0.9s;
+}

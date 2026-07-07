@@ -1,46 +1,26 @@
 import { motion } from 'framer-motion'
-import { Rocket, Settings2, TrendingUp } from 'lucide-react'
+import { MousePointerClick, ListChecks, Printer } from 'lucide-react'
+import SectionHeader from '../ui/SectionHeader'
 
 const STEPS = [
-  {
-    icon: Rocket,
-    title: 'Launch',
-    tag: 'Business planners',
-    desc: 'Follow a structured planner that takes you from idea to open for business.',
-  },
-  {
-    icon: Settings2,
-    title: 'Operate',
-    tag: 'Daily workflows',
-    desc: 'Run your day-to-day with workflows built specifically for your industry.',
-  },
-  {
-    icon: TrendingUp,
-    title: 'Grow',
-    tag: 'Templates, resources, calculators, dashboard',
-    desc: 'Add templates, tools, and reporting as your business scales up.',
-  },
+  { icon: MousePointerClick, title: 'Choose a Business System', desc: 'Find the system built for your industry.' },
+  { icon: ListChecks, title: 'Complete Interactive Modules', desc: 'Work through Planners™, Workflows™, and Toolkits™ right in your browser.' },
+  { icon: Printer, title: 'Print or Save PDF', desc: 'Keep a copy whenever you need one.' },
 ]
 
 export default function HowItWorks() {
   return (
-    <section className="section-py relative overflow-hidden">
-      <div className="container-px mx-auto max-w-7xl">
-        <div className="mb-16 max-w-xl">
-          <p className="eyebrow">The Process</p>
-          <h2 className="mt-2 font-display text-3xl font-bold tracking-tight text-navy md:text-4xl">
-            How BGrowth Works
-          </h2>
-        </div>
+    <section id="how-it-works" className="section-py relative overflow-hidden">
+      <div className="container-px mx-auto max-w-page">
+        <SectionHeader eyebrow="The Process" title="How BGrowth Works" className="mb-16" />
 
-        <div className="relative grid gap-6 md:grid-cols-3">
-          {/* connecting line */}
-          <div className="pointer-events-none absolute left-0 right-0 top-[52px] hidden h-px md:block">
+        <div className="relative grid gap-6 sm:grid-cols-3">
+          <div className="pointer-events-none absolute left-0 right-0 top-[44px] hidden h-px sm:block">
             <svg width="100%" height="2" className="overflow-visible">
               <motion.line
-                x1="16%"
+                x1="14%"
                 y1="1"
-                x2="84%"
+                x2="86%"
                 y2="1"
                 stroke="url(#lineGrad)"
                 strokeWidth="1.5"
@@ -72,15 +52,10 @@ export default function HowItWorks() {
                 <div className="grid h-11 w-11 place-items-center rounded-2xl bg-navy text-white">
                   <step.icon size={19} strokeWidth={2} />
                 </div>
-                <span className="font-display text-lg font-bold text-navy/15">
-                  0{i + 1}
-                </span>
+                <span className="font-display text-lg font-bold text-navy/15">0{i + 1}</span>
               </div>
-              <h3 className="mt-6 font-display text-xl font-bold text-navy">{step.title}</h3>
-              <p className="mt-1.5 text-[12.5px] font-semibold uppercase tracking-wide text-primary/70">
-                {step.tag}
-              </p>
-              <p className="mt-3 text-[14px] leading-relaxed text-navy/50">{step.desc}</p>
+              <h3 className="mt-5 font-display text-[16px] font-bold text-navy">{step.title}</h3>
+              <p className="mt-2 text-[13.5px] leading-relaxed text-navy/50">{step.desc}</p>
             </motion.div>
           ))}
         </div>

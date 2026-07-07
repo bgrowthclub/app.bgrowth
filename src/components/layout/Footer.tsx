@@ -1,4 +1,4 @@
-import logo from '../assets/logo.png'
+import logo from '../../assets/logo.png'
 
 const COLUMNS = [
   {
@@ -25,7 +25,7 @@ const COLUMNS = [
 
 export default function Footer() {
   return (
-    <footer className="relative border-t border-navy/[0.06] bg-bg-soft">
+    <footer className="relative border-t border-navy/[0.06] bg-bg-soft print:hidden">
       <div className="container-px mx-auto max-w-7xl py-16">
         <div className="grid gap-12 lg:grid-cols-[1.2fr_2fr]">
           <div>
