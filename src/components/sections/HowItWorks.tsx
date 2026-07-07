@@ -1,11 +1,15 @@
 import { motion } from 'framer-motion'
-import { MousePointerClick, ListChecks, Printer } from 'lucide-react'
+import { MousePointerClick, ListChecks, Download } from 'lucide-react'
 import SectionHeader from '../ui/SectionHeader'
 
 const STEPS = [
   { icon: MousePointerClick, title: 'Choose a Business System', desc: 'Find the system built for your industry.' },
   { icon: ListChecks, title: 'Complete Interactive Modules', desc: 'Work through Planners™, Workflows™, and Toolkits™ right in your browser.' },
-  { icon: Printer, title: 'Print or Save PDF', desc: 'Keep a copy whenever you need one.' },
+  {
+    icon: Download,
+    title: 'Download, Print or Reuse',
+    desc: 'Complete your Business System online. Your information remains available while you work. When you\u2019re finished, download a copy, print it, or reset the form whenever you\u2019re ready to start fresh.',
+  },
 ]
 
 export default function HowItWorks() {

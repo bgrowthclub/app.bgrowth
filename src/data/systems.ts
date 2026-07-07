@@ -1,4 +1,4 @@
-import type { BusinessSystem, SystemComponent } from '../types/system'
+import type { BusinessSystem, BusinessModule } from '../types/system'
 
 export const CATEGORIES = [
   'All',
@@ -17,20 +17,27 @@ const genericReviews = [
 const genericFaq = [
   { question: 'How do I access my system after purchase?', answer: 'It opens instantly online from My Systems — no download required, no waiting for an email.' },
   { question: 'Can I use this on my phone or tablet?', answer: 'Yes. Every system is fully responsive and works the same on desktop, tablet, and mobile.' },
-  { question: 'Can I print it or save it as a PDF?', answer: 'Yes. Use the Print or Save PDF buttons at the top of the system at any time.' },
-  { question: 'Does my progress save automatically?', answer: 'No — this system does not store data. Complete a session and print or save your results before closing the page.' },
+  { question: 'Can I print it or save it as a PDF?', answer: 'Yes. Use the Print or Save PDF buttons at the top of each module at any time.' },
+  { question: 'Does my progress save automatically?', answer: 'No — modules do not store data. Complete a session and print or save your results before closing the page.' },
 ]
 
-// --- Components (Planner™ / Workflow™ / Toolkit™) -------------------------
-// Independent, reusable content units. A Business System bundles one or
-// more of these. Only the first component of a system renders on the
-// Interactive System page this sprint — the shape already supports more.
+const genericAffiliates = [
+  { id: 'affiliate-bonding', name: 'SuretyBond Direct', description: 'Notary bonds and E&O insurance, issued same-day.', url: 'https://example.com/suretybond' },
+  { id: 'affiliate-stamp', name: 'NotaryStamp Co.', description: 'State-compliant stamps, seals, and journals.', url: 'https://example.com/notarystamp' },
+]
 
-const notaryJourneyPlanner: SystemComponent = {
+// --- Modules (Planner™ / Workflow™ / Toolkit™) -----------------------------
+// Independent, reusable units exported from BGrowth Studio. A Business
+// System bundles one or more of these. The Runtime only ever displays this
+// content — it's produced by Studio's Checklist/Planner/Workflow/Template
+// builders, none of which live in this project.
+
+const notaryJourneyPlanner: BusinessModule = {
   id: 'notary-journey-planner',
-  name: 'Notary Journey Planner™',
+  title: 'Notary Journey Planner™',
   type: 'Planner',
   description: 'Confirm the fundamentals before your first appointment.',
+  estimatedTime: '20 min',
   content: [
     {
       id: 'setup',
@@ -64,11 +71,12 @@ const notaryJourneyPlanner: SystemComponent = {
   ],
 }
 
-const notaryEquipmentPlanner: SystemComponent = {
+const notaryEquipmentPlanner: BusinessModule = {
   id: 'notary-equipment-planner',
-  name: 'Notary Equipment Planner™',
+  title: 'Notary Equipment Planner™',
   type: 'Planner',
   description: 'Know exactly what to buy, in what order, and what it actually costs.',
+  estimatedTime: '10 min',
   content: [
     {
       id: 'core',
@@ -90,11 +98,12 @@ const notaryEquipmentPlanner: SystemComponent = {
   ],
 }
 
-const notaryServiceWorkflow: SystemComponent = {
+const notaryServiceWorkflow: BusinessModule = {
   id: 'notary-service-workflow',
-  name: 'Notary Service Workflow™',
+  title: 'Notary Service Workflow™',
   type: 'Workflow',
   description: 'Run signings, journals, and client communication in one repeatable flow.',
+  estimatedTime: '15 min per job',
   content: [
     {
       id: 'confirm',
@@ -125,11 +134,12 @@ const notaryServiceWorkflow: SystemComponent = {
   ],
 }
 
-const notarySigningAgentWorkflow: SystemComponent = {
+const notarySigningAgentWorkflow: BusinessModule = {
   id: 'notary-signing-agent-workflow',
-  name: 'Notary Signing Agent Workflow™',
+  title: 'Notary Signing Agent Workflow™',
   type: 'Workflow',
   description: 'Track borrower details, document sets, and funding status on loan signings.',
+  estimatedTime: '20 min per job',
   content: [
     {
       id: 'borrower',
@@ -159,11 +169,12 @@ const notarySigningAgentWorkflow: SystemComponent = {
   ],
 }
 
-const cleaningLaunchToolkit: SystemComponent = {
+const cleaningLaunchToolkit: BusinessModule = {
   id: 'cleaning-launch-toolkit',
-  name: 'Cleaning Launch Toolkit™',
+  title: 'Cleaning Launch Toolkit™',
   type: 'Toolkit',
   description: 'Pricing, crew setup, and client intake in one place.',
+  estimatedTime: '15 min',
   content: [
     {
       id: 'pricing',
@@ -184,11 +195,12 @@ const cleaningLaunchToolkit: SystemComponent = {
   ],
 }
 
-const bookkeepingCloseWorkflow: SystemComponent = {
+const bookkeepingCloseWorkflow: BusinessModule = {
   id: 'bookkeeping-close-workflow',
-  name: 'Monthly Close Workflow™',
+  title: 'Monthly Close Workflow™',
   type: 'Workflow',
   description: 'The same short, repeatable close — every month.',
+  estimatedTime: '30 min per month',
   content: [
     {
       id: 'close',
@@ -202,26 +214,31 @@ const bookkeepingCloseWorkflow: SystemComponent = {
   ],
 }
 
-// --- Business Systems (the products customers actually purchase) --------
+// --- Business Systems (the packages customers actually purchase) --------
 
 export const SYSTEMS: BusinessSystem[] = [
   {
+    id: 'sys-001',
     slug: 'start-your-notary-business',
-    name: 'Start Your Notary Business™',
+    title: 'Start Your Notary Business™',
+    subtitle: 'Everything to go from licensed to booked.',
+    industry: 'Legal',
     category: 'Notary',
     type: 'Business Launch System',
     shortDescription: 'A complete launch path from licensing to your first signing appointment.',
     description:
       'Start Your Notary Business™ walks you through every decision required to launch, in the order you actually need to make them — entity setup, bonding and insurance, pricing, service area, equipment, and your first booking.',
-    modules: 8,
     estimatedTime: '2–3 weeks',
     difficulty: 'Beginner',
     price: 79,
     memberPrice: 63,
     checkoutUrl: 'https://checkout.bgrowth.com/start-your-notary-business',
-    audience: ['First-time notaries', 'Side-hustlers going full-time', 'Anyone licensed but not yet booking jobs'],
-    relatedSlugs: ['notary-equipment-planner', 'daily-notary-operations'],
-    features: [
+    whoIsFor: ['First-time notaries', 'Side-hustlers going full-time', 'Anyone licensed but not yet booking jobs'],
+    relatedSystems: ['notary-equipment-planner', 'daily-notary-operations'],
+    tags: ['notary', 'launch', 'beginner'],
+    status: 'published',
+    featured: true,
+    benefits: [
       { title: 'Guided sequence', description: 'Every step unlocks the next — no guesswork about order.' },
       { title: 'Built-in pricing worksheet', description: 'Set your fees with a framework, not a guess.' },
       { title: 'Launch-ready plan', description: 'Know exactly when you\u2019re ready for your first job.' },
@@ -236,139 +253,170 @@ export const SYSTEMS: BusinessSystem[] = [
       { title: 'State Bonding Requirements Guide', type: 'Guide' },
       { title: 'Fee Schedule Template', type: 'Template' },
     ],
+    affiliatePartners: genericAffiliates,
     reviews: genericReviews,
     faq: genericFaq,
-    components: [notaryJourneyPlanner, notaryEquipmentPlanner],
+    modules: [notaryJourneyPlanner, notaryEquipmentPlanner],
   },
   {
+    id: 'sys-002',
     slug: 'notary-equipment-planner',
-    name: 'Notary Equipment System™',
+    title: 'Notary Equipment System™',
+    subtitle: 'Buy the right gear, once.',
+    industry: 'Legal',
     category: 'Notary',
     type: 'Toolkit System',
     shortDescription: 'Know exactly what to buy, in what order, and what it actually costs.',
     description:
-      'Cut through conflicting advice about what a mobile notary actually needs. This planner lists every tool by priority and estimated cost so you spend only where it matters.',
-    modules: 4,
+      'Cut through conflicting advice about what a mobile notary actually needs. This system lists every tool by priority and estimated cost so you spend only where it matters.',
     estimatedTime: '3 days',
     difficulty: 'Beginner',
     price: 39,
     memberPrice: 31,
     checkoutUrl: 'https://checkout.bgrowth.com/notary-equipment-planner',
-    audience: ['New notaries outfitting for the first time', 'Anyone unsure what equipment is actually necessary'],
-    relatedSlugs: ['start-your-notary-business', 'daily-notary-operations'],
-    features: [
+    whoIsFor: ['New notaries outfitting for the first time', 'Anyone unsure what equipment is actually necessary'],
+    relatedSystems: ['start-your-notary-business', 'daily-notary-operations'],
+    tags: ['notary', 'equipment'],
+    status: 'published',
+    featured: true,
+    benefits: [
       { title: 'Priority-ranked list', description: 'Buy what matters first, add the rest later.' },
       { title: 'Budget worksheet', description: 'Plan spend across startup and month two.' },
     ],
     whatsIncluded: ['Notary Equipment Planner™', 'Resources™'],
     resources: [{ title: 'Supplier Shortlist', type: 'Resource' }],
+    affiliatePartners: genericAffiliates.slice(1),
     reviews: genericReviews.slice(0, 2),
     faq: genericFaq,
-    components: [notaryEquipmentPlanner],
+    modules: [notaryEquipmentPlanner],
   },
   {
+    id: 'sys-003',
     slug: 'daily-notary-operations',
-    name: 'Daily Notary Operations™',
+    title: 'Daily Notary Operations™',
+    subtitle: 'Run every signing the same reliable way.',
+    industry: 'Legal',
     category: 'Notary',
     type: 'Business Operations System',
     shortDescription: 'Run signings, journals, and client communication in one repeatable flow.',
     description:
       'The day-to-day operating system for a working notary — from appointment confirmation through document return, so nothing gets missed on a busy week.',
-    modules: 6,
     estimatedTime: 'Ongoing',
     difficulty: 'Intermediate',
     price: 59,
     memberPrice: 47,
     checkoutUrl: 'https://checkout.bgrowth.com/daily-notary-operations',
-    audience: ['Working notaries booking signings weekly', 'Anyone juggling client comms and journal entries by hand'],
-    relatedSlugs: ['start-your-notary-business', 'notary-signing-agent-workflow'],
-    features: [
+    whoIsFor: ['Working notaries booking signings weekly', 'Anyone juggling client comms and journal entries by hand'],
+    relatedSystems: ['start-your-notary-business', 'notary-signing-agent-workflow'],
+    tags: ['notary', 'operations'],
+    status: 'published',
+    featured: true,
+    benefits: [
       { title: 'Repeatable per-job flow', description: 'The same reliable sequence, every signing.' },
       { title: 'Client communication prompts', description: 'Know what to send and when.' },
     ],
     whatsIncluded: ['Notary Service Workflow™', 'Resources™', 'Certificates', 'Affiliate Products'],
     resources: [{ title: 'Confirmation Email Template', type: 'Template' }],
+    affiliatePartners: genericAffiliates,
     reviews: genericReviews,
     faq: genericFaq,
-    components: [notaryServiceWorkflow],
+    modules: [notaryServiceWorkflow],
   },
   {
+    id: 'sys-004',
     slug: 'notary-signing-agent-workflow',
-    name: 'Notary Signing Agent System™',
+    title: 'Notary Signing Agent System™',
+    subtitle: 'Purpose-built for loan signings.',
+    industry: 'Legal',
     category: 'Notary',
     type: 'Business Operations System',
     shortDescription: 'Step-by-step process from confirmation to funded and filed.',
     description:
       'Built specifically for loan signings — track borrower details, document sets, and funding status from confirmation through completion.',
-    modules: 5,
     estimatedTime: '1 week setup',
     difficulty: 'Advanced',
     price: 59,
     memberPrice: 47,
     checkoutUrl: 'https://checkout.bgrowth.com/notary-signing-agent-workflow',
-    audience: ['Notaries specializing in loan signings', 'Anyone expanding from general notary work into signing agent work'],
-    relatedSlugs: ['daily-notary-operations', 'start-your-notary-business'],
-    features: [
+    whoIsFor: ['Notaries specializing in loan signings', 'Anyone expanding from general notary work into signing agent work'],
+    relatedSystems: ['daily-notary-operations', 'start-your-notary-business'],
+    tags: ['notary', 'loan-signing', 'advanced'],
+    status: 'published',
+    featured: false,
+    benefits: [
       { title: 'Loan-specific fields', description: 'Borrower, co-borrower, and lender tracked together.' },
       { title: 'Funding status tracker', description: 'Know what\u2019s outstanding at a glance.' },
     ],
     whatsIncluded: ['Notary Signing Agent Workflow™', 'Resources™'],
     resources: [{ title: 'Borrower Intake Template', type: 'Template' }],
+    affiliatePartners: genericAffiliates.slice(0, 1),
     reviews: genericReviews.slice(0, 2),
     faq: genericFaq,
-    components: [notarySigningAgentWorkflow],
+    modules: [notarySigningAgentWorkflow],
   },
   {
+    id: 'sys-005',
     slug: 'cleaning-business-launch',
-    name: 'Cleaning Business Launch™',
+    title: 'Cleaning Business Launch™',
+    subtitle: 'Open the right way, from job one.',
+    industry: 'Cleaning',
     category: 'Cleaning',
     type: 'Business Launch System',
     shortDescription: 'Pricing, crews, and client intake — organized before your first job.',
     description:
       'Everything needed to open your cleaning business the right way: pricing structure, crew setup, and your first client intake flow.',
-    modules: 9,
     estimatedTime: '2 weeks',
     difficulty: 'Beginner',
     price: 79,
     memberPrice: 63,
     checkoutUrl: 'https://checkout.bgrowth.com/cleaning-business-launch',
-    audience: ['First-time cleaning business owners', 'Solo cleaners ready to hire their first team member'],
-    relatedSlugs: ['bookkeeping-operations'],
-    features: [
+    whoIsFor: ['First-time cleaning business owners', 'Solo cleaners ready to hire their first team member'],
+    relatedSystems: ['bookkeeping-operations'],
+    tags: ['cleaning', 'launch'],
+    status: 'published',
+    featured: false,
+    benefits: [
       { title: 'Room-based pricing model', description: 'Price consistently across every job.' },
       { title: 'Crew setup guide', description: 'Structure pay before you hire.' },
     ],
     whatsIncluded: ['Cleaning Launch Toolkit™', 'Resources™'],
     resources: [{ title: 'Pricing Worksheet', type: 'Template' }],
+    affiliatePartners: [],
     reviews: genericReviews,
     faq: genericFaq,
-    components: [cleaningLaunchToolkit],
+    modules: [cleaningLaunchToolkit],
   },
   {
+    id: 'sys-006',
     slug: 'bookkeeping-operations',
-    name: 'Bookkeeping Operations™',
+    title: 'Bookkeeping Operations™',
+    subtitle: 'A close you can actually keep up with.',
+    industry: 'Financial',
     category: 'Bookkeeping',
     type: 'Business Operations System',
     shortDescription: 'A monthly close process built for service businesses, not accountants.',
     description:
       'A repeatable monthly close designed for owner-operators — reconcile, categorize, and report without needing an accounting background.',
-    modules: 7,
     estimatedTime: 'Ongoing',
     difficulty: 'Intermediate',
     price: 69,
     memberPrice: 55,
     checkoutUrl: 'https://checkout.bgrowth.com/bookkeeping-operations',
-    audience: ['Service business owners doing their own books', 'Anyone dreading the monthly close'],
-    relatedSlugs: ['cleaning-business-launch'],
-    features: [
+    whoIsFor: ['Service business owners doing their own books', 'Anyone dreading the monthly close'],
+    relatedSystems: ['cleaning-business-launch'],
+    tags: ['bookkeeping', 'operations'],
+    status: 'published',
+    featured: false,
+    benefits: [
       { title: 'Monthly close plan', description: 'The same short list, every month.' },
       { title: 'Plain-language categories', description: 'No accounting jargon required.' },
     ],
     whatsIncluded: ['Monthly Close Workflow™', 'Resources™'],
     resources: [{ title: 'Category Reference Sheet', type: 'Resource' }],
+    affiliatePartners: [],
     reviews: genericReviews.slice(0, 2),
     faq: genericFaq,
-    components: [bookkeepingCloseWorkflow],
+    modules: [bookkeepingCloseWorkflow],
   },
 ]
 
@@ -376,8 +424,12 @@ export function getSystemBySlug(slug: string) {
   return SYSTEMS.find((s) => s.slug === slug)
 }
 
+export function getModuleBySlug(system: BusinessSystem, moduleSlug: string) {
+  return system.modules.find((m) => m.id === moduleSlug)
+}
+
 export function getRelatedSystems(system: BusinessSystem) {
-  return system.relatedSlugs
+  return system.relatedSystems
     .map((slug) => getSystemBySlug(slug))
     .filter((s): s is BusinessSystem => Boolean(s))
 }

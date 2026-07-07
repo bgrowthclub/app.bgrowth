@@ -1,18 +1,16 @@
 import { useParams, Link, Navigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { CheckSquare, Square, Users } from 'lucide-react'
+import { CheckSquare, Square } from 'lucide-react'
 import Badge from '../components/ui/Badge'
 import SectionHeader from '../components/ui/SectionHeader'
 import FeatureGrid from '../components/ui/FeatureGrid'
 import PricingCard from '../components/ui/PricingCard'
-import EmptyState from '../components/ui/EmptyState'
-import Grid from '../components/layout/Grid'
-import ModuleBadge from '../components/systems/ModuleBadge'
-import BusinessSystemCard from '../components/systems/BusinessSystemCard'
 import ResourceCard from '../components/systems/ResourceCard'
-import TestimonialCard from '../components/systems/TestimonialCard'
-import FAQ from '../components/ui/FAQ'
-import { getSystemBySlug, getRelatedSystems } from '../data/systems'
+import BusinessModuleGrid from '../components/runtime/BusinessModuleGrid'
+import ReviewPanel from '../components/runtime/ReviewPanel'
+import FAQPanel from '../components/runtime/FAQPanel'
+import RelatedSystemsPanel from '../components/runtime/RelatedSystemsPanel'
+import { getSystemBySlug } from '../data/systems'
 
 export default function ProductPage() {
   const { slug } = useParams<{ slug: string }>()
@@ -20,9 +18,8 @@ export default function ProductPage() {
 
   if (!system) return <Navigate to="/systems" replace />
 
-  const previewComponent = system.components[0]
-  const previewSection = previewComponent.content[0]
-  const related = getRelatedSystems(system)
+  const previewModule = system.modules[0]
+  const previewSection = previewModule.content[0]
 
   return (
     <div className="pt-32 md:pt-40">
@@ -40,12 +37,13 @@ export default function ProductPage() {
               <Badge variant="outline">{system.difficulty}</Badge>
             </div>
             <h1 className="mt-5 font-display text-3xl font-bold leading-tight tracking-tight text-navy md:text-4xl">
-              {system.name}
+              {system.title}
             </h1>
+            {system.subtitle && <p className="mt-2 max-w-lg text-[16px] text-navy/45">{system.subtitle}</p>}
             <p className="mt-4 max-w-lg text-[16px] leading-relaxed text-navy/55">{system.description}</p>
 
             <div className="mt-6 flex items-center gap-4 text-[13px] text-navy/40">
-              <span>{system.modules} modules</span>
+              <span>{system.modules.length} modules</span>
               <span className="h-1 w-1 rounded-full bg-navy/20" />
               <span>{system.estimatedTime}</span>
             </div>
@@ -62,7 +60,7 @@ export default function ProductPage() {
               <span className="h-2.5 w-2.5 rounded-full bg-navy/10" />
               <span className="h-2.5 w-2.5 rounded-full bg-navy/10" />
               <span className="h-2.5 w-2.5 rounded-full bg-navy/10" />
-              <span className="ml-2 text-[11px] font-semibold text-navy/30">{previewComponent.name}</span>
+              <span className="ml-2 text-[11px] font-semibold text-navy/30">{previewModule.title}</span>
             </div>
             <div className="rounded-xl2 border border-navy/[0.05] bg-bg-soft p-5">
               <p className="text-[11px] font-semibold uppercase tracking-wide text-primary/70">
@@ -89,19 +87,11 @@ export default function ProductPage() {
         </div>
       </section>
 
-      {/* Modules Included */}
+      {/* Modules Included — informational preview, not linked (buying unlocks Open Module) */}
       <section className="section-py bg-bg-soft">
         <div className="container-px mx-auto max-w-page">
           <SectionHeader eyebrow="Modules Included" title="What's inside this system" className="mb-10" />
-          <Grid cols={3}>
-            {system.components.map((c) => (
-              <div key={c.id} className="rounded-xl3 border border-navy/[0.06] bg-white p-6 shadow-softer">
-                <ModuleBadge type={c.type} />
-                <h3 className="mt-4 font-display text-[15px] font-bold text-navy">{c.name}</h3>
-                {c.description && <p className="mt-1.5 text-[13.5px] leading-relaxed text-navy/50">{c.description}</p>}
-              </div>
-            ))}
-          </Grid>
+          <BusinessModuleGrid system={system} actionable={false} />
         </div>
       </section>
 
@@ -134,7 +124,7 @@ export default function ProductPage() {
       <section className="section-py bg-bg-soft">
         <div className="container-px mx-auto max-w-page">
           <SectionHeader eyebrow="Benefits" title="What it helps you do" className="mb-10" />
-          <FeatureGrid features={system.features} />
+          <FeatureGrid features={system.benefits} />
         </div>
       </section>
 
@@ -143,9 +133,8 @@ export default function ProductPage() {
         <div className="container-px mx-auto max-w-page">
           <SectionHeader eyebrow="Who Is This For" title="Built for people like you" className="mb-8" />
           <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-            {system.audience.map((a) => (
+            {system.whoIsFor.map((a) => (
               <div key={a} className="flex items-center gap-3 rounded-xl border border-navy/[0.06] bg-white px-4 py-3.5 shadow-softer">
-                <Users size={16} className="shrink-0 text-primary" />
                 <span className="text-[14px] text-navy/70">{a}</span>
               </div>
             ))}
@@ -154,40 +143,23 @@ export default function ProductPage() {
       </section>
 
       {/* Related Systems */}
-      {related.length > 0 && (
-        <section className="section-py bg-bg-soft">
-          <div className="container-px mx-auto max-w-page">
-            <SectionHeader eyebrow="Related Systems" title="You might also need" className="mb-10" />
-            <Grid cols={3}>
-              {related.map((r) => (
-                <BusinessSystemCard key={r.slug} system={r} />
-              ))}
-            </Grid>
-          </div>
-        </section>
-      )}
+      <section className="section-py bg-bg-soft">
+        <div className="container-px mx-auto max-w-page">
+          <RelatedSystemsPanel system={system} />
+        </div>
+      </section>
 
       {/* Reviews */}
       <section className="section-py">
         <div className="container-px mx-auto max-w-page">
-          <SectionHeader eyebrow="Customer Reviews" title="What people say" className="mb-10" />
-          {system.reviews.length > 0 ? (
-            <div className="grid gap-5 md:grid-cols-3">
-              {system.reviews.map((r) => (
-                <TestimonialCard key={r.name} review={r} />
-              ))}
-            </div>
-          ) : (
-            <EmptyState title="No reviews yet." description="Be the first to complete this system and leave one." />
-          )}
+          <ReviewPanel reviews={system.reviews} />
         </div>
       </section>
 
       {/* FAQ */}
       <section className="section-py bg-bg-soft">
         <div className="container-px mx-auto max-w-narrow">
-          <SectionHeader eyebrow="FAQ" title="Good to know" align="center" className="mb-10" />
-          <FAQ items={system.faq} />
+          <FAQPanel items={system.faq} />
         </div>
       </section>
 
@@ -195,7 +167,7 @@ export default function ProductPage() {
       <section className="pb-28 pt-20">
         <div className="container-px mx-auto max-w-narrow">
           <PricingCard
-            name={system.name}
+            name={system.title}
             price={system.price}
             memberPrice={system.memberPrice}
             checkoutUrl={system.checkoutUrl}

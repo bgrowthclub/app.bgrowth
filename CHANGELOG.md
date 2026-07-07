@@ -1,116 +1,102 @@
-# Changelog — Platform v1 (page redesign + component library expansion)
+# Repair Report — app.bgrowth
 
-Scope: the actual visual redesign pass the last sprint deferred. All 5 pages
-now use the new component library. The interactive form engine
-(`SystemSectionBlock.tsx`) was **not touched** — only the shell around it.
+## Root cause
 
-## Design tokens
-- `src/styles/tokens.css` — Dark Navy updated `#071A52` → `#0A1B4D` per the
-  new brand spec. Everything else (`primary`, radii, shadows) is unchanged
-  and derives from this one file as before.
+Sprint 3 and Sprint 4 never actually made it into `src/`. `src/` was still
+frozen at the *Platform v1* state. Two separate mistakes stacked on top of
+each other:
 
-## New reusable components
-```
-src/components/ui/
-  SectionHeader.tsx   — renamed from SectionTitle; added an optional
-                          `action` slot (e.g. a button beside the title)
-  EmptyState.tsx       — no-results / no-purchases state
-  FilterPill.tsx        — toggleable filter pill (category, module type)
-  FeatureGrid.tsx       — Grid + FeatureCard, one call instead of a manual map
-  PricingCard.tsx       — price + "Get {system}" button + member-discount box
-  MemberBanner.tsx      — the glass CTA card, extracted so it's reusable
-                          beyond just the homepage
-  SearchToolbar.tsx     — search input + sort dropdown + a slot for filter
-                          pill rows
+1. **Sprint 3's zip** (`components/runtime/`, `pages/`, `data/`, `types/`)
+   got extracted **one directory level too shallow** — its contents landed
+   directly at the repo root instead of inside `src/`.
+2. **Sprint 4's individually-delivered files** (`AboutPage.tsx`,
+   `IndustriesPage.tsx`, `Footer.tsx`, `SEO.tsx`, etc.) were dropped flat at
+   the repo root as well, instead of their proper `src/pages/`,
+   `src/components/ui/`, `src/components/layout/`, `src/data/` locations.
 
-src/components/systems/
-  ModuleBadge.tsx        — small badge per module type (Planner™/Workflow™/
-                          Toolkit™/Resource™/Template™/Guide™), each with
-                          its own icon
-  IndustryCard.tsx        — card for the homepage Industries section
-  BusinessSystemCard.tsx  — replaces SystemCard.tsx. Two variants:
-                          `grid` (Browse Systems, My Systems, Related
-                          Systems) and `horizontal` (Featured Systems on
-                          the homepage — "large horizontal cards" per brief)
-  TestimonialCard.tsx     — renamed from ReviewCard.tsx (same component,
-                          new name to match the requested library)
-```
+On top of that, **`node_modules` (127MB, 7,351 files) and `dist` were
+committed to git** with no `.gitignore` at all.
 
-## Removed / renamed
-- `components/systems/SystemCard.tsx` → `BusinessSystemCard.tsx`
-- `components/systems/ReviewCard.tsx` → `TestimonialCard.tsx`
-- `components/ui/SectionTitle.tsx` → `SectionHeader.tsx`
-- `components/sections/BusinessCategories.tsx` → `Industries.tsx` (now
-  uses `IndustryCard`, and the 8 industries from the brief: Legal,
-  Cleaning, Home Services, Financial, Real Estate, Transportation,
-  Personal Services, Construction — instead of the old category list)
-- `components/sections/JoinClub.tsx` → `BecomeMember.tsx` (same waitlist
-  form, now built on the reusable `MemberBanner`)
+None of this actually broke `npm run build` by itself — `tsconfig.json`'s
+`include: ["src"]` meant TypeScript quietly ignored all the stray files, so
+the build "succeeded" while silently building the *old* Platform v1 site.
+Sprint 3's Runtime and Sprint 4's public pages effectively never shipped.
 
-## Data model — new fields (additive, nothing removed)
-`src/types/system.ts` and `src/data/systems.ts`:
-- `BusinessSystem.difficulty: 'Beginner' | 'Intermediate' | 'Advanced'`
-- `BusinessSystem.memberPrice: number` — feeds the new member-discount box
-- `BusinessSystem.audience: string[]` — powers the new "Who Is This For" section
-- `BusinessSystem.relatedSlugs: string[]` — powers the new "Related Systems" section
-- `getRelatedSystems(system)` helper added alongside the existing
-  `getSystemBySlug`.
+I also found two things I told you last sprint were "already done" that
+weren't — I was checking my own local working copy, not your actual repo:
+`Navbar.tsx` and `HowItWorks.tsx` were never updated, and `src/data/
+industries.ts` didn't exist at all, which meant `IndustriesPage.tsx` had a
+broken import waiting to surface the moment it was actually wired in.
+Apologies for that — fixed as part of this repair.
 
-## Naming-rule fix (important)
-The brief tightened the rule: **Planner/Workflow/Guide/Checklist/Worksheet
-can only be module names, never a Business System's own product name.** Two
-existing top-level products broke this (inherited from the last sprint,
-before the rule was this specific):
-- `Notary Equipment Planner™` (product) → renamed to **`Notary Equipment
-  System™`**. The module inside it is still called "Notary Equipment
-  Planner™" — that's correct, modules are exactly where that word belongs.
-- `Notary Signing Agent Workflow™` (product) → renamed to **`Notary
-  Signing Agent System™`**, same reasoning.
+## What this delivery is
 
-Slugs were left unchanged (`notary-equipment-planner`,
-`notary-signing-agent-workflow`) so no links break — only the display
-`name` changed. Verified with a grep: all 6 top-level product names are now
-clean; the words only appear on module-level names.
+This is the **entire corrected project** — not a diff. Replace your repo's
+contents with this (keep your `.git` folder; everything else can be
+overwritten) and it's ready to commit.
 
-## Page-by-page changes
-- **Home** (`HomePage.tsx`): Hero copy updated to "Business Systems Built
-  for Service Professionals" / "Launch faster. Operate smarter. Grow with
-  confidence." with CTAs "Browse Systems" + "How It Works" (anchors to the
-  new `#how-it-works` section). New section order: Hero → Industries →
-  Featured Systems (now large horizontal cards) → How It Works (new 3-step:
-  Choose → Complete Interactive Modules → Print or Save PDF) → Testimonials
-  → Become a Member.
-- **Browse Systems** (`BrowseSystems.tsx`): full rebuild — `SearchToolbar`
-  (search + sort: Featured/Price ↑/Price ↓/Name), industry filter pills,
-  **new module-type filter** (Planner™/Workflow™/Toolkit™/etc., derived from
-  `ComponentType`), `BusinessSystemCard` grid, `EmptyState` on no results.
-- **Product Page** (`ProductPage.tsx`): expanded to match the brief —
-  Hero + interactive preview, **Modules Included** (each module as a card
-  with its `ModuleBadge`), What's Included, Resources™, **Benefits**
-  (`FeatureGrid`), **Who Is This For** (`audience`), **Related Systems**
-  (`BusinessSystemCard` grid via `getRelatedSystems`), Customer Reviews
-  (`TestimonialCard`, with an `EmptyState` fallback), FAQ, and a
-  **`PricingCard`** at the bottom with the member-discount box.
-- **My Systems** (`MySystems.tsx`): now uses `BusinessSystemCard`-style
-  cards via `Grid`, button renamed "Open System" → **"Continue"** per
-  brief, `EmptyState` for the no-purchases case.
-- **Interactive System** (`InteractiveSystem.tsx`): shell redesign only —
-  `SystemSectionBlock.tsx` (the form engine) is byte-for-byte what it was
-  last sprint.
-  - **Module navigation**: when a system bundles more than one component
-    (currently only Start Your Notary Business™), pills let you switch
-    between them. Field values are scoped per-component
-    (`Record<componentId, FieldValues>`) so switching modules can't leak
-    one module's answers into another with the same field id.
-  - **Progress indicator**: a simple "Module X of Y" label — position in
-    the bundle, not a saved/tracked completion percentage. Nothing persists.
-  - **Resources panel**: slide-out drawer (`PanelRight` button) showing
-    `system.resources` for quick reference while filling out the form.
-  - Button renamed "Reset" → **"Restart"**, now clears only the active
-    module's values, not the whole system.
+## Files changed
+
+**New**
+- `.gitignore` — excludes `node_modules`, `dist`, `.DS_Store`
+- `src/data/industries.ts` — recreated; this file never existed in the repo
+
+**Merged from the stray root `components/`/`pages/`/`data`/`types/`
+folders into their correct `src/` locations** (Sprint 3, previously
+disconnected from the build):
+- `src/components/runtime/*.tsx` (11 files)
+- `src/components/sections/FeaturedSystems.tsx`
+- `src/components/systems/BusinessSystemCard.tsx`, `FeatureCard.tsx`,
+  `ModuleBadge.tsx`
+- `src/components/ui/FeatureGrid.tsx`
+- `src/pages/BrowseSystems.tsx`, `MySystems.tsx`, `ProductPage.tsx`,
+  `SystemOverviewPage.tsx`, `SystemModulePage.tsx`
+- `src/data/systems.ts`
+- `src/types/system.ts`
+- **Removed**: `src/pages/InteractiveSystem.tsx` (superseded by
+  `SystemOverviewPage` + `SystemModulePage`)
+
+**Merged from the loose root `.tsx`/`.ts` files into their correct `src/`
+locations** (Sprint 4, previously disconnected from the build):
+- `src/pages/AboutPage.tsx`, `IndustriesPage.tsx`, `PricingPage.tsx`,
+  `ResourcesPage.tsx`
+- `src/components/ui/ArticleCard.tsx`, `PricingTierCard.tsx`
+- `src/components/seo/SEO.tsx`
+- `src/components/layout/Footer.tsx`, `ScrollToTop.tsx`
+- `src/data/resources.ts`
+- `src/App.tsx` (now has all 10 routes: `/`, `/systems`, `/product/:slug`,
+  `/my-systems`, `/system/:slug`, `/system/:slug/module/:moduleSlug`,
+  `/industries`, `/resources`, `/pricing`, `/about`)
+
+**Actually fixed this round** (previously reported as "already done," but
+weren't, in your real repo):
+- `src/components/layout/Navbar.tsx` — added "Home" link; Industries/
+  Resources/Pricing/About now point to real routes instead of homepage
+  anchors (`/#industries` etc.); primary CTA changed to "Join BGrowth Club"
+  → `/pricing`
+- `src/components/sections/HowItWorks.tsx` — Step 3 replaced with the exact
+  wording from the brief ("Download, Print or Reuse" — no cloud-storage or
+  permanence implication)
+- `src/components/systems/IndustryCard.tsx` — added the optional `count`/
+  `ctaLabel` props `IndustriesPage.tsx` needs (homepage teaser usage is
+  visually unchanged since those props are optional)
 
 ## Verified
-- `npx tsc --noEmit` — clean.
-- `npx vite build` — clean production build.
-- Grep sweep confirms no product-level name uses Planner/Workflow/Guide/
-  Checklist/Worksheet — only module names do.
+
+- `rm -rf node_modules dist && npm install` — clean install, no errors
+- `npm run build` (`tsc && vite build`) — **zero errors**, 1917 modules
+  transformed
+- Every internal `to=`/`href=` target in `src/` cross-checked against the
+  routes defined in `App.tsx` — all resolve. (`/account`, `/privacy`,
+  `/terms`, `/contact` are linked from the Member nav / footer but have no
+  page yet — that's a pre-existing, disclosed gap from Sprint 4, not part
+  of this repair's scope, and won't break the build; they render blank
+  under the nav/footer until those pages are built.)
+- Grep sweep: the word "Checklist" appears only in code comments and the
+  one deliberate `ModuleBadge` label override — never in rendered copy.
+
+## Dependencies
+
+**None added.** `react-router-dom` was already correctly listed in
+`package.json` — the missing pieces were entirely file placement, not
+missing packages.

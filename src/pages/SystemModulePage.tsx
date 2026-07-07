@@ -4,34 +4,29 @@ import { Printer, FileDown, RotateCcw, BookOpen, Handshake, Sparkles, X, PanelRi
 import SystemSectionBlock, { FieldValues } from '../components/systems/SystemSectionBlock'
 import ModuleBadge from '../components/systems/ModuleBadge'
 import ResourceCard from '../components/systems/ResourceCard'
-import { getSystemBySlug } from '../data/systems'
+import RuntimeNavigation from '../components/runtime/RuntimeNavigation'
+import { getSystemBySlug, getModuleBySlug } from '../data/systems'
 
-export default function InteractiveSystem() {
-  const { slug } = useParams<{ slug: string }>()
+export default function SystemModulePage() {
+  const { slug, moduleSlug } = useParams<{ slug: string; moduleSlug: string }>()
   const system = slug ? getSystemBySlug(slug) : undefined
+  const activeModule = system && moduleSlug ? getModuleBySlug(system, moduleSlug) : undefined
 
-  // Values are scoped per-component so switching modules never bleeds one
-  // module's field values into another. Nothing here persists anywhere —
-  // it's plain React state for the current browser session only.
-  const [valuesByComponent, setValuesByComponent] = useState<Record<string, FieldValues>>({})
-  const [activeIndex, setActiveIndex] = useState(0)
+  // Values live only in this page's local state — a fresh route load (i.e.
+  // switching modules) starts clean automatically. Nothing is stored
+  // anywhere; there is no history and no database.
+  const [values, setValues] = useState<FieldValues>({})
   const [resourcesOpen, setResourcesOpen] = useState(false)
 
-  if (!system) return <Navigate to="/systems" replace />
-
-  const activeComponent = system.components[activeIndex]
-  const activeValues = valuesByComponent[activeComponent.id] ?? {}
+  if (!system || !activeModule) return <Navigate to="/systems" replace />
 
   const handleFieldChange = (fieldId: string, value: string | boolean) => {
-    setValuesByComponent((prev) => ({
-      ...prev,
-      [activeComponent.id]: { ...(prev[activeComponent.id] ?? {}), [fieldId]: value },
-    }))
+    setValues((prev) => ({ ...prev, [fieldId]: value }))
   }
 
   const handleRestart = () => {
     if (window.confirm('Restart this module? Nothing is saved, so anything you\u2019ve entered will be cleared.')) {
-      setValuesByComponent((prev) => ({ ...prev, [activeComponent.id]: {} }))
+      setValues({})
     }
   }
 
@@ -46,14 +41,9 @@ export default function InteractiveSystem() {
         <div className="container-px mx-auto max-w-4xl py-4">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <Link to={`/product/${system.slug}`} className="text-[12.5px] font-semibold text-primary">
-                ← {system.name}
+              <Link to={`/system/${system.slug}`} className="text-[12.5px] font-semibold text-primary">
+                ← {system.title}
               </Link>
-              {system.components.length > 1 && (
-                <p className="mt-0.5 text-[11px] text-navy/35">
-                  Module {activeIndex + 1} of {system.components.length}
-                </p>
-              )}
             </div>
             <div className="flex items-center gap-2">
               <button
@@ -87,24 +77,9 @@ export default function InteractiveSystem() {
             </div>
           </div>
 
-          {/* Module navigation — only shown when a system bundles more than one component */}
-          {system.components.length > 1 && (
-            <div className="mt-3 flex flex-wrap gap-2">
-              {system.components.map((c, i) => (
-                <button
-                  key={c.id}
-                  onClick={() => setActiveIndex(i)}
-                  className={`rounded-full px-3.5 py-1.5 text-[12px] font-semibold transition-colors ${
-                    i === activeIndex
-                      ? 'bg-grad-primary text-white shadow-softer'
-                      : 'border border-navy/10 bg-white text-navy/55 hover:border-primary/20'
-                  }`}
-                >
-                  {c.name}
-                </button>
-              ))}
-            </div>
-          )}
+          <div className="mt-3">
+            <RuntimeNavigation system={system} activeModuleId={activeModule.id} />
+          </div>
         </div>
       </div>
 
@@ -113,20 +88,20 @@ export default function InteractiveSystem() {
           <p className="eyebrow">{system.category}</p>
           <div className="mt-2 flex flex-wrap items-center gap-3">
             <h1 className="font-display text-2xl font-bold tracking-tight text-navy md:text-3xl">
-              {activeComponent.name}
+              {activeModule.title}
             </h1>
-            <ModuleBadge type={activeComponent.type} className="no-print" />
+            <ModuleBadge type={activeModule.type} className="no-print" />
           </div>
-          <p className="mt-1.5 text-[13px] text-navy/40">Part of {system.name}</p>
+          <p className="mt-1.5 text-[13px] text-navy/40">Part of {system.title}</p>
         </div>
 
         <div className="mt-8 space-y-5">
-          {activeComponent.content.map((section, i) => (
+          {activeModule.content.map((section, i) => (
             <SystemSectionBlock
               key={section.id}
               section={section}
               index={i}
-              values={activeValues}
+              values={values}
               onFieldChange={handleFieldChange}
             />
           ))}
@@ -134,13 +109,13 @@ export default function InteractiveSystem() {
 
         {/* Follow-up actions — no history, no database, purely navigational */}
         <div className="no-print mt-10 grid gap-3 sm:grid-cols-3">
-          <Link
-            to={`/product/${system.slug}#resources`}
+          <button
+            onClick={() => setResourcesOpen(true)}
             className="flex items-center justify-center gap-2 rounded-xl border border-navy/10 bg-white px-4 py-3.5 text-[13px] font-semibold text-navy/70 shadow-softer hover:border-primary/20"
           >
             <BookOpen size={15} />
             Resources
-          </Link>
+          </button>
           <a
             href="#"
             className="flex items-center justify-center gap-2 rounded-xl border border-navy/10 bg-white px-4 py-3.5 text-[13px] font-semibold text-navy/70 shadow-softer hover:border-primary/20"
@@ -175,7 +150,7 @@ export default function InteractiveSystem() {
                 <X size={16} />
               </button>
             </div>
-            <p className="mt-1.5 text-[13px] text-navy/45">Reference material for {system.name}.</p>
+            <p className="mt-1.5 text-[13px] text-navy/45">Reference material for {system.title}.</p>
             <div className="mt-6 space-y-3">
               {system.resources.map((r) => (
                 <ResourceCard key={r.title} resource={r} />

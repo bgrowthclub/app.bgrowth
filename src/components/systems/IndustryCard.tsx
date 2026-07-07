@@ -1,5 +1,6 @@
 import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
+import { ArrowRight } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
 const MotionLink = motion(Link)
@@ -10,9 +11,11 @@ interface Props {
   description: string
   to: string
   index?: number
+  count?: number // when provided, shows "N Business Systems" + a CTA row (used on the Industries page)
+  ctaLabel?: string
 }
 
-export default function IndustryCard({ icon: Icon, name, description, to, index = 0 }: Props) {
+export default function IndustryCard({ icon: Icon, name, description, to, index = 0, count, ctaLabel }: Props) {
   return (
     <MotionLink
       to={to}
@@ -30,6 +33,20 @@ export default function IndustryCard({ icon: Icon, name, description, to, index 
         <p className="font-display text-[15px] font-semibold text-navy">{name}</p>
         <p className="mt-1 text-[13px] text-navy/45">{description}</p>
       </div>
+
+      {count !== undefined && (
+        <div className="mt-1 flex items-center justify-between border-t border-navy/[0.06] pt-3">
+          <span className="text-[11.5px] font-medium text-navy/35">
+            {count > 0 ? `${count} Business System${count === 1 ? '' : 's'}` : 'Coming soon'}
+          </span>
+          {ctaLabel && (
+            <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-primary">
+              {ctaLabel}
+              <ArrowRight size={12} className="transition-transform duration-300 group-hover:translate-x-0.5" />
+            </span>
+          )}
+        </div>
+      )}
     </MotionLink>
   )
 }

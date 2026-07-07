@@ -1,8 +1,8 @@
 import Grid from '../layout/Grid'
 import FeatureCard from '../systems/FeatureCard'
-import type { SystemFeature } from '../../types/system'
+import type { SystemBenefit } from '../../types/system'
 
-export default function FeatureGrid({ features }: { features: SystemFeature[] }) {
+export default function FeatureGrid({ features }: { features: SystemBenefit[] }) {
   return (
     <Grid cols={3}>
       {features.map((f) => (

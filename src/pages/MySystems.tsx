@@ -36,7 +36,7 @@ export default function MySystems() {
                   <div className="grid h-12 w-12 place-items-center rounded-2xl bg-grad-primary text-white shadow-soft">
                     <Icon size={21} strokeWidth={2} />
                   </div>
-                  <h3 className="mt-5 font-display text-[16px] font-bold text-navy">{sys.name}</h3>
+                  <h3 className="mt-5 font-display text-[16px] font-bold text-navy">{sys.title}</h3>
                   <p className="mt-1.5 text-[13px] text-navy/45">{sys.category} · {sys.type}</p>
 
                   <Button to={`/system/${sys.slug}`} className="mt-6 w-full" icon={<ArrowRight size={15} />}>

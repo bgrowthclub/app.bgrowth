@@ -4,10 +4,11 @@ import { motion } from 'framer-motion'
 import SearchToolbar from '../components/ui/SearchToolbar'
 import FilterPill from '../components/ui/FilterPill'
 import BusinessSystemCard from '../components/systems/BusinessSystemCard'
+import { MODULE_TYPE_CONFIG } from '../components/systems/ModuleBadge'
 import EmptyState from '../components/ui/EmptyState'
 import Grid from '../components/layout/Grid'
 import { CATEGORIES, SYSTEMS } from '../data/systems'
-import type { ComponentType } from '../types/system'
+import type { ModuleType } from '../types/system'
 
 const SORT_OPTIONS = [
   { label: 'Featured', value: 'featured' },
@@ -16,7 +17,13 @@ const SORT_OPTIONS = [
   { label: 'Name: A–Z', value: 'name-asc' },
 ]
 
-const ALL_MODULE_TYPES: ComponentType[] = ['Planner', 'Workflow', 'Toolkit', 'Resource', 'Template', 'Guide']
+const PUBLISHED_SYSTEMS = SYSTEMS.filter((s) => s.status === 'published')
+
+// Derived from the catalog rather than a fixed list — a module type only
+// shows as a filter option if some published system actually has one.
+const ALL_MODULE_TYPES: ModuleType[] = Array.from(
+  new Set(PUBLISHED_SYSTEMS.flatMap((s) => s.modules.map((m) => m.type))),
+)
 
 export default function BrowseSystems() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -25,16 +32,16 @@ export default function BrowseSystems() {
   const [category, setCategory] = useState(
     (CATEGORIES as readonly string[]).includes(initialCategory) ? initialCategory : 'All',
   )
-  const [moduleType, setModuleType] = useState<ComponentType | 'All'>('All')
+  const [moduleType, setModuleType] = useState<ModuleType | 'All'>('All')
   const [sort, setSort] = useState('featured')
 
   const results = useMemo(() => {
-    let list = SYSTEMS.filter((s) => {
+    let list = PUBLISHED_SYSTEMS.filter((s) => {
       const matchesCategory = category === 'All' || s.category === category
-      const matchesModule = moduleType === 'All' || s.components.some((c) => c.type === moduleType)
+      const matchesModule = moduleType === 'All' || s.modules.some((m) => m.type === moduleType)
       const matchesQuery =
         query.trim() === '' ||
-        s.name.toLowerCase().includes(query.toLowerCase()) ||
+        s.title.toLowerCase().includes(query.toLowerCase()) ||
         s.shortDescription.toLowerCase().includes(query.toLowerCase())
       return matchesCategory && matchesModule && matchesQuery
     })
@@ -42,7 +49,7 @@ export default function BrowseSystems() {
     list = [...list].sort((a, b) => {
       if (sort === 'price-asc') return a.price - b.price
       if (sort === 'price-desc') return b.price - a.price
-      if (sort === 'name-asc') return a.name.localeCompare(b.name)
+      if (sort === 'name-asc') return a.title.localeCompare(b.title)
       return 0 // 'featured' — catalog order
     })
 
@@ -85,7 +92,7 @@ export default function BrowseSystems() {
             <span className="mr-1 text-[12px] font-semibold uppercase tracking-wide text-navy/30">Module Type</span>
             <FilterPill label="All" active={moduleType === 'All'} onClick={() => setModuleType('All')} />
             {ALL_MODULE_TYPES.map((t) => (
-              <FilterPill key={t} label={`${t}™`} active={moduleType === t} onClick={() => setModuleType(t)} />
+              <FilterPill key={t} label={MODULE_TYPE_CONFIG[t].label} active={moduleType === t} onClick={() => setModuleType(t)} />
             ))}
           </div>
         </div>

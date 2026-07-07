@@ -12,14 +12,14 @@ interface NavItem {
   to: string
 }
 
-// Public nav: BGrowth · Business Systems · Industries · Resources · Pricing · About · Login
-// Sections without a dedicated page yet link to the matching homepage anchor.
+// Public nav: Home · Business Systems · Industries · Resources · Pricing · About · Login
 const PUBLIC_LINKS: NavItem[] = [
+  { label: 'Home', to: '/' },
   { label: 'Business Systems', to: '/systems' },
-  { label: 'Industries', to: '/#industries' },
-  { label: 'Resources', to: '/#resources' },
-  { label: 'Pricing', to: '/#pricing' },
-  { label: 'About', to: '/#about' },
+  { label: 'Industries', to: '/industries' },
+  { label: 'Resources', to: '/resources' },
+  { label: 'Pricing', to: '/pricing' },
+  { label: 'About', to: '/about' },
 ]
 
 // Member nav: My Systems · Resources · Account · Logout
@@ -87,8 +87,8 @@ export default function Navbar({ mode = 'public' }: { mode?: NavMode }) {
                 <span className="cursor-default rounded-full px-4 py-2 text-[13.5px] font-semibold text-navy/40">
                   Login
                 </span>
-                <Button to="/systems" className="!px-5 !py-2.5 !text-[13.5px]">
-                  Browse Systems
+                <Button to="/pricing" className="!px-5 !py-2.5 !text-[13.5px]">
+                  Join BGrowth Club
                 </Button>
               </>
             ) : (
@@ -130,8 +130,8 @@ export default function Navbar({ mode = 'public' }: { mode?: NavMode }) {
                   <span className="cursor-default rounded-xl border border-navy/10 px-4 py-3 text-center text-sm font-semibold text-navy/40">
                     Login
                   </span>
-                  <Button to="/systems" className="w-full" onClick={() => setOpen(false)}>
-                    Browse Systems
+                  <Button to="/pricing" className="w-full" onClick={() => setOpen(false)}>
+                    Join BGrowth Club
                   </Button>
                 </>
               ) : (

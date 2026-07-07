@@ -3,15 +3,11 @@ import BusinessSystemCard from '../systems/BusinessSystemCard'
 import SectionHeader from '../ui/SectionHeader'
 import { SYSTEMS } from '../../data/systems'
 
-const FEATURED_SLUGS = [
-  'start-your-notary-business',
-  'notary-equipment-planner',
-  'daily-notary-operations',
-  'notary-signing-agent-workflow',
-]
-
 export default function FeaturedSystems() {
-  const featured = SYSTEMS.filter((s) => FEATURED_SLUGS.includes(s.slug))
+  // No hardcoded product list — a system appears here purely because its
+  // exported data says `featured: true`. Add or remove a system from this
+  // section by editing that one field, not this component.
+  const featured = SYSTEMS.filter((s) => s.status === 'published' && s.featured)
 
   return (
     <section id="systems" className="section-py relative bg-bg-soft">

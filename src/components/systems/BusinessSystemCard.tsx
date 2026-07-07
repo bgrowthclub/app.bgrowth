@@ -12,7 +12,7 @@ interface Props {
 }
 
 function uniqueModuleTypes(system: BusinessSystem) {
-  return Array.from(new Set(system.components.map((c) => c.type)))
+  return Array.from(new Set(system.modules.map((m) => m.type)))
 }
 
 export default function BusinessSystemCard({ system, variant = 'grid', ctaLabel = 'View System', ctaTo }: Props) {
@@ -40,7 +40,7 @@ export default function BusinessSystemCard({ system, variant = 'grid', ctaLabel 
               {system.difficulty}
             </span>
           </div>
-          <h3 className="mt-3 font-display text-[19px] font-bold text-navy">{system.name}</h3>
+          <h3 className="mt-3 font-display text-[19px] font-bold text-navy">{system.title}</h3>
           <p className="mt-1.5 max-w-lg text-[14px] leading-relaxed text-navy/50">{system.shortDescription}</p>
           <div className="mt-4 flex flex-wrap gap-1.5">
             {moduleTypes.map((t) => (
@@ -74,7 +74,7 @@ export default function BusinessSystemCard({ system, variant = 'grid', ctaLabel 
         </span>
       </div>
 
-      <h3 className="mt-5 font-display text-[17px] font-bold leading-snug text-navy">{system.name}</h3>
+      <h3 className="mt-5 font-display text-[17px] font-bold leading-snug text-navy">{system.title}</h3>
       <p className="mt-2 text-[13.5px] leading-relaxed text-navy/50">{system.shortDescription}</p>
 
       <div className="mt-4 flex flex-wrap gap-1.5">
