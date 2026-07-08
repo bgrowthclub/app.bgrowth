@@ -1,6 +1,5 @@
-import { useState } from 'react'
 import { Menu } from 'lucide-react'
-import SearchBox from './SearchBox'
+import GlobalSearch from './GlobalSearch'
 import NotificationButton from './NotificationButton'
 import QuickActionButton from './QuickActionButton'
 import MembershipBadge from './MembershipBadge'
@@ -12,8 +11,6 @@ interface Props {
 }
 
 export default function TopBar({ onOpenMobileSidebar }: Props) {
-  const [query, setQuery] = useState('')
-
   return (
     <header className="sticky top-0 z-30 border-b border-navy/[0.06] bg-white/90 backdrop-blur-xl">
       <div className="flex items-center gap-3 px-4 py-3 md:px-6">
@@ -26,14 +23,18 @@ export default function TopBar({ onOpenMobileSidebar }: Props) {
         </button>
 
         <div className="max-w-sm flex-1">
-          <SearchBox value={query} onChange={setQuery} placeholder="Search the platform…" />
+          <GlobalSearch />
         </div>
 
         <div className="ml-auto flex items-center gap-1.5 sm:gap-2.5">
           <QuickActionButton />
           <NotificationButton />
           <ThemeToggleButton />
-          <MembershipBadge />
+          {/* Hidden below sm — the one item here with no shorter fallback
+              form, and it overflowed a 375px viewport when always shown. */}
+          <span className="hidden sm:inline-flex">
+            <MembershipBadge />
+          </span>
           <UserMenu />
         </div>
       </div>

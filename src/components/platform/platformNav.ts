@@ -34,10 +34,13 @@ export const PLATFORM_NAV_GROUPS: PlatformNavGroup[] = [
   {
     label: 'Business',
     items: [
-      // These two point at experiences that already exist elsewhere in the
-      // app (the Business System catalog + My Systems) rather than getting
-      // their own placeholder page — see ARCHITECTURE.md on the Runtime.
-      { label: 'My Business Systems', to: '/my-systems', icon: FolderOpen },
+      // My Business Systems now lives inside the Workspace itself (search,
+      // filter, sort — see pages/platform/MyBusinessSystemsPage.tsx). The
+      // legacy /my-systems page (marketing AppLayout) is untouched and still
+      // reachable from its own nav, but the Workspace no longer points at it.
+      { label: 'My Business Systems', to: '/platform/my-systems', icon: FolderOpen },
+      // BGrowth App still points at the existing catalog browse page — see
+      // ARCHITECTURE.md on the Runtime.
       { label: 'BGrowth App', to: '/systems', icon: LayoutGrid },
     ],
   },
