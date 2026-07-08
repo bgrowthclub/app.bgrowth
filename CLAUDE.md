@@ -196,6 +196,13 @@ src/
                      Category — plus memberMock.ts, mock member/ownership
                      state for Workspace
   lib/              shared non-component logic (motion.ts, greeting.ts)
+  modules/
+    commerce/       BGrowth Commerce™ — the provider-agnostic domain layer
+                     (types + service interfaces + mock data, no
+                     implementation) every future payment provider,
+                     membership, reward, benefit, and partner relationship
+                     is built on. See ARCHITECTURE.md §9. Not imported by
+                     any page or component yet.
   pages/            one file per marketing route; composes the above, adds
                      <SEO>, does param/slug lookup — pages should stay thin
     platform/       one file per Workspace route (Dashboard, My Business
@@ -203,7 +210,9 @@ src/
                      Resources, Profile, Membership, Settings, Support)
   styles/           tokens.css (design tokens)
   types/            system.ts — the BusinessSystem data model (see
-                     ARCHITECTURE.md §2 on its planned generalization)
+                     ARCHITECTURE.md §2 on its planned generalization) —
+                     plus growth.ts, the shared Growth Category vocabulary
+                     used by both the catalog and Commerce
   App.tsx           route table — two sibling layouts, AppLayout and
                      PlatformLayout (see ARCHITECTURE.md §1)
   main.tsx          app entry / providers (BrowserRouter)
@@ -473,7 +482,53 @@ A change is done only when:
    next person — human or AI — can trust this file's description of the
    system.
 
-## 16. Things Claude Should NEVER Do
+## 16. BGrowth Commerce™ Rules
+
+**BGrowth Commerce™** (`src/modules/commerce/`) is the permanent,
+provider-agnostic domain layer for every payment, membership, reward,
+benefit, and partner concern (see ARCHITECTURE.md §9). It exists precisely
+so this application never depends on a specific payment provider. These
+rules are permanent, not specific to whichever milestone introduced them:
+
+- **Always reuse Commerce's models — never redefine them.** A `Product`,
+  `MembershipPlan`, `Purchase`, `Order`, `Reward`, `Benefit`, or
+  `AffiliatePartner` already has a canonical shape in
+  `src/modules/commerce/types/`. Extend it there if it's missing a field;
+  never define a second, similar interface elsewhere (in a page, a
+  component, or a new file) for the same concept.
+- **Never hardcode Stripe** (or any other provider) anywhere outside a
+  future `ProviderAdapter` implementation. Application code — pages,
+  components, other services — calls `CheckoutProvider`/the service
+  interfaces, never a provider SDK. If a task seems to require importing a
+  payment provider's SDK directly into a page or component, stop — that
+  bypasses the whole point of this architecture.
+- **Never bypass Commerce.** A feature that reads "does this member own
+  this," "what does this membership tier include," or "what does this
+  cost" reads it through a Commerce type/service (`ProductAccess`,
+  `MembershipPlan`, `PricingService`, etc.), never by inventing a parallel
+  ownership/pricing check inline.
+- **Never duplicate the `Product` model.** A sellable thing — a Growth
+  System, a Course, a Marketplace item, a Subscription — gets a `Product`
+  entry (linked via `source` to its real content, e.g. a `BusinessSystem`
+  slug), not a second product-shaped type, and not commerce fields bolted
+  onto a new content type the way `BusinessSystem.price` was before
+  Commerce existed (see ARCHITECTURE.md §9 on that field's planned
+  migration).
+- **Never duplicate the `MembershipPlan` model.** All six tiers (Free,
+  Club, Workspace, Creator, Business, Enterprise) live in one place,
+  `types/membership.ts` — a new tier is a new entry there, never a
+  separate ad hoc "plan" shape.
+- **Never implement a `ProviderAdapter`, checkout flow, webhook, or
+  backend persistence without explicit user direction.** Milestone 5.1
+  built the architecture only — see CLAUDE.md §3 on this repo's current
+  static-MVP phase, which Commerce does not change by itself.
+- **The Commerce module's `mock/` data is for proving the types compile
+  and compose correctly** — it is not a second source of truth for the
+  real catalog (`data/systems.ts` stays authoritative for actual Business
+  Systems) and should not be imported into pages/components as a
+  stand-in for a real service implementation.
+
+## 17. Things Claude Should NEVER Do
 
 - Never create a duplicate Business/Growth System data model or a second
   catalog array — extend `src/types/system.ts` and `src/data/systems.ts`.

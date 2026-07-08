@@ -212,7 +212,7 @@ PlatformLayout (src/components/platform/PlatformLayout.tsx)
   session. See §8.
 
 **Known naming gaps, not yet reconciled in code** (documentation debt,
-deliberately not silently fixed — see CLAUDE.md §16):
+deliberately not silently fixed — see CLAUDE.md §17):
 
 - The sidebar's **"BGrowth App"** entry currently links to `/systems` (the
   public catalog browse page) as a stand-in destination. Under the current
@@ -321,34 +321,185 @@ instead of a URL-prefix heuristic. One identity, one session, across every
 Growth Category — do not build two different auth mechanisms for the two
 layouts, and do not build a separate account system per category.
 
-## 9. Commerce
+## 9. BGrowth Commerce™ Architecture
 
-**Current:** commerce fields (`price`, `memberPrice`, `checkoutUrl`,
-`whatsIncluded`) live directly on `BusinessSystem`, populated as static
-data. "Purchase" is a link to an external `checkoutUrl`
-(`checkout.bgrowth.com/...`) — no checkout flow exists in this repo.
-"Owned" systems (in both the legacy `MySystems.tsx` and the Workspace's
-`MyBusinessSystemsPage`/Dashboard sections) come from one hardcoded slug
-list in `data/memberMock.ts`, not a real purchase record.
+**Current, pre-Commerce-module state:** commerce fields (`price`,
+`memberPrice`, `checkoutUrl`, `whatsIncluded`) still live directly on
+`BusinessSystem`, populated as static data. "Purchase" is a link to an
+external `checkoutUrl` (`checkout.bgrowth.com/...`) — no checkout flow
+exists in this repo. "Owned" systems (in both the legacy `MySystems.tsx`
+and the Workspace's `MyBusinessSystemsPage`/Dashboard sections) come from
+one hardcoded slug list in `data/memberMock.ts`, not a real purchase
+record. **None of that changed in Milestone 5.1** — this section describes
+the architecture those pieces will eventually migrate onto, not a change
+to how the app behaves today.
 
-**Future integration point:** as noted in `types/system.ts`'s own comments,
-these fields are explicitly *not* part of a Studio export — they belong to
-the Runtime/commerce concern. When real commerce arrives (BGrowth
-Marketplace, real checkout, membership billing), the expected evolution is:
+### What BGrowth Commerce™ is
 
-- Split commerce fields into a dedicated type (e.g. `SystemOffer` or
-  `CommerceListing`) keyed by a system's slug, rather than growing the
-  core system type further — this split should be category-agnostic from
-  the start.
-- Replace `PURCHASED_SLUGS`/`LAST_OPENED_SLUG` in `data/memberMock.ts` with
-  a real purchase/entitlement lookup against the member's account, capable
-  of spanning systems from more than one Growth Category.
-- Replace the external `checkoutUrl` link with an in-app or embedded
-  checkout, without changing how `ProductPage`/`PricingCard` present price.
-- Marketplace commissions (see VISION.md's Revenue Model) become a second
-  commerce path alongside direct BGrowth sales — the commerce layer should
-  be designed to know *who* is selling a given listing and *which
-  category* it belongs to, not just what it costs.
+BGrowth Commerce™ (`src/modules/commerce/`) is the provider-agnostic
+domain layer every future payment integration, membership, reward,
+benefit, and affiliate relationship is built on. It exists so that **no
+part of this application ever depends on Stripe, PayPal, or any other
+payment provider directly** — the application talks only to Commerce;
+Commerce talks to a provider through one abstraction seam.
+
+```
+src/modules/commerce/
+  types/       domain models — interfaces and types only, no logic
+    product.ts      Product, ProductType, ProductSourceRef, ProductBenefit
+    membership.ts    MembershipPlan, MembershipTierId, MembershipPermissions
+    purchase.ts      Cart, CartItem, Purchase, Order, Transaction, Invoice
+    access.ts        ProductAccess, UserEntitlement, License
+    rewards.ts       Reward, Badge, Achievement, MemberLevel, ReferralReward
+    benefits.ts      Benefit, Coupon, Discount
+    partners.ts      AffiliatePartner (extends types/system.ts's), AffiliateCommission
+    pricing.ts       Currency, Money, TaxRule
+    provider.ts      ProviderId, CheckoutSessionRequest/Result, ProviderTransactionRef
+  services/    interfaces only — no implementations exist yet
+    ProductService.ts, PurchaseService.ts, MembershipService.ts,
+    RewardService.ts, BenefitService.ts, PartnerService.ts,
+    PricingService.ts, DiscountService.ts,
+    CheckoutProvider.ts, ProviderAdapter.ts
+  mock/        realistic BGrowth example data for testing against the
+               types/services above — not a second product catalog
+```
+
+`src/modules/` is a new top-level pattern, reserved for large,
+self-contained domain modules — Commerce is the first tenant. Unlike
+`components/`, `data/`, and `lib/` (which index UI, catalog content, and
+small shared helpers respectively), a `modules/*` folder owns an entire
+domain's types and service contracts together.
+
+### Product vs. BusinessSystem — not a competing model
+
+`Product` is **not** a replacement for `BusinessSystem`, and Milestone 5.1
+does not touch `types/system.ts`. `BusinessSystem` remains the Runtime's
+content model — the modules, sections, and fields a member actually works
+through (see §2, §4). `Product` is the commerce *listing* around whatever
+is being sold — a Growth System, a Course, a Marketplace item, a
+Membership plan, a Bundle — and it points back at the real content via an
+optional `source: { type, id }` reference instead of duplicating it:
+
+```
+Product (commerce/types/product.ts)
+  source: { type: 'GrowthSystem', id: 'start-your-notary-business' }
+                                          │
+                                          ▼
+                        BusinessSystem (data/systems.ts, unchanged)
+```
+
+When a second Growth Category or a Course/Marketplace product exists, it
+gets its own `Product` entry the same way — Commerce never needs its own
+parallel content catalog.
+
+### ProductAccess — access is Commerce's decision, not the provider's
+
+`ProductAccess`/`UserEntitlement` (`types/access.ts`) are the single
+source of truth for "can this member use this product" — deliberately
+decoupled from *how* they got access. A member can have `hasAccess: true`
+from a direct `purchase`, a `membership` tier, a `bundle`, a
+`reward-unlock`, a `gift`, a `trial`, or a future `enterprise-seat` —
+Workspace should eventually check `ProductAccess`, never a payment
+provider's state directly, and never re-derive ownership by asking
+"did Stripe charge this person." Today, Workspace's ownership check is
+still `data/memberMock.ts`'s hardcoded `PURCHASED_SLUGS` — migrating that
+read to a `ProductAccess` lookup (once a `PurchaseService` implementation
+exists) is the intended future step, not done in this milestone.
+
+### The Provider Abstraction
+
+This is the core of "the application must never depend directly on
+Stripe":
+
+```
+Application (pages, components)
+        │  never imports a provider SDK
+        ▼
+Commerce Engine (ProductService, PurchaseService, MembershipService,
+                 RewardService, BenefitService, PartnerService,
+                 PricingService, DiscountService)
+        │  delegates checkout/payment concerns to —
+        ▼
+CheckoutProvider   (services/CheckoutProvider.ts)
+        │  the ONE thing the application ever calls to start a purchase;
+        │  internally selects and delegates to —
+        ▼
+ProviderAdapter    (services/ProviderAdapter.ts)
+        │  one implementation per payment provider, all satisfying the
+        │  same interface — createCheckoutSession / getTransaction /
+        │  refundTransaction
+        ▼
+   Stripe  │  PayPal  │  Mercado Pago  │  Apple Pay  │  Google Pay  │
+   Hotmart │  Paddle  │  Lemon Squeezy │  (any future provider)
+```
+
+Every box above `ProviderAdapter` in this diagram is provider-agnostic
+code and stays that way permanently. Adding a new provider means writing
+one new `ProviderAdapter` implementation — it never means touching
+`ProductService`, a page, or a component. `ProviderId` (in
+`types/provider.ts`) is a union of known providers plus a `(string & {})`
+escape hatch specifically so a not-yet-listed provider doesn't require a
+type change either.
+
+**No `ProviderAdapter` implementation exists yet** — not for Stripe, not
+for any other provider. This milestone built the contract they'll be
+built against, not a Stripe integration (explicitly out of scope — see
+CLAUDE.md's Commerce rules).
+
+### Future Stripe integration (and any other provider)
+
+1. Add a Stripe-specific file (e.g. `services/providers/StripeAdapter.ts`)
+   implementing `ProviderAdapter` — this is the *only* file allowed to
+   import a Stripe SDK.
+2. Register it wherever `CheckoutProvider`'s concrete implementation picks
+   an adapter (that selection mechanism doesn't exist yet either — it's
+   part of the same future implementation work, not this milestone).
+3. Nothing else changes. Pages and components already only ever call
+   `CheckoutProvider`/the service interfaces, never a provider directly,
+   because that boundary is what this milestone establishes.
+
+### Future Marketplace integration
+
+A Marketplace listing is a `Product` with `type: 'MarketplaceProduct'`
+(or `'GrowthSystem'`/`'Course'`/etc., authored by someone other than
+BGrowth) plus an owning creator. Selling it involves the same
+`Cart`/`Order`/`Purchase`/`Transaction` flow as a direct BGrowth sale;
+the difference is purely commercial: an `AffiliateCommission`-shaped
+record (or a creator-specific sibling of it) tracks the creator's share of
+each `Transaction`, exactly as `AffiliateCommission` already tracks a
+partner's share today. No new checkout mechanism is needed — only a new
+`Product.source` value and a commission calculation on top of the same
+`PricingService`/`DiscountService` seam.
+
+### Future Rewards, Benefits, Memberships, and Enterprise
+
+- **Rewards:** `RewardService.awardReward(...)` is the seam every other
+  product surface (Purchase completing, a module finishing, a referral
+  confirming) would eventually call into — see `types/rewards.ts`'s
+  `RewardType` union for every trigger this already anticipates. No caller
+  exists yet anywhere in the app.
+- **Benefits:** `BenefitService`/`Coupon`/`Discount` are ready to be
+  surfaced inside Workspace (e.g. a future "Benefits" Dashboard section)
+  the same way `MemberBenefitsSection` today shows static marketing
+  copy — the real version would call `listBenefitsForMember` instead.
+- **Memberships:** `MembershipService`/`MembershipPlan` intentionally
+  carry no price yet (see `types/membership.ts`) — pricing a tier is a
+  distinct, future decision layered on top of this shape, likely via a
+  `Product` of `type: 'Membership'` linking back to the plan (see the
+  `bgrowth-club-membership` mock product).
+- **Enterprise:** `License` (`types/access.ts`) models seat-based access
+  for team/business accounts — reserved for the `enterprise` membership
+  tier, not exercised by any current product.
+
+### Data flow addendum
+
+The Commerce module follows the exact same rule as the rest of this repo
+(see §11): types are consumed through service *interfaces*, never by
+reaching into mock arrays directly from application code, once a real
+implementation exists. Today, `mock/` exists purely to prove the types
+compile and compose correctly — it is not wired into any page, and should
+not be imported from `pages/` or `components/` as a substitute for a real
+`ProductService` implementation.
 
 ## 10. How Every Ecosystem Product Connects
 
@@ -454,8 +605,9 @@ pipeline, never new code at the rendering layer.
 
 See CLAUDE.md §5 for the authoritative folder map (including
 `components/platform/` and `pages/platform/`, the Workspace shell's
-folders) and the note about the stray, non-authoritative root-level
-duplicate files. This document assumes `src/` as the only real tree.
+folders, and `modules/commerce/`, the BGrowth Commerce™ module — see §9)
+and the note about the stray, non-authoritative root-level duplicate
+files. This document assumes `src/` as the only real tree.
 
 ## 13. Component Hierarchy
 
@@ -532,9 +684,14 @@ these questions before writing code:
    `data/resources.ts`, `data/memberMock.ts`) so the Runtime's and
    Workspace's rendering layers don't need to change — this repo's
    architecture is already built around that seam (see §6, §7).
-6. **Does it change commerce, auth, or persistence?** These are explicitly
-   out of scope for the current phase (see CLAUDE.md §3) — confirm with the
-   user before building rather than bolting partial versions on ad hoc.
+6. **Does it change commerce, auth, or persistence?** Real auth and
+   persistence are explicitly out of scope for the current phase (see
+   CLAUDE.md §3) — confirm with the user before building rather than
+   bolting partial versions on ad hoc. Commerce *architecture* (types and
+   service interfaces) already exists in `src/modules/commerce/` (see
+   §9) — a commerce-shaped feature should extend those models/interfaces,
+   never hardcode a payment provider or duplicate `Product`/
+   `MembershipPlan`.
 
 **Recommendations for the eventual generalization** (documentation only —
 none of this is implemented, and none of it should be done opportunistically):
