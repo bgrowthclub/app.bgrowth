@@ -14,6 +14,7 @@ export default function SidebarItem({ item, collapsed = false, onNavigate }: Pro
     <NavLink
       to={to}
       onClick={onNavigate}
+      aria-label={collapsed ? label : undefined}
       title={collapsed ? label : undefined}
       className={({ isActive }) =>
         `flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13.5px] font-medium transition-colors ${

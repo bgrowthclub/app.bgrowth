@@ -24,9 +24,10 @@ function SidebarBody({ collapsed, onNavigate }: { collapsed: boolean; onNavigate
 export default function Sidebar({ collapsed, onToggleCollapsed, mobileOpen, onCloseMobile }: Props) {
   return (
     <>
-      {/* Desktop / tablet — persistent column, collapsible to icon-only */}
+      {/* Desktop / tablet — persistent column from md upward, collapsible to
+          icon-only (defaults collapsed on tablet widths, see PlatformLayout) */}
       <aside
-        className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-navy/[0.06] bg-white transition-all duration-300 lg:flex ${
+        className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-navy/[0.06] bg-white transition-all duration-300 md:flex ${
           collapsed ? 'w-[76px]' : 'w-64'
         }`}
       >
@@ -57,9 +58,10 @@ export default function Sidebar({ collapsed, onToggleCollapsed, mobileOpen, onCl
         </div>
       </aside>
 
-      {/* Mobile — overlay drawer */}
+      {/* Mobile — overlay drawer, below the md breakpoint where the
+          persistent column above takes over */}
       {mobileOpen && (
-        <div className="fixed inset-0 z-50 flex lg:hidden">
+        <div className="fixed inset-0 z-50 flex md:hidden">
           <div className="absolute inset-0 bg-navy/20 backdrop-blur-sm" onClick={onCloseMobile} />
           <aside className="relative flex h-full w-72 max-w-[80vw] flex-col bg-white shadow-glow">
             <div className="flex items-center justify-between px-4 py-5">

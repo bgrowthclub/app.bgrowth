@@ -20,7 +20,7 @@ export default function TopBar({ onOpenMobileSidebar }: Props) {
         <button
           onClick={onOpenMobileSidebar}
           aria-label="Open menu"
-          className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-navy lg:hidden"
+          className="grid h-9 w-9 shrink-0 place-items-center rounded-full text-navy md:hidden"
         >
           <Menu size={20} />
         </button>
