@@ -8,7 +8,7 @@ import Button from '../../components/ui/Button'
 import Grid from '../../components/layout/Grid'
 import OwnedSystemCard from '../../components/systems/OwnedSystemCard'
 import { getOwnedSystems } from '../../data/systems'
-import { PURCHASED_SLUGS } from '../../data/memberMock'
+import { useIdentity } from '../../modules/identity/mock/MockIdentityProvider'
 
 const SORT_OPTIONS = [
   { label: 'Recently Opened', value: 'recent' },
@@ -19,7 +19,8 @@ const SORT_OPTIONS = [
 const DIFFICULTY_ORDER: Record<string, number> = { Beginner: 0, Intermediate: 1, Advanced: 2 }
 
 export default function MyBusinessSystemsPage() {
-  const owned = getOwnedSystems(PURCHASED_SLUGS)
+  const { user } = useIdentity()
+  const owned = user ? getOwnedSystems(user.ownedProducts) : []
 
   const industries = Array.from(new Set(owned.map((s) => s.industry)))
   const categories = Array.from(new Set(owned.map((s) => s.category)))

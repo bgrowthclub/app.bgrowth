@@ -1,11 +1,19 @@
 import Avatar from '../ui/Avatar'
 import MembershipBadge from './MembershipBadge'
 import { getTimeOfDayGreeting } from '../../lib/greeting'
-import { MOCK_MEMBER_NAME } from '../../data/memberMock'
+import { useIdentity } from '../../modules/identity/mock/MockIdentityProvider'
+import { getMockMembershipPlanByTier } from '../../modules/commerce/mock/mockMembershipPlans'
 
 export default function WorkspaceHero() {
+  const { user } = useIdentity()
   const greeting = getTimeOfDayGreeting()
-  const firstName = MOCK_MEMBER_NAME.split(' ')[0]
+
+  // ProtectedRoute guarantees an authenticated member by the time this
+  // renders, but stay defensive rather than assume it.
+  if (!user) return null
+
+  const firstName = user.firstName ?? user.displayName.split(' ')[0]
+  const membershipName = getMockMembershipPlanByTier(user.membership)?.name ?? 'Free Plan'
 
   return (
     <div className="flex flex-col items-start gap-5 sm:flex-row sm:items-center sm:justify-between">
@@ -16,9 +24,12 @@ export default function WorkspaceHero() {
           <h1 className="mt-1 font-display text-2xl font-bold tracking-tight text-navy md:text-3xl">
             {greeting}, {firstName}
           </h1>
+          <p className="mt-1 text-[13px] text-navy/45">
+            {user.rewards} reward points · Level {user.achievements.level}
+          </p>
         </div>
       </div>
-      <MembershipBadge />
+      <MembershipBadge tier={membershipName} />
     </div>
   )
 }

@@ -111,26 +111,39 @@ Category.
 
 This repo is a **static, client-only MVP**:
 
-- React + Vite SPA. No backend, no database, no real authentication.
+- React + Vite SPA. No backend, no database, no *real* authentication —
+  but **BGrowth Identity™'s mock authentication is real, working
+  behavior** (see ARCHITECTURE.md §8): Login, Register, Sign Out, and
+  route protection actually function today, simulated entirely
+  client-side via React state and localStorage — there is no server, no
+  credential check, and no real session token behind any of it.
 - Business System catalog data is hardcoded TypeScript (`src/data/`),
   standing in for a future export from **BGrowth Studio**. It covers only
   the Business & Entrepreneurship Growth Category today (see §2).
 - Two layouts exist side by side: `AppLayout` (public marketing site,
-  "member" vs "public" nav is a route-prefix visual switch only) and
-  `PlatformLayout` (the Workspace shell). **Neither is gated by real
-  auth** — `/platform/*` is reachable by anyone today.
+  "member" vs "public" nav is a route-prefix visual switch only, plus the
+  new auth pages under `pages/auth/`) and `PlatformLayout` (the Workspace
+  shell). **`/platform/*` is now gated behind BGrowth Identity™'s mock
+  session** via `ProtectedRoute` — a guest is redirected to `/login`; this
+  is a real (if mock) behavior change from earlier milestones, not a
+  placeholder.
 - Module field values (checklists/planners a user fills in) live in
   transient React state only. Nothing persists. "Save PDF" is the browser's
   native print dialog.
 - Ownership of Business Systems ("My Business Systems," "Continue
   Building," recommendations) is simulated with a mock member file,
-  `src/data/memberMock.ts` — not a real account or purchase record.
+  `src/data/memberMock.ts`, now wrapped into BGrowth Identity™'s `User`
+  shape (`modules/identity/mock/mockUser.ts`) and read by Workspace
+  through `useIdentity()` — not a real account or purchase record.
 
-**Do not silently upgrade this phase.** If a task implies adding real auth,
-a database, or a payments backend, stop and confirm scope with the user
-first — that is a phase change, not a bug fix. See ARCHITECTURE.md §8 for
-how auth should eventually gate `/platform`, and §9 for how commerce should
-eventually replace the mock ownership data.
+**Do not silently upgrade this phase.** If a task implies adding a *real*
+auth provider, a database, or a payments backend, stop and confirm scope
+with the user first — that is a phase change, not a bug fix. Building on
+top of the existing mock Identity/Commerce architecture (new mock data,
+new UI reading through `useIdentity()`/Commerce's services) is in scope;
+replacing the mock with a real provider is not, without explicit
+direction. See ARCHITECTURE.md §8 for the Identity architecture and how a
+real provider would eventually replace the mock, and §9 for Commerce.
 
 ## 4. Architecture Principles
 
@@ -203,8 +216,18 @@ src/
                      membership, reward, benefit, and partner relationship
                      is built on. See ARCHITECTURE.md §9. Not imported by
                      any page or component yet.
+    identity/       BGrowth Identity™ — the provider-agnostic identity
+                     layer every future auth provider is built on (types +
+                     service interfaces, no implementation), PLUS a real,
+                     working mock/ implementation (MockIdentityProvider,
+                     the useIdentity() hook) and routing/ (ProtectedRoute,
+                     GuestRoute) — actually wired into App.tsx and
+                     main.tsx. See ARCHITECTURE.md §8.
   pages/            one file per marketing route; composes the above, adds
                      <SEO>, does param/slug lookup — pages should stay thin
+    auth/           one file per auth route (Login, Register, Forgot
+                     Password, Reset Password, Verify Email) — composes
+                     ui/AuthCard, reads/writes state via useIdentity()
     platform/       one file per Workspace route (Dashboard, My Business
                      Systems, Academy, Community, Marketplace, Find,
                      Resources, Profile, Membership, Settings, Support)
@@ -214,8 +237,9 @@ src/
                      plus growth.ts, the shared Growth Category vocabulary
                      used by both the catalog and Commerce
   App.tsx           route table — two sibling layouts, AppLayout and
-                     PlatformLayout (see ARCHITECTURE.md §1)
-  main.tsx          app entry / providers (BrowserRouter)
+                     PlatformLayout (the latter wrapped in ProtectedRoute
+                     — see ARCHITECTURE.md §1, §8)
+  main.tsx          app entry / providers (BrowserRouter, MockIdentityProvider)
 ```
 
 **Known issue, do not treat as reference:** the repo root also contains a
@@ -528,7 +552,54 @@ rules are permanent, not specific to whichever milestone introduced them:
   Systems) and should not be imported into pages/components as a
   stand-in for a real service implementation.
 
-## 17. Things Claude Should NEVER Do
+## 17. BGrowth Identity™ Rules
+
+**BGrowth Identity™** (`src/modules/identity/`) is the permanent,
+provider-agnostic identity layer for every authentication and member-data
+concern (see ARCHITECTURE.md §8). It exists precisely so this application
+never depends on a specific auth provider. Unlike Commerce's `mock/`
+(static example data), Identity's `mock/` is a real, working
+implementation (`MockIdentityProvider`, `useIdentity()`) — these rules
+apply to it exactly as they would to a real provider integration:
+
+- **Always reuse Identity's models — never redefine them.** A `User`,
+  `Session`, `UserSettings`, or any other type already has a canonical
+  shape in `src/modules/identity/types/`. Extend it there if it's missing
+  a field; never define a second, similar interface elsewhere for the
+  same concept.
+- **Never couple a page or component directly to an authentication
+  provider.** There is no Firebase/Supabase/Clerk/Auth0/Cognito SDK
+  anywhere in this repo, and none should ever be imported outside a
+  future `IdentityProviderAdapter` implementation. Application code calls
+  `useIdentity()` and the route guards (`ProtectedRoute`/`GuestRoute`),
+  never a provider SDK directly.
+- **Never duplicate the `User` model.** A member's identity — name,
+  email, membership, owned products, rewards, settings — lives on `User`
+  in `types/user.ts`. Don't grow a second, parallel "profile" shape in a
+  page or component; extend `User`/`UserProfile` instead.
+- **Never duplicate the `Session` model.** Session/auth-result shapes live
+  in `types/session.ts` — a new auth flow reuses `Session`/`AuthResult`,
+  it doesn't invent a new one.
+- **Always use BGrowth Identity™ for "is this member signed in" and "who
+  is this member."** Never check `window.localStorage` for the mock
+  session key directly outside `MockIdentityProvider`, and never
+  reintroduce a direct `data/memberMock.ts` import in a Workspace
+  component now that `useIdentity()` is the established path (see
+  ARCHITECTURE.md §8's Workspace Integration note) — the legacy
+  `/my-systems` page is the one deliberate exception, left as-is.
+- **`GuestRoute` is the single authority for where an authenticated
+  visitor of a guest-only route goes** — never add a second redirect
+  decision inside a page wrapped in it (see ARCHITECTURE.md §8 on the bug
+  this caused during Milestone 5.2: a page's own effect racing against
+  `GuestRoute`'s redirect).
+- **Never implement a real `IdentityProviderAdapter`, real credential
+  validation, or backend session storage without explicit user
+  direction.** Milestone 5.2 built working *mock* auth only — see §3 on
+  this repo's current static-MVP phase, which Identity's mock
+  implementation does not change the *reality* of, only the *simulated
+  behavior* of.
+
+## 18. Things Claude Should NEVER Do
 
 - Never create a duplicate Business/Growth System data model or a second
   catalog array — extend `src/types/system.ts` and `src/data/systems.ts`.
@@ -555,9 +626,12 @@ rules are permanent, not specific to whichever milestone introduced them:
   `runtime/` folders) to a category-neutral name opportunistically — that
   rename is planned (see ARCHITECTURE.md §14) but deliberate and
   standalone, not a side effect of adding a feature.
-- Never add real authentication, persistence, or payment integration
-  without explicit user direction — this repo's current phase is
-  intentionally static/client-only.
+- Never add a *real* authentication provider, backend persistence, or
+  payment integration without explicit user direction — this repo's
+  current phase is intentionally static/client-only. BGrowth Identity™'s
+  mock auth and BGrowth Commerce™'s mock data are the sanctioned
+  exception (see §16, §17) — extending *those* is expected; replacing
+  them with something real is a phase change.
 - Never edit or reference the stray root-level duplicate files
   (`/App.tsx`, `/components`, `/pages`, `/data`, `/types`, etc.) — treat
   `src/` as the only real tree.

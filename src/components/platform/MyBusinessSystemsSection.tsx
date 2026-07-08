@@ -5,10 +5,11 @@ import Button from '../ui/Button'
 import EmptyState from '../ui/EmptyState'
 import OwnedSystemCard from '../systems/OwnedSystemCard'
 import { getOwnedSystems } from '../../data/systems'
-import { PURCHASED_SLUGS } from '../../data/memberMock'
+import { useIdentity } from '../../modules/identity/mock/MockIdentityProvider'
 
 export default function MyBusinessSystemsSection() {
-  const owned = getOwnedSystems(PURCHASED_SLUGS)
+  const { user } = useIdentity()
+  const owned = user ? getOwnedSystems(user.ownedProducts) : []
 
   return (
     <div>

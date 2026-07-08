@@ -22,6 +22,13 @@ import ProfilePage from './pages/platform/ProfilePage'
 import MembershipPage from './pages/platform/MembershipPage'
 import SettingsPage from './pages/platform/SettingsPage'
 import SupportPage from './pages/platform/SupportPage'
+import LoginPage from './pages/auth/LoginPage'
+import RegisterPage from './pages/auth/RegisterPage'
+import ForgotPasswordPage from './pages/auth/ForgotPasswordPage'
+import ResetPasswordPage from './pages/auth/ResetPasswordPage'
+import VerifyEmailPage from './pages/auth/VerifyEmailPage'
+import ProtectedRoute from './modules/identity/routing/ProtectedRoute'
+import GuestRoute from './modules/identity/routing/GuestRoute'
 
 export default function App() {
   return (
@@ -37,12 +44,37 @@ export default function App() {
         <Route path="/resources" element={<ResourcesPage />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/about" element={<AboutPage />} />
+
+        {/* BGrowth Identity™ — mock authentication (see
+            modules/identity/mock/MockIdentityProvider.tsx). Guest-only:
+            an already-authenticated member is redirected into Workspace
+            instead of seeing these forms again. */}
+        <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
+        <Route path="/register" element={<GuestRoute><RegisterPage /></GuestRoute>} />
+        <Route path="/forgot-password" element={<GuestRoute><ForgotPasswordPage /></GuestRoute>} />
+        <Route path="/reset-password" element={<GuestRoute><ResetPasswordPage /></GuestRoute>} />
+        {/* Not guest-only: reachable right after Register while already
+            authenticated (see RegisterPage), so it must not bounce an
+            authenticated member away. */}
+        <Route path="/verify-email" element={<VerifyEmailPage />} />
+        {/* Long-standing linked-but-unrouted gap (see CLAUDE.md) — now
+            resolves into the Workspace Account Area that already exists. */}
+        <Route path="/account" element={<Navigate to="/platform/profile" replace />} />
       </Route>
 
       {/* BGrowth Platform Shell — the permanent foundation every future
           authenticated product (Club, App, Academy, Find, Marketplace, AI)
-          shares. Deliberately a separate layout from AppLayout above. */}
-      <Route path="/platform" element={<PlatformLayout />}>
+          shares. Deliberately a separate layout from AppLayout above.
+          Gated behind BGrowth Identity™'s mock session — see
+          modules/identity/routing/ProtectedRoute.tsx. */}
+      <Route
+        path="/platform"
+        element={
+          <ProtectedRoute>
+            <PlatformLayout />
+          </ProtectedRoute>
+        }
+      >
         <Route index element={<Navigate to="/platform/dashboard" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="my-systems" element={<MyBusinessSystemsPage />} />

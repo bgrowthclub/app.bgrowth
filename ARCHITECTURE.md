@@ -20,28 +20,34 @@ mock member state — is bundled at build time as TypeScript data. There is
 no API layer yet; "data fetching" today is a synchronous import.
 
 There are **two layouts**, mounted as sibling top-level routes in
-`App.tsx` — they are not nested inside one another and share no chrome:
+`App.tsx` — they are not nested inside one another and share no chrome —
+plus one context provider wrapping the whole router:
 
 ```
 Browser
-  └─ React Router (client-side routing, BrowserRouter)
-       ├─ AppLayout (Navbar + Outlet + Footer)      — the public/marketing site
-       │    └─ Pages (src/pages/*.tsx)
-       │         ├─ read route params
-       │         ├─ look up data (src/data/*, via accessor functions)
-       │         ├─ render <SEO> (document head only, no SSR)
-       │         └─ compose components (sections / systems / runtime / ui)
-       │
-       └─ PlatformLayout (Sidebar + TopBar + Content)  — the Workspace shell
-            └─ Pages (src/pages/platform/*.tsx)
-                 ├─ same data-lookup and <SEO> conventions as above
-                 └─ compose components (platform / systems / ui)
+  └─ MockIdentityProvider (main.tsx — see §8's BGrowth Identity™ Architecture)
+       └─ React Router (client-side routing, BrowserRouter)
+            ├─ AppLayout (Navbar + Outlet + Footer)  — the public/marketing site
+            │    └─ Pages (src/pages/*.tsx, src/pages/auth/*.tsx)
+            │         ├─ read route params
+            │         ├─ look up data (src/data/*, via accessor functions)
+            │         ├─ render <SEO> (document head only, no SSR)
+            │         └─ compose components (sections / systems / runtime / ui)
+            │         (auth pages are wrapped in GuestRoute — see §8)
+            │
+            └─ ProtectedRoute (see §8) wraps —
+                 PlatformLayout (Sidebar + TopBar + Content) — the Workspace shell
+                      └─ Pages (src/pages/platform/*.tsx)
+                           ├─ same data-lookup and <SEO> conventions as above
+                           └─ compose components (platform / systems / ui)
 ```
 
-There is no server, no database, no auth provider, and no payment
-integration in this repository. Where those concerns show up in the UI
-(Login, checkout, Account, Sign Out), they are visual placeholders or
-external links — explicitly not implemented here yet (see §8, §9, §11).
+There is no server, no database, and no payment integration in this
+repository, and no *real* auth provider — but BGrowth Identity™'s mock
+implementation means Login, Register, Sign Out, and route protection are
+now functionally real (simulated client-side, no backend) rather than
+inert placeholders. See §8 (Identity) and §9 (Commerce) for both
+architectures, and §11 for data flow.
 
 ## 2. Business Systems Are One Specialization of a Universal Growth System
 
@@ -212,7 +218,7 @@ PlatformLayout (src/components/platform/PlatformLayout.tsx)
   session. See §8.
 
 **Known naming gaps, not yet reconciled in code** (documentation debt,
-deliberately not silently fixed — see CLAUDE.md §17):
+deliberately not silently fixed — see CLAUDE.md §18):
 
 - The sidebar's **"BGrowth App"** entry currently links to `/systems` (the
   public catalog browse page) as a stand-in destination. Under the current
@@ -298,28 +304,203 @@ function boundary:
   `MyBusinessSystemsPage.tsx` over the full static array) once the catalog
   — across one category or eight — is too large for that to scale.
 
-## 8. Authentication (Current & Future)
+## 8. BGrowth Identity™ Architecture
 
-**Current:** none, anywhere in the app. Two separate visual stand-ins
-exist, and neither is real route protection:
+### What BGrowth Identity™ is
 
-- `AppLayout.tsx` switches the marketing Navbar between `'public'` and
-  `'member'` link sets purely based on the URL prefix
-  (`MEMBER_ROUTE_PREFIXES = ['/my-systems', '/system/']`). The "Login"
-  control in the public nav is a non-interactive visual placeholder.
-- `PlatformLayout.tsx` (the Workspace shell, see §5) has no equivalent
-  gate at all — every `/platform/*` route is open to anyone, and
-  `UserMenu`'s "Sign Out" is inert.
+BGrowth Identity™ (`src/modules/identity/`) is the provider-agnostic
+identity layer every current and future authentication provider is built
+on — mirroring how BGrowth Commerce™ (§9) sits between the application and
+any payment provider. **The application never imports Firebase, Supabase,
+Clerk, Auth0, Cognito, or any other auth SDK directly** — it only ever
+calls Identity's hook (`useIdentity()`) and route guards
+(`ProtectedRoute`/`GuestRoute`).
 
-**Future integration point:** authentication should wrap the router (or
-sit above both `AppLayout` and `PlatformLayout`) as a real session/identity
-provider. `/platform` becomes the natural boundary for "must be signed in"
-— the whole Workspace shell gated at once, rather than per-page checks —
-while `AppLayout`'s existing public/member nav-mode switch on the
-marketing site should be preserved as-is, driven by the same session
-instead of a URL-prefix heuristic. One identity, one session, across every
-Growth Category — do not build two different auth mechanisms for the two
-layouts, and do not build a separate account system per category.
+```
+src/modules/identity/
+  types/       domain models — interfaces and types only, no logic
+    user.ts        User, UserProfile, Avatar, UserProgress, UserAchievements, UserStats
+    session.ts      Session, AuthResult, SessionStatus
+    auth.ts          LoginCredentials, RegistrationData, PasswordResetRequest/
+                     Confirmation, EmailVerification
+    settings.ts      UserSettings, NotificationPreferences, WorkspacePreferences,
+                     SecuritySettings, PrivacySettings, UserPreferences
+    provider.ts      IdentityProviderId
+    future.ts        FutureOrganization, FutureTeam, FutureRoles,
+                     FuturePermissions, FutureInvitation
+  services/    interfaces only — no implementations exist yet
+    IdentityService.ts, AuthenticationService.ts, SessionService.ts,
+    ProfileService.ts, SettingsService.ts, NotificationService.ts,
+    PasswordService.ts, VerificationService.ts, ProviderAdapter.ts
+  mock/        the ONE part of Identity that is a real, working
+               implementation (not just types) — see below
+    mockUser.ts               the mock member, wrapping data/memberMock.ts
+    MockIdentityProvider.tsx  a real React Context: login/register/logout/
+                              password reset/email verification, all
+                              simulated client-side (localStorage for
+                              "Remember Me" only — no backend)
+  routing/     ProtectedRoute.tsx, GuestRoute.tsx — reusable route guards
+               built on useIdentity(), used directly in App.tsx
+```
+
+Unlike Commerce's `mock/` (static example data only), Identity's `mock/`
+is a **working implementation** of the Application↔Identity boundary,
+because this milestone explicitly required functional mock login, logout,
+registration, "Remember Me," and email verification — not just a typed
+contract. `MockIdentityProvider` does not implement `IdentityProviderAdapter`
+(the interface a real provider adapter will satisfy); it simulates the same
+user-facing behavior directly in React state instead, as a stand-in for
+the whole boundary until a real provider exists.
+
+### The Provider Abstraction
+
+```
+Application (pages, components — via useIdentity() and the route guards)
+        │  never imports an auth provider SDK
+        ▼
+BGrowth Identity™ (AuthenticationService, SessionService, ProfileService,
+                   SettingsService, NotificationService, PasswordService,
+                   VerificationService — interfaces only today; the mock
+                   provider fills this role for now)
+        │  delegates the actual login/register/session work to —
+        ▼
+IdentityProviderAdapter   (services/ProviderAdapter.ts)
+        │  one implementation per identity provider, all satisfying the
+        │  same interface — login / register / logout / getCurrentSession
+        ▼
+   Firebase Authentication │ Supabase Auth │ Clerk │ Auth0 │ Cognito │
+   Custom Authentication   │ (any future provider)
+```
+
+**No `IdentityProviderAdapter` implementation exists yet.** Swapping or
+adding a provider means writing one new adapter file — it never means
+touching a page, a component, or `useIdentity()`'s call sites.
+`IdentityProviderId` (in `types/provider.ts`) is a union of known
+providers plus a `(string & {})` escape hatch, exactly like Commerce's
+`ProviderId`, specifically so an unlisted future provider doesn't require
+a type change.
+
+### User model and its relationship to Commerce
+
+`User` (`types/user.ts`) is BGrowth Identity™'s canonical member model —
+built to support every current and future BGrowth product, not just
+Workspace. It deliberately **reuses** Commerce's `MembershipTierId`
+(`membership: MembershipTierId`) instead of defining a second membership
+enum — Identity never redefines a concept Commerce already owns, and
+Commerce never redefines a concept Identity already owns. `ownedProducts`/
+`benefits`/`rewards` on `User` are the Identity-side mirror of Commerce's
+`ProductAccess`/`Benefit`/`Reward` — see §9's Commerce Architecture for
+those.
+
+The mock user (`mock/mockUser.ts`) does not invent a new mock member — it
+imports the existing `MOCK_MEMBER_NAME`/`PURCHASED_SLUGS` constants from
+`data/memberMock.ts` (established in the Workspace milestones) and wraps
+them into the full `User` shape. `data/memberMock.ts` remains the single
+source for those raw values; it now has two consumers (the legacy
+`/my-systems` page, unchanged, and `mock/mockUser.ts`) instead of five —
+see the Workspace Integration note below.
+
+### Protected Routes, Guest Routes, and the mock session
+
+- **`ProtectedRoute`** (`routing/ProtectedRoute.tsx`) gates a route behind
+  `useIdentity()`'s session — `/platform/*` is wrapped in it in `App.tsx`,
+  so the whole Workspace shell requires a (mock) session, not each page
+  individually. A guest visiting any `/platform/*` URL is redirected to
+  `/login`.
+- **`GuestRoute`** (`routing/GuestRoute.tsx`) is the inverse — `/login`,
+  `/register`, `/forgot-password`, and `/reset-password` redirect an
+  already-authenticated member away instead of showing the form again.
+  Critically, **`GuestRoute` is the single authority** for where an
+  authenticated visitor of a guest route goes: unverified (a fresh
+  Register) → `/verify-email`; verified (an existing Login) →
+  `/platform/dashboard`. Neither `LoginPage` nor `RegisterPage` navigates
+  on its own — early versions did, and it raced against `GuestRoute`'s own
+  redirect decision, sending a fresh registration straight to Workspace
+  instead of the verification step. Any future guest-route page should
+  follow the same rule: let `GuestRoute` decide, don't duplicate the
+  decision in the page.
+- **`/verify-email`** is deliberately **not** wrapped in either guard — it
+  must stay reachable by an authenticated-but-unverified member (right
+  after Register) without `GuestRoute` bouncing them away, and it's also a
+  reasonable page for a signed-out visitor following a stale link.
+- **Public routes** (everything else on the marketing site) need no
+  wrapper at all.
+- **Future Role-Based/Premium/Creator/Admin/Enterprise routes**: extend
+  `ProtectedRoute` with a permission check once `FutureRoles`/
+  `FuturePermissions` (see `types/future.ts`) are implemented — e.g. an
+  optional `requiredRole` prop that checks the member's role before
+  rendering children, composed the same way `ProtectedRoute` already
+  composes with the session check. Not built now; nothing in the app
+  needs it yet.
+
+### Mock authentication
+
+`MockIdentityProvider` (mounted once, in `main.tsx`, wrapping `<App />`)
+simulates the complete flow with no backend:
+
+- **Login** — any non-empty email/password "succeeds" (there is no real
+  credential check — see CLAUDE.md's Identity rules on why that's
+  intentional for this phase) and returns the mock user.
+- **Register** — any complete form creates a variant of the mock user with
+  the entered name/email, marked unverified, and redirects (via
+  `GuestRoute`) to `/verify-email`.
+- **Logout** — clears the session and returns to the Homepage (`/`), from
+  `UserMenu`'s now-functional "Sign Out."
+- **Remember Me** — the only place this milestone touches
+  `window.localStorage` (`bgrowth.identity.mockSession`), purely so a
+  reload doesn't lose the mock session. No token, no real security.
+- **Forgot/Reset Password, Email Verification** — simulated with an
+  artificial delay and local state only; no email is ever sent.
+
+### Workspace Integration
+
+Per this milestone's explicit ask, Workspace now displays the
+**Identity-sourced** member instead of importing `data/memberMock.ts`
+constants directly: `WorkspaceHero` (name, avatar, membership tier via
+`getMockMembershipPlanByTier`, reward points, level), `UserMenu` (display
+name, working Sign Out), and `ContinueBuildingSection`/
+`MyBusinessSystemsSection`/`MyBusinessSystemsPage` (ownership, via
+`user.ownedProducts` instead of the raw `PURCHASED_SLUGS` import). The
+underlying mock data is unchanged (still sourced from
+`data/memberMock.ts` transitively) — only *where components read it from*
+changed, from a direct data import to `useIdentity()`.
+
+### Account Area architecture
+
+The Account Area's fields already have a home in `types/settings.ts`
+(`UserSettings` → `notifications`/`security`/`privacy`; `preferences` →
+theme/locale; `workspace` → Workspace-specific display prefs) and directly
+on `User` (`language`, `country`, `timezone`). "Connected Accounts,"
+"Devices," and "Sessions" are intentionally left unmodeled — future
+Account Area tabs with no shape defined until they're built. The
+`/platform/settings` **page itself remains the same placeholder** it was
+before this milestone — this section is architecture, not a redesign of
+that page (see CLAUDE.md §3 on not silently upgrading this phase).
+
+### Future: real providers, Organizations, Teams, RBAC, Enterprise
+
+1. **Firebase/Supabase/Clerk/Auth0/Cognito/custom** — write one new file
+   implementing `IdentityProviderAdapter`, then replace
+   `MockIdentityProvider` with a real provider wrapping that adapter.
+   Nothing calling `useIdentity()` changes, because the hook's shape
+   (`status`, `user`, `login`, `register`, `logout`, ...) is the contract,
+   not the mock implementation.
+2. **Organizations/Teams** (`types/future.ts`'s `FutureOrganization`/
+   `FutureTeam`) — reserved for BGrowth App's future Business/Enterprise
+   membership tiers (see `modules/commerce/types/membership.ts`). A
+   `User` would gain an organization/team membership list; Workspace would
+   filter owned products by the active organization the same way it
+   already filters by `user.ownedProducts`.
+3. **RBAC** (`FutureRoles`/`FuturePermissions`) — composes with
+   `ProtectedRoute` as described above; a permission check is an addition
+   to the existing guard, not a new routing mechanism.
+4. **Enterprise** — `FutureInvitation` plus Commerce's `License` (seats)
+   together cover invite-and-seat-based access once the `enterprise`
+   membership tier is priced and sold as a `Product`.
+5. **Marketplace** — a Creator's `User.createdProducts` already exists;
+   once Marketplace is real, a creator's identity and a buyer's identity
+   are the same `User` type, just with different fields populated —
+   no separate "creator account" type is needed.
 
 ## 9. BGrowth Commerce™ Architecture
 
@@ -605,9 +786,10 @@ pipeline, never new code at the rendering layer.
 
 See CLAUDE.md §5 for the authoritative folder map (including
 `components/platform/` and `pages/platform/`, the Workspace shell's
-folders, and `modules/commerce/`, the BGrowth Commerce™ module — see §9)
-and the note about the stray, non-authoritative root-level duplicate
-files. This document assumes `src/` as the only real tree.
+folders; `modules/commerce/`, the BGrowth Commerce™ module — see §9; and
+`modules/identity/`, the BGrowth Identity™ module — see §8) and the note
+about the stray, non-authoritative root-level duplicate files. This
+document assumes `src/` as the only real tree.
 
 ## 13. Component Hierarchy
 
@@ -618,25 +800,35 @@ AppLayout                                    (marketing site)
  │           SystemOverviewPage → BusinessSystemRuntime → ...,
  │           SystemModulePage → ..., MySystems, PricingPage,
  │           ResourcesPage, AboutPage
+ │           LoginPage, RegisterPage, ForgotPasswordPage,
+ │           ResetPasswordPage (each wrapped in GuestRoute),
+ │           VerifyEmailPage (unwrapped — see §8)
+ │           → all compose ui/AuthCard
  └─ Footer
 
+ProtectedRoute (see §8) wraps —
 PlatformLayout                               (BGrowth Workspace shell)
  ├─ Sidebar (platformNav.ts, data-driven)
  ├─ TopBar
  │   ├─ GlobalSearch → searchSystems / searchResources
  │   ├─ QuickActionButton, NotificationButton, ThemeToggleButton (Popover)
  │   ├─ MembershipBadge
- │   └─ UserMenu (Popover) → Profile/Membership/Settings/Help/Sign Out
+ │   └─ UserMenu (Popover) → Profile/Membership/Settings/Help/
+ │       Sign Out (now wired to useIdentity().logout())
  └─ Outlet →
      DashboardPage
-      ├─ WorkspaceHero (Avatar, MembershipBadge, getTimeOfDayGreeting)
-      ├─ ContinueBuildingSection → systems/OwnedSystemCard (featured)
+      ├─ WorkspaceHero (Avatar, MembershipBadge, getTimeOfDayGreeting,
+      │   useIdentity() — name/membership/rewards/level)
+      ├─ ContinueBuildingSection → systems/OwnedSystemCard (featured,
+      │   useIdentity().user.ownedProducts[0])
       ├─ MyBusinessSystemsSection → systems/OwnedSystemCard × 3, "View All"
+      │   (useIdentity().user.ownedProducts)
       ├─ RecommendedSection → ui/Carousel → systems/BusinessSystemCard
       ├─ RecentlyAddedSection → layout/Grid → systems/BusinessSystemCard
       ├─ QuickActionsSection (static config)
       └─ MemberBenefitsSection (static config)
      MyBusinessSystemsPage → SearchToolbar, FilterPill, systems/OwnedSystemCard
+       (useIdentity().user.ownedProducts)
      ProfilePage, MembershipPage, SettingsPage, SupportPage,
      AcademyPage, CommunityPage, MarketplacePage, FindPage,
      PlatformResourcesPage → all compose PlaceholderPage
@@ -684,14 +876,17 @@ these questions before writing code:
    `data/resources.ts`, `data/memberMock.ts`) so the Runtime's and
    Workspace's rendering layers don't need to change — this repo's
    architecture is already built around that seam (see §6, §7).
-6. **Does it change commerce, auth, or persistence?** Real auth and
-   persistence are explicitly out of scope for the current phase (see
+6. **Does it change commerce, auth, or persistence?** Real backend
+   persistence is explicitly out of scope for the current phase (see
    CLAUDE.md §3) — confirm with the user before building rather than
    bolting partial versions on ad hoc. Commerce *architecture* (types and
-   service interfaces) already exists in `src/modules/commerce/` (see
-   §9) — a commerce-shaped feature should extend those models/interfaces,
-   never hardcode a payment provider or duplicate `Product`/
-   `MembershipPlan`.
+   service interfaces) already exists in `src/modules/commerce/` (§9); a
+   working *mock* Identity architecture (`src/modules/identity/`, §8) now
+   exists too — a commerce-shaped feature extends those
+   models/interfaces, and an auth/identity-shaped feature reuses
+   `useIdentity()`/`ProtectedRoute`/`GuestRoute`. Never hardcode a payment
+   or identity provider, and never duplicate `Product`/`MembershipPlan`/
+   `User`/`Session`.
 
 **Recommendations for the eventual generalization** (documentation only —
 none of this is implemented, and none of it should be done opportunistically):
