@@ -68,19 +68,29 @@ export default function Navbar({ mode = 'public' }: { mode?: NavMode }) {
           </Link>
 
           <nav className="hidden items-center gap-1 lg:flex">
-            {links.map((link) => (
-              <NavLink
-                key={link.label}
-                to={link.to}
-                className={({ isActive }) =>
-                  `rounded-full px-4 py-2 text-[13.5px] font-medium transition-colors ${
-                    isActive ? 'bg-bg-soft text-navy' : 'text-navy/70 hover:bg-bg-soft hover:text-navy'
-                  }`
-                }
-              >
-                {link.label}
-              </NavLink>
-            ))}
+            {links.map((link) => {
+              // Same-page anchor items (Solutions, Knowledge) resolve to the
+              // same pathname as Home ("/") — without this they'd all light
+              // up together on the homepage. Only a real distinct route
+              // (Home, About, My Systems, etc.) should ever show as active.
+              const isAnchor = link.to.includes('#')
+              return (
+                <NavLink
+                  key={link.label}
+                  to={link.to}
+                  end
+                  className={({ isActive }) =>
+                    `rounded-full px-4 py-2 text-[13.5px] font-medium transition-colors ${
+                      isActive && !isAnchor
+                        ? 'bg-bg-soft text-navy'
+                        : 'text-navy/70 hover:bg-bg-soft hover:text-navy'
+                    }`
+                  }
+                >
+                  {link.label}
+                </NavLink>
+              )
+            })}
           </nav>
 
           <div className="hidden items-center gap-2 lg:flex">

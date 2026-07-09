@@ -74,7 +74,7 @@ export default function Hero() {
   }
 
   return (
-    <section className="relative isolate overflow-hidden pb-28 pt-40 md:pb-40 md:pt-52">
+    <section className="relative isolate overflow-hidden pb-14 pt-32 md:pb-16 md:pt-36">
       <div className="pointer-events-none absolute inset-0 bg-grad-radial-soft" />
       <motion.div
         aria-hidden
@@ -138,7 +138,7 @@ export default function Hero() {
           custom={1}
           initial="hidden"
           animate="show"
-          className="mx-auto mt-9 max-w-md text-[16px] leading-relaxed text-navy/55 sm:text-[18px]"
+          className="mx-auto mt-5 max-w-md text-[16px] leading-relaxed text-navy/55 sm:text-[18px]"
         >
           Discover the right solutions, knowledge and guidance to move forward, one goal at a
           time.
@@ -149,7 +149,7 @@ export default function Hero() {
           custom={2}
           initial="hidden"
           animate="show"
-          className="mt-8 flex h-7 items-center justify-center text-[15px] text-navy/50 sm:text-[16px]"
+          className="mt-5 flex h-7 items-center justify-center text-[15px] text-navy/50 sm:text-[16px]"
         >
           <span className="mr-1.5">I want to</span>
           <AnimatePresence mode="wait">
@@ -173,7 +173,7 @@ export default function Hero() {
           custom={3}
           initial="hidden"
           animate="show"
-          className="mx-auto mt-11 max-w-[760px]"
+          className="mx-auto mt-7 max-w-[760px]"
         >
           <SearchBar
             value={query}
@@ -189,26 +189,7 @@ export default function Hero() {
           custom={4}
           initial="hidden"
           animate="show"
-          className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row"
-        >
-          <Button
-            href="#life-worlds"
-            className="!h-14 !rounded-full !px-8"
-            icon={<ArrowRight size={16} />}
-          >
-            Explore Solutions
-          </Button>
-          <Button href="#knowledge" variant="secondary" className="!h-14 !rounded-full !px-8">
-            Explore Knowledge
-          </Button>
-        </motion.div>
-
-        <motion.div
-          variants={fadeUp}
-          custom={5}
-          initial="hidden"
-          animate="show"
-          className="mt-8"
+          className="mt-6"
         >
           <div
             ref={goalsRowRef}
@@ -225,6 +206,25 @@ export default function Hero() {
               </button>
             ))}
           </div>
+        </motion.div>
+
+        <motion.div
+          variants={fadeUp}
+          custom={5}
+          initial="hidden"
+          animate="show"
+          className="mt-7 flex flex-col items-center justify-center gap-3 sm:flex-row"
+        >
+          <Button
+            href="#life-worlds"
+            className="!h-14 !rounded-full !px-8"
+            icon={<ArrowRight size={16} />}
+          >
+            Find My Solution
+          </Button>
+          <Button href="#knowledge" variant="secondary" className="!h-14 !rounded-full !px-8">
+            Browse Knowledge
+          </Button>
         </motion.div>
       </div>
     </section>
