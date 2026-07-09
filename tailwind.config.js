@@ -12,11 +12,6 @@ export default {
         accent: 'rgb(var(--color-primary-accent-rgb) / <alpha-value>)',
         bg: 'var(--color-bg)',
         'bg-soft': 'rgb(var(--color-bg-soft-rgb) / <alpha-value>)',
-        space: {
-          deep: 'var(--color-space-deep)',
-          mid: 'var(--color-space-mid)',
-          horizon: 'var(--color-space-horizon)',
-        },
       },
       fontFamily: {
         display: ['var(--font-display)'],
@@ -39,8 +34,6 @@ export default {
         'grad-primary': 'linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-accent) 100%)',
         'grad-navy': 'linear-gradient(135deg, var(--color-navy) 0%, var(--color-primary) 100%)',
         'grad-radial-soft': 'radial-gradient(circle at 50% 0%, rgba(47,128,255,.10), rgba(255,255,255,0) 60%)',
-        'grad-orbit':
-          'radial-gradient(circle at 50% 15%, rgba(47,128,255,0.35), rgba(6,8,20,0) 55%), linear-gradient(180deg, var(--color-space-deep) 0%, var(--color-space-mid) 55%, var(--color-space-horizon) 100%)',
       },
     },
   },

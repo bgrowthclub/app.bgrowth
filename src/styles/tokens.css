@@ -55,13 +55,4 @@
   --duration-fast: 0.3s;
   --duration-base: 0.6s;
   --duration-slow: 0.9s;
-
-  /* Space / Hero Atmosphere — the homepage Hero's dark-to-light narrative
-     opens here, so it gets its own small token set rather than one-off
-     hex values in the component. Deliberately built from the same
-     primary/accent hue as the rest of the brand, just deepened, so the
-     dark hero still reads as BGrowth rather than a different product. */
-  --color-space-deep: #05070F;
-  --color-space-mid: #0B1230;
-  --color-space-horizon: #142057;
 }
