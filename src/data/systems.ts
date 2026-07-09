@@ -12,6 +12,7 @@ const genericReviews = [
   { name: 'Jessica M.', role: 'Notary Public, California', quote: 'The systems are incredibly easy to follow. Instead of wondering what to do next, I simply follow the workflow.', rating: 5 },
   { name: 'David R.', role: 'Cleaning Business Owner', quote: 'I launched my business in less than three weeks because everything was already organized.', rating: 5 },
   { name: 'Amanda S.', role: 'Bookkeeper', quote: 'The planners helped me stop feeling overwhelmed.', rating: 5 },
+  { name: 'Marcus T.', role: 'Delivery Driver', quote: 'I stopped guessing what to buy and what to charge. Everything was laid out in order.', rating: 5 },
 ]
 
 const genericFaq = [
@@ -24,6 +25,11 @@ const genericFaq = [
 const genericAffiliates = [
   { id: 'affiliate-bonding', name: 'SuretyBond Direct', description: 'Notary bonds and E&O insurance, issued same-day.', url: 'https://example.com/suretybond' },
   { id: 'affiliate-stamp', name: 'NotaryStamp Co.', description: 'State-compliant stamps, seals, and journals.', url: 'https://example.com/notarystamp' },
+]
+
+const deliveryAffiliates = [
+  { id: 'affiliate-mileage-app', name: 'MileIQ Pro', description: 'Automatic mileage tracking for tax deductions.', url: 'https://example.com/mileiq' },
+  { id: 'affiliate-cargo', name: 'RouteGear', description: 'Insulated delivery bags and cargo organizers.', url: 'https://example.com/routegear' },
 ]
 
 // --- Modules (Planner™ / Workflow™ / Toolkit™) -----------------------------
@@ -209,6 +215,113 @@ const bookkeepingCloseWorkflow: BusinessModule = {
         { id: 'reconciled', type: 'checkbox', label: 'Bank accounts reconciled' },
         { id: 'categorized', type: 'checkbox', label: 'Transactions categorized' },
         { id: 'closeDate', type: 'date', label: 'Close date' },
+      ],
+    },
+  ],
+}
+
+const deliveryBusinessLaunchPlanner: BusinessModule = {
+  id: 'delivery-business-launch-planner',
+  title: 'Delivery Business Launch Planner™',
+  type: 'Planner',
+  description: 'Confirm the fundamentals before your first route.',
+  estimatedTime: '15 min',
+  content: [
+    {
+      id: 'setup',
+      title: 'Business Setup',
+      description: 'Confirm the fundamentals before your first route.',
+      fields: [
+        { id: 'entity', type: 'checkbox', label: 'Business entity registered' },
+        { id: 'insurance', type: 'checkbox', label: 'Commercial auto insurance active' },
+        { id: 'vehicleRegistered', type: 'checkbox', label: 'Vehicle registered for commercial use' },
+        { id: 'startDate', type: 'date', label: 'Target launch date' },
+        { id: 'notes', type: 'textarea', label: 'Notes', placeholder: 'Anything to remember for this step…' },
+      ],
+    },
+    {
+      id: 'coverage',
+      title: 'Service Area & Pricing',
+      fields: [
+        { id: 'deliveryRadius', type: 'text', label: 'Delivery radius', placeholder: '15 miles' },
+        { id: 'baseRate', type: 'text', label: 'Base delivery rate', placeholder: '$8 per delivery' },
+        { id: 'mileageRate', type: 'text', label: 'Per-mile rate', placeholder: '$0.65 / mile' },
+        { id: 'rushFee', type: 'text', label: 'Rush fee', placeholder: '$5' },
+      ],
+    },
+    {
+      id: 'launch',
+      title: 'Launch Readiness',
+      fields: [
+        { id: 'platformProfiles', type: 'checkbox', label: 'Delivery platform profiles created' },
+        { id: 'localListings', type: 'checkbox', label: 'Local business listing published' },
+        { id: 'firstDelivery', type: 'checkbox', label: 'First delivery completed' },
+      ],
+    },
+  ],
+}
+
+const deliveryVehicleEquipmentPlanner: BusinessModule = {
+  id: 'delivery-vehicle-equipment-planner',
+  title: 'Delivery Vehicle & Equipment Planner™',
+  type: 'Planner',
+  description: 'Know exactly what to buy, in what order, and what it actually costs.',
+  estimatedTime: '10 min',
+  content: [
+    {
+      id: 'core',
+      title: 'Core Equipment',
+      fields: [
+        { id: 'insulatedBags', type: 'checkbox', label: 'Insulated delivery bags acquired' },
+        { id: 'dolly', type: 'checkbox', label: 'Hand truck / dolly acquired' },
+        { id: 'phoneMount', type: 'checkbox', label: 'Phone mount & GPS ready' },
+        { id: 'mileageApp', type: 'checkbox', label: 'Mileage tracking app installed' },
+      ],
+    },
+    {
+      id: 'budget',
+      title: 'Budget',
+      fields: [
+        { id: 'startupBudget', type: 'text', label: 'Startup equipment budget', placeholder: '$300' },
+        { id: 'notes', type: 'textarea', label: 'Notes' },
+      ],
+    },
+  ],
+}
+
+const dailyDeliveryOperationsWorkflow: BusinessModule = {
+  id: 'daily-delivery-operations-workflow',
+  title: 'Daily Delivery Operations Workflow™',
+  type: 'Workflow',
+  description: 'Run pickups, deliveries, and payment in one repeatable flow.',
+  estimatedTime: '10 min per route',
+  content: [
+    {
+      id: 'pickup',
+      title: 'Pickup Confirmation',
+      fields: [
+        { id: 'customerName', type: 'text', label: 'Customer name' },
+        { id: 'pickupAddress', type: 'text', label: 'Pickup address' },
+        { id: 'pickupTime', type: 'text', label: 'Pickup time', placeholder: '2:00 PM' },
+        { id: 'confirmed', type: 'checkbox', label: 'Pickup confirmed with customer' },
+      ],
+    },
+    {
+      id: 'delivery',
+      title: 'Delivery Execution',
+      fields: [
+        { id: 'deliveryAddress', type: 'text', label: 'Delivery address' },
+        { id: 'proofCaptured', type: 'checkbox', label: 'Proof of delivery captured' },
+        { id: 'onTime', type: 'checkbox', label: 'Delivered on time' },
+      ],
+    },
+    {
+      id: 'wrapup',
+      title: 'Wrap-Up',
+      fields: [
+        { id: 'mileageLogged', type: 'checkbox', label: 'Mileage logged' },
+        { id: 'paymentCollected', type: 'checkbox', label: 'Payment collected or invoiced' },
+        { id: 'notes', type: 'textarea', label: 'Notes' },
       ],
     },
   ],
@@ -417,6 +530,111 @@ export const SYSTEMS: BusinessSystem[] = [
     reviews: genericReviews.slice(0, 2),
     faq: genericFaq,
     modules: [bookkeepingCloseWorkflow],
+  },
+  {
+    id: 'sys-007',
+    slug: 'start-your-delivery-business',
+    title: 'Start Your Delivery Business™',
+    subtitle: 'From vehicle-ready to first delivery.',
+    industry: 'Logistics',
+    category: 'Delivery',
+    type: 'Business Launch System',
+    shortDescription: 'A complete launch path from vehicle setup to your first paid delivery.',
+    description:
+      'Start Your Delivery Business™ walks you through every decision required to launch a local delivery or courier business, in the order you actually need to make them — insurance and registration, service area and pricing, equipment, and your first delivery.',
+    estimatedTime: '1–2 weeks',
+    difficulty: 'Beginner',
+    price: 79,
+    memberPrice: 63,
+    checkoutUrl: 'https://checkout.bgrowth.com/start-your-delivery-business',
+    whoIsFor: ['First-time delivery or courier business owners', 'Rideshare drivers moving into deliveries', 'Anyone with a vehicle looking for a low-overhead launch'],
+    relatedSystems: ['delivery-vehicle-equipment', 'daily-delivery-operations'],
+    tags: ['delivery', 'launch', 'beginner'],
+    status: 'published',
+    featured: false,
+    benefits: [
+      { title: 'Guided sequence', description: 'Every step unlocks the next — no guesswork about order.' },
+      { title: 'Built-in rate worksheet', description: 'Set your delivery rates with a framework, not a guess.' },
+      { title: 'Launch-ready plan', description: 'Know exactly when you’re ready for your first route.' },
+    ],
+    whatsIncluded: [
+      'Delivery Business Launch Planner™',
+      'Delivery Vehicle & Equipment Planner™',
+      'Resources™',
+      'Affiliate Recommendations',
+    ],
+    resources: [
+      { title: 'Local Delivery Rate Card Template', type: 'Template' },
+      { title: 'Commercial Auto Insurance Guide', type: 'Guide' },
+    ],
+    affiliatePartners: deliveryAffiliates,
+    reviews: genericReviews,
+    faq: genericFaq,
+    modules: [deliveryBusinessLaunchPlanner, deliveryVehicleEquipmentPlanner],
+  },
+  {
+    id: 'sys-008',
+    slug: 'delivery-vehicle-equipment',
+    title: 'Delivery Vehicle & Equipment System™',
+    subtitle: 'Gear up without overspending.',
+    industry: 'Logistics',
+    category: 'Delivery',
+    type: 'Toolkit System',
+    shortDescription: 'Know exactly what to buy, in what order, and what it actually costs.',
+    description:
+      'Cut through conflicting advice about what a delivery driver actually needs. This system lists every tool by priority and estimated cost so you spend only where it matters.',
+    estimatedTime: '2 days',
+    difficulty: 'Beginner',
+    price: 29,
+    memberPrice: 23,
+    checkoutUrl: 'https://checkout.bgrowth.com/delivery-vehicle-equipment',
+    whoIsFor: ['New delivery drivers outfitting for the first time', 'Anyone unsure what equipment is actually necessary'],
+    relatedSystems: ['start-your-delivery-business', 'daily-delivery-operations'],
+    tags: ['delivery', 'equipment'],
+    status: 'published',
+    featured: false,
+    benefits: [
+      { title: 'Priority-ranked list', description: 'Buy what matters first, add the rest later.' },
+      { title: 'Budget worksheet', description: 'Plan spend across startup and month two.' },
+    ],
+    whatsIncluded: ['Delivery Vehicle & Equipment Planner™', 'Resources™'],
+    resources: [{ title: 'Supplier Shortlist', type: 'Resource' }],
+    affiliatePartners: deliveryAffiliates.slice(0, 1),
+    reviews: genericReviews.slice(0, 2),
+    faq: genericFaq,
+    modules: [deliveryVehicleEquipmentPlanner],
+  },
+  {
+    id: 'sys-009',
+    slug: 'daily-delivery-operations',
+    title: 'Daily Delivery Operations™',
+    subtitle: 'Run every route the same reliable way.',
+    industry: 'Logistics',
+    category: 'Delivery',
+    type: 'Business Operations System',
+    shortDescription: 'Pickup, delivery, and wrap-up in one repeatable flow.',
+    description:
+      'The day-to-day operating system for a working delivery driver — from pickup confirmation through payment, so nothing gets missed on a busy route.',
+    estimatedTime: 'Ongoing',
+    difficulty: 'Intermediate',
+    price: 49,
+    memberPrice: 39,
+    checkoutUrl: 'https://checkout.bgrowth.com/daily-delivery-operations',
+    whoIsFor: ['Working delivery drivers running routes daily', 'Anyone juggling pickups, proof of delivery, and invoicing by hand'],
+    relatedSystems: ['start-your-delivery-business', 'delivery-vehicle-equipment'],
+    tags: ['delivery', 'operations'],
+    status: 'published',
+    featured: false,
+    benefits: [
+      { title: 'Repeatable per-route flow', description: 'The same reliable sequence, every delivery.' },
+      { title: 'Proof-of-delivery prompts', description: 'Know what to capture and when.' },
+    ],
+    whatsIncluded: ['Daily Delivery Operations Workflow™', 'Resources™'],
+    resources: [{ title: 'Proof of Delivery Template', type: 'Template' }],
+    affiliatePartners: deliveryAffiliates.slice(1),
+    reviews: genericReviews,
+    faq: genericFaq,
+    modules: [dailyDeliveryOperationsWorkflow],
   },
 ]
 
