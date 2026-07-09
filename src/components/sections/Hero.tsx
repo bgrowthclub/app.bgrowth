@@ -1,7 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { motion, AnimatePresence } from 'framer-motion'
+import { ArrowRight } from 'lucide-react'
 import SearchBar from '../ui/SearchBar'
+import Button from '../ui/Button'
 import { fadeUp, floatY } from '../../lib/motion'
 
 // Rotating examples for the "I want to ___" line beneath the headline —
@@ -185,6 +187,25 @@ export default function Hero() {
         <motion.div
           variants={fadeUp}
           custom={4}
+          initial="hidden"
+          animate="show"
+          className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row"
+        >
+          <Button
+            href="#life-worlds"
+            className="!h-14 !rounded-full !px-8"
+            icon={<ArrowRight size={16} />}
+          >
+            Explore Solutions
+          </Button>
+          <Button href="#knowledge" variant="secondary" className="!h-14 !rounded-full !px-8">
+            Explore Knowledge
+          </Button>
+        </motion.div>
+
+        <motion.div
+          variants={fadeUp}
+          custom={5}
           initial="hidden"
           animate="show"
           className="mt-8"
