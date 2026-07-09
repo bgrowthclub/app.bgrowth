@@ -71,7 +71,7 @@ export default function Navbar({ mode = 'public' }: { mode?: NavMode }) {
               between the logo and the right-side buttons) — absolutely
               positioned and centered on the bar's own midpoint, Apple-nav
               style, so an uneven logo/buttons width never throws it off. */}
-          <nav className="hidden items-center gap-1.5 lg:absolute lg:left-1/2 lg:top-1/2 lg:flex lg:-translate-x-1/2 lg:-translate-y-1/2">
+          <nav className="hidden items-center gap-2 lg:absolute lg:left-1/2 lg:top-1/2 lg:flex lg:-translate-x-1/2 lg:-translate-y-1/2">
             {links.map((link) => {
               // Same-page anchor items (Solutions, Knowledge) resolve to the
               // same pathname as Home ("/") — without this they'd all light
