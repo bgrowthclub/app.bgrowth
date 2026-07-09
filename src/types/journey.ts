@@ -3,30 +3,40 @@
 // ---------------------------------------------------------------------------
 // Distinct from BusinessSystem (types/system.ts), which is a commerce
 // bundle sold in the Runtime. A Journey is the knowledge graph a customer
-// goal decomposes into — Stages, then Knowledge Assets — and is the source
-// of truth commerce bundles (and future Academy courses, Marketplace
-// listings, articles, and AI coaches) get built from. One Knowledge Asset
-// may ship as more than one OutputFormat.
+// goal decomposes into — Stages, then Knowledge Objects.
+//
+// A KnowledgeObject is format-agnostic: it holds the reusable substance
+// (the points) rather than any one presentation. `outputFormats` names the
+// formats it's suited to become — Workspace, Academy, Marketplace, Article,
+// AI Coaching, Website Page — but the object itself is never named after
+// one of them, and one object commonly powers several formats at once.
 
 export type OutputFormat = 'Workspace' | 'Academy' | 'Marketplace' | 'Article' | 'AI Coaching' | 'Website Page'
 
-export type AssetKind = 'Assessment' | 'Planner' | 'Workflow' | 'Toolkit' | 'Guide' | 'Checklist' | 'Tracker' | 'Template' | 'Playbook'
+// The shape of the knowledge itself, not its output medium.
+export type KnowledgeShape = 'Concept' | 'Decision' | 'Process' | 'Reference' | 'Data'
 
-export interface KnowledgeAsset {
+export interface KnowledgePoint {
+  label: string
+  detail?: string
+}
+
+export interface KnowledgeObject {
   id: string
-  title: string // premium name, e.g. "Cleaning Business Readiness Assessment™"
-  kind: AssetKind
-  problem: string // the one problem this asset solves — never overlaps a sibling asset
+  title: string // plain knowledge title — no format branding (no "Planner™", "Checklist™", "Guide™")
+  shape: KnowledgeShape
+  problem: string // the one problem/question this object answers — never overlaps a sibling
   summary: string
+  points: KnowledgePoint[] // the reusable substance itself
   outputFormats: OutputFormat[]
-  leadsTo?: string // id of the asset this one hands off to next
+  leadsTo?: string // id of the object this one hands off to next
 }
 
 export interface JourneyStage {
   id: string
   name: string
   description: string
-  assets: KnowledgeAsset[]
+  objects: KnowledgeObject[]
 }
 
 export interface Journey {
@@ -39,6 +49,6 @@ export interface Journey {
   stages: JourneyStage[]
 }
 
-export function getJourneyAssetCount(journey: Journey) {
-  return journey.stages.reduce((sum, stage) => sum + stage.assets.length, 0)
+export function getJourneyObjectCount(journey: Journey) {
+  return journey.stages.reduce((sum, stage) => sum + stage.objects.length, 0)
 }
