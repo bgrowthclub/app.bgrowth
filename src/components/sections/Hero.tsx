@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { motion, AnimatePresence } from 'framer-motion'
+import { motion, AnimatePresence, useScroll, useTransform } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
 import SearchBar from '../ui/SearchBar'
 import Button from '../ui/Button'
@@ -59,6 +59,13 @@ export default function Hero() {
   const [query, setQuery] = useState('')
   const [exampleIndex, setExampleIndex] = useState(0)
   const goalsRowRef = useWheelHorizontalScroll<HTMLDivElement>()
+  const sectionRef = useRef<HTMLElement>(null)
+
+  // Very soft parallax for the background "ecosystem" panels as the user
+  // scrolls past the Hero — an extremely small translation, layered on top
+  // of (not replacing) each panel's own existing float animation.
+  const { scrollYProgress } = useScroll({ target: sectionRef, offset: ['start start', 'end start'] })
+  const bgParallaxY = useTransform(scrollYProgress, [0, 1], [0, 36])
 
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
@@ -74,7 +81,7 @@ export default function Hero() {
   }
 
   return (
-    <section className="relative isolate overflow-hidden pb-14 pt-32 md:pb-16 md:pt-36">
+    <section ref={sectionRef} className="relative isolate overflow-hidden pb-14 pt-32 md:pb-16 md:pt-36">
       <div className="pointer-events-none absolute inset-0 bg-grad-radial-soft" />
       <motion.div
         aria-hidden
@@ -84,40 +91,112 @@ export default function Hero() {
         transition={{ duration: 10, repeat: Infinity, ease: 'easeInOut' }}
       />
 
-      {/* Ambient floating UI shapes — abstract, low-opacity, blurred; pure
-          background texture communicating "this is a platform," not a
-          second focal point. No product-specific content, since the Hero
-          no longer speaks to any one Growth Category. */}
-      <motion.div
-        aria-hidden
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1, ...floatY.animate }}
-        transition={{ opacity: { duration: 1.2, delay: 0.3 }, y: { ...floatY.transition, delay: 0.3 } }}
-        className="pointer-events-none absolute -left-16 top-1/3 hidden w-56 rotate-[-6deg] blur-[2px] lg:block"
-      >
-        <div className="rounded-2xl border border-navy/[0.05] bg-white/40 p-3 opacity-20 shadow-softer backdrop-blur-lg">
-          <div className="space-y-2 rounded-xl bg-bg-soft/70 p-3">
-            <div className="h-1.5 w-10 rounded-full bg-primary/20" />
-            <div className="h-10 rounded-lg bg-white/70" />
-            <div className="h-1.5 w-2/3 rounded-full bg-navy/[0.06]" />
+      {/* Ambient "ecosystem" background — abstract, low-opacity, blurred
+          interface panels (dashboard, checklist, calculator, progress,
+          knowledge, chart) suggesting a platform full of connected tools
+          without ever becoming readable or product-specific. Kept behind
+          and clear of the central content column; never competes with the
+          headline. Wrapped in one scroll-linked parallax layer (very small
+          translation) on top of each panel's own existing float loop. */}
+      <motion.div aria-hidden className="pointer-events-none absolute inset-0" style={{ y: bgParallaxY }}>
+        {/* Checklist panel — top-left */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1, ...floatY.animate }}
+          transition={{ opacity: { duration: 1.2, delay: 0.3 }, y: { ...floatY.transition, delay: 0.3 } }}
+          className="absolute -left-16 top-1/3 hidden w-56 rotate-[-6deg] blur-[2px] lg:block"
+        >
+          <div className="rounded-2xl border border-navy/[0.05] bg-white/40 p-3 opacity-20 shadow-softer backdrop-blur-lg">
+            <div className="space-y-2 rounded-xl bg-bg-soft/70 p-3">
+              <div className="h-1.5 w-10 rounded-full bg-primary/20" />
+              <div className="h-10 rounded-lg bg-white/70" />
+              <div className="h-1.5 w-2/3 rounded-full bg-navy/[0.06]" />
+            </div>
           </div>
-        </div>
-      </motion.div>
+        </motion.div>
 
-      <motion.div
-        aria-hidden
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1, ...floatY.animate }}
-        transition={{ opacity: { duration: 1.2, delay: 0.45 }, y: { ...floatY.transition, delay: 0.6 } }}
-        className="pointer-events-none absolute -right-10 top-1/4 hidden w-48 rotate-[5deg] blur-[2px] lg:block"
-      >
-        <div className="rounded-2xl border border-navy/[0.05] bg-white/40 p-2.5 opacity-15 shadow-softer backdrop-blur-lg">
-          <div className="space-y-1.5 rounded-lg bg-bg-soft/70 p-2.5">
-            <div className="mx-auto h-1 w-8 rounded-full bg-navy/10" />
-            <div className="h-8 rounded-lg bg-grad-primary opacity-60" />
-            <div className="h-1.5 w-1/2 rounded-full bg-navy/[0.06]" />
+        {/* Mini dashboard panel — top-right */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1, ...floatY.animate }}
+          transition={{ opacity: { duration: 1.2, delay: 0.45 }, y: { ...floatY.transition, delay: 0.6 } }}
+          className="absolute -right-10 top-1/4 hidden w-48 rotate-[5deg] blur-[2px] lg:block"
+        >
+          <div className="rounded-2xl border border-navy/[0.05] bg-white/40 p-2.5 opacity-15 shadow-softer backdrop-blur-lg">
+            <div className="space-y-1.5 rounded-lg bg-bg-soft/70 p-2.5">
+              <div className="mx-auto h-1 w-8 rounded-full bg-navy/10" />
+              <div className="h-8 rounded-lg bg-grad-primary opacity-60" />
+              <div className="h-1.5 w-1/2 rounded-full bg-navy/[0.06]" />
+            </div>
           </div>
-        </div>
+        </motion.div>
+
+        {/* Progress tracker panel — bottom-left, deeper/softer layer */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1, ...floatY.animate }}
+          transition={{ opacity: { duration: 1.2, delay: 0.6 }, y: { duration: 6, repeat: Infinity, ease: 'easeInOut', delay: 0.2 } }}
+          className="absolute -left-24 bottom-16 hidden w-52 rotate-[4deg] blur-[3px] lg:block"
+        >
+          <div className="rounded-2xl border border-navy/[0.05] bg-white/40 p-3 opacity-15 shadow-softer backdrop-blur-lg">
+            <div className="flex items-center gap-2.5">
+              <div className="h-8 w-8 shrink-0 rounded-full bg-grad-primary opacity-60" />
+              <div className="flex-1 space-y-1.5">
+                <div className="h-1.5 w-full rounded-full bg-navy/[0.07]" />
+                <div className="h-1.5 w-2/3 rounded-full bg-primary/20" />
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Calculator / grid panel — bottom-right */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1, ...floatY.animate }}
+          transition={{ opacity: { duration: 1.2, delay: 0.75 }, y: { duration: 5.5, repeat: Infinity, ease: 'easeInOut', delay: 0.5 } }}
+          className="absolute -right-20 bottom-20 hidden w-40 rotate-[-4deg] blur-[3px] lg:block"
+        >
+          <div className="rounded-2xl border border-navy/[0.05] bg-white/40 p-3 opacity-15 shadow-softer backdrop-blur-lg">
+            <div className="grid grid-cols-3 gap-1.5">
+              {Array.from({ length: 9 }).map((_, i) => (
+                <div key={i} className="h-3 w-3 rounded-md bg-bg-soft/80" />
+              ))}
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Knowledge / document panel — far left, deepest layer */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1, ...floatY.animate }}
+          transition={{ opacity: { duration: 1.2, delay: 0.9 }, y: { duration: 7, repeat: Infinity, ease: 'easeInOut', delay: 0.1 } }}
+          className="absolute -left-28 top-[58%] hidden w-40 rotate-[-3deg] blur-[3px] xl:block"
+        >
+          <div className="rounded-2xl border border-navy/[0.05] bg-white/40 p-3 opacity-10 shadow-softer backdrop-blur-lg">
+            <div className="space-y-1.5">
+              <div className="h-1.5 w-full rounded-full bg-navy/[0.06]" />
+              <div className="h-1.5 w-5/6 rounded-full bg-navy/[0.06]" />
+              <div className="h-1.5 w-2/3 rounded-full bg-navy/[0.06]" />
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Chart / graph panel — far right, deepest layer */}
+        <motion.div
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1, ...floatY.animate }}
+          transition={{ opacity: { duration: 1.2, delay: 1.05 }, y: { duration: 6.5, repeat: Infinity, ease: 'easeInOut', delay: 0.4 } }}
+          className="absolute -right-28 top-[62%] hidden w-36 rotate-[3deg] blur-[3px] xl:block"
+        >
+          <div className="rounded-2xl border border-navy/[0.05] bg-white/40 p-3 opacity-10 shadow-softer backdrop-blur-lg">
+            <div className="flex h-9 items-end gap-1.5">
+              <div className="h-4 w-2 rounded bg-primary/30" />
+              <div className="h-7 w-2 rounded bg-primary/40" />
+              <div className="h-5 w-2 rounded bg-primary/25" />
+              <div className="h-9 w-2 rounded bg-primary/50" />
+            </div>
+          </div>
+        </motion.div>
       </motion.div>
 
       <div className="container-px relative mx-auto max-w-4xl text-center">

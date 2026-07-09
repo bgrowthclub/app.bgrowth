@@ -54,7 +54,7 @@ export default function Navbar({ mode = 'public' }: { mode?: NavMode }) {
     >
       <div className="container-px mx-auto max-w-page">
         <div
-          className={`flex items-center justify-between rounded-2xl px-4 py-2.5 transition-all duration-300 ${
+          className={`relative flex items-center justify-between rounded-2xl px-4 py-2.5 transition-all duration-300 ${
             scrolled
               ? 'border border-navy/[0.06] bg-white/80 shadow-soft backdrop-blur-xl'
               : 'border border-transparent bg-transparent'
@@ -67,7 +67,11 @@ export default function Navbar({ mode = 'public' }: { mode?: NavMode }) {
             </span>
           </Link>
 
-          <nav className="hidden items-center gap-1 lg:flex">
+          {/* Centered relative to the entire bar (not just the space left
+              between the logo and the right-side buttons) — absolutely
+              positioned and centered on the bar's own midpoint, Apple-nav
+              style, so an uneven logo/buttons width never throws it off. */}
+          <nav className="hidden items-center gap-1.5 lg:absolute lg:left-1/2 lg:top-1/2 lg:flex lg:-translate-x-1/2 lg:-translate-y-1/2">
             {links.map((link) => {
               // Same-page anchor items (Solutions, Knowledge) resolve to the
               // same pathname as Home ("/") — without this they'd all light
