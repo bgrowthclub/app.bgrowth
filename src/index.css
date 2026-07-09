@@ -69,4 +69,15 @@ body {
   .eyebrow {
     @apply text-xs font-semibold uppercase tracking-[0.18em] text-primary;
   }
+
+  /* Hides the scrollbar on an intentionally-scrollable horizontal row
+     (e.g. the Hero's suggestion chips) while keeping native scroll/touch/
+     trackpad behavior — used wherever a "Netflix row" pattern is needed. */
+  .no-scrollbar {
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
 }
