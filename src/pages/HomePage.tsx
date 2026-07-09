@@ -1,19 +1,17 @@
 import Hero from '../components/sections/Hero'
-import Industries from '../components/sections/Industries'
-import FeaturedSystems from '../components/sections/FeaturedSystems'
-import HowItWorks from '../components/sections/HowItWorks'
-import Testimonials from '../components/sections/Testimonials'
-import BecomeMember from '../components/sections/BecomeMember'
+import LifeWorlds from '../components/sections/LifeWorlds'
+import FeaturedJourneys from '../components/sections/FeaturedJourneys'
+import Knowledge from '../components/sections/Knowledge'
+import AboutStory from '../components/sections/AboutStory'
 
 export default function HomePage() {
   return (
     <>
       <Hero />
-      <Industries />
-      <FeaturedSystems />
-      <HowItWorks />
-      <Testimonials />
-      <BecomeMember />
+      <LifeWorlds />
+      <FeaturedJourneys />
+      <Knowledge />
+      <AboutStory />
     </>
   )
 }

@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { Link, NavLink } from 'react-router-dom'
+import { Link, NavLink, useLocation } from 'react-router-dom'
 import { Menu, X, LogOut } from 'lucide-react'
 import logo from '../../assets/logo.png'
 import Button from '../ui/Button'
@@ -12,13 +12,18 @@ interface NavItem {
   to: string
 }
 
-// Public nav: Home · Business Systems · Industries · Resources · Pricing · About · Login
+// Public nav — deliberately minimal per the homepage's "Life Worlds /
+// Journeys / Knowledge / About" narrative. The first three are same-page
+// anchors on the homepage (see ScrollToTop.tsx, which already handles
+// hash-based scrolling); "About" keeps linking to the existing standalone
+// /about page rather than duplicating it as a homepage section. Every
+// route this replaced in the primary nav (Business Systems, Industries,
+// Resources, Pricing) is still fully reachable — via the Footer, and via
+// in-section CTAs (e.g. Featured Journeys' "View All Journeys" button).
 const PUBLIC_LINKS: NavItem[] = [
-  { label: 'Home', to: '/' },
-  { label: 'Business Systems', to: '/systems' },
-  { label: 'Industries', to: '/industries' },
-  { label: 'Resources', to: '/resources' },
-  { label: 'Pricing', to: '/pricing' },
+  { label: 'Life Worlds', to: '/#life-worlds' },
+  { label: 'Journeys', to: '/#journeys' },
+  { label: 'Knowledge', to: '/#knowledge' },
   { label: 'About', to: '/about' },
 ]
 
@@ -32,7 +37,14 @@ const MEMBER_LINKS: NavItem[] = [
 export default function Navbar({ mode = 'public' }: { mode?: NavMode }) {
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
+  const { pathname } = useLocation()
   const links = mode === 'member' ? MEMBER_LINKS : PUBLIC_LINKS
+
+  // The homepage Hero is a dark "orbit" section (see components/sections/Hero.tsx)
+  // — while it's showing behind the unscrolled navbar, navy text is
+  // illegible. Every other page, and the homepage once scrolled past the
+  // Hero, keeps the normal light navbar with navy text.
+  const overDarkHero = mode === 'public' && pathname === '/' && !scrolled
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12)
@@ -59,7 +71,11 @@ export default function Navbar({ mode = 'public' }: { mode?: NavMode }) {
         >
           <Link to={mode === 'member' ? '/my-systems' : '/'} className="flex items-center gap-2.5">
             <img src={logo} alt="BGrowth" className="h-8 w-8 object-contain" />
-            <span className="font-display text-[17px] font-bold tracking-tight text-navy">
+            <span
+              className={`font-display text-[17px] font-bold tracking-tight transition-colors duration-300 ${
+                overDarkHero ? 'text-white' : 'text-navy'
+              }`}
+            >
               BGrowth
             </span>
           </Link>
@@ -71,7 +87,13 @@ export default function Navbar({ mode = 'public' }: { mode?: NavMode }) {
                 to={link.to}
                 className={({ isActive }) =>
                   `rounded-full px-4 py-2 text-[13.5px] font-medium transition-colors ${
-                    isActive ? 'bg-bg-soft text-navy' : 'text-navy/70 hover:bg-bg-soft hover:text-navy'
+                    overDarkHero
+                      ? isActive
+                        ? 'bg-white/15 text-white'
+                        : 'text-white/70 hover:bg-white/10 hover:text-white'
+                      : isActive
+                        ? 'bg-bg-soft text-navy'
+                        : 'text-navy/70 hover:bg-bg-soft hover:text-navy'
                   }`
                 }
               >
@@ -83,12 +105,16 @@ export default function Navbar({ mode = 'public' }: { mode?: NavMode }) {
           <div className="hidden items-center gap-2 lg:flex">
             {mode === 'public' ? (
               <>
-                {/* Visual placeholder only — auth is handled outside this project */}
-                <span className="cursor-default rounded-full px-4 py-2 text-[13.5px] font-semibold text-navy/40">
-                  Login
-                </span>
-                <Button to="/pricing" className="!px-5 !py-2.5 !text-[13.5px]">
-                  Join BGrowth Club
+                <Link
+                  to="/login"
+                  className={`rounded-full px-4 py-2 text-[13.5px] font-semibold transition-colors ${
+                    overDarkHero ? 'text-white/70 hover:text-white' : 'text-navy/60 hover:text-navy'
+                  }`}
+                >
+                  Log In
+                </Link>
+                <Button to="/register" className="!px-5 !py-2.5 !text-[13.5px]">
+                  GO BEYOND
                 </Button>
               </>
             ) : (
@@ -100,7 +126,9 @@ export default function Navbar({ mode = 'public' }: { mode?: NavMode }) {
           </div>
 
           <button
-            className="grid h-9 w-9 place-items-center rounded-full text-navy lg:hidden"
+            className={`grid h-9 w-9 place-items-center rounded-full transition-colors duration-300 lg:hidden ${
+              overDarkHero ? 'text-white' : 'text-navy'
+            }`}
             onClick={() => setOpen(!open)}
             aria-label="Toggle menu"
           >
@@ -127,11 +155,15 @@ export default function Navbar({ mode = 'public' }: { mode?: NavMode }) {
             <div className="mt-2 flex flex-col gap-2 border-t border-navy/[0.06] pt-3">
               {mode === 'public' ? (
                 <>
-                  <span className="cursor-default rounded-xl border border-navy/10 px-4 py-3 text-center text-sm font-semibold text-navy/40">
-                    Login
-                  </span>
-                  <Button to="/pricing" className="w-full" onClick={() => setOpen(false)}>
-                    Join BGrowth Club
+                  <Link
+                    to="/login"
+                    onClick={() => setOpen(false)}
+                    className="rounded-xl border border-navy/10 px-4 py-3 text-center text-sm font-semibold text-navy/60 hover:text-navy"
+                  >
+                    Log In
+                  </Link>
+                  <Button to="/register" className="w-full" onClick={() => setOpen(false)}>
+                    GO BEYOND
                   </Button>
                 </>
               ) : (

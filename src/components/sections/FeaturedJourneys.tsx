@@ -1,21 +1,27 @@
 import { motion } from 'framer-motion'
+import { ArrowRight } from 'lucide-react'
 import BusinessSystemCard from '../systems/BusinessSystemCard'
 import SectionHeader from '../ui/SectionHeader'
+import Button from '../ui/Button'
 import { SYSTEMS } from '../../data/systems'
 
-export default function FeaturedSystems() {
-  // No hardcoded product list — a system appears here purely because its
-  // exported data says `featured: true`. Add or remove a system from this
-  // section by editing that one field, not this component.
+export default function FeaturedJourneys() {
+  // Same rule as before this section was renamed: a system appears here
+  // purely because its data says `featured: true` — no hardcoded list.
   const featured = SYSTEMS.filter((s) => s.status === 'published' && s.featured)
 
   return (
-    <section id="systems" className="section-py relative bg-bg-soft">
+    <section id="journeys" className="section-py relative bg-bg-soft">
       <div className="container-px mx-auto max-w-page">
         <SectionHeader
-          eyebrow="Business Systems™"
-          title="Featured Systems"
-          description="Each system bundles the modules you need — Planners™, Workflows™, Toolkits™, and Resources™ — into one guided product."
+          eyebrow="Featured Journeys"
+          title="Real transformations, already underway."
+          description="Every Journey is a guided path — the steps, tools, and structure to get from where you are to where you're going."
+          action={
+            <Button to="/systems" variant="secondary" icon={<ArrowRight size={16} />}>
+              View All Journeys
+            </Button>
+          }
           className="mb-14"
         />
 
