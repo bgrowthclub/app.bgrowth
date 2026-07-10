@@ -138,14 +138,14 @@ const CLOUD: CloudFragment[] = [
   // deeper/smaller ones only reveal from `xl` for extra density on big screens.
   { kind: 'checklist', position: 'hidden -left-16 top-[12%] w-56 rotate-[-6deg] blur-[2px] lg:block', opacity: 'opacity-20', floatDelay: 0.3, floatDuration: 5, fadeDelay: 0.3 },
   { kind: 'lines', position: 'hidden -left-6 top-[28%] w-36 rotate-[2deg] blur-[2px] xl:block', opacity: 'opacity-10', floatDelay: 0.2, floatDuration: 6.2, fadeDelay: 0.5 },
-  { kind: 'progress', position: 'hidden -left-24 top-[44%] w-52 rotate-[4deg] blur-[3px] lg:block', opacity: 'opacity-15', floatDelay: 0.2, floatDuration: 6, fadeDelay: 0.6 },
+  { kind: 'progress', position: '-left-16 top-[44%] w-36 rotate-[4deg] blur-[3px] lg:-left-24 lg:w-52', opacity: 'opacity-5 lg:opacity-15', floatDelay: 0.2, floatDuration: 6, fadeDelay: 0.6 },
   { kind: 'card', position: 'hidden -left-4 top-[58%] w-24 rotate-[-3deg] blur-[2px] xl:block', opacity: 'opacity-10', floatDelay: 0.6, floatDuration: 5.6, fadeDelay: 0.8 },
   { kind: 'lines', position: 'hidden -left-28 top-[70%] w-40 rotate-[-3deg] blur-[3px] xl:block', opacity: 'opacity-10', floatDelay: 0.1, floatDuration: 7, fadeDelay: 0.9 },
   { kind: 'grid', position: 'hidden -left-10 top-[84%] w-32 rotate-[3deg] blur-[2px] lg:block', opacity: 'opacity-10', floatDelay: 0.4, floatDuration: 5.8, fadeDelay: 1.1 },
   // Right flank, top to bottom
   { kind: 'dashboard', position: 'hidden -right-10 top-[16%] w-48 rotate-[5deg] blur-[2px] lg:block', opacity: 'opacity-15', floatDelay: 0.6, floatDuration: 5.4, fadeDelay: 0.45 },
   { kind: 'card', position: 'hidden -right-4 top-[32%] w-24 rotate-[4deg] blur-[2px] xl:block', opacity: 'opacity-10', floatDelay: 0.3, floatDuration: 6.4, fadeDelay: 0.65 },
-  { kind: 'grid', position: 'hidden -right-20 top-[46%] w-40 rotate-[-4deg] blur-[3px] lg:block', opacity: 'opacity-15', floatDelay: 0.5, floatDuration: 5.5, fadeDelay: 0.75 },
+  { kind: 'grid', position: '-right-12 top-[46%] w-28 rotate-[-4deg] blur-[3px] lg:-right-20 lg:w-40', opacity: 'opacity-5 lg:opacity-15', floatDelay: 0.5, floatDuration: 5.5, fadeDelay: 0.75 },
   { kind: 'chart', position: 'hidden -right-28 top-[60%] w-36 rotate-[3deg] blur-[3px] xl:block', opacity: 'opacity-10', floatDelay: 0.4, floatDuration: 6.5, fadeDelay: 1.05 },
   { kind: 'lines', position: 'hidden -right-6 top-[74%] w-32 rotate-[-2deg] blur-[2px] xl:block', opacity: 'opacity-10', floatDelay: 0.2, floatDuration: 6.8, fadeDelay: 1.2 },
   { kind: 'progress', position: 'hidden -right-16 top-[87%] w-44 rotate-[-5deg] blur-[3px] lg:block', opacity: 'opacity-10', floatDelay: 0.5, floatDuration: 6.1, fadeDelay: 1.3 },
@@ -222,11 +222,11 @@ export default function Hero() {
           custom={0}
           initial="hidden"
           animate="show"
-          className="font-display text-[36px] font-bold leading-[1.15] tracking-tight text-navy sm:text-[58px] md:text-[68px] lg:text-[80px]"
+          className="font-display text-[32px] font-bold leading-[1.22] tracking-tight text-navy sm:text-[58px] sm:leading-[1.15] md:text-[68px] lg:text-[80px]"
         >
           What do you want
-          <br />
-          to achieve <span className="bg-grad-primary bg-clip-text text-transparent">next?</span>
+          <br className="hidden sm:block" /> to achieve{' '}
+          <span className="bg-grad-primary bg-clip-text text-transparent">next?</span>
         </motion.h1>
 
         <motion.p
@@ -234,7 +234,7 @@ export default function Hero() {
           custom={1}
           initial="hidden"
           animate="show"
-          className="mx-auto mt-4 max-w-md text-[15px] leading-relaxed text-navy/55 sm:mt-5 sm:text-[18px]"
+          className="mx-auto mt-4 max-w-[280px] text-[15px] leading-relaxed text-navy/55 sm:mt-5 sm:max-w-md sm:text-[18px]"
         >
           Discover the right solutions, knowledge and guidance to move forward, one goal at a
           time.
@@ -269,7 +269,7 @@ export default function Hero() {
           custom={3}
           initial="hidden"
           animate="show"
-          className="mx-auto mt-6 max-w-[760px] sm:mt-7"
+          className="mx-auto mt-6 max-w-[760px] px-3 sm:mt-7 sm:px-0"
         >
           <SearchBar
             value={query}
@@ -307,7 +307,7 @@ export default function Hero() {
         >
           <Button
             href="#life-worlds"
-            className="!h-14 !flex-1 !gap-1 !whitespace-nowrap !rounded-full !px-3 !text-[12.5px] sm:!flex-none sm:!gap-2 sm:!px-8 sm:!text-sm"
+            className="!h-12 !flex-1 !gap-1 !whitespace-nowrap !rounded-full !px-3 !text-[12.5px] sm:!h-14 sm:!flex-none sm:!gap-2 sm:!px-8 sm:!text-sm"
             icon={<ArrowRight size={16} className="hidden sm:inline" />}
           >
             Find My Solution
@@ -315,7 +315,7 @@ export default function Hero() {
           <Button
             href="#knowledge"
             variant="secondary"
-            className="!h-14 !flex-1 !whitespace-nowrap !rounded-full !px-3 !text-[12.5px] sm:!flex-none sm:!px-8 sm:!text-sm"
+            className="!h-12 !flex-1 !whitespace-nowrap !rounded-full !px-3 !text-[12.5px] sm:!h-14 sm:!flex-none sm:!px-8 sm:!text-sm"
           >
             Browse Knowledge
           </Button>

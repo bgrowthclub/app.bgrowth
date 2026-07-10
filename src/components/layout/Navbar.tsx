@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Link, NavLink } from 'react-router-dom'
 import { Menu, X, LogOut } from 'lucide-react'
 import logo from '../../assets/logo.png'
@@ -43,6 +43,15 @@ export default function Navbar({ mode = 'public' }: { mode?: NavMode }) {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
+  // Lock page scroll while the mobile bottom sheet is open, same as any
+  // modal/sheet overlay would.
+  useEffect(() => {
+    document.body.style.overflow = open ? 'hidden' : ''
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [open])
+
   return (
     <motion.header
       initial={{ y: -24, opacity: 0 }}
@@ -61,7 +70,14 @@ export default function Navbar({ mode = 'public' }: { mode?: NavMode }) {
           }`}
         >
           <Link to={mode === 'member' ? '/my-systems' : '/'} className="flex items-center gap-2.5">
-            <img src={logo} alt="BGrowth" className="h-8 w-8 object-contain" />
+            {/* Circular masked container — the source PNG is a square icon
+                on a flat white canvas, which read as "an image pasted on
+                top" once everything else went pill/circle-shaped. Cropping
+                it into a circle (rather than editing the asset) keeps this
+                a pure presentation fix. */}
+            <span className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full shadow-softer">
+              <img src={logo} alt="BGrowth" className="h-full w-full scale-110 object-cover" />
+            </span>
             <span className="font-display text-[17px] font-bold tracking-tight text-navy">
               BGrowth
             </span>
@@ -127,45 +143,67 @@ export default function Navbar({ mode = 'public' }: { mode?: NavMode }) {
           </button>
         </div>
 
+      </div>
+
+      {/* Mobile navigation — a bottom sheet (iOS-style) rather than a
+          dropdown: slides up from the bottom with rounded top corners and
+          large touch targets, dismissed by the backdrop or an item tap. */}
+      <AnimatePresence>
         {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-2 flex flex-col gap-1 rounded-2xl border border-navy/[0.06] bg-white/95 p-3 shadow-soft backdrop-blur-xl lg:hidden"
-          >
-            {links.map((link) => (
-              <Link
-                key={link.label}
-                to={link.to}
-                onClick={() => setOpen(false)}
-                className="rounded-xl px-4 py-2.5 text-sm font-medium text-navy/80 hover:bg-bg-soft"
-              >
-                {link.label}
-              </Link>
-            ))}
-            <div className="mt-2 flex flex-col gap-2 border-t border-navy/[0.06] pt-3">
+          <>
+            <motion.div
+              key="backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="fixed inset-0 z-40 bg-navy/30 backdrop-blur-sm lg:hidden"
+              onClick={() => setOpen(false)}
+            />
+            <motion.div
+              key="sheet"
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 32, stiffness: 320 }}
+              className="fixed inset-x-0 bottom-0 z-50 rounded-t-3xl border-t border-navy/[0.06] bg-white p-3 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-20px_60px_-10px_rgba(16,97,236,0.18)] lg:hidden"
+            >
+              <div className="mx-auto mb-2 h-1.5 w-10 rounded-full bg-navy/10" />
+              <div className="flex flex-col gap-0.5">
+                {links.map((link) => (
+                  <Link
+                    key={link.label}
+                    to={link.to}
+                    onClick={() => setOpen(false)}
+                    className="rounded-2xl px-4 py-4 text-[16px] font-medium text-navy/80 transition-colors hover:bg-bg-soft"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+              <div className="my-2 border-t border-navy/[0.06]" />
               {mode === 'public' ? (
-                <>
+                <div className="flex flex-col gap-2">
                   <Link
                     to="/login"
                     onClick={() => setOpen(false)}
-                    className="rounded-xl border border-navy/10 px-4 py-3 text-center text-sm font-semibold text-navy/60 hover:text-navy"
+                    className="rounded-2xl px-4 py-4 text-center text-[16px] font-semibold text-navy/70 transition-colors hover:bg-bg-soft"
                   >
                     Login
                   </Link>
-                  <Button to="/pricing" className="w-full" onClick={() => setOpen(false)}>
+                  <Button to="/pricing" className="!h-14 w-full" onClick={() => setOpen(false)}>
                     Join BGrowth Club
                   </Button>
-                </>
+                </div>
               ) : (
-                <button className="btn-secondary" onClick={() => setOpen(false)}>
+                <button className="btn-secondary w-full" onClick={() => setOpen(false)}>
                   Logout
                 </button>
               )}
-            </div>
-          </motion.div>
+            </motion.div>
+          </>
         )}
-      </div>
+      </AnimatePresence>
     </motion.header>
   )
 }
