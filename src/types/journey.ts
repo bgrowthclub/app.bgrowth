@@ -3,21 +3,28 @@
 // ---------------------------------------------------------------------------
 // Distinct from BusinessSystem (types/system.ts), which is a commerce
 // bundle sold in the Runtime. A Journey is the knowledge graph a customer
-// goal decomposes into — Stages, then Knowledge Objects.
+// goal decomposes into:
+//
+//   Goal -> Journey -> Stage -> Knowledge Object -> Learning Units -> Output Formats
 //
 // A KnowledgeObject is format-agnostic: it holds the reusable substance
-// (the points) rather than any one presentation. `outputFormats` names the
-// formats it's suited to become — Workspace, Academy, Marketplace, Article,
-// AI Coaching, Website Page — but the object itself is never named after
-// one of them, and one object commonly powers several formats at once.
+// (its Learning Units) rather than any one presentation. `outputFormats`
+// names the formats it's suited to become — Workspace, Academy,
+// Marketplace, Article, AI Coaching, Website Page — but the object itself
+// is never named after one of them, and one object commonly powers
+// several formats at once.
 
 export type OutputFormat = 'Workspace' | 'Academy' | 'Marketplace' | 'Article' | 'AI Coaching' | 'Website Page'
 
 // The shape of the knowledge itself, not its output medium.
 export type KnowledgeShape = 'Concept' | 'Decision' | 'Process' | 'Reference' | 'Data'
 
-export interface KnowledgePoint {
-  label: string
+// One reusable, atomic teachable point inside a Knowledge Object — small
+// enough to become a lesson, an article section, a workspace field, or an
+// AI coaching prompt on its own.
+export interface LearningUnit {
+  id: string
+  title: string
   detail?: string
 }
 
@@ -27,7 +34,7 @@ export interface KnowledgeObject {
   shape: KnowledgeShape
   problem: string // the one problem/question this object answers — never overlaps a sibling
   summary: string
-  points: KnowledgePoint[] // the reusable substance itself
+  learningUnits: LearningUnit[] // the reusable substance itself
   outputFormats: OutputFormat[]
   leadsTo?: string // id of the object this one hands off to next
 }

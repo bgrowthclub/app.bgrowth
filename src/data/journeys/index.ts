@@ -1,5 +1,5 @@
 import type { Journey } from '../../types/journey'
-import { startACleaningBusinessJourney } from './startACleaningBusiness'
+import { startACleaningBusinessJourney } from './cleaning-business'
 
 export const JOURNEYS: Journey[] = [startACleaningBusinessJourney]
 
