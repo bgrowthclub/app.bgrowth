@@ -1,6 +1,6 @@
 import Hero from '../components/sections/Hero'
 import LifeWorlds from '../components/sections/LifeWorlds'
-import FeaturedJourneys from '../components/sections/FeaturedJourneys'
+import StartHere from '../components/sections/StartHere'
 import Knowledge from '../components/sections/Knowledge'
 import AboutStory from '../components/sections/AboutStory'
 
@@ -9,7 +9,7 @@ export default function HomePage() {
     <>
       <Hero />
       <LifeWorlds />
-      <FeaturedJourneys />
+      <StartHere />
       <Knowledge />
       <AboutStory />
     </>
