@@ -251,6 +251,23 @@ work from `src/`.
 
 ## 6. Component Rules
 
+**Component Evolution Rule** — before creating a new component, work through
+this in order:
+
+1. Can an existing component be reused with no modification at all?
+2. If not, can it be extended without affecting the other pages/contexts
+   that already use it?
+3. Would that extension introduce context-specific conditionals (a `variant`
+   prop, an `if (mode === ...)` branch, etc.) serving an unrelated context?
+
+If the answer to (3) is yes, stop — create a new sibling component instead.
+Never grow a shared, reusable component into a "Swiss Army knife" carrying
+variants for unrelated contexts (`BusinessSystemCard` vs. `OwnedSystemCard`
+vs. `WorkspaceCoverCard` are exactly this: siblings, not one component with
+three modes). Favor several small, specialized sibling components over one
+increasingly complex shared one — a sibling only costs a new file; a bad
+extension costs every existing caller.
+
 - **`ui/`** components must stay business-agnostic (and Growth-Category-
   agnostic). If a `ui/` component starts importing from `types/system.ts`,
   it belongs in `systems/` instead.
@@ -435,7 +452,9 @@ work from `src/`.
 
 ## 12. Reuse Policy
 
-Before creating anything new, check for an existing one:
+Before creating anything new, check for an existing one — and run the
+Component Evolution Rule's three-question test (§6) before extending
+whatever you find:
 
 - New card/grid layout → check `src/components/ui/` and
   `src/components/systems/` first.
