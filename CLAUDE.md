@@ -179,6 +179,16 @@ real provider would eventually replace the mock, and §9 for Commerce.
    just because `/platform` is convenient to add to — confirm which of
    the ten products actually owns it. And a new Growth Category is new
    *data*, never a new Runtime, page pipeline, or component tree (see §8).
+7. **Engineering exists to preserve product intent, not the other way
+   around.** Before implementing anything, ask what product decision the
+   implementation is trying to preserve. When engineering and product pull
+   in different directions, product wins:
+   - Cleaner code that weakens the product experience → preserve the
+     product experience, not the cleanliness.
+   - Prettier UI that weakens usability → preserve usability, not the
+     visual polish.
+   - Simpler engineering that changes previously-approved product
+     behavior → don't make that trade silently. Stop and ask first.
 
 ## 5. Folder Organization
 
