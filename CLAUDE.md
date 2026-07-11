@@ -461,6 +461,20 @@ If something truly doesn't exist, build the smallest addition that fits the
 existing pattern, and prefer extending an existing file over creating a new
 one when the addition is small and closely related.
 
+**Never delete an existing component on your own initiative.** This applies
+even when a change makes a component fully unused (no remaining imports) —
+confirming zero references does not by itself authorize deletion. Instead:
+
+- Leave the file in the repository.
+- In your summary, name the component and explain why it became unused
+  (e.g. "superseded by X, no remaining imports").
+- Recommend removal if it genuinely looks safe to remove, but don't act on
+  that recommendation yourself.
+- Wait for explicit approval before deleting it in a follow-up change.
+
+This rule applies to every future implementation, not just the task that
+prompted it.
+
 ## 13. Build Requirements
 
 - `npm run build` (`tsc && vite build`) must pass with zero errors before
@@ -601,6 +615,10 @@ apply to it exactly as they would to a real provider integration:
 
 ## 18. Things Claude Should NEVER Do
 
+- Never delete an existing component on your own initiative, even one that
+  becomes fully unused as a side effect of a change — leave it, explain why
+  it's unused, recommend removal if appropriate, and wait for explicit
+  approval before deleting it (see §12).
 - Never create a duplicate Business/Growth System data model or a second
   catalog array — extend `src/types/system.ts` and `src/data/systems.ts`.
 - Never create a category-specific Runtime, page pipeline, or component
