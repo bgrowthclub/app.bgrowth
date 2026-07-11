@@ -10,6 +10,58 @@ CLAUDE.md.
 
 ---
 
+## Brand Constitution
+
+The compressed, quotable form of everything below — Mission, Vision, and
+Business Philosophy expand on this; nothing here should ever contradict
+them.
+
+**Brand Purpose**
+
+BGrowth exists to help people turn ambition into action. We do not sell
+software. We do not sell courses. We do not sell templates. We help people
+build something better. (This is brand positioning, not a technical
+constraint — Commerce's `ProductType` still models real content shapes
+like `Course`/`Template` internally, per ARCHITECTURE.md §9. It's how
+BGrowth talks about itself, not a restriction on what a Growth System is
+made of.)
+
+**Brand Philosophy**
+
+- Identity before product.
+- Transformation before features.
+- Execution before consumption.
+- Structure before motivation.
+
+**Product Principles**
+
+- Every feature must reduce friction.
+- Every page must reinforce the ecosystem.
+- Every solution must solve a real problem.
+- Never add complexity without value.
+- Builders are our audience.
+
+**Decision Rule**
+
+When two solutions are technically valid, choose the one that better
+preserves the user experience. Product intent always wins. (This is the
+brand-facing statement of the same rule CLAUDE.md §4 principle 7 enforces
+on the engineering side — read that one for how it applies to actual
+implementation trade-offs.)
+
+**A naming note, flagged rather than silently applied:** "Builders" above
+is brand voice — the aspirational way BGrowth talks about who it serves in
+marketing language, in the same spirit as "Go Beyond." It does not replace
+**member**, which stays the actual account/product noun already wired
+through the codebase (`User`, `MOCK_MEMBER_NAME`, Identity's `useIdentity()`,
+"My Business Systems," etc. — see CLAUDE.md §17). If "Builder" is meant to
+become the literal product-facing noun everywhere member appears today,
+that's a deliberate, standalone renaming task like the "Community"→"Club"
+one already flagged in CLAUDE.md §2 — not something to infer and apply
+silently from this document alone.
+
+---
+
 ## Mission
 
 Most people who want to grow — in their business, their career, their
