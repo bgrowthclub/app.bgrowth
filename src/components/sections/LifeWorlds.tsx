@@ -11,15 +11,30 @@ export default function LifeWorlds() {
   return (
     <section id="life-worlds" className="section-py relative">
       <div className="container-px mx-auto max-w-page">
+        {/* WORKSPACE™ — the ecosystem title. Deliberately heavier than a
+            standard SectionHeader eyebrow (bigger, bolder, pill-badged,
+            like the Hero's own "GO BEYOND." mark) since this is the name
+            of the product itself, not just a section label. */}
+        <motion.div
+          variants={fadeUp}
+          initial="hidden"
+          whileInView="show"
+          viewport={viewportOnce}
+          className="mb-5 flex justify-center"
+        >
+          <span className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-bg-soft px-5 py-2 text-sm font-bold uppercase tracking-[0.14em] text-primary shadow-softer">
+            Workspace™
+          </span>
+        </motion.div>
+
         <SectionHeader
-          eyebrow="Workspace™"
           title="What do you want to achieve next?"
           description="Choose an interactive workspace designed to help you organize, learn, plan and accomplish meaningful goals."
           align="center"
           className="mb-14"
         />
 
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6">
           {WORKSPACE_CATEGORIES.map((category, i) => (
             <IndustryCard
               key={category.slug}
@@ -40,7 +55,7 @@ export default function LifeWorlds() {
           initial="hidden"
           whileInView="show"
           viewport={viewportOnce}
-          className="mt-14"
+          className="mt-10 sm:mt-14"
         >
           <Card padding="lg" className="mx-auto max-w-3xl text-center">
             <h3 className="font-display text-2xl font-bold tracking-tight text-navy md:text-3xl">

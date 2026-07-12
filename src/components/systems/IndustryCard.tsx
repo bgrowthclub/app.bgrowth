@@ -38,10 +38,10 @@ export default function IndustryCard({
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: '-40px' }}
       transition={{ delay: index * 0.05, duration: 0.5 }}
-      whileHover={{ y: -4 }}
-      className="group flex flex-col gap-4 rounded-xl2 border border-navy/[0.06] bg-white p-5 shadow-softer transition-all duration-300 hover:border-primary/20 hover:shadow-soft"
+      whileHover={{ y: -5 }}
+      className="group flex flex-col gap-4 rounded-xl2 border border-navy/[0.06] bg-white p-5 shadow-softer transition-all duration-300 ease-out hover:border-primary/25 hover:shadow-glow"
     >
-      <div className="grid h-11 w-11 place-items-center rounded-xl bg-bg-soft text-primary transition-colors duration-300 group-hover:bg-grad-primary group-hover:text-white">
+      <div className="grid h-11 w-11 place-items-center rounded-xl bg-bg-soft text-primary transition-all duration-300 group-hover:scale-105 group-hover:bg-grad-primary group-hover:text-white">
         <Icon size={20} strokeWidth={2} />
       </div>
       <div>
