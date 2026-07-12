@@ -47,7 +47,7 @@ export default function Footer() {
               </span>
             </Link>
             <p className="mt-4 max-w-xs text-[13.5px] leading-relaxed text-navy/45">
-              Business Systems that help service business owners launch, organize, and grow with confidence.
+              Interactive Workspaces™ that help you organize, learn, plan and accomplish meaningful goals.
             </p>
             <div className="mt-5 flex gap-2">
               {SOCIALS.map((s) => (
