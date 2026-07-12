@@ -18,3 +18,10 @@ export function buildCheckoutSelection(system: BusinessSystem, workspaceId: stri
     workspaceId,
   }
 }
+
+// Shared narrowing guard for router navigation `state` — used by both
+// CheckoutPage and CheckoutSuccessPage so a direct/bookmarked visit with no
+// (or malformed) state is handled identically on every step of the flow.
+export function isCheckoutSelection(value: unknown): value is CheckoutSelection {
+  return !!value && typeof value === 'object' && 'productId' in value && 'productSlug' in value
+}
