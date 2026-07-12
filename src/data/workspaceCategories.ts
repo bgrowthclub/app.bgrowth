@@ -22,10 +22,10 @@ export interface WorkspaceCategory {
 const publishedCount = SYSTEMS.filter((s) => s.status === 'published').length
 
 export const WORKSPACE_CATEGORIES: WorkspaceCategory[] = [
-  { slug: 'business', icon: Briefcase, name: 'Business', description: 'Start, launch, and run something of your own.', count: publishedCount },
-  { slug: 'career', icon: Building2, name: 'Career', description: 'Grow into the profession you actually want.', count: 0 },
-  { slug: 'finance', icon: PiggyBank, name: 'Finance', description: 'Take control of money, budgeting, and the future.', count: 0 },
-  { slug: 'health', icon: HeartPulse, name: 'Health', description: 'Build habits that make you stronger, longer.', count: 0 },
-  { slug: 'learning', icon: GraduationCap, name: 'Learning', description: 'Pick up the skills and languages that open doors.', count: 0 },
-  { slug: 'lifestyle', icon: HomeIcon, name: 'Lifestyle', description: 'Shape a life and a home you want to come back to.', count: 0 },
+  { slug: 'business', icon: Briefcase, name: 'Business', description: 'Launch, organize and grow your next business with interactive workspaces.', count: publishedCount },
+  { slug: 'career', icon: Building2, name: 'Career', description: 'Plan your career, build new skills and move toward better opportunities.', count: 0 },
+  { slug: 'finance', icon: PiggyBank, name: 'Finance', description: 'Take control of your money, budgeting and long-term financial goals.', count: 0 },
+  { slug: 'health', icon: HeartPulse, name: 'Health', description: 'Create healthier habits, routines and wellness plans that last.', count: 0 },
+  { slug: 'learning', icon: GraduationCap, name: 'Learning', description: 'Learn new skills, languages and knowledge through guided workspaces.', count: 0 },
+  { slug: 'lifestyle', icon: HomeIcon, name: 'Lifestyle', description: 'Organize your home, routines and personal projects with confidence.', count: 0 },
 ]

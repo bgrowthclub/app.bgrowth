@@ -91,7 +91,7 @@ export default function AboutPage() {
       </section>
 
       {/* How Our Workspaces Work */}
-      <section className="section-py bg-bg-soft">
+      <section id="how-it-works" className="section-py bg-bg-soft">
         <div className="container-px mx-auto max-w-page">
           <SectionHeader
             eyebrow="How It Works"

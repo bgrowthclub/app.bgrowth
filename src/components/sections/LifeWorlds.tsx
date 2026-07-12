@@ -31,7 +31,7 @@ export default function LifeWorlds() {
           title="What do you want to achieve next?"
           description="Choose an interactive workspace designed to help you organize, learn, plan and accomplish meaningful goals."
           align="center"
-          className="mb-14"
+          className="mb-11"
         />
 
         <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6">
@@ -45,6 +45,7 @@ export default function LifeWorlds() {
               index={i}
               count={category.count}
               ctaLabel={category.count > 0 ? 'Explore' : 'Preview'}
+              unitLabel="Workspace"
               hideEmptyStatus
             />
           ))}
@@ -59,15 +60,18 @@ export default function LifeWorlds() {
         >
           <Card padding="lg" className="mx-auto max-w-3xl text-center">
             <h3 className="font-display text-2xl font-bold tracking-tight text-navy md:text-3xl">
-              Ready to achieve something new?
+              Ready to achieve something meaningful?
             </h3>
             <p className="mx-auto mt-3 max-w-xl text-[15px] leading-relaxed text-navy/55">
-              Discover interactive workspaces designed to help you take action, stay organized
-              and move confidently toward your goals.
+              Discover interactive Workspaces designed to help you organize, learn, plan and
+              accomplish your goals, one step at a time.
             </p>
-            <div className="mt-7 flex justify-center">
+            <div className="mt-7 flex flex-wrap items-center justify-center gap-3">
               <Button to="/systems" icon={<ArrowRight size={16} />}>
                 Explore All Workspaces
+              </Button>
+              <Button to="/about#how-it-works" variant="secondary">
+                How Workspaces Work
               </Button>
             </div>
           </Card>
