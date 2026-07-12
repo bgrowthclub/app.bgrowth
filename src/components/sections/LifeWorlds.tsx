@@ -1,29 +1,11 @@
 import { motion } from 'framer-motion'
-import { Building2, Briefcase, PiggyBank, HeartPulse, GraduationCap, Home as HomeIcon, ArrowRight } from 'lucide-react'
+import { ArrowRight } from 'lucide-react'
 import SectionHeader from '../ui/SectionHeader'
 import IndustryCard from '../systems/IndustryCard'
 import Card from '../ui/Card'
 import Button from '../ui/Button'
-import { SYSTEMS } from '../../data/systems'
+import { WORKSPACE_CATEGORIES } from '../../data/workspaceCategories'
 import { fadeUp, viewportOnce } from '../../lib/motion'
-
-// Six Life Worlds for the homepage narrative — a curated, homepage-only
-// presentation of BGrowth's Growth Categories (see src/types/growth.ts and
-// PRODUCT_CATALOG.md), not a new data model. Only Business & Entrepreneurship
-// has real catalog data today, so it's the only World that links straight
-// into /systems — the rest link to an honest per-category preview page
-// (see data/categoryPreviews.ts, pages/CategoryPreviewPage.tsx) instead of
-// claiming a catalog that doesn't exist yet.
-const publishedCount = SYSTEMS.filter((s) => s.status === 'published').length
-
-const LIFE_WORLDS = [
-  { slug: 'business', icon: Briefcase, name: 'Business', desc: 'Start, launch, and run something of your own.', count: publishedCount },
-  { slug: 'career', icon: Building2, name: 'Career', desc: 'Grow into the profession you actually want.', count: 0 },
-  { slug: 'finance', icon: PiggyBank, name: 'Finance', desc: 'Take control of money, budgeting, and the future.', count: 0 },
-  { slug: 'health', icon: HeartPulse, name: 'Health', desc: 'Build habits that make you stronger, longer.', count: 0 },
-  { slug: 'learning', icon: GraduationCap, name: 'Learning', desc: 'Pick up the skills and languages that open doors.', count: 0 },
-  { slug: 'lifestyle', icon: HomeIcon, name: 'Lifestyle', desc: 'Shape a life and a home you want to come back to.', count: 0 },
-]
 
 export default function LifeWorlds() {
   return (
@@ -38,16 +20,16 @@ export default function LifeWorlds() {
         />
 
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {LIFE_WORLDS.map((world, i) => (
+          {WORKSPACE_CATEGORIES.map((category, i) => (
             <IndustryCard
-              key={world.name}
-              icon={world.icon}
-              name={world.name}
-              description={world.desc}
-              to={world.count > 0 ? '/systems' : `/preview/${world.slug}`}
+              key={category.slug}
+              icon={category.icon}
+              name={category.name}
+              description={category.description}
+              to={category.count > 0 ? '/systems' : `/preview/${category.slug}`}
               index={i}
-              count={world.count}
-              ctaLabel={world.count > 0 ? 'Explore' : 'Preview'}
+              count={category.count}
+              ctaLabel={category.count > 0 ? 'Explore' : 'Preview'}
               hideEmptyStatus
             />
           ))}
