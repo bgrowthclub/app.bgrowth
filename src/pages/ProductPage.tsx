@@ -5,6 +5,7 @@ import Badge from '../components/ui/Badge'
 import SectionHeader from '../components/ui/SectionHeader'
 import FeatureGrid from '../components/ui/FeatureGrid'
 import PricingCard from '../components/ui/PricingCard'
+import PurchaseCard from '../components/ui/PurchaseCard'
 import ResourceCard from '../components/systems/ResourceCard'
 import BusinessModuleGrid from '../components/runtime/BusinessModuleGrid'
 import ReviewPanel from '../components/runtime/ReviewPanel'
@@ -12,6 +13,9 @@ import FAQPanel from '../components/runtime/FAQPanel'
 import RelatedSystemsPanel from '../components/runtime/RelatedSystemsPanel'
 import { getSystemBySlug } from '../data/systems'
 import { DEFAULT_WORKSPACE_SLUG } from '../data/workspaceCategories'
+import { buildCheckoutSelection } from '../lib/checkout'
+
+const MODULES_PREVIEW_ID = 'modules-included'
 
 export default function ProductPage() {
   const { slug } = useParams<{ slug: string }>()
@@ -21,6 +25,7 @@ export default function ProductPage() {
 
   const previewModule = system.modules[0]
   const previewSection = previewModule.content[0]
+  const selection = buildCheckoutSelection(system, DEFAULT_WORKSPACE_SLUG)
 
   return (
     <div className="pt-32 md:pt-40">
@@ -50,46 +55,54 @@ export default function ProductPage() {
             </div>
           </div>
 
-          {/* Interactive preview image (not a static PDF preview — a working software preview) */}
-          <motion.div
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, ease: 'easeOut' }}
-            className="rounded-xl3 border border-navy/[0.06] bg-white p-2 shadow-glow"
-          >
-            <div className="flex items-center gap-1.5 px-4 py-3">
-              <span className="h-2.5 w-2.5 rounded-full bg-navy/10" />
-              <span className="h-2.5 w-2.5 rounded-full bg-navy/10" />
-              <span className="h-2.5 w-2.5 rounded-full bg-navy/10" />
-              <span className="ml-2 text-[11px] font-semibold text-navy/30">{previewModule.title}</span>
-            </div>
-            <div className="rounded-xl2 border border-navy/[0.05] bg-bg-soft p-5">
-              <p className="text-[11px] font-semibold uppercase tracking-wide text-primary/70">
-                {previewSection.title}
-              </p>
-              <div className="mt-4 space-y-2.5">
-                {previewSection.fields.slice(0, 4).map((field, i) => (
-                  <div key={field.id} className="flex items-center gap-2.5 rounded-lg bg-white px-3.5 py-3 shadow-softer">
-                    {field.type === 'checkbox' ? (
-                      i === 0 ? (
-                        <CheckSquare size={16} className="shrink-0 text-primary" />
-                      ) : (
-                        <Square size={16} className="shrink-0 text-navy/20" />
-                      )
-                    ) : (
-                      <span className="h-3.5 w-3.5 shrink-0 rounded-md border border-navy/15" />
-                    )}
-                    <span className="text-[13px] text-navy/70">{field.label}</span>
-                  </div>
-                ))}
+          <div className="space-y-6">
+            {/* Interactive preview image (not a static PDF preview — a working software preview) */}
+            <motion.div
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.7, ease: 'easeOut' }}
+              className="rounded-xl3 border border-navy/[0.06] bg-white p-2 shadow-glow"
+            >
+              <div className="flex items-center gap-1.5 px-4 py-3">
+                <span className="h-2.5 w-2.5 rounded-full bg-navy/10" />
+                <span className="h-2.5 w-2.5 rounded-full bg-navy/10" />
+                <span className="h-2.5 w-2.5 rounded-full bg-navy/10" />
+                <span className="ml-2 text-[11px] font-semibold text-navy/30">{previewModule.title}</span>
               </div>
-            </div>
-          </motion.div>
+              <div className="rounded-xl2 border border-navy/[0.05] bg-bg-soft p-5">
+                <p className="text-[11px] font-semibold uppercase tracking-wide text-primary/70">
+                  {previewSection.title}
+                </p>
+                <div className="mt-4 space-y-2.5">
+                  {previewSection.fields.slice(0, 4).map((field, i) => (
+                    <div key={field.id} className="flex items-center gap-2.5 rounded-lg bg-white px-3.5 py-3 shadow-softer">
+                      {field.type === 'checkbox' ? (
+                        i === 0 ? (
+                          <CheckSquare size={16} className="shrink-0 text-primary" />
+                        ) : (
+                          <Square size={16} className="shrink-0 text-navy/20" />
+                        )
+                      ) : (
+                        <span className="h-3.5 w-3.5 shrink-0 rounded-md border border-navy/15" />
+                      )}
+                      <span className="text-[13px] text-navy/70">{field.label}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </motion.div>
+
+            <PurchaseCard
+              selection={selection}
+              previewTargetId={MODULES_PREVIEW_ID}
+              className="lg:sticky lg:top-[100px]"
+            />
+          </div>
         </div>
       </section>
 
       {/* Modules Included — informational preview, not linked (buying unlocks Open Module) */}
-      <section className="section-py bg-bg-soft">
+      <section id={MODULES_PREVIEW_ID} className="section-py bg-bg-soft">
         <div className="container-px mx-auto max-w-page">
           <SectionHeader eyebrow="Modules Included" title="What's inside this system" className="mb-10" />
           <BusinessModuleGrid system={system} actionable={false} />
@@ -167,16 +180,7 @@ export default function ProductPage() {
       {/* Purchase */}
       <section className="pb-28 pt-20">
         <div className="container-px mx-auto max-w-narrow">
-          <PricingCard
-            productId={system.id}
-            productSlug={system.slug}
-            name={system.title}
-            shortDescription={system.shortDescription}
-            price={system.price}
-            memberPrice={system.memberPrice}
-            category={system.category}
-            workspaceId={DEFAULT_WORKSPACE_SLUG}
-          />
+          <PricingCard selection={selection} />
         </div>
       </section>
     </div>

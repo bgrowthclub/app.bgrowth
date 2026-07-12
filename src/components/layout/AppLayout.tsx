@@ -17,7 +17,12 @@ export default function AppLayout() {
   const mode = isMemberRoute(pathname) ? 'member' : 'public'
 
   return (
-    <div className="relative min-h-screen overflow-x-hidden bg-bg">
+    // overflow-x-clip (not overflow-x-hidden): identical horizontal-bleed
+    // clipping, but doesn't force the paired overflow-y axis to 'auto' the
+    // way `hidden` does per the CSS Overflow spec — that pairing quirk is
+    // what breaks `position: sticky` for any descendant (e.g. ProductPage's
+    // sticky PurchaseCard) anywhere under this root.
+    <div className="relative min-h-screen overflow-x-clip bg-bg">
       <ScrollToTop />
       <Navbar mode={mode} />
       <main>
