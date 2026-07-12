@@ -13,9 +13,24 @@ interface Props {
   index?: number
   count?: number // when provided, shows "N Business Systems" + a CTA row (used on the Industries page)
   ctaLabel?: string
+  // When count is 0, skip the "Coming soon" status text and show only the
+  // CTA (used by LifeWorlds, where every card gets a uniform right-aligned
+  // "Explore →"/"Preview →" instead of a two-sided status+CTA row).
+  // Defaults to false so IndustriesPage's existing cards are unaffected.
+  hideEmptyStatus?: boolean
 }
 
-export default function IndustryCard({ icon: Icon, name, description, to, index = 0, count, ctaLabel }: Props) {
+export default function IndustryCard({
+  icon: Icon,
+  name,
+  description,
+  to,
+  index = 0,
+  count,
+  ctaLabel,
+  hideEmptyStatus = false,
+}: Props) {
+  const showStatus = count !== undefined && !(count === 0 && hideEmptyStatus)
   return (
     <MotionLink
       to={to}
@@ -34,11 +49,17 @@ export default function IndustryCard({ icon: Icon, name, description, to, index 
         <p className="mt-1 text-[13px] text-navy/45">{description}</p>
       </div>
 
-      {count !== undefined && (
-        <div className="mt-1 flex items-center justify-between border-t border-navy/[0.06] pt-3">
-          <span className="text-[11.5px] font-medium text-navy/35">
-            {count > 0 ? `${count} Business System${count === 1 ? '' : 's'}` : 'Coming soon'}
-          </span>
+      {(showStatus || ctaLabel) && (
+        <div
+          className={`mt-1 flex items-center border-t border-navy/[0.06] pt-3 ${
+            showStatus ? 'justify-between' : 'justify-end'
+          }`}
+        >
+          {showStatus && (
+            <span className="text-[11.5px] font-medium text-navy/35">
+              {count! > 0 ? `${count} Business System${count === 1 ? '' : 's'}` : 'Coming soon'}
+            </span>
+          )}
           {ctaLabel && (
             <span className="inline-flex items-center gap-1 text-[12px] font-semibold text-primary">
               {ctaLabel}

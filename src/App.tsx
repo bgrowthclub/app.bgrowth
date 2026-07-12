@@ -7,6 +7,7 @@ import MySystems from './pages/MySystems'
 import SystemOverviewPage from './pages/SystemOverviewPage'
 import SystemModulePage from './pages/SystemModulePage'
 import IndustriesPage from './pages/IndustriesPage'
+import CategoryPreviewPage from './pages/CategoryPreviewPage'
 import ResourcesPage from './pages/ResourcesPage'
 import PricingPage from './pages/PricingPage'
 import AboutPage from './pages/AboutPage'
@@ -41,6 +42,7 @@ export default function App() {
         <Route path="/system/:slug" element={<SystemOverviewPage />} />
         <Route path="/system/:slug/module/:moduleSlug" element={<SystemModulePage />} />
         <Route path="/industries" element={<IndustriesPage />} />
+        <Route path="/preview/:category" element={<CategoryPreviewPage />} />
         <Route path="/resources" element={<ResourcesPage />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/about" element={<AboutPage />} />
