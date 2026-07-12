@@ -3,6 +3,7 @@ import AppLayout from './components/layout/AppLayout'
 import HomePage from './pages/HomePage'
 import BrowseSystems from './pages/BrowseSystems'
 import ProductPage from './pages/ProductPage'
+import CheckoutPage from './pages/CheckoutPage'
 import MySystems from './pages/MySystems'
 import SystemOverviewPage from './pages/SystemOverviewPage'
 import SystemModulePage from './pages/SystemModulePage'
@@ -38,6 +39,7 @@ export default function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/systems" element={<BrowseSystems />} />
         <Route path="/product/:slug" element={<ProductPage />} />
+        <Route path="/checkout" element={<CheckoutPage />} />
         <Route path="/my-systems" element={<MySystems />} />
         <Route path="/system/:slug" element={<SystemOverviewPage />} />
         <Route path="/system/:slug/module/:moduleSlug" element={<SystemModulePage />} />

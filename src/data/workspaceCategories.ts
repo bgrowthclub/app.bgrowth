@@ -29,3 +29,10 @@ export const WORKSPACE_CATEGORIES: WorkspaceCategory[] = [
   { slug: 'learning', icon: GraduationCap, name: 'Learning', description: 'Learn new skills, languages and knowledge through guided workspaces.', count: 0 },
   { slug: 'lifestyle', icon: HomeIcon, name: 'Lifestyle', description: 'Organize your home, routines and personal projects with confidence.', count: 0 },
 ]
+
+// Every system in today's catalog belongs to the Business & Entrepreneurship
+// Workspace — the only live Growth Category (see CLAUDE.md §2). Referenced
+// wherever a system needs to declare its Workspace (e.g. ProductPage's
+// checkout hand-off) until BusinessSystem gains its own workspace/category
+// field.
+export const DEFAULT_WORKSPACE_SLUG = 'business'

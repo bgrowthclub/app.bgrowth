@@ -11,6 +11,7 @@ import ReviewPanel from '../components/runtime/ReviewPanel'
 import FAQPanel from '../components/runtime/FAQPanel'
 import RelatedSystemsPanel from '../components/runtime/RelatedSystemsPanel'
 import { getSystemBySlug } from '../data/systems'
+import { DEFAULT_WORKSPACE_SLUG } from '../data/workspaceCategories'
 
 export default function ProductPage() {
   const { slug } = useParams<{ slug: string }>()
@@ -167,10 +168,14 @@ export default function ProductPage() {
       <section className="pb-28 pt-20">
         <div className="container-px mx-auto max-w-narrow">
           <PricingCard
+            productId={system.id}
+            productSlug={system.slug}
             name={system.title}
+            shortDescription={system.shortDescription}
             price={system.price}
             memberPrice={system.memberPrice}
-            checkoutUrl={system.checkoutUrl}
+            category={system.category}
+            workspaceId={DEFAULT_WORKSPACE_SLUG}
           />
         </div>
       </section>
