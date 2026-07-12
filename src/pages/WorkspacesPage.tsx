@@ -11,11 +11,8 @@ import { fadeUp, viewportOnce } from '../lib/motion'
 
 // The standalone entry point into the Workspace™ ecosystem — same content
 // and same WORKSPACE_CATEGORIES source as the homepage's Workspace section
-// (components/sections/LifeWorlds.tsx). No longer an industry/profession
-// directory; kept at the existing /industries route and file name since
-// renaming either wasn't part of this task — see the naming note in
-// CLAUDE.md §2 for how this kind of gap gets tracked.
-export default function IndustriesPage() {
+// (components/sections/LifeWorlds.tsx).
+export default function WorkspacesPage() {
   const [query, setQuery] = useState('')
 
   const results = useMemo(() => {
@@ -33,7 +30,7 @@ export default function IndustriesPage() {
         title="Workspace™"
         description="Choose an interactive workspace designed to help you organize, learn, plan and accomplish meaningful goals."
         keywords={['bgrowth workspace', 'growth systems', 'business workspace', 'personal growth']}
-        path="/industries"
+        path="/workspaces"
       />
 
       {/* Hero */}

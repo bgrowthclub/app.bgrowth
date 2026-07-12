@@ -6,7 +6,7 @@ import { SYSTEMS } from './systems'
 // presentation of BGrowth's Growth Categories (see src/types/growth.ts and
 // PRODUCT_CATALOG.md), not a new data model. Single source of truth for
 // both the homepage's Workspace section (components/sections/LifeWorlds.tsx)
-// and the standalone Workspace entry page (pages/IndustriesPage.tsx) — never
+// and the standalone Workspace entry page (pages/WorkspacesPage.tsx) — never
 // duplicate this list. Only Business & Entrepreneurship has a real catalog
 // today, so it's the only category that links straight into /systems; the
 // rest link to an honest per-category preview page instead of claiming a

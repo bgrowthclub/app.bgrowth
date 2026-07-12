@@ -16,7 +16,7 @@ interface NavItem {
 // "Knowledge" are same-page anchors on the homepage (see ScrollToTop.tsx,
 // which already handles hash-based scrolling into the Life Worlds and
 // Knowledge sections); "About" keeps linking to the existing standalone
-// /about page. Business Systems/Industries/Resources/Pricing remain fully
+// /about page. Business Systems/Workspace/Resources/Pricing remain fully
 // reachable via the Footer and in-section CTAs, same as before.
 const PUBLIC_LINKS: NavItem[] = [
   { label: 'Home', to: '/' },

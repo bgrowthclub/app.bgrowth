@@ -11,12 +11,12 @@ interface Props {
   description: string
   to: string
   index?: number
-  count?: number // when provided, shows "N Business Systems" + a CTA row (used on the Industries page)
+  count?: number // when provided, shows "N Business Systems" + a CTA row (used on the Workspace page)
   ctaLabel?: string
   // When count is 0, skip the "Coming soon" status text and show only the
   // CTA (used by LifeWorlds, where every card gets a uniform right-aligned
   // "Explore →"/"Preview →" instead of a two-sided status+CTA row).
-  // Defaults to false so IndustriesPage's existing cards are unaffected.
+  // Defaults to false so WorkspacesPage's existing cards are unaffected.
   hideEmptyStatus?: boolean
 }
 
