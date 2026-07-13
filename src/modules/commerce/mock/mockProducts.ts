@@ -173,11 +173,34 @@ export function getMockProductsByType(type: Product['type']) {
 
 // The only ProductRepository implementation today — see
 // services/ProductRepository.ts for what replaces this once Studio
-// publishes real Product JSON.
+// publishes real Product JSON through a Remote Product Source. There is no
+// real cost difference here between "index" and "full body" (both just
+// read the same in-memory array), but the shape matches what a remote
+// implementation would do: derive the lightweight index from the full
+// records, then look up one full record by id on demand.
 export function createLocalProductRepository(): ProductRepository {
   return {
-    async loadAll() {
-      return MOCK_PRODUCTS
+    async loadIndex() {
+      return {
+        generatedAt: new Date().toISOString(),
+        products: MOCK_PRODUCTS.map(
+          ({ id, slug, title, description, type, category, status, featured, tags }) => ({
+            id,
+            slug,
+            title,
+            description,
+            type,
+            category,
+            status,
+            featured,
+            tags,
+          }),
+        ),
+      }
+    },
+
+    async loadProduct(id) {
+      return MOCK_PRODUCTS.find((p) => p.id === id)
     },
   }
 }

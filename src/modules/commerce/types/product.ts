@@ -78,3 +78,23 @@ export interface Product {
   // adding the field properly once its shape is known.
   futureFields?: Record<string, unknown>
 }
+
+// One row of a published product index — see ProductIndex below. Just
+// enough of Product to filter, search, and list without loading that
+// product's full JSON body; derived from Product itself (Pick, not a
+// re-typed copy) so the two can never drift apart.
+export type ProductIndexEntry = Pick<
+  Product,
+  'id' | 'slug' | 'title' | 'description' | 'type' | 'category' | 'status' | 'featured' | 'tags'
+>
+
+// The published manifest a Remote Product Source exposes — one lightweight
+// document listing every available product. The Runtime loads this first;
+// ProductService then loads a product's full JSON only for entries that
+// actually match a filter/search (see services/ProductRepository.ts and
+// services/ProductService.ts). Not implemented yet — see ProductRepository
+// for where this plugs in.
+export interface ProductIndex {
+  generatedAt: string // ISO date string — when this index was published
+  products: ProductIndexEntry[]
+}
