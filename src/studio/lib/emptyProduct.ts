@@ -1,11 +1,13 @@
 import type { Product } from '../../modules/commerce/types/product'
+import { createEmptyProductAssets } from '../../modules/commerce/types/assets'
+import { createInitialVersioning } from '../../modules/commerce/types/version'
 
 let draftCounter = 0
 
 // A blank Product draft for the "+ New Product" flow — deliberately
 // GrowthSystem-typed by default (today's only real product type) but every
 // field is editable, including `type` itself, since the Product Engine
-// must support every ProductType, not just Workspace.
+// must support every ProductType, not just a Workspace-backed one.
 export function createEmptyProductDraft(): Product {
   draftCounter += 1
   return {
@@ -18,6 +20,7 @@ export function createEmptyProductDraft(): Product {
     currency: 'USD',
     visibility: 'paid',
     type: 'GrowthSystem',
+    assets: createEmptyProductAssets(),
     featured: false,
     status: 'draft',
     benefits: [],
@@ -28,5 +31,6 @@ export function createEmptyProductDraft(): Product {
     aiEnabled: false,
     partnerOffers: [],
     rewardPoints: 0,
+    versioning: createInitialVersioning(),
   }
 }

@@ -1,4 +1,5 @@
 import type { Product } from '../types/product'
+import type { ProductVersion, ProductVersioning } from '../types/version'
 import { MOCK_PRODUCTS } from '../mock/mockProducts'
 
 // The write counterpart to ProductService (read-only, used by the
@@ -26,8 +27,14 @@ export function createProductAdminService(): ProductAdminService {
   }
 
   return {
+    // A fresh array copy every call — MOCK_PRODUCTS itself is never
+    // reassigned, only mutated in place, so returning it directly would
+    // hand back the exact same array reference on every call. Studio's
+    // React state (`setProducts`) bails out of re-rendering when it
+    // receives a reference it already has, which would silently hide
+    // every save/publish/archive from the UI.
     async getAll() {
-      return MOCK_PRODUCTS
+      return [...MOCK_PRODUCTS]
     },
 
     async getById(id) {
@@ -36,7 +43,20 @@ export function createProductAdminService(): ProductAdminService {
 
     async save(product) {
       const now = new Date().toISOString()
-      const saved: Product = { ...product, createdAt: product.createdAt ?? now, updatedAt: now }
+      const existing = MOCK_PRODUCTS.find((p) => p.id === product.id)
+      // Every save bumps the draft version, whether or not the product has
+      // ever been published — see types/version.ts. This never touches
+      // `history`; only publish() appends to it.
+      const versioning: ProductVersioning = {
+        ...(existing?.versioning ?? product.versioning),
+        draftVersion: (existing?.versioning ?? product.versioning).draftVersion + 1,
+      }
+      const saved: Product = {
+        ...product,
+        versioning,
+        createdAt: existing?.createdAt ?? product.createdAt ?? now,
+        updatedAt: now,
+      }
       const index = MOCK_PRODUCTS.findIndex((p) => p.id === product.id)
       if (index >= 0) {
         MOCK_PRODUCTS[index] = saved
@@ -46,18 +66,41 @@ export function createProductAdminService(): ProductAdminService {
       return saved
     },
 
+    // Appends a new ProductVersion snapshot to `history` and moves
+    // `publishedVersion` to point at it — publishing never overwrites a
+    // prior published version in place, so every past published state of
+    // the product stays inspectable (see types/version.ts).
     async publish(id) {
       const product = requireProduct(id)
-      product.status = 'published'
-      product.updatedAt = new Date().toISOString()
-      return product
+      const now = new Date().toISOString()
+      const { versioning, ...snapshot } = product
+      const version = (versioning.history[versioning.history.length - 1]?.version ?? 0) + 1
+      const newVersion: ProductVersion = { version, publishedAt: now, snapshot }
+      // A new object, not an in-place mutation — like save() above, this
+      // keeps the object reference itself changing so React state that
+      // holds a stale reference to the pre-publish product is forced to
+      // re-render instead of silently bailing out.
+      const published: Product = {
+        ...product,
+        status: 'published',
+        updatedAt: now,
+        versioning: {
+          draftVersion: version + 1,
+          publishedVersion: version,
+          history: [...versioning.history, newVersion],
+        },
+      }
+      const index = MOCK_PRODUCTS.findIndex((p) => p.id === id)
+      MOCK_PRODUCTS[index] = published
+      return published
     },
 
     async archive(id) {
       const product = requireProduct(id)
-      product.status = 'archived'
-      product.updatedAt = new Date().toISOString()
-      return product
+      const archived: Product = { ...product, status: 'archived', updatedAt: new Date().toISOString() }
+      const index = MOCK_PRODUCTS.findIndex((p) => p.id === id)
+      MOCK_PRODUCTS[index] = archived
+      return archived
     },
   }
 }

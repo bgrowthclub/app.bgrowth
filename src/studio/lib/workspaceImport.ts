@@ -1,13 +1,12 @@
 import type { BusinessSystem } from '../../types/system'
 import type { Product, ProductDifficulty } from '../../modules/commerce/types/product'
 
-// The one place a selected Workspace's fields are mapped onto a Product
-// draft — read-only on the Workspace side. This never writes back to
-// data/systems.ts; it only snapshots a few fields onto the Product being
-// edited. Called once, when a Workspace is chosen on the Workspace tab;
-// every field it sets becomes a normal, independently-editable Product
-// field afterward ("allow manual override if necessary" — that override
-// is just the General tab's own inputs, no special-cased logic here).
+// Superseded by lib/contentSources/growthSystemSource.ts, which the
+// Product Engine's ContentSourceTab now calls instead — left in place,
+// unused, per CLAUDE.md §12/§18 (never delete a component on your own
+// initiative; recommend removal and wait for approval). Kept compiling
+// against the current Product shape since WorkspaceTab.tsx (also unused,
+// same reason) still references it.
 export function applyWorkspaceToProductDraft(product: Product, system: BusinessSystem): Product {
   return {
     ...product,
@@ -17,7 +16,7 @@ export function applyWorkspaceToProductDraft(product: Product, system: BusinessS
     industry: system.industry,
     difficulty: system.difficulty as ProductDifficulty,
     estimatedTime: system.estimatedTime,
-    thumbnail: system.thumbnail,
+    assets: { ...product.assets, thumbnail: system.thumbnail ?? product.assets.thumbnail },
     source: { type: 'GrowthSystem', id: system.slug },
   }
 }

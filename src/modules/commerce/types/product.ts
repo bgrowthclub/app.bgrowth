@@ -1,5 +1,8 @@
 import type { GrowthCategoryId } from '../../../types/growth'
 import type { CurrencyCode } from './pricing'
+import type { ContentSourceRef } from './contentSource'
+import type { ProductAssets } from './assets'
+import type { ProductVersioning } from './version'
 
 // Every kind of sellable thing across the whole BGrowth ecosystem — not
 // just Business Systems. Support requested by Milestone 5.1. `Planner` and
@@ -48,16 +51,6 @@ export interface ProductSeo {
   keywords?: string[]
 }
 
-// Points a Product back at the real content it sells, without duplicating
-// that content's data. A `GrowthSystem` Product, for example, points at a
-// slug in data/systems.ts — Commerce never forks or re-authors catalog
-// content; it only describes how something already defined elsewhere is
-// sold. See ARCHITECTURE.md's Commerce Architecture section.
-export interface ProductSourceRef {
-  type: 'GrowthSystem' | 'Course' | 'MarketplaceItem' | 'MembershipPlan' | 'Bundle' | 'External'
-  id: string
-}
-
 export interface ProductBenefit {
   title: string
   description: string
@@ -81,11 +74,11 @@ export interface Product {
   category: GrowthCategoryId
   // Marketing taxonomy, mirroring BusinessSystem.industry (e.g. "Legal") —
   // optional since not every ProductType has one (a Membership doesn't).
-  // Auto-filled from the selected Workspace by the Product Engine, then
-  // editable like every other General-tab field.
+  // Auto-filled from the selected Content Source by the Product Engine,
+  // then editable like every other General-tab field.
   industry?: string
   language?: string // BCP-47-ish tag (e.g. "en") — for a future multi-language catalog
-  version?: string // e.g. "1.0" — the Product record's own version, not the Workspace's
+  version?: string // e.g. "1.0" — the Product record's own display version, distinct from `versioning` (see types/version.ts)
   price: number
   currency: CurrencyCode
   salePrice?: number
@@ -93,10 +86,10 @@ export interface Product {
   affiliateCommissionPercent?: number
   visibility?: ProductVisibility
   type: ProductType
-  thumbnail?: string
-  heroImage?: string
-  previewImage?: string
-  gallery?: string[]
+  // All media — Thumbnail, Hero Image, Gallery, Preview Images, Videos,
+  // Downloads — lives on this one model instead of scattered top-level
+  // fields. See types/assets.ts.
+  assets: ProductAssets
   featured: boolean
   status: ProductStatus
   benefits: ProductBenefit[]
@@ -113,7 +106,14 @@ export interface Product {
   aiEnabled: boolean
   partnerOffers: string[] // AffiliatePartner ids (see partners.ts)
   rewardPoints: number
-  source?: ProductSourceRef
+  // What real content this product sells — see types/contentSource.ts.
+  // Generalizes what earlier milestones called "the selected Workspace":
+  // any registered Content Source type can populate this, not only
+  // GrowthSystem.
+  source?: ContentSourceRef
+  // Draft/Published version history — see types/version.ts. Publishing
+  // appends a new version instead of overwriting the last one.
+  versioning: ProductVersioning
   createdAt?: string // ISO date string — set on first save
   updatedAt?: string // ISO date string — set on every save
   // Escape hatch for fields a future product type or provider needs before

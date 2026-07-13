@@ -4,9 +4,27 @@
 // re-describing their content, per Commerce's never-duplicate rule.
 
 import type { Product } from '../types/product'
+import type { ProductSnapshot, ProductVersioning } from '../types/version'
 import type { ProductRepository } from '../services/ProductRepository'
+import { createEmptyProductAssets } from '../types/assets'
 
-export const MOCK_PRODUCTS: Product[] = [
+// Every mock product below is defined without `versioning` and gets one
+// attached here — `published` entries get a real v1 history entry (proving
+// the version history shape actually renders), everything else starts at
+// an unpublished draft v1. See types/version.ts.
+function withInitialVersioning(product: ProductSnapshot): Product {
+  const versioning: ProductVersioning =
+    product.status === 'published'
+      ? {
+          draftVersion: 2,
+          publishedVersion: 1,
+          history: [{ version: 1, publishedAt: '2026-01-15T00:00:00.000Z', snapshot: product }],
+        }
+      : { draftVersion: 1, history: [] }
+  return { ...product, versioning }
+}
+
+const RAW_PRODUCTS: ProductSnapshot[] = [
   {
     id: 'prod-001',
     slug: 'start-your-notary-business',
@@ -17,6 +35,7 @@ export const MOCK_PRODUCTS: Product[] = [
     price: 79,
     currency: 'USD',
     type: 'GrowthSystem',
+    assets: createEmptyProductAssets(),
     featured: true,
     status: 'published',
     benefits: [{ title: 'Guided sequence', description: 'Every step unlocks the next.' }],
@@ -41,6 +60,7 @@ export const MOCK_PRODUCTS: Product[] = [
     price: 29,
     currency: 'USD',
     type: 'Course',
+    assets: createEmptyProductAssets(),
     featured: false,
     status: 'draft',
     benefits: [{ title: 'Self-paced', description: 'Learn on your own schedule.' }],
@@ -64,6 +84,7 @@ export const MOCK_PRODUCTS: Product[] = [
     price: 19,
     currency: 'USD',
     type: 'Certification',
+    assets: createEmptyProductAssets(),
     featured: false,
     status: 'draft',
     benefits: [{ title: 'Shareable credential', description: 'Add it to a professional profile.' }],
@@ -85,6 +106,7 @@ export const MOCK_PRODUCTS: Product[] = [
     price: 5,
     currency: 'USD',
     type: 'Template',
+    assets: createEmptyProductAssets(),
     featured: false,
     status: 'published',
     benefits: [{ title: 'Copy and send', description: 'No formatting required.' }],
@@ -106,6 +128,7 @@ export const MOCK_PRODUCTS: Product[] = [
     price: 15,
     currency: 'USD',
     type: 'AIAssistant',
+    assets: createEmptyProductAssets(),
     featured: true,
     status: 'draft',
     benefits: [{ title: 'Available anytime', description: 'No scheduling required.' }],
@@ -127,6 +150,7 @@ export const MOCK_PRODUCTS: Product[] = [
     price: 99,
     currency: 'USD',
     type: 'Bundle',
+    assets: createEmptyProductAssets(),
     featured: true,
     status: 'draft',
     benefits: [{ title: 'Save vs. buying separately', description: 'Bundled pricing beats buying each system on its own.' }],
@@ -149,6 +173,7 @@ export const MOCK_PRODUCTS: Product[] = [
     price: 19,
     currency: 'USD',
     type: 'Membership',
+    assets: createEmptyProductAssets(),
     featured: true,
     status: 'draft',
     benefits: [{ title: 'Member pricing', description: 'Discounted pricing on every Business System.' }],
@@ -162,6 +187,8 @@ export const MOCK_PRODUCTS: Product[] = [
     source: { type: 'MembershipPlan', id: 'plan-club' },
   },
 ]
+
+export const MOCK_PRODUCTS: Product[] = RAW_PRODUCTS.map(withInitialVersioning)
 
 export function getMockProductBySlug(slug: string) {
   return MOCK_PRODUCTS.find((p) => p.slug === slug)

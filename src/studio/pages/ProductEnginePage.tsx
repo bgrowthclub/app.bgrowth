@@ -4,7 +4,7 @@ import Button from '../../components/ui/Button'
 import ProductListPanel from '../components/ProductListPanel'
 import PublishDialog from '../components/PublishDialog'
 import GeneralTab from '../components/tabs/GeneralTab'
-import WorkspaceTab from '../components/tabs/WorkspaceTab'
+import ContentSourceTab from '../components/tabs/ContentSourceTab'
 import PricingTab from '../components/tabs/PricingTab'
 import ImagesTab from '../components/tabs/ImagesTab'
 import WebsiteTab from '../components/tabs/WebsiteTab'
@@ -13,11 +13,11 @@ import { productAdminService } from '../../modules/commerce/services/ProductAdmi
 import { createEmptyProductDraft } from '../lib/emptyProduct'
 import type { Product } from '../../modules/commerce/types/product'
 
-type TabId = 'general' | 'workspace' | 'pricing' | 'images' | 'website' | 'publishing'
+type TabId = 'general' | 'source' | 'pricing' | 'images' | 'website' | 'publishing'
 
 const TABS: { id: TabId; label: string }[] = [
   { id: 'general', label: 'General' },
-  { id: 'workspace', label: 'Workspace' },
+  { id: 'source', label: 'Content Source' },
   { id: 'pricing', label: 'Pricing' },
   { id: 'images', label: 'Images' },
   { id: 'website', label: 'Website' },
@@ -25,8 +25,8 @@ const TABS: { id: TabId; label: string }[] = [
 ]
 
 // The Product Engine — a Product Management module, not a Product Builder.
-// It imports an existing Workspace (by id, read-only — see
-// lib/workspaceImport.ts and WorkspaceTab) and manages everything about
+// It imports an existing Content Source (by id, read-only — see
+// lib/contentSources/ and ContentSourceTab) and manages everything about
 // selling it: pricing, images, SEO, categories, visibility, related
 // products, and publishing state. Every read/write here goes through
 // ProductAdminService, never through mock/mockProducts.ts directly.
@@ -102,8 +102,8 @@ export default function ProductEnginePage() {
         <p className="eyebrow">BGrowth Studio</p>
         <h1 className="mt-2 font-display text-2xl font-bold tracking-tight text-navy md:text-3xl">Product Engine</h1>
         <p className="mt-2 max-w-xl text-[14px] text-navy/55">
-          Import an existing Workspace and manage everything about selling it — pricing, images, SEO, and
-          publishing. Workspace content itself is never edited here.
+          Import an existing Content Source and manage everything about selling it — pricing, images, SEO, and
+          publishing. Source content itself is never edited here.
         </p>
       </div>
 
@@ -147,7 +147,7 @@ export default function ProductEnginePage() {
 
               <div className="p-6">
                 {activeTab === 'general' && <GeneralTab product={draft} onChange={handleChange} />}
-                {activeTab === 'workspace' && <WorkspaceTab product={draft} onChange={handleChange} />}
+                {activeTab === 'source' && <ContentSourceTab product={draft} onChange={handleChange} />}
                 {activeTab === 'pricing' && <PricingTab product={draft} onChange={handleChange} />}
                 {activeTab === 'images' && <ImagesTab product={draft} onChange={handleChange} />}
                 {activeTab === 'website' && <WebsiteTab product={draft} onChange={handleChange} allProducts={products} />}

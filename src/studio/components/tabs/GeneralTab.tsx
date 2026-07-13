@@ -93,7 +93,7 @@ export default function GeneralTab({ product, onChange }: Props) {
         </select>
       </Field>
 
-      <Field label="Industry" hint="Auto-filled from the selected Workspace">
+      <Field label="Industry" hint="Auto-filled from the selected Content Source">
         <input
           className={inputClass}
           value={product.industry ?? ''}
