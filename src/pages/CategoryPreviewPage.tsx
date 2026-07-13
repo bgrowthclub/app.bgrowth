@@ -5,7 +5,7 @@ import type { LucideIcon } from 'lucide-react'
 import SEO from '../components/seo/SEO'
 import Button from '../components/ui/Button'
 import { getCategoryPreview } from '../data/categoryPreviews'
-import { fadeUp, viewportOnce } from '../lib/motion'
+import { fadeUp } from '../lib/motion'
 
 const ICONS: Record<string, LucideIcon> = {
   career: Building2,

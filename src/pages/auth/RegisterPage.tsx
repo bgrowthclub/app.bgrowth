@@ -40,8 +40,9 @@ export default function RegisterPage() {
       >
         <form onSubmit={handleSubmit} className="space-y-4">
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-navy/60">Name</label>
+            <label htmlFor="register-name" className="mb-1.5 block text-[13px] font-medium text-navy/60">Name</label>
             <input
+              id="register-name"
               type="text"
               required
               value={displayName}
@@ -50,8 +51,9 @@ export default function RegisterPage() {
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-navy/60">Email</label>
+            <label htmlFor="register-email" className="mb-1.5 block text-[13px] font-medium text-navy/60">Email</label>
             <input
+              id="register-email"
               type="email"
               required
               value={email}
@@ -60,8 +62,9 @@ export default function RegisterPage() {
             />
           </div>
           <div>
-            <label className="mb-1.5 block text-[13px] font-medium text-navy/60">Password</label>
+            <label htmlFor="register-password" className="mb-1.5 block text-[13px] font-medium text-navy/60">Password</label>
             <input
+              id="register-password"
               type="password"
               required
               value={password}
