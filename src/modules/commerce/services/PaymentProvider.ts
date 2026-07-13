@@ -6,11 +6,12 @@ import type { WebhookEvent } from '../types/webhook'
 // Wix Payments, Square, Mercado Pago, or any future provider. This is the
 // Commerce Engine's renamed, expanded replacement for ProviderAdapter.ts
 // (left in place, unused, per CLAUDE.md §12/§18 — recommend removal once
-// approved). CommerceEngine is the only thing that ever selects and calls
-// a PaymentProvider; nothing else in the application imports a provider
-// SDK, or this interface, directly. See ARCHITECTURE.md's Commerce
-// Engine section for the full
-// Website → Commerce Engine → Payment Provider → Payment Gateway flow.
+// approved). PaymentManager (see ./PaymentManager.ts) is the only thing
+// that ever selects and calls a PaymentProvider — not CommerceEngine
+// directly, and never a page or component. Nothing else in the
+// application imports a provider SDK, or this interface, directly. See
+// ARCHITECTURE.md's Commerce Engine section for the full
+// Checkout → Commerce Engine → Payment Manager → Payment Provider → Payment Gateway flow.
 //
 // Interface only — no implementation. No concrete Stripe/PayPal/etc.
 // adapter exists yet; this is the contract the first one will be built

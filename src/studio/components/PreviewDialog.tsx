@@ -19,7 +19,7 @@ export default function PreviewDialog({ open, onClose, product }: Props) {
   if (!open) return null
 
   const { product: p, generatedAt } = productPreviewService.generatePreview(product)
-  const displayPrice = p.salePrice ?? p.price
+  const displayPrice = p.salePrice ?? p.basePrice
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -52,11 +52,11 @@ export default function PreviewDialog({ open, onClose, product }: Props) {
 
           <div className="mt-4 flex items-baseline gap-2">
             <span className="font-display text-lg font-bold text-navy">
-              {p.visibility === 'free' ? 'Free' : `${p.currency} ${displayPrice.toFixed(2)}`}
+              {p.visibility === 'free' ? 'Free' : `${p.baseCurrency} ${displayPrice.toFixed(2)}`}
             </span>
             {p.salePrice != null && p.visibility !== 'free' && (
               <span className="text-[13px] text-navy/40 line-through">
-                {p.currency} {p.price.toFixed(2)}
+                {p.baseCurrency} {p.basePrice.toFixed(2)}
               </span>
             )}
           </div>

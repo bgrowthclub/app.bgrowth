@@ -538,12 +538,13 @@ src/modules/commerce/
     pricing.ts       Currency, Money, TaxRule
     provider.ts      ProviderId, CheckoutSessionRequest/Result, ProviderTransactionRef
     webhook.ts       WebhookEvent, WebhookEventType
+    paymentProfile.ts   PaymentProfile, PaymentProfileId, KnownPaymentProfileId
   services/    interfaces only — no implementations exist yet
     ProductService.ts, PurchaseService.ts, MembershipService.ts,
     RewardService.ts, BenefitService.ts, PartnerService.ts,
     PricingService.ts, DiscountService.ts,
     OrderService.ts, TaxService.ts, CouponService.ts, RefundService.ts,
-    WebhookService.ts, PaymentProvider.ts
+    WebhookService.ts, PaymentProvider.ts, PaymentManager.ts
     CheckoutProvider.ts, ProviderAdapter.ts   (superseded, kept — see below)
   mock/        realistic BGrowth example data for testing against the
                types/services above — not a second product catalog
@@ -599,11 +600,11 @@ typed explicitly. It is the single commercial layer the rest of the
 application is ever allowed to call for anything payment-shaped:
 
 ```
-Website  ->  Commerce Engine  ->  Payment Provider  ->  Payment Gateway
+Checkout  ->  Commerce Engine  ->  Payment Manager  ->  Payment Provider  ->  Payment Gateway
 ```
 
-`CommerceEngine` composes seven named services — each its own interface,
-each with no implementation yet:
+`CommerceEngine` composes six named services plus the Payment Manager —
+each its own interface, each with no implementation yet:
 
 | Service | File | Owns |
 |---|---|---|
@@ -611,9 +612,18 @@ each with no implementation yet:
 | Pricing Service | `services/PricingService.ts` | price lookup + currency conversion |
 | Coupon Service | `services/CouponService.ts` | redeemable coupon-code mechanics |
 | Tax Service | `services/TaxService.ts` | tax-rate lookup + calculation |
-| Payment Provider (interface) | `services/PaymentProvider.ts` | the seam each concrete payment provider implements |
 | Refund Service | `services/RefundService.ts` | the refund workflow across Order/Purchase/Transaction |
 | Webhook Service | `services/WebhookService.ts` | verifying + normalizing inbound provider webhooks |
+| Payment Manager | `services/PaymentManager.ts` | resolving a product's Payment Profile to a concrete Payment Provider — see below |
+
+`CommerceEngine` never selects a `PaymentProvider` directly and never
+holds a single "active" one — that decision belongs entirely to
+`PaymentManager`, which is what lets a product be sold under a different
+provider per Payment Profile or per buyer region without touching
+`CommerceEngine` itself. `PaymentProvider` (`services/PaymentProvider.ts`)
+is the interface each concrete provider implements; it isn't one of
+`CommerceEngine`'s six composed services because nothing selects or holds
+a `PaymentProvider` instance except `PaymentManager`.
 
 `PurchaseService`, `MembershipService`, `RewardService`, `BenefitService`,
 `PartnerService`, and `DiscountService` remain part of Commerce but sit
@@ -624,19 +634,23 @@ below for how they relate.
 ### The Provider Abstraction
 
 This is the core of "the application must never depend directly on
-Stripe":
+Stripe" — and, as of this milestone, "never depend on a specific country
+or payment provider either":
 
 ```
-Application (pages, components)
-        │  never imports a provider SDK, never imports PaymentProvider directly
+Application (Checkout page, Product Pages)
+        │  never imports a provider SDK, never imports PaymentProvider or
+        │  PaymentManager directly, only ever knows a product's
+        │  PaymentProfileId (see Payment Profiles below)
         ▼
 CommerceEngine     (CommerceEngine.ts)
         │  composes Order/Pricing/Coupon/Tax/Refund/Webhook Services and
-        │  is the only thing that selects the active provider via —
+        │  delegates every provider-facing call to —
         ▼
-getActivePaymentProvider()
-        │  returns whichever PaymentProvider is active, based on
-        │  configuration this milestone does not define
+PaymentManager     (services/PaymentManager.ts)
+        │  resolves a PaymentProfileId (+ optional buyer region) to a
+        │  PaymentProfile, then to whichever PaymentProvider that profile
+        │  (or region override) routes to
         ▼
 PaymentProvider    (services/PaymentProvider.ts)
         │  one implementation per payment provider, all satisfying the
@@ -650,10 +664,10 @@ PaymentProvider    (services/PaymentProvider.ts)
 Every box above `PaymentProvider` in this diagram is provider-agnostic
 code and stays that way permanently. Adding a new provider means writing
 one new `PaymentProvider` implementation — it never means touching
-`CommerceEngine`, a page, or a component. `ProviderId` (in
-`types/provider.ts`) is a union of known providers plus a `(string & {})`
-escape hatch specifically so a not-yet-listed provider doesn't require a
-type change either.
+`CommerceEngine`, `PaymentManager`, a page, or a component. `ProviderId`
+(in `types/provider.ts`) is a union of known providers plus a
+`(string & {})` escape hatch specifically so a not-yet-listed provider
+doesn't require a type change either.
 
 **No `PaymentProvider` implementation exists yet** — not for Stripe, not
 for any other provider. This milestone built the contract it'll be built
@@ -667,18 +681,60 @@ unused, per CLAUDE.md §12/§18's no-silent-deletion policy — recommended
 for removal once every future caller targets the new names, pending
 explicit approval.
 
+### Payment Profiles — how a Product avoids naming a provider
+
+A `Product` never references Stripe, PayPal, or any provider directly.
+Instead it carries a `paymentProfileId` (`types/paymentProfile.ts`) — one
+of a small set of named commercial "modes":
+
+| Payment Profile | Typical use |
+|---|---|
+| `standard` | a normal one-time purchase |
+| `membership` | a recurring membership/subscription product |
+| `free` | a free product — no provider is ever invoked |
+| `enterprise` | an enterprise/seat-based sale, likely a different provider or invoicing flow |
+| `regional` | a product whose provider varies by the buyer's country (see below) |
+
+`PaymentManager.resolveProvider(paymentProfileId, region?)` is the only
+place a `PaymentProfileId` is ever turned into a concrete
+`PaymentProvider`. A `PaymentProfile` has one default `providerId`, plus
+an optional `regionOverrides` map (e.g. `{ BR: 'mercado-pago' }`) a
+`regional` profile uses to route different countries to different
+providers. Neither mechanism is implemented yet — no `PaymentProfile`
+records or provider routing exist, only the types and the `PaymentManager`
+seam they'll be read through.
+
+### Base Price, Base Currency, and global commerce
+
+`Product.basePrice` / `Product.baseCurrency` (`types/product.ts`) are the
+single anchor price every other price derives from — e.g. `39` / `USD`.
+A product is never given a second, per-region hardcoded price list (no
+`priceUSD`/`priceBRL` fields); a displayed price in a different currency
+is always a future `PricingService.convertCurrency(...)` call away from
+these two fields, not a new field on `Product`. Combined with
+`paymentProfileId`, this is what lets BGrowth sell the same product in the
+United States, Brazil, Europe, Canada, Asia, and Australia without any
+change to Checkout or a Product Page: both surfaces only ever read
+`basePrice`/`baseCurrency`/`paymentProfileId` off the `Product` they
+already load through `ProductService` — region and provider selection
+happen entirely inside `PaymentManager`, further down the stack. No
+currency-conversion logic exists yet — `PricingService.convertCurrency`
+remains an interface with no implementation, same as every other Commerce
+service.
+
 ### Future Stripe integration (and any other provider)
 
 1. Add a Stripe-specific file (e.g. `services/providers/StripeProvider.ts`)
    implementing `PaymentProvider` — this is the *only* file allowed to
    import a Stripe SDK.
-2. Register it wherever `CommerceEngine`'s concrete implementation of
-   `getActivePaymentProvider()` picks a provider (that selection mechanism
+2. Register it wherever `PaymentManager`'s concrete implementation of
+   `resolveProvider(...)` maps a `PaymentProfile`'s `providerId` (or a
+   `regionOverrides` entry) to a `PaymentProvider` instance (that mapping
    doesn't exist yet either — it's part of the same future implementation
    work, not this milestone).
 3. Nothing else changes. Pages and components already only ever call
-   `CommerceEngine`, never a provider directly, because that boundary is
-   what this milestone establishes.
+   `CommerceEngine` with a `PaymentProfileId`, never a provider directly,
+   because that boundary is what this milestone establishes.
 
 ### Future Marketplace integration
 

@@ -78,13 +78,13 @@ export default function CheckoutPage() {
   const system = resolveProductSystem(product)
   const Icon = ICONS_BY_CATEGORY[system?.category ?? ''] ?? ICONS_BY_CATEGORY.Default
   const workspace = WORKSPACE_CATEGORIES.find((w) => w.slug === selection.workspaceId)
-  const priceLabel = product.price.toFixed(2)
+  const priceLabel = product.basePrice.toFixed(2)
 
   function handleContinueToPayment() {
     // Future: call CommerceEngine.orders.createOrder(...) then
-    // CommerceEngine.getActivePaymentProvider().createCheckout(...) and
-    // redirect to the returned checkoutUrl. This page never calls a
-    // payment provider (Stripe, PayPal, ...) directly.
+    // CommerceEngine.paymentManager.createCheckout(product.paymentProfileId, ...)
+    // and redirect to the returned checkoutUrl. This page never calls a
+    // payment provider (Stripe, PayPal, ...) or PaymentManager directly.
   }
 
   return (

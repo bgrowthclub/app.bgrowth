@@ -24,5 +24,5 @@ export function isCheckoutSelection(value: unknown): value is CheckoutSelection 
 // compute it three slightly different ways.
 export function getMemberPrice(product: Product): number {
   const discount = product.clubDiscountPercent ?? 0
-  return Math.max(0, product.price * (1 - discount / 100))
+  return Math.max(0, product.basePrice * (1 - discount / 100))
 }

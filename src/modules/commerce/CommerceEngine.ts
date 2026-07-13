@@ -2,7 +2,7 @@ import type { OrderService } from './services/OrderService'
 import type { PricingService } from './services/PricingService'
 import type { CouponService } from './services/CouponService'
 import type { TaxService } from './services/TaxService'
-import type { PaymentProvider } from './services/PaymentProvider'
+import type { PaymentManager } from './services/PaymentManager'
 import type { RefundService } from './services/RefundService'
 import type { WebhookService } from './services/WebhookService'
 
@@ -10,14 +10,17 @@ import type { WebhookService } from './services/WebhookService'
 // application (Checkout page, Studio, Workspace) is ever allowed to call
 // for anything payment-shaped:
 //
-//   Website -> Commerce Engine -> Payment Provider -> Payment Gateway
+//   Checkout -> Commerce Engine -> Payment Manager -> Payment Provider -> Payment Gateway
 //
-// The Commerce Engine composes the six services below and is responsible
-// for selecting the active PaymentProvider (Stripe, PayPal, Wix Payments,
-// Square, Mercado Pago, or any future provider) and routing every
-// checkout/refund/webhook call through it. No page or component ever
-// selects or calls a PaymentProvider directly, and nothing outside
-// Commerce ever imports a provider SDK — see CLAUDE.md §16 and
+// The Commerce Engine composes the six services below. It never selects a
+// PaymentProvider itself, and never knows which country or currency a
+// buyer is in — that decision belongs entirely to PaymentManager (see
+// services/PaymentManager.ts), which resolves a product's PaymentProfile
+// to a concrete provider. This is what lets BGrowth sell in any region
+// (United States, Brazil, Europe, Canada, Asia, Australia, ...) without a
+// single change to Checkout or a Product Page — they only ever carry a
+// PaymentProfileId, never a provider name or a hardcoded currency. Nothing
+// outside Commerce ever imports a provider SDK — see CLAUDE.md §16 and
 // ARCHITECTURE.md's Commerce Engine section.
 //
 // Interface only — no implementation. This is the architecture a future
@@ -30,6 +33,5 @@ export interface CommerceEngine {
   readonly tax: TaxService
   readonly refunds: RefundService
   readonly webhooks: WebhookService
-
-  getActivePaymentProvider(): PaymentProvider
+  readonly paymentManager: PaymentManager
 }

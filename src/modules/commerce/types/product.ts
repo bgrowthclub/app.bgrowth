@@ -3,6 +3,7 @@ import type { CurrencyCode } from './pricing'
 import type { ContentSourceRef } from './contentSource'
 import type { ProductAssets } from './assets'
 import type { ProductVersioning } from './version'
+import type { PaymentProfileId } from './paymentProfile'
 
 // Every kind of sellable thing across the whole BGrowth ecosystem — not
 // just Business Systems. Support requested by Milestone 5.1. `Planner` and
@@ -79,11 +80,22 @@ export interface Product {
   industry?: string
   language?: string // BCP-47-ish tag (e.g. "en") — for a future multi-language catalog
   version?: string // e.g. "1.0" — the Product record's own display version, distinct from `versioning` (see types/version.ts)
-  price: number
-  currency: CurrencyCode
+  // The anchor price/currency every other price is derived from — never a
+  // per-region or per-provider price list. A displayed price in a
+  // different currency is a future PricingService.convertCurrency(...)
+  // call away from these two fields, never a second hardcoded price on
+  // the product itself (see ARCHITECTURE.md's Commerce Engine section).
+  basePrice: number
+  baseCurrency: CurrencyCode
   salePrice?: number
   clubDiscountPercent?: number
   affiliateCommissionPercent?: number
+  // Which Payment Profile (Standard, Membership, Free, Enterprise,
+  // Regional, ...) this product sells under — see types/paymentProfile.ts.
+  // A Product never references a payment provider (Stripe, PayPal, ...)
+  // directly; PaymentManager resolves this id to a concrete provider at
+  // checkout time.
+  paymentProfileId: PaymentProfileId
   visibility?: ProductVisibility
   type: ProductType
   // All media — Thumbnail, Hero Image, Gallery, Preview Images, Videos,
