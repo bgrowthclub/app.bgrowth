@@ -3,15 +3,21 @@ import type { MembershipTierId } from './membership'
 // How a member came to have access to a product — deliberately separate
 // from *how they paid* (that's Purchase/Transaction). A member can have
 // access without a direct Purchase record at all (membership, bundle,
-// reward unlock, gift, trial, or a future enterprise seat).
+// reward unlock, gift, coupon, trial/beta, enterprise seat, or a product
+// that's simply free). AccessService (see services/AccessService.ts) is
+// what lets a caller check "does this member have access" without ever
+// needing to know which of these it came from.
 export type AccessSource =
   | 'purchase'
   | 'membership'
   | 'bundle'
   | 'reward-unlock'
   | 'gift'
+  | 'coupon'
   | 'trial'
+  | 'beta'
   | 'enterprise-seat'
+  | 'free-product'
 
 // The single source of truth Workspace should eventually check before
 // rendering a Growth System (or any product) as "owned" — see

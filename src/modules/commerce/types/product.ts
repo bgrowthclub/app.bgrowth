@@ -25,9 +25,28 @@ export type ProductType =
   | 'Bundle'
   | 'Subscription'
 
-export type ProductStatus = 'draft' | 'published' | 'archived'
+export type ProductStatus = 'draft' | 'published' | 'archived' | 'coming-soon'
 
 export type ProductDifficulty = 'Beginner' | 'Intermediate' | 'Advanced'
+
+// How a published product is actually offered to a visitor — orthogonal to
+// `status` (the admin/publishing lifecycle). A product can be `published`
+// and still be `coming-soon` in the storefront sense (e.g. pre-orders) or
+// `private` (unlisted, reachable only by direct link).
+export type ProductVisibility = 'free' | 'paid' | 'coming-soon' | 'private'
+
+export interface ProductFaqItem {
+  question: string
+  answer: string
+}
+
+// Meta Title/Description/Keywords for the product's public page — see
+// pages/ProductPage.tsx's <SEO> usage for the shape this ultimately feeds.
+export interface ProductSeo {
+  metaTitle?: string
+  metaDescription?: string
+  keywords?: string[]
+}
 
 // Points a Product back at the real content it sells, without duplicating
 // that content's data. A `GrowthSystem` Product, for example, points at a
@@ -55,14 +74,36 @@ export interface Product {
   title: string
   subtitle?: string
   description: string
+  // Longer, product-page-length copy — `description` stays the short,
+  // card/search-facing blurb it already was; this is additive, not a
+  // replacement (see the Product Engine's General tab).
+  longDescription?: string
   category: GrowthCategoryId
+  // Marketing taxonomy, mirroring BusinessSystem.industry (e.g. "Legal") —
+  // optional since not every ProductType has one (a Membership doesn't).
+  // Auto-filled from the selected Workspace by the Product Engine, then
+  // editable like every other General-tab field.
+  industry?: string
+  language?: string // BCP-47-ish tag (e.g. "en") — for a future multi-language catalog
+  version?: string // e.g. "1.0" — the Product record's own version, not the Workspace's
   price: number
   currency: CurrencyCode
+  salePrice?: number
+  clubDiscountPercent?: number
+  affiliateCommissionPercent?: number
+  visibility?: ProductVisibility
   type: ProductType
   thumbnail?: string
+  heroImage?: string
+  previewImage?: string
+  gallery?: string[]
   featured: boolean
   status: ProductStatus
   benefits: ProductBenefit[]
+  whatsIncluded?: string[]
+  faq?: ProductFaqItem[]
+  relatedProductIds?: string[]
+  seo?: ProductSeo
   tags: string[]
   difficulty?: ProductDifficulty
   estimatedTime?: string
@@ -73,6 +114,8 @@ export interface Product {
   partnerOffers: string[] // AffiliatePartner ids (see partners.ts)
   rewardPoints: number
   source?: ProductSourceRef
+  createdAt?: string // ISO date string — set on first save
+  updatedAt?: string // ISO date string — set on every save
   // Escape hatch for fields a future product type or provider needs before
   // this interface is formally extended — never read ad hoc without also
   // adding the field properly once its shape is known.

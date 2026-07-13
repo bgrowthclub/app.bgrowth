@@ -434,6 +434,15 @@ export function getRelatedSystems(system: BusinessSystem) {
     .filter((s): s is BusinessSystem => Boolean(s))
 }
 
+// Every Workspace in the catalog, regardless of status — the Product
+// Engine's "Select Workspace" dropdown (src/studio/) reads through this
+// rather than importing SYSTEMS directly. Deliberately unfiltered: Studio
+// needs to see a Workspace to build a Product around it before that
+// Workspace is necessarily published.
+export function getAllSystems() {
+  return SYSTEMS
+}
+
 // --- Workspace accessors ---------------------------------------------------
 // These read the same SYSTEMS catalog above through their own functions
 // (per CLAUDE.md: never import SYSTEMS directly outside this file) — nothing

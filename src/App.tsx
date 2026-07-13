@@ -32,6 +32,8 @@ import ResetPasswordPage from './pages/auth/ResetPasswordPage'
 import VerifyEmailPage from './pages/auth/VerifyEmailPage'
 import ProtectedRoute from './modules/identity/routing/ProtectedRoute'
 import GuestRoute from './modules/identity/routing/GuestRoute'
+import StudioLayout from './studio/StudioLayout'
+import ProductEnginePage from './studio/pages/ProductEnginePage'
 
 export default function App() {
   return (
@@ -93,6 +95,18 @@ export default function App() {
         <Route path="membership" element={<MembershipPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="support" element={<SupportPage />} />
+      </Route>
+
+      {/* BGrowth Studio — a deliberate, explicit third layout. This is the
+          Product Engine: an internal Product Management tool (not a
+          Product Builder — see src/studio/pages/ProductEnginePage.tsx),
+          separate from both the public marketing site (AppLayout) and the
+          member Workspace (PlatformLayout). No BGrowth Identity™ session
+          gate yet — this is a known gap, not an oversight, until real
+          staff/admin auth exists. */}
+      <Route path="/studio" element={<StudioLayout />}>
+        <Route index element={<Navigate to="/studio/products" replace />} />
+        <Route path="products" element={<ProductEnginePage />} />
       </Route>
     </Routes>
   )
