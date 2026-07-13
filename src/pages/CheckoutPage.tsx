@@ -46,10 +46,13 @@ const TRUST_ITEMS = [
 
 // Checkout — the second step of the purchase flow integration. Lays out a
 // production-ready order summary; it does not process any payment. See
-// handleContinueToPayment below for where BGrowth's future Stripe Checkout
-// integration plugs in. Loads the product it's selling through
-// ProductService — the navigation state only carries a productId, never a
-// duplicated snapshot of price/title/etc (see types/checkout.ts).
+// handleContinueToPayment below for where this page will call the
+// Commerce Engine (src/modules/commerce/CommerceEngine.ts) — the only
+// layer ever allowed to talk to a payment provider; this page must never
+// call Stripe/PayPal/etc. directly. Loads the product it's selling
+// through ProductService — the navigation state only carries a
+// productId, never a duplicated snapshot of price/title/etc (see
+// types/checkout.ts).
 export default function CheckoutPage() {
   const location = useLocation()
   const navigate = useNavigate()
@@ -78,8 +81,10 @@ export default function CheckoutPage() {
   const priceLabel = product.price.toFixed(2)
 
   function handleContinueToPayment() {
-    // Future:
-    // Redirect to Stripe Checkout
+    // Future: call CommerceEngine.orders.createOrder(...) then
+    // CommerceEngine.getActivePaymentProvider().createCheckout(...) and
+    // redirect to the returned checkoutUrl. This page never calls a
+    // payment provider (Stripe, PayPal, ...) directly.
   }
 
   return (

@@ -526,6 +526,7 @@ Commerce talks to a provider through one abstraction seam.
 
 ```
 src/modules/commerce/
+  CommerceEngine.ts   the formal facade — see "The Commerce Engine" below
   types/       domain models — interfaces and types only, no logic
     product.ts      Product, ProductType, ProductSourceRef, ProductBenefit
     membership.ts    MembershipPlan, MembershipTierId, MembershipPermissions
@@ -536,11 +537,14 @@ src/modules/commerce/
     partners.ts      AffiliatePartner (extends types/system.ts's), AffiliateCommission
     pricing.ts       Currency, Money, TaxRule
     provider.ts      ProviderId, CheckoutSessionRequest/Result, ProviderTransactionRef
+    webhook.ts       WebhookEvent, WebhookEventType
   services/    interfaces only — no implementations exist yet
     ProductService.ts, PurchaseService.ts, MembershipService.ts,
     RewardService.ts, BenefitService.ts, PartnerService.ts,
     PricingService.ts, DiscountService.ts,
-    CheckoutProvider.ts, ProviderAdapter.ts
+    OrderService.ts, TaxService.ts, CouponService.ts, RefundService.ts,
+    WebhookService.ts, PaymentProvider.ts
+    CheckoutProvider.ts, ProviderAdapter.ts   (superseded, kept — see below)
   mock/        realistic BGrowth example data for testing against the
                types/services above — not a second product catalog
 ```
@@ -587,6 +591,36 @@ still `data/memberMock.ts`'s hardcoded `PURCHASED_SLUGS` — migrating that
 read to a `ProductAccess` lookup (once a `PurchaseService` implementation
 exists) is the intended future step, not done in this milestone.
 
+### The Commerce Engine
+
+`CommerceEngine` (`src/modules/commerce/CommerceEngine.ts`) is the formal
+facade this architecture was always building toward, and is now named and
+typed explicitly. It is the single commercial layer the rest of the
+application is ever allowed to call for anything payment-shaped:
+
+```
+Website  ->  Commerce Engine  ->  Payment Provider  ->  Payment Gateway
+```
+
+`CommerceEngine` composes seven named services — each its own interface,
+each with no implementation yet:
+
+| Service | File | Owns |
+|---|---|---|
+| Order Service | `services/OrderService.ts` | the whole-cart checkout record (`Order`) |
+| Pricing Service | `services/PricingService.ts` | price lookup + currency conversion |
+| Coupon Service | `services/CouponService.ts` | redeemable coupon-code mechanics |
+| Tax Service | `services/TaxService.ts` | tax-rate lookup + calculation |
+| Payment Provider (interface) | `services/PaymentProvider.ts` | the seam each concrete payment provider implements |
+| Refund Service | `services/RefundService.ts` | the refund workflow across Order/Purchase/Transaction |
+| Webhook Service | `services/WebhookService.ts` | verifying + normalizing inbound provider webhooks |
+
+`PurchaseService`, `MembershipService`, `RewardService`, `BenefitService`,
+`PartnerService`, and `DiscountService` remain part of Commerce but sit
+outside `CommerceEngine` itself — they aren't payment-provider-facing
+concerns; see "Future Rewards, Benefits, Memberships, and Enterprise"
+below for how they relate.
+
 ### The Provider Abstraction
 
 This is the core of "the application must never depend directly on
@@ -594,50 +628,57 @@ Stripe":
 
 ```
 Application (pages, components)
-        │  never imports a provider SDK
+        │  never imports a provider SDK, never imports PaymentProvider directly
         ▼
-Commerce Engine (ProductService, PurchaseService, MembershipService,
-                 RewardService, BenefitService, PartnerService,
-                 PricingService, DiscountService)
-        │  delegates checkout/payment concerns to —
+CommerceEngine     (CommerceEngine.ts)
+        │  composes Order/Pricing/Coupon/Tax/Refund/Webhook Services and
+        │  is the only thing that selects the active provider via —
         ▼
-CheckoutProvider   (services/CheckoutProvider.ts)
-        │  the ONE thing the application ever calls to start a purchase;
-        │  internally selects and delegates to —
+getActivePaymentProvider()
+        │  returns whichever PaymentProvider is active, based on
+        │  configuration this milestone does not define
         ▼
-ProviderAdapter    (services/ProviderAdapter.ts)
+PaymentProvider    (services/PaymentProvider.ts)
         │  one implementation per payment provider, all satisfying the
-        │  same interface — createCheckoutSession / getTransaction /
-        │  refundTransaction
+        │  same interface — createCheckout / verifyPayment / refund /
+        │  webhook / cancel
         ▼
-   Stripe  │  PayPal  │  Mercado Pago  │  Apple Pay  │  Google Pay  │
-   Hotmart │  Paddle  │  Lemon Squeezy │  (any future provider)
+   Stripe  │  PayPal  │  Wix Payments  │  Square  │  Mercado Pago  │
+   Apple Pay │ Google Pay │ Hotmart │ Paddle │ Lemon Squeezy │ (future)
 ```
 
-Every box above `ProviderAdapter` in this diagram is provider-agnostic
+Every box above `PaymentProvider` in this diagram is provider-agnostic
 code and stays that way permanently. Adding a new provider means writing
-one new `ProviderAdapter` implementation — it never means touching
-`ProductService`, a page, or a component. `ProviderId` (in
+one new `PaymentProvider` implementation — it never means touching
+`CommerceEngine`, a page, or a component. `ProviderId` (in
 `types/provider.ts`) is a union of known providers plus a `(string & {})`
 escape hatch specifically so a not-yet-listed provider doesn't require a
 type change either.
 
-**No `ProviderAdapter` implementation exists yet** — not for Stripe, not
-for any other provider. This milestone built the contract they'll be
-built against, not a Stripe integration (explicitly out of scope — see
+**No `PaymentProvider` implementation exists yet** — not for Stripe, not
+for any other provider. This milestone built the contract it'll be built
+against, not a Stripe integration (explicitly out of scope — see
 CLAUDE.md's Commerce rules).
+
+`CheckoutProvider.ts` and `ProviderAdapter.ts` (the pre-`CommerceEngine`
+version of this same seam) are now superseded by `CommerceEngine.ts` and
+`PaymentProvider.ts` respectively. Both old files are left in place,
+unused, per CLAUDE.md §12/§18's no-silent-deletion policy — recommended
+for removal once every future caller targets the new names, pending
+explicit approval.
 
 ### Future Stripe integration (and any other provider)
 
-1. Add a Stripe-specific file (e.g. `services/providers/StripeAdapter.ts`)
-   implementing `ProviderAdapter` — this is the *only* file allowed to
+1. Add a Stripe-specific file (e.g. `services/providers/StripeProvider.ts`)
+   implementing `PaymentProvider` — this is the *only* file allowed to
    import a Stripe SDK.
-2. Register it wherever `CheckoutProvider`'s concrete implementation picks
-   an adapter (that selection mechanism doesn't exist yet either — it's
-   part of the same future implementation work, not this milestone).
+2. Register it wherever `CommerceEngine`'s concrete implementation of
+   `getActivePaymentProvider()` picks a provider (that selection mechanism
+   doesn't exist yet either — it's part of the same future implementation
+   work, not this milestone).
 3. Nothing else changes. Pages and components already only ever call
-   `CheckoutProvider`/the service interfaces, never a provider directly,
-   because that boundary is what this milestone establishes.
+   `CommerceEngine`, never a provider directly, because that boundary is
+   what this milestone establishes.
 
 ### Future Marketplace integration
 
