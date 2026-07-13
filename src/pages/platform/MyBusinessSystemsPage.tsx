@@ -7,7 +7,7 @@ import EmptyState from '../../components/ui/EmptyState'
 import Button from '../../components/ui/Button'
 import Grid from '../../components/layout/Grid'
 import ProductLibraryCard from '../../components/systems/ProductLibraryCard'
-import { getUserProducts } from '../../lib/productLibrary'
+import { useOwnedProducts } from '../../lib/productLibrary'
 import { useIdentity } from '../../modules/identity/mock/MockIdentityProvider'
 
 const SORT_OPTIONS = [
@@ -20,7 +20,7 @@ const DIFFICULTY_ORDER: Record<string, number> = { Beginner: 0, Intermediate: 1,
 
 export default function MyBusinessSystemsPage() {
   const { user } = useIdentity()
-  const owned = user ? getUserProducts(user) : []
+  const owned = useOwnedProducts(user)
 
   const industries = Array.from(new Set(owned.map((p) => p.tag)))
   const categories = Array.from(new Set(owned.map((p) => p.subTag).filter((c): c is string => Boolean(c))))

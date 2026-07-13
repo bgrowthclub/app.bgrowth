@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { useLocation, Navigate } from 'react-router-dom'
 import { ArrowRight, BookOpen, Check, CheckCircle2, LifeBuoy } from 'lucide-react'
 import SEO from '../components/seo/SEO'
@@ -7,6 +8,9 @@ import Button from '../components/ui/Button'
 import { ICONS_BY_CATEGORY } from '../components/systems/categoryIcons'
 import { WORKSPACE_CATEGORIES } from '../data/workspaceCategories'
 import { isCheckoutSelection } from '../lib/checkout'
+import { productService } from '../modules/commerce/services/ProductService'
+import { resolveProductSystem } from '../lib/publishedCatalog'
+import type { Product } from '../modules/commerce/types/product'
 
 const TIMELINE_STEPS = [
   { title: 'Purchase Completed', status: 'complete' as const },
@@ -24,10 +28,26 @@ const TIMELINE_STEPS = [
 export default function CheckoutSuccessPage() {
   const location = useLocation()
   const selection = isCheckoutSelection(location.state) ? location.state : null
+  const [product, setProduct] = useState<Product | null | undefined>(undefined)
 
-  if (!selection) return <Navigate to="/systems" replace />
+  useEffect(() => {
+    if (!selection) return
+    let cancelled = false
+    setProduct(undefined)
+    productService.getProductById(selection.productId).then((result) => {
+      if (!cancelled) setProduct(result ?? null)
+    })
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selection?.productId])
 
-  const Icon = ICONS_BY_CATEGORY[selection.category] ?? ICONS_BY_CATEGORY.Default
+  if (!selection || product === null) return <Navigate to="/systems" replace />
+  if (product === undefined) return null
+
+  const system = resolveProductSystem(product)
+  const Icon = ICONS_BY_CATEGORY[system?.category ?? ''] ?? ICONS_BY_CATEGORY.Default
   const workspace = WORKSPACE_CATEGORIES.find((w) => w.slug === selection.workspaceId)
   const purchaseDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
   const orderId = `BG-${Date.now().toString(36).toUpperCase()}`
@@ -72,7 +92,7 @@ export default function CheckoutSuccessPage() {
             </div>
             <div className="flex-1">
               {workspace && <Badge>{workspace.name} Workspace™</Badge>}
-              <h2 className="mt-2 font-display text-lg font-bold text-navy">{selection.productName}</h2>
+              <h2 className="mt-2 font-display text-lg font-bold text-navy">{product.title}</h2>
             </div>
           </div>
 

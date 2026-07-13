@@ -1,10 +1,12 @@
 import { useNavigate } from 'react-router-dom'
 import { ArrowRight, Check } from 'lucide-react'
 import Button from './Button'
-import type { CheckoutSelection } from '../../types/checkout'
+import { buildCheckoutSelection } from '../../lib/checkout'
+import type { Product } from '../../modules/commerce/types/product'
 
 interface Props {
-  selection: CheckoutSelection
+  product: Product
+  workspaceId: string
   previewTargetId: string
   className?: string
 }
@@ -22,17 +24,17 @@ const QUICK_SUMMARY = [
 // "Preview" CTA and a quick-summary checklist that PricingCard (the page's
 // bottom buy box) doesn't, so it earns its own component instead of a
 // branchy prop added to PricingCard.
-export default function PurchaseCard({ selection, previewTargetId, className = '' }: Props) {
+export default function PurchaseCard({ product, workspaceId, previewTargetId, className = '' }: Props) {
   const navigate = useNavigate()
 
   function handleBuyNow() {
-    navigate('/checkout', { state: selection })
+    navigate('/checkout', { state: buildCheckoutSelection(product, workspaceId) })
   }
 
   return (
     <div className={`rounded-xl3 border border-navy/[0.06] bg-white p-6 shadow-glow ${className}`}>
       <div className="flex items-baseline gap-2">
-        <span className="font-display text-3xl font-bold text-navy">${selection.price}</span>
+        <span className="font-display text-3xl font-bold text-navy">${product.price}</span>
         <span className="text-[13px] text-navy/40">one-time</span>
       </div>
 

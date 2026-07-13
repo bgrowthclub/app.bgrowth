@@ -3,10 +3,12 @@
 // (via `source`) real slugs already in src/data/systems.ts, rather than
 // re-describing their content, per Commerce's never-duplicate rule.
 
-import type { Product } from '../types/product'
+import type { Product, ProductDifficulty } from '../types/product'
 import type { ProductSnapshot, ProductVersioning } from '../types/version'
 import type { ProductRepository } from '../services/ProductRepository'
+import type { BusinessSystem } from '../../../types/system'
 import { createEmptyProductAssets } from '../types/assets'
+import { getAllSystems } from '../../../data/systems'
 
 // Every mock product below is defined without `versioning` and gets one
 // attached here — `published` entries get a real v1 history entry (proving
@@ -188,7 +190,63 @@ const RAW_PRODUCTS: ProductSnapshot[] = [
   },
 ]
 
-export const MOCK_PRODUCTS: Product[] = RAW_PRODUCTS.map(withInitialVersioning)
+// Auto-generates a Product wrapper for every BusinessSystem in
+// data/systems.ts that doesn't already have a hand-authored one above
+// (only 'start-your-notary-business' does, as prod-001) — standing in for
+// "already published through Studio before this session," using the same
+// GrowthSystem → Product field mapping Studio's Content Source tab uses
+// (see studio/lib/contentSources/growthSystemSource.ts). Without this, the
+// Runtime↔Product Engine connection would make the public catalog regress
+// from every published BusinessSystem down to just the one someone has
+// manually turned into a Product — this keeps today's catalog size
+// intact while the rest of Commerce's fields (pricing, assets, SEO) stay
+// genuinely editable, per-product, in Studio going forward. Read only
+// through the exported getAllSystems() accessor, never SYSTEMS directly
+// (see CLAUDE.md's Data Rules).
+function productFromSystem(system: BusinessSystem, id: string): ProductSnapshot {
+  const clubDiscountPercent =
+    system.price > 0 ? Math.round((1 - system.memberPrice / system.price) * 100) : undefined
+  return {
+    id,
+    slug: system.slug,
+    title: system.title,
+    subtitle: system.subtitle,
+    description: system.shortDescription,
+    longDescription: system.description,
+    category: 'business-entrepreneurship',
+    industry: system.industry,
+    price: system.price,
+    currency: 'USD',
+    clubDiscountPercent,
+    visibility: 'paid',
+    type: 'GrowthSystem',
+    assets: createEmptyProductAssets(),
+    featured: system.featured,
+    status: system.status === 'published' ? 'published' : 'draft',
+    benefits: system.benefits,
+    whatsIncluded: system.whatsIncluded,
+    tags: system.tags,
+    difficulty: system.difficulty as ProductDifficulty,
+    estimatedTime: system.estimatedTime,
+    workspaceEnabled: true,
+    academyEnabled: false,
+    communityEnabled: true,
+    aiEnabled: false,
+    partnerOffers: system.affiliatePartners.map((p) => p.id),
+    rewardPoints: 40,
+    source: { type: 'GrowthSystem', id: system.slug },
+  }
+}
+
+const HAND_AUTHORED_SYSTEM_SLUGS = new Set(
+  RAW_PRODUCTS.filter((p) => p.source?.type === 'GrowthSystem').map((p) => (p.source as { id: string }).id),
+)
+
+const GENERATED_SYSTEM_PRODUCTS: ProductSnapshot[] = getAllSystems()
+  .filter((s) => !HAND_AUTHORED_SYSTEM_SLUGS.has(s.slug))
+  .map((s, i) => productFromSystem(s, `prod-sys-${i + 1}`))
+
+export const MOCK_PRODUCTS: Product[] = [...RAW_PRODUCTS, ...GENERATED_SYSTEM_PRODUCTS].map(withInitialVersioning)
 
 export function getMockProductBySlug(slug: string) {
   return MOCK_PRODUCTS.find((p) => p.slug === slug)

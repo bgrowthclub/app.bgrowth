@@ -4,12 +4,12 @@ import Grid from '../layout/Grid'
 import Button from '../ui/Button'
 import EmptyState from '../ui/EmptyState'
 import ProductLibraryCard from '../systems/ProductLibraryCard'
-import { getUserProducts } from '../../lib/productLibrary'
+import { useOwnedProducts } from '../../lib/productLibrary'
 import { useIdentity } from '../../modules/identity/mock/MockIdentityProvider'
 
 export default function MyBusinessSystemsSection() {
   const { user } = useIdentity()
-  const owned = user ? getUserProducts(user) : []
+  const owned = useOwnedProducts(user)
 
   return (
     <div>

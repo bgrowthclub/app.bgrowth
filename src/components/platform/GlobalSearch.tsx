@@ -1,20 +1,37 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import SearchBox from './SearchBox'
-import { searchSystems } from '../../data/systems'
+import { productService } from '../../modules/commerce/services/ProductService'
 import { searchResources } from '../../data/resources'
+import type { Product } from '../../modules/commerce/types/product'
 
-// Mock global search across the ecosystem — Business Systems and Resources
-// are real (read through their existing accessor functions), Marketplace and
+// Global search across the ecosystem — Products (read through
+// ProductService, the Runtime↔Product Engine connection — see the
+// milestone that wired this up) and Resources are real, Marketplace and
 // Community have no data source yet so they're shown as inert placeholder
 // rows, per the current phase (no backend, no search API).
 export default function GlobalSearch() {
   const [query, setQuery] = useState('')
   const trimmed = query.trim()
 
-  const systemResults = useMemo(() => (trimmed ? searchSystems(trimmed, 3) : []), [trimmed])
+  const [productResults, setProductResults] = useState<Product[]>([])
+
+  useEffect(() => {
+    if (!trimmed) {
+      setProductResults([])
+      return
+    }
+    let cancelled = false
+    productService.searchProducts(trimmed).then((results) => {
+      if (!cancelled) setProductResults(results.slice(0, 3))
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [trimmed])
+
   const resourceResults = useMemo(() => (trimmed ? searchResources(trimmed, 3) : []), [trimmed])
-  const hasResults = systemResults.length > 0 || resourceResults.length > 0
+  const hasResults = productResults.length > 0 || resourceResults.length > 0
 
   return (
     <div className="relative">
@@ -28,12 +45,12 @@ export default function GlobalSearch() {
               <p className="px-3 py-4 text-center text-[13px] text-navy/40">No matches for "{trimmed}".</p>
             )}
 
-            {systemResults.length > 0 && (
+            {productResults.length > 0 && (
               <div className="mb-1">
                 <p className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-navy/30">
                   Workspaces
                 </p>
-                {systemResults.map((s) => (
+                {productResults.map((s) => (
                   <Link
                     key={s.slug}
                     to={`/product/${s.slug}`}

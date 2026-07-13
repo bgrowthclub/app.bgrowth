@@ -147,6 +147,18 @@ export default function GeneralTab({ product, onChange }: Props) {
           ))}
         </select>
       </Field>
+
+      <label className="mt-1.5 flex items-center gap-2.5 sm:col-span-2">
+        <input
+          type="checkbox"
+          checked={product.featured}
+          onChange={(e) => onChange({ featured: e.target.checked })}
+          className="h-4 w-4 rounded border-navy/20 text-primary focus:ring-primary/30"
+        />
+        <span className="text-[13px] font-medium text-navy/70">
+          Featured — shown in the Homepage's featured row once published
+        </span>
+      </label>
     </div>
   )
 }

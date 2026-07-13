@@ -1,7 +1,7 @@
 import type { Product, ProductType, ProductStatus, ProductIndexEntry } from '../types/product'
 import type { GrowthCategoryId } from '../../../types/growth'
 import type { ProductRepository } from './ProductRepository'
-import { createLocalProductRepository } from '../mock/mockProducts'
+import { createPublishedProductRepository } from '../store/publishedProductRepository'
 
 export interface ProductListFilter {
   category?: GrowthCategoryId
@@ -19,6 +19,19 @@ export interface ProductService {
   getProductBySlug(slug: string): Promise<Product | undefined>
   listProducts(filter?: ProductListFilter): Promise<Product[]>
   searchProducts(query: string): Promise<Product[]>
+  // Every product currently live — the Homepage's featured row, per the
+  // Runtime↔Product Engine connection milestone.
+  getFeatured(): Promise<Product[]>
+  // Every published product, unfiltered — the Workspace Catalog reads
+  // through this. Functionally identical to `listProducts()` with no
+  // filter today (the repository is published-only by construction — see
+  // store/publishedProductRepository.ts) but named to match what callers
+  // actually mean at the call site.
+  getPublished(): Promise<Product[]>
+  // Resolves a product's `relatedProductIds` (set in Studio's Website tab)
+  // into full Product records. Never a hardcoded relationship — an empty
+  // `relatedProductIds` simply resolves to an empty list.
+  getRelated(productId: string): Promise<Product[]>
 }
 
 function matchesFilter(entry: ProductIndexEntry, filter?: ProductListFilter): boolean {
@@ -35,11 +48,20 @@ function matchesFilter(entry: ProductIndexEntry, filter?: ProductListFilter): bo
 // that matched. This is what makes "request only the Product JSON files it
 // needs" true automatically once the repository is backed by a real Remote
 // Product Source — nothing here changes when that happens; only the
-// repository passed into createProductService does.
+// repository passed into createProductService does. There is also no
+// caching anywhere in this chain — every call reads the repository fresh —
+// so a Studio publish is visible to the very next ProductService call with
+// nothing to explicitly "refresh".
 export function createProductService(repository: ProductRepository): ProductService {
   async function loadFullProducts(entries: ProductIndexEntry[]): Promise<Product[]> {
     const products = await Promise.all(entries.map((entry) => repository.loadProduct(entry.id)))
     return products.filter((p): p is Product => Boolean(p))
+  }
+
+  async function listProducts(filter?: ProductListFilter): Promise<Product[]> {
+    const index = await repository.loadIndex()
+    const matches = index.products.filter((entry) => matchesFilter(entry, filter))
+    return loadFullProducts(matches)
   }
 
   return {
@@ -53,11 +75,7 @@ export function createProductService(repository: ProductRepository): ProductServ
       return entry ? repository.loadProduct(entry.id) : undefined
     },
 
-    async listProducts(filter) {
-      const index = await repository.loadIndex()
-      const matches = index.products.filter((entry) => matchesFilter(entry, filter))
-      return loadFullProducts(matches)
-    },
+    listProducts,
 
     async searchProducts(query) {
       const index = await repository.loadIndex()
@@ -73,12 +91,27 @@ export function createProductService(repository: ProductRepository): ProductServ
       )
       return loadFullProducts(matches)
     },
+
+    async getFeatured() {
+      return listProducts({ featured: true })
+    },
+
+    async getPublished() {
+      return listProducts()
+    },
+
+    async getRelated(productId) {
+      const product = await repository.loadProduct(productId)
+      const ids = product?.relatedProductIds ?? []
+      if (ids.length === 0) return []
+      const related = await Promise.all(ids.map((id) => repository.loadProduct(id)))
+      return related.filter((p): p is Product => Boolean(p))
+    },
   }
 }
 
-// Ready-to-use singleton for anything that just needs "the" ProductService
-// today. Not imported by any page or component yet — see CLAUDE.md's
-// Commerce rules on not using mock data as a stand-in for the real catalog
-// (data/systems.ts stays authoritative for actual Business Systems) until
-// this is genuinely backed by Studio-published data.
-export const productService: ProductService = createProductService(createLocalProductRepository())
+// Ready-to-use singleton every page/component reads through — backed by
+// the Published Product Repository (see store/publishedProductRepository.ts),
+// so this is genuinely "every product Studio has published," not mock data
+// standing in for the real catalog.
+export const productService: ProductService = createProductService(createPublishedProductRepository())

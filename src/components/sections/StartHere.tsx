@@ -1,11 +1,11 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type { RefObject } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react'
 import WorkspaceCoverCard from '../systems/WorkspaceCoverCard'
 import SectionHeader from '../ui/SectionHeader'
 import Button from '../ui/Button'
-import { SYSTEMS } from '../../data/systems'
+import { loadFeaturedSystemProducts, systemForCard } from '../../lib/publishedCatalog'
 import { fadeUp, viewportOnce } from '../../lib/motion'
 
 // Lets a vertical mouse-wheel gesture drive the horizontal carousel — same
@@ -76,10 +76,21 @@ function useDragScroll(ref: RefObject<HTMLDivElement>) {
 }
 
 export default function StartHere() {
-  // Broadened from the old "featured only" filter (3 of 6) to every
-  // published system — still exactly the same real catalog data, just not
-  // artificially narrowed, so the browse row has enough to actually browse.
-  const workspaces = SYSTEMS.filter((s) => s.status === 'published')
+  // Reads the Runtime↔Product Engine connection's Published Product
+  // Repository (via ProductService.getFeatured()) instead of a hardcoded
+  // catalog filter — a product only shows up here once Studio has both
+  // published it and marked it Featured. See lib/publishedCatalog.ts.
+  const [workspaces, setWorkspaces] = useState<Awaited<ReturnType<typeof loadFeaturedSystemProducts>>>([])
+
+  useEffect(() => {
+    let cancelled = false
+    loadFeaturedSystemProducts().then((pairs) => {
+      if (!cancelled) setWorkspaces(pairs)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   const trackRef = useRef<HTMLDivElement>(null)
   useWheelHorizontalScroll(trackRef)
@@ -105,9 +116,9 @@ export default function StartHere() {
           ref={trackRef}
           className="container-px flex cursor-grab snap-x snap-mandatory gap-5 overflow-x-auto pb-2 pt-1 active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
-          {workspaces.map((system, i) => (
+          {workspaces.map((pair, i) => (
             <motion.div
-              key={system.slug}
+              key={pair.product.id}
               variants={fadeUp}
               custom={i}
               initial="hidden"
@@ -115,7 +126,7 @@ export default function StartHere() {
               viewport={viewportOnce}
               className="w-[260px] shrink-0 sm:w-[300px] lg:w-[320px]"
             >
-              <WorkspaceCoverCard system={system} index={i} />
+              <WorkspaceCoverCard system={systemForCard(pair)} index={i} />
             </motion.div>
           ))}
           {/* Trailing spacer so the last card can snap fully into view

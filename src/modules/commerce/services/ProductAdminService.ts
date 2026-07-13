@@ -1,6 +1,7 @@
 import type { Product } from '../types/product'
 import type { ProductVersion, ProductVersioning } from '../types/version'
 import { MOCK_PRODUCTS } from '../mock/mockProducts'
+import { upsertPublishedProduct, removePublishedProduct } from '../store/publishedProductStore'
 
 // The write counterpart to ProductService (read-only, used by the
 // Runtime/website side). ProductAdminService exists specifically for the
@@ -41,6 +42,11 @@ export function createProductAdminService(): ProductAdminService {
       return MOCK_PRODUCTS.find((p) => p.id === id)
     },
 
+    // Never touches the Published Product Repository — only publish()/
+    // archive() cross that boundary. Editing a product's `status` field
+    // directly (e.g. from General tab) and saving does not by itself
+    // change what's live on the site; Publish/Archive are the only two
+    // actions that do.
     async save(product) {
       const now = new Date().toISOString()
       const existing = MOCK_PRODUCTS.find((p) => p.id === product.id)
@@ -69,7 +75,11 @@ export function createProductAdminService(): ProductAdminService {
     // Appends a new ProductVersion snapshot to `history` and moves
     // `publishedVersion` to point at it — publishing never overwrites a
     // prior published version in place, so every past published state of
-    // the product stays inspectable (see types/version.ts).
+    // the product stays inspectable (see types/version.ts). Also writes
+    // the result into the Published Product Repository — the one crossing
+    // point between Studio's draft store and everything the Runtime reads
+    // through ProductService. Immediately live, no rebuild, no refresh
+    // step: ProductService reads the repository fresh on every call.
     async publish(id) {
       const product = requireProduct(id)
       const now = new Date().toISOString()
@@ -92,14 +102,19 @@ export function createProductAdminService(): ProductAdminService {
       }
       const index = MOCK_PRODUCTS.findIndex((p) => p.id === id)
       MOCK_PRODUCTS[index] = published
+      upsertPublishedProduct(published)
       return published
     },
 
+    // Removes the product from the Published Product Repository — it stops
+    // being reachable through ProductService immediately, even though the
+    // draft record (and its full version history) stays in Studio.
     async archive(id) {
       const product = requireProduct(id)
       const archived: Product = { ...product, status: 'archived', updatedAt: new Date().toISOString() }
       const index = MOCK_PRODUCTS.findIndex((p) => p.id === id)
       MOCK_PRODUCTS[index] = archived
+      removePublishedProduct(id)
       return archived
     },
   }

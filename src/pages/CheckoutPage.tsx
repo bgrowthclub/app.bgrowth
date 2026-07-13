@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { useLocation, useNavigate, Navigate, Link } from 'react-router-dom'
 import { ArrowRight, Check, CheckCircle2, ShieldCheck } from 'lucide-react'
 import SEO from '../components/seo/SEO'
@@ -9,7 +10,10 @@ import FeatureGrid from '../components/ui/FeatureGrid'
 import { ICONS_BY_CATEGORY } from '../components/systems/categoryIcons'
 import { WORKSPACE_CATEGORIES } from '../data/workspaceCategories'
 import { isCheckoutSelection } from '../lib/checkout'
+import { productService } from '../modules/commerce/services/ProductService'
+import { resolveProductSystem } from '../lib/publishedCatalog'
 import type { SystemBenefit } from '../types/system'
+import type { Product } from '../modules/commerce/types/product'
 
 // Generic Workspace™ experience benefits, shown on every Checkout regardless
 // of which system was purchased — distinct from a system's own
@@ -43,17 +47,35 @@ const TRUST_ITEMS = [
 // Checkout — the second step of the purchase flow integration. Lays out a
 // production-ready order summary; it does not process any payment. See
 // handleContinueToPayment below for where BGrowth's future Stripe Checkout
-// integration plugs in.
+// integration plugs in. Loads the product it's selling through
+// ProductService — the navigation state only carries a productId, never a
+// duplicated snapshot of price/title/etc (see types/checkout.ts).
 export default function CheckoutPage() {
   const location = useLocation()
   const navigate = useNavigate()
   const selection = isCheckoutSelection(location.state) ? location.state : null
+  const [product, setProduct] = useState<Product | null | undefined>(undefined)
 
-  if (!selection) return <Navigate to="/systems" replace />
+  useEffect(() => {
+    if (!selection) return
+    let cancelled = false
+    setProduct(undefined)
+    productService.getProductById(selection.productId).then((result) => {
+      if (!cancelled) setProduct(result ?? null)
+    })
+    return () => {
+      cancelled = true
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selection?.productId])
 
-  const Icon = ICONS_BY_CATEGORY[selection.category] ?? ICONS_BY_CATEGORY.Default
+  if (!selection || product === null) return <Navigate to="/systems" replace />
+  if (product === undefined) return null
+
+  const system = resolveProductSystem(product)
+  const Icon = ICONS_BY_CATEGORY[system?.category ?? ''] ?? ICONS_BY_CATEGORY.Default
   const workspace = WORKSPACE_CATEGORIES.find((w) => w.slug === selection.workspaceId)
-  const priceLabel = selection.price.toFixed(2)
+  const priceLabel = product.price.toFixed(2)
 
   function handleContinueToPayment() {
     // Future:
@@ -65,7 +87,7 @@ export default function CheckoutPage() {
       <SEO title="Checkout" description="Review your order before continuing to payment." path="/checkout" />
 
       <div className="container-px mx-auto max-w-page">
-        <Link to={`/product/${selection.productSlug}`} className="text-[13px] font-semibold text-primary">
+        <Link to={`/product/${product.slug}`} className="text-[13px] font-semibold text-primary">
           ← Back to Product
         </Link>
 
@@ -81,8 +103,8 @@ export default function CheckoutPage() {
               </div>
               <div className="mt-6">
                 {workspace && <Badge>{workspace.name} Workspace™</Badge>}
-                <h2 className="mt-3 font-display text-2xl font-bold text-navy">{selection.productName}</h2>
-                <p className="mt-2 max-w-xl text-[15px] leading-relaxed text-navy/55">{selection.shortDescription}</p>
+                <h2 className="mt-3 font-display text-2xl font-bold text-navy">{product.title}</h2>
+                <p className="mt-2 max-w-xl text-[15px] leading-relaxed text-navy/55">{product.description}</p>
               </div>
             </div>
 
@@ -114,7 +136,7 @@ export default function CheckoutPage() {
             <div className="mt-4 space-y-3 border-b border-navy/[0.06] pb-5">
               <div className="flex items-start justify-between gap-4 text-[14px]">
                 <span className="shrink-0 text-navy/50">Product</span>
-                <span className="text-right font-semibold text-navy">{selection.productName}</span>
+                <span className="text-right font-semibold text-navy">{product.title}</span>
               </div>
               <div className="flex items-center justify-between text-[14px]">
                 <span className="text-navy/50">Price</span>
