@@ -517,10 +517,28 @@ prompted it.
 
 ## 14. Git Workflow
 
-- Commit messages in this repo follow a "Sprint N — theme" convention for
-  batches of work (e.g. "Sprint 5 - Member Experience Foundation"); smaller
-  fixes use a plain descriptive message. Match whichever granularity fits
-  the change.
+Full detail lives in **docs/development/branching-strategy.md** — read it
+before starting a new feature. Summary:
+
+- One branch per major feature, named `feature/<feature-name>` off `main`
+  (e.g. `feature/product-runtime`, `feature/search`). Do not keep growing
+  one long-running branch indefinitely — `claude/engineering-foundation-p70xwe`
+  was that branch through Sprint 8 and is now frozen; it is not extended
+  further.
+- Commit messages use the Sprint-numbered block format:
+  `Sprint XX` / `Feature Name` / blank line / summary bullets. Not a bare
+  "Fix..." or "Add...". The sprint number is sequential across the whole
+  project, continuing the same counter the old "Sprint N - Theme" one-line
+  convention already used (Sprint 5, 6, 7, 8, ...) — it does not reset per
+  branch.
+- Don't cut a Vercel Preview Deployment after every small commit. Build the
+  complete feature (multiple commits is normal), verify it
+  (`npm run build` clean, routes manually exercised), then push one
+  **Release Candidate** commit — that commit's Preview is what actually
+  gets reviewed.
+- Merge into `main` via pull request once the Release Candidate is
+  approved. `main` is the production branch; Vercel deploys it to
+  production on every merge.
 - Never commit `node_modules/` or `dist/` (this rule is currently violated
   by repo history and should be fixed deliberately, not incidentally, as
   part of an unrelated commit).
