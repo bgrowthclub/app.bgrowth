@@ -22,6 +22,12 @@ export interface PaymentProvider {
   createCheckout(request: CheckoutSessionRequest): Promise<CheckoutSessionResult>
   verifyPayment(transactionId: string): Promise<Transaction>
   refund(transactionId: string): Promise<Transaction>
-  webhook(payload: unknown): Promise<WebhookEvent>
+  // `payload` is the exact raw, unparsed request body — every real
+  // provider's signature scheme (e.g. Stripe's HMAC over the raw bytes)
+  // verifies and parses in one atomic step, and breaks if handed a
+  // re-serialized or already-parsed object instead of the original
+  // string. `signature` is whatever header/value that provider's scheme
+  // requires (e.g. Stripe's `stripe-signature` header).
+  webhook(payload: string, signature: string): Promise<WebhookEvent>
   cancel(transactionId: string): Promise<Transaction>
 }

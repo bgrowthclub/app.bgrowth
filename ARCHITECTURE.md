@@ -818,6 +818,36 @@ compile and compose correctly — it is not wired into any page, and should
 not be imported from `pages/` or `components/` as a substitute for a real
 `ProductService` implementation.
 
+### Pre-Stripe readiness review
+
+A readiness pass (reviewing the Commerce Engine as if a third-party
+developer had to implement a new `PaymentProvider` tomorrow) found the
+architecture sound, with two interface-completeness fixes made here:
+
+- **`PaymentProvider.webhook`** took `(payload: unknown)` with no
+  signature — unusable by any real provider, since signature verification
+  needs the exact raw request body plus whatever header/value that
+  provider's scheme requires. Now `webhook(payload: string, signature:
+  string)`; `WebhookService`'s two methods were updated to match.
+- **`RefundService`'s doc comment** still described refunds as calling
+  "the Commerce Engine's active `PaymentProvider`" — stale language from
+  before `PaymentManager` existed. Corrected to describe refunds routing
+  through `PaymentManager`.
+
+One structural gap was found and documented rather than built out (fixing
+it for real means implementing `OrderService`, which is out of scope for
+architecture-only work): `AccessService.grantAccess` has no caller
+anywhere in the app today, and nothing yet ties it to `OrderService`
+completing an order — see the readiness note on `AccessService.ts`.
+
+**Environment variables**: none existed before this review — no
+`.env.example`, no `.gitignore` entry for `.env*`. Added both. Given this
+app has no backend/serverless function yet (see `vercel.json` — a static
+rewrite only), a real provider's *secret* key has nowhere server-side to
+live; only a *publishable* key could ever be a `VITE_`-prefixed variable.
+Building that server-side home is a prerequisite for the first real
+`PaymentProvider`, not something this review builds.
+
 ## 10. How Every Ecosystem Product Connects
 
 VISION.md describes ten ecosystem products, spanning eight Growth

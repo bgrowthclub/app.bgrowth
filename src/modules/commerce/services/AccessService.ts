@@ -8,6 +8,15 @@ import { MOCK_PRODUCT_ACCESS } from '../mock/mockProductAccess'
 // Engine, a future gated Runtime page — reads through this, never through
 // mock/mockProductAccess.ts or a Purchase record directly. The UI should
 // never need to know *why* access exists, only whether it does.
+//
+// Readiness note: `grantAccess` is intended to be called once
+// OrderService.completeOrder(...) succeeds (a completed Order is what
+// should grant `purchase`-sourced access going forward) — not from a page
+// or component directly. Today neither OrderService nor that call exists
+// yet (grantAccess has no caller anywhere in the app — see
+// lib/productLibrary.ts's comment), so this dependency is documented
+// intent, not yet a real one. Wiring it is in scope for the sprint that
+// implements OrderService, not this readiness review.
 export interface AccessService {
   hasAccess(memberId: string, productId: string): Promise<boolean>
   getAccess(memberId: string, productId: string): Promise<ProductAccess | undefined>
