@@ -539,13 +539,17 @@ src/modules/commerce/
     provider.ts      ProviderId, CheckoutSessionRequest/Result, ProviderTransactionRef
     webhook.ts       WebhookEvent, WebhookEventType
     paymentProfile.ts   PaymentProfile, PaymentProfileId, KnownPaymentProfileId
-  services/    interfaces only — no implementations exist yet
+  services/    interfaces only, except where noted
     ProductService.ts, PurchaseService.ts, MembershipService.ts,
     RewardService.ts, BenefitService.ts, PartnerService.ts,
     PricingService.ts, DiscountService.ts,
     OrderService.ts, TaxService.ts, CouponService.ts, RefundService.ts,
     WebhookService.ts, PaymentProvider.ts, PaymentManager.ts
     CheckoutProvider.ts, ProviderAdapter.ts   (superseded, kept — see below)
+    ProductRepository.ts, OrderRepository.ts   (repository seams — see below)
+  store/       the one place each repository's concrete (local, in-memory)
+               implementation lives — publishedProductStore.ts +
+               publishedProductRepository.ts (Product), LocalOrderRepository.ts (Order)
   mock/        realistic BGrowth example data for testing against the
                types/services above — not a second product catalog
 ```
@@ -630,6 +634,41 @@ a `PaymentProvider` instance except `PaymentManager`.
 outside `CommerceEngine` itself — they aren't payment-provider-facing
 concerns; see "Future Rewards, Benefits, Memberships, and Enterprise"
 below for how they relate.
+
+### Order persistence — OrderRepository
+
+`OrderService` owns the *business logic* of an `Order` (creating one from
+a `Cart`, completing it, cancelling it) but never how that record is
+actually stored — that's `OrderRepository`'s (`services/OrderRepository.ts`)
+job, deliberately mirroring `ProductRepository`'s role for `Product`
+records:
+
+```
+OrderService            (business logic — create / complete / cancel)
+        │  a future implementation is built as
+        │  createOrderService(repository: OrderRepository): OrderService,
+        │  exactly like createProductService(repository: ProductRepository)
+        │  is today — OrderService itself never knows how an Order is
+        │  persisted, it only ever calls the repository it's given
+        ▼
+OrderRepository         (services/OrderRepository.ts)
+        │  saveOrder / getOrderById / listOrdersForMember — the only
+        │  persistence-facing seam anywhere in the Order stack
+        ▼
+LocalOrderRepository    (store/LocalOrderRepository.ts)
+        │  the only implementation today — an in-memory array, exactly
+        │  like store/publishedProductStore.ts is for products
+        ▼
+   A future database- or API-backed OrderRepository (Postgres, Google
+   Sheets, or anything else) implements this same interface and replaces
+   LocalOrderRepository — nothing above this layer changes when that
+   happens.
+```
+
+**No `OrderService` implementation exists yet** — this milestone prepares
+only the repository abstraction (`OrderRepository` + `LocalOrderRepository`),
+not `OrderService`'s business logic, not database or Google Sheets
+persistence, and not a Stripe integration.
 
 ### The Provider Abstraction
 
