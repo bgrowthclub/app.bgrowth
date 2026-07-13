@@ -4,6 +4,7 @@
 // re-describing their content, per Commerce's never-duplicate rule.
 
 import type { Product } from '../types/product'
+import type { ProductRepository } from '../services/ProductRepository'
 
 export const MOCK_PRODUCTS: Product[] = [
   {
@@ -168,4 +169,15 @@ export function getMockProductBySlug(slug: string) {
 
 export function getMockProductsByType(type: Product['type']) {
   return MOCK_PRODUCTS.filter((p) => p.type === type)
+}
+
+// The only ProductRepository implementation today — see
+// services/ProductRepository.ts for what replaces this once Studio
+// publishes real Product JSON.
+export function createLocalProductRepository(): ProductRepository {
+  return {
+    async loadAll() {
+      return MOCK_PRODUCTS
+    },
+  }
 }
