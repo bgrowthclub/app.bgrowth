@@ -12,7 +12,7 @@ interface Benefit {
 // Static, page-specific config — mirrors QUICK_ACTIONS above, no data model
 // needed since these are marketing statements, not Business System content.
 const MEMBER_BENEFITS: Benefit[] = [
-  { title: 'Exclusive Business Systems', description: 'Systems only available to BGrowth Club members.', icon: Star },
+  { title: 'Exclusive Workspaces', description: 'Workspaces only available to BGrowth Club members.', icon: Star },
   { title: 'Premium Resources', description: 'Deeper guides, templates, and tools.', icon: BookOpen },
   { title: 'Academy Discounts', description: 'Reduced pricing on Academy courses.', icon: GraduationCap },
   { title: 'Marketplace Discounts', description: 'Member pricing with trusted partners.', icon: Store },

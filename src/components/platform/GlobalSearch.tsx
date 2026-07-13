@@ -31,7 +31,7 @@ export default function GlobalSearch() {
             {systemResults.length > 0 && (
               <div className="mb-1">
                 <p className="px-3 pb-1 pt-2 text-[11px] font-semibold uppercase tracking-wide text-navy/30">
-                  Business Systems
+                  Workspaces
                 </p>
                 {systemResults.map((s) => (
                   <Link

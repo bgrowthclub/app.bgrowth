@@ -67,7 +67,7 @@ export default function OwnedSystemCard({ system, size = 'default' }: Props) {
 
         <div className="mt-auto flex flex-wrap gap-2.5 pt-6">
           <Button to={`/system/${system.slug}`} icon={<ArrowRight size={15} />}>
-            {featured ? 'Continue' : 'Open System'}
+            {featured ? 'Continue' : 'Open Workspace'}
           </Button>
           <Button to={`/product/${system.slug}`} variant="secondary">
             View Details

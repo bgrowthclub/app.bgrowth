@@ -2,7 +2,13 @@ import type { GrowthCategoryId } from '../../../types/growth'
 import type { CurrencyCode } from './pricing'
 
 // Every kind of sellable thing across the whole BGrowth ecosystem — not
-// just Business Systems. Support requested by Milestone 5.1.
+// just Business Systems. Support requested by Milestone 5.1. `Planner` and
+// `Calculator` cover the standalone, single-module products PRODUCT_CATALOG
+// .md already names as their own trademarked nouns (Planner™, Calculator™ —
+// see CLAUDE.md §10) once a category sells one outside a bundled
+// GrowthSystem — e.g. a Budget Planner™ sold on its own in Personal
+// Finance. Used by lib/productLibrary.ts to derive a product's primary
+// action label/route — never hardcode that label per call site.
 export type ProductType =
   | 'GrowthSystem'
   | 'Course'
@@ -10,6 +16,8 @@ export type ProductType =
   | 'MarketplaceProduct'
   | 'Download'
   | 'Template'
+  | 'Planner'
+  | 'Calculator'
   | 'AIAssistant'
   | 'Service' // future
   | 'Event' // future

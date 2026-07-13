@@ -12,7 +12,7 @@ export default function DashboardPage() {
     <div className="space-y-14">
       <SEO
         title="Dashboard"
-        description="Your BGrowth Workspace — continue your Business Systems, discover what's next, and manage your membership."
+        description="Your BGrowth Workspace — continue your Workspaces, discover what's next, and manage your membership."
         path="/platform/dashboard"
       />
       <WorkspaceHero />
