@@ -14,7 +14,7 @@ interface Props {
   title: string
   description: string
   keywords?: string[]
-  path: string // e.g. "/industries" — used for canonical + og:url
+  path: string // e.g. "/workspaces" — used for canonical + og:url
   ogImage?: string
 }
 

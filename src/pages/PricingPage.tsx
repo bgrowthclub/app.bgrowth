@@ -13,7 +13,7 @@ const TIERS = [
     price: '$0',
     priceNote: 'forever',
     description: 'Get started before you buy anything.',
-    features: ['Free Business Systems', 'Free Resources™', 'Newsletter', 'Community updates'],
+    features: ['Free Business Systems', 'Free Resources™', 'Newsletter', 'Club updates'],
     ctaLabel: 'Browse Free Systems',
     ctaTo: '/systems',
   },
@@ -37,7 +37,7 @@ const TIERS = [
       'Member pricing on every system',
       'Exclusive Resources™',
       'Future courses',
-      'Community',
+      'Club community',
       'Priority updates',
     ],
     ctaLabel: 'Join BGrowth Club',
@@ -50,7 +50,7 @@ const COMPARISON_ROWS = [
   { label: 'Member pricing on every system', free: false, individual: false, club: true },
   { label: 'Free resources & templates', free: true, individual: true, club: true },
   { label: 'Exclusive member-only resources', free: false, individual: false, club: true },
-  { label: 'Newsletter & community updates', free: true, individual: true, club: true },
+  { label: 'Newsletter & Club updates', free: true, individual: true, club: true },
   { label: 'Future courses', free: false, individual: false, club: true },
 ]
 

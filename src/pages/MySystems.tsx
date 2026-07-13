@@ -4,14 +4,11 @@ import Button from '../components/ui/Button'
 import EmptyState from '../components/ui/EmptyState'
 import Grid from '../components/layout/Grid'
 import { ICONS_BY_CATEGORY } from '../components/systems/categoryIcons'
-import { SYSTEMS } from '../data/systems'
-
-// Placeholder purchased list — membership & purchase history are handled
-// outside this project. This is mock data standing in for that source.
-const PURCHASED_SLUGS = ['start-your-notary-business', 'daily-notary-operations']
+import { getOwnedSystems } from '../data/systems'
+import { PURCHASED_SLUGS } from '../data/memberMock'
 
 export default function MySystems() {
-  const purchased = SYSTEMS.filter((s) => PURCHASED_SLUGS.includes(s.slug))
+  const purchased = getOwnedSystems(PURCHASED_SLUGS)
 
   return (
     <section className="pt-36 pb-24 md:pt-44">

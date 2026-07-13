@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
+import { motion, AnimatePresence } from 'framer-motion'
 import { Link, NavLink } from 'react-router-dom'
 import { Menu, X, LogOut } from 'lucide-react'
 import logo from '../../assets/logo.png'
@@ -12,13 +12,16 @@ interface NavItem {
   to: string
 }
 
-// Public nav: Home · Business Systems · Industries · Resources · Pricing · About · Login
+// Public nav: Home · Solutions · Knowledge · About. "Solutions" and
+// "Knowledge" are same-page anchors on the homepage (see ScrollToTop.tsx,
+// which already handles hash-based scrolling into the Life Worlds and
+// Knowledge sections); "About" keeps linking to the existing standalone
+// /about page. Business Systems/Workspace/Resources/Pricing remain fully
+// reachable via the Footer and in-section CTAs, same as before.
 const PUBLIC_LINKS: NavItem[] = [
   { label: 'Home', to: '/' },
-  { label: 'Business Systems', to: '/systems' },
-  { label: 'Industries', to: '/industries' },
-  { label: 'Resources', to: '/resources' },
-  { label: 'Pricing', to: '/pricing' },
+  { label: 'Solutions', to: '/#life-worlds' },
+  { label: 'Knowledge', to: '/#knowledge' },
   { label: 'About', to: '/about' },
 ]
 
@@ -40,6 +43,15 @@ export default function Navbar({ mode = 'public' }: { mode?: NavMode }) {
     return () => window.removeEventListener('scroll', onScroll)
   }, [])
 
+  // Lock page scroll while the mobile bottom sheet is open, same as any
+  // modal/sheet overlay would.
+  useEffect(() => {
+    document.body.style.overflow = open ? 'hidden' : ''
+    return () => {
+      document.body.style.overflow = ''
+    }
+  }, [open])
+
   return (
     <motion.header
       initial={{ y: -24, opacity: 0 }}
@@ -51,42 +63,65 @@ export default function Navbar({ mode = 'public' }: { mode?: NavMode }) {
     >
       <div className="container-px mx-auto max-w-page">
         <div
-          className={`flex items-center justify-between rounded-2xl px-4 py-2.5 transition-all duration-300 ${
+          className={`relative flex items-center justify-between rounded-2xl px-4 py-2.5 transition-all duration-300 ${
             scrolled
               ? 'border border-navy/[0.06] bg-white/80 shadow-soft backdrop-blur-xl'
               : 'border border-transparent bg-transparent'
           }`}
         >
           <Link to={mode === 'member' ? '/my-systems' : '/'} className="flex items-center gap-2.5">
-            <img src={logo} alt="BGrowth" className="h-8 w-8 object-contain" />
+            {/* Circular masked container — the source PNG is a square icon
+                on a flat white canvas, which read as "an image pasted on
+                top" once everything else went pill/circle-shaped. Cropping
+                it into a circle (rather than editing the asset) keeps this
+                a pure presentation fix. */}
+            <span className="grid h-8 w-8 shrink-0 place-items-center overflow-hidden rounded-full shadow-softer">
+              <img src={logo} alt="BGrowth" className="h-full w-full scale-110 object-cover" />
+            </span>
             <span className="font-display text-[17px] font-bold tracking-tight text-navy">
               BGrowth
             </span>
           </Link>
 
-          <nav className="hidden items-center gap-1 lg:flex">
-            {links.map((link) => (
-              <NavLink
-                key={link.label}
-                to={link.to}
-                className={({ isActive }) =>
-                  `rounded-full px-4 py-2 text-[13.5px] font-medium transition-colors ${
-                    isActive ? 'bg-bg-soft text-navy' : 'text-navy/70 hover:bg-bg-soft hover:text-navy'
-                  }`
-                }
-              >
-                {link.label}
-              </NavLink>
-            ))}
+          {/* Centered relative to the entire bar (not just the space left
+              between the logo and the right-side buttons) — absolutely
+              positioned and centered on the bar's own midpoint, Apple-nav
+              style, so an uneven logo/buttons width never throws it off. */}
+          <nav className="hidden items-center gap-2 lg:absolute lg:left-1/2 lg:top-1/2 lg:flex lg:-translate-x-1/2 lg:-translate-y-1/2">
+            {links.map((link) => {
+              // Same-page anchor items (Solutions, Knowledge) resolve to the
+              // same pathname as Home ("/") — without this they'd all light
+              // up together on the homepage. Only a real distinct route
+              // (Home, About, My Systems, etc.) should ever show as active.
+              const isAnchor = link.to.includes('#')
+              return (
+                <NavLink
+                  key={link.label}
+                  to={link.to}
+                  end
+                  className={({ isActive }) =>
+                    `rounded-full px-4 py-2 text-[13.5px] font-medium transition-colors ${
+                      isActive && !isAnchor
+                        ? 'bg-bg-soft text-navy'
+                        : 'text-navy/70 hover:bg-bg-soft hover:text-navy'
+                    }`
+                  }
+                >
+                  {link.label}
+                </NavLink>
+              )
+            })}
           </nav>
 
           <div className="hidden items-center gap-2 lg:flex">
             {mode === 'public' ? (
               <>
-                {/* Visual placeholder only — auth is handled outside this project */}
-                <span className="cursor-default rounded-full px-4 py-2 text-[13.5px] font-semibold text-navy/40">
+                <Link
+                  to="/login"
+                  className="rounded-full px-4 py-2 text-[13.5px] font-semibold text-navy/60 transition-colors hover:text-navy"
+                >
                   Login
-                </span>
+                </Link>
                 <Button to="/pricing" className="!px-5 !py-2.5 !text-[13.5px]">
                   Join BGrowth Club
                 </Button>
@@ -108,41 +143,67 @@ export default function Navbar({ mode = 'public' }: { mode?: NavMode }) {
           </button>
         </div>
 
+      </div>
+
+      {/* Mobile navigation — a bottom sheet (iOS-style) rather than a
+          dropdown: slides up from the bottom with rounded top corners and
+          large touch targets, dismissed by the backdrop or an item tap. */}
+      <AnimatePresence>
         {open && (
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mt-2 flex flex-col gap-1 rounded-2xl border border-navy/[0.06] bg-white/95 p-3 shadow-soft backdrop-blur-xl lg:hidden"
-          >
-            {links.map((link) => (
-              <Link
-                key={link.label}
-                to={link.to}
-                onClick={() => setOpen(false)}
-                className="rounded-xl px-4 py-2.5 text-sm font-medium text-navy/80 hover:bg-bg-soft"
-              >
-                {link.label}
-              </Link>
-            ))}
-            <div className="mt-2 flex flex-col gap-2 border-t border-navy/[0.06] pt-3">
+          <>
+            <motion.div
+              key="backdrop"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              transition={{ duration: 0.25 }}
+              className="fixed inset-0 z-40 bg-navy/30 backdrop-blur-sm lg:hidden"
+              onClick={() => setOpen(false)}
+            />
+            <motion.div
+              key="sheet"
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 32, stiffness: 320 }}
+              className="fixed inset-x-0 bottom-0 z-50 rounded-t-3xl border-t border-navy/[0.06] bg-white p-3 pb-[max(1rem,env(safe-area-inset-bottom))] shadow-[0_-20px_60px_-10px_rgba(16,97,236,0.18)] lg:hidden"
+            >
+              <div className="mx-auto mb-2 h-1.5 w-10 rounded-full bg-navy/10" />
+              <div className="flex flex-col gap-0.5">
+                {links.map((link) => (
+                  <Link
+                    key={link.label}
+                    to={link.to}
+                    onClick={() => setOpen(false)}
+                    className="rounded-2xl px-4 py-4 text-[16px] font-medium text-navy/80 transition-colors hover:bg-bg-soft"
+                  >
+                    {link.label}
+                  </Link>
+                ))}
+              </div>
+              <div className="my-2 border-t border-navy/[0.06]" />
               {mode === 'public' ? (
-                <>
-                  <span className="cursor-default rounded-xl border border-navy/10 px-4 py-3 text-center text-sm font-semibold text-navy/40">
+                <div className="flex flex-col gap-2">
+                  <Link
+                    to="/login"
+                    onClick={() => setOpen(false)}
+                    className="rounded-2xl px-4 py-4 text-center text-[16px] font-semibold text-navy/70 transition-colors hover:bg-bg-soft"
+                  >
                     Login
-                  </span>
-                  <Button to="/pricing" className="w-full" onClick={() => setOpen(false)}>
+                  </Link>
+                  <Button to="/pricing" className="!h-14 w-full" onClick={() => setOpen(false)}>
                     Join BGrowth Club
                   </Button>
-                </>
+                </div>
               ) : (
-                <button className="btn-secondary" onClick={() => setOpen(false)}>
+                <button className="btn-secondary w-full" onClick={() => setOpen(false)}>
                   Logout
                 </button>
               )}
-            </div>
-          </motion.div>
+            </motion.div>
+          </>
         )}
-      </div>
+      </AnimatePresence>
     </motion.header>
   )
 }

@@ -433,3 +433,62 @@ export function getRelatedSystems(system: BusinessSystem) {
     .map((slug) => getSystemBySlug(slug))
     .filter((s): s is BusinessSystem => Boolean(s))
 }
+
+// Every Workspace in the catalog, regardless of status — the Product
+// Engine's "Select Workspace" dropdown (src/studio/) reads through this
+// rather than importing SYSTEMS directly. Deliberately unfiltered: Studio
+// needs to see a Workspace to build a Product around it before that
+// Workspace is necessarily published.
+export function getAllSystems() {
+  return SYSTEMS
+}
+
+// --- Workspace accessors ---------------------------------------------------
+// These read the same SYSTEMS catalog above through their own functions
+// (per CLAUDE.md: never import SYSTEMS directly outside this file) — nothing
+// here is a second data source, just different views over the one catalog.
+
+export function getOwnedSystems(slugs: string[]) {
+  return SYSTEMS.filter((s) => slugs.includes(s.slug))
+}
+
+export function searchSystems(query: string, limit = 5) {
+  const q = query.toLowerCase()
+  return SYSTEMS.filter(
+    (s) =>
+      s.status === 'published' &&
+      (s.title.toLowerCase().includes(q) || s.shortDescription.toLowerCase().includes(q)),
+  ).slice(0, limit)
+}
+
+export function getRecentlyAddedSystems(limit = 4) {
+  // Mock "recency" — the catalog has no real createdAt field yet (see
+  // types/system.ts), so catalog array order stands in as an insertion-order
+  // proxy until a Studio export carries a real timestamp.
+  return [...SYSTEMS].filter((s) => s.status === 'published').reverse().slice(0, limit)
+}
+
+export function getRecommendedSystems(ownedSlugs: string[], limit = 4) {
+  // Mock recommendation logic — related systems of what's already owned,
+  // excluding anything already owned, topped up with featured systems if
+  // there aren't enough. Not a real recommendation engine.
+  const owned = new Set(ownedSlugs)
+
+  const related = ownedSlugs
+    .map((slug) => getSystemBySlug(slug))
+    .filter((s): s is BusinessSystem => Boolean(s))
+    .flatMap((s) => getRelatedSystems(s))
+    .filter((s) => !owned.has(s.slug))
+
+  const deduped = Array.from(new Map(related.map((s) => [s.slug, s])).values())
+
+  if (deduped.length < limit) {
+    const seen = new Set(deduped.map((s) => s.slug))
+    const fallback = SYSTEMS.filter(
+      (s) => s.status === 'published' && s.featured && !owned.has(s.slug) && !seen.has(s.slug),
+    )
+    deduped.push(...fallback)
+  }
+
+  return deduped.slice(0, limit)
+}

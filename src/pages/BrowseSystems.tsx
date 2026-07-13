@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import SearchToolbar from '../components/ui/SearchToolbar'
@@ -7,7 +7,8 @@ import BusinessSystemCard from '../components/systems/BusinessSystemCard'
 import { MODULE_TYPE_CONFIG } from '../components/systems/ModuleBadge'
 import EmptyState from '../components/ui/EmptyState'
 import Grid from '../components/layout/Grid'
-import { CATEGORIES, SYSTEMS } from '../data/systems'
+import { CATEGORIES } from '../data/systems'
+import { loadPublishedSystemProducts, systemForCard } from '../lib/publishedCatalog'
 import type { ModuleType } from '../types/system'
 
 const SORT_OPTIONS = [
@@ -16,14 +17,6 @@ const SORT_OPTIONS = [
   { label: 'Price: High to Low', value: 'price-desc' },
   { label: 'Name: A–Z', value: 'name-asc' },
 ]
-
-const PUBLISHED_SYSTEMS = SYSTEMS.filter((s) => s.status === 'published')
-
-// Derived from the catalog rather than a fixed list — a module type only
-// shows as a filter option if some published system actually has one.
-const ALL_MODULE_TYPES: ModuleType[] = Array.from(
-  new Set(PUBLISHED_SYSTEMS.flatMap((s) => s.modules.map((m) => m.type))),
-)
 
 export default function BrowseSystems() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -35,8 +28,41 @@ export default function BrowseSystems() {
   const [moduleType, setModuleType] = useState<ModuleType | 'All'>('All')
   const [sort, setSort] = useState('featured')
 
+  // The Workspace Catalog — reads the Runtime↔Product Engine connection's
+  // Published Product Repository (via ProductService.getPublished())
+  // instead of a hardcoded catalog filter. A newly published product shows
+  // up here automatically, no code change required. See
+  // lib/publishedCatalog.ts.
+  const [publishedSystems, setPublishedSystems] = useState<Awaited<ReturnType<typeof loadPublishedSystemProducts>>>(
+    [],
+  )
+
+  useEffect(() => {
+    let cancelled = false
+    loadPublishedSystemProducts().then((pairs) => {
+      if (!cancelled) setPublishedSystems(pairs)
+    })
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  // Each product's own title/description/price merged onto its system —
+  // see systemForCard's doc comment on why the catalog can't render
+  // BusinessSystem's raw fields directly. Also gives every card a unique
+  // key (the product's slug), so two products ever wrapping the same
+  // Workspace render as two distinct cards, not a collapsed duplicate.
+  const publishedList = useMemo(() => publishedSystems.map(systemForCard), [publishedSystems])
+
+  // Derived from the catalog rather than a fixed list — a module type only
+  // shows as a filter option if some published system actually has one.
+  const allModuleTypes: ModuleType[] = useMemo(
+    () => Array.from(new Set(publishedList.flatMap((s) => s.modules.map((m) => m.type)))),
+    [publishedList],
+  )
+
   const results = useMemo(() => {
-    let list = PUBLISHED_SYSTEMS.filter((s) => {
+    let list = publishedList.filter((s) => {
       const matchesCategory = category === 'All' || s.category === category
       const matchesModule = moduleType === 'All' || s.modules.some((m) => m.type === moduleType)
       const matchesQuery =
@@ -54,7 +80,7 @@ export default function BrowseSystems() {
     })
 
     return list
-  }, [query, category, moduleType, sort])
+  }, [publishedList, query, category, moduleType, sort])
 
   const handleCategory = (c: string) => {
     setCategory(c)
@@ -91,7 +117,7 @@ export default function BrowseSystems() {
           <div className="flex flex-wrap items-center gap-2">
             <span className="mr-1 text-[12px] font-semibold uppercase tracking-wide text-navy/30">Module Type</span>
             <FilterPill label="All" active={moduleType === 'All'} onClick={() => setModuleType('All')} />
-            {ALL_MODULE_TYPES.map((t) => (
+            {allModuleTypes.map((t) => (
               <FilterPill key={t} label={MODULE_TYPE_CONFIG[t].label} active={moduleType === t} onClick={() => setModuleType(t)} />
             ))}
           </div>

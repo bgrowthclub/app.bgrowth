@@ -65,3 +65,11 @@ export const ARTICLES: Article[] = [
 export const STATE_RESOURCES = [
   'California', 'Texas', 'Florida', 'New York', 'Illinois', 'Pennsylvania', 'Ohio', 'Georgia',
 ]
+
+// Mock search over the resource lists above — used by the Workspace's global
+// search (see components/platform/GlobalSearch.tsx). Not a real search index.
+export function searchResources(query: string, limit = 5): SystemResource[] {
+  const q = query.toLowerCase()
+  const all = [...FREE_DOWNLOADS, ...BUSINESS_GUIDES, ...TEMPLATES, ...BUSINESS_DOCUMENTS]
+  return all.filter((r) => r.title.toLowerCase().includes(q)).slice(0, limit)
+}
