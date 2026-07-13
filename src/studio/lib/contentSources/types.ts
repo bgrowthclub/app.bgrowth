@@ -1,5 +1,18 @@
 import type { Product, ProductDifficulty } from '../../../modules/commerce/types/product'
 import type { ContentSourceType } from '../../../modules/commerce/types/contentSource'
+import type { ModuleType } from '../../../types/system'
+
+// A read-only summary of one module — enough to show what the source
+// contains (type + title, matching how ModuleBadge already renders a
+// BusinessModule elsewhere) without ever pulling in its actual content
+// (sections/fields). Informational only: never written onto a Product,
+// since Product doesn't model modules — the source stays the one place
+// module content actually lives (see CLAUDE.md's Data Rules).
+export interface ContentSourceModuleSummary {
+  id: string
+  title: string
+  type: ModuleType
+}
 
 // A lightweight, provider-agnostic snapshot of "the real content a Product
 // sells" — enough to auto-fill the General tab's fields. Every future
@@ -15,6 +28,7 @@ export interface ContentSourceSnapshot {
   difficulty?: ProductDifficulty
   estimatedTime?: string
   thumbnail?: string
+  modules?: ContentSourceModuleSummary[]
 }
 
 export interface ContentSourceOption {

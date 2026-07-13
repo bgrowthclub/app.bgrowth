@@ -67,7 +67,9 @@ export default function ProductEnginePage() {
     const fresh = createEmptyProductDraft()
     setProducts((prev) => [fresh, ...prev])
     setSelectedId(fresh.id)
-    setActiveTab('general')
+    // Land on Content Source first — importing a Workspace is the first
+    // thing a new product needs, and doing so auto-fills most of General.
+    setActiveTab('source')
     setDirty(false)
   }
 

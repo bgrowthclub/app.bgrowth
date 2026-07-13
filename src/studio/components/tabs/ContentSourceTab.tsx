@@ -3,6 +3,7 @@ import { ExternalLink, RefreshCw } from 'lucide-react'
 import Field from '../ui/Field'
 import { selectClass } from '../ui/formStyles'
 import Badge from '../../../components/ui/Badge'
+import ModuleBadge from '../../../components/systems/ModuleBadge'
 import { CONTENT_SOURCE_TYPES, getContentSourceProvider } from '../../lib/contentSources/registry'
 import type { Product } from '../../../modules/commerce/types/product'
 import type { ContentSourceType } from '../../../modules/commerce/types/contentSource'
@@ -116,6 +117,19 @@ export default function ContentSourceTab({ product, onChange }: Props) {
               <p className="mt-1.5 text-[13px] leading-relaxed text-navy/50">{snapshot.description}</p>
               {snapshot.estimatedTime && (
                 <p className="mt-3 text-[12px] text-navy/40">Estimated time: {snapshot.estimatedTime}</p>
+              )}
+
+              {snapshot.modules && snapshot.modules.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-wide text-navy/35">
+                    Modules ({snapshot.modules.length})
+                  </p>
+                  <div className="mt-2 flex flex-wrap gap-2">
+                    {snapshot.modules.map((m) => (
+                      <ModuleBadge key={m.id} type={m.type} />
+                    ))}
+                  </div>
+                </div>
               )}
 
               <div className="mt-4 flex items-center gap-1.5 text-[12.5px] font-semibold text-navy/40">

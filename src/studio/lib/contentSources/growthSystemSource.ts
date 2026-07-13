@@ -19,6 +19,10 @@ function loadSnapshot(id: string): ContentSourceSnapshot | undefined {
     difficulty: system.difficulty as ProductDifficulty,
     estimatedTime: system.estimatedTime,
     thumbnail: system.thumbnail,
+    // Type + title only — never the module's `content` (sections/fields).
+    // Informational, for the Content Source tab / preview to show what the
+    // Workspace contains; never written onto the Product itself.
+    modules: system.modules.map((m) => ({ id: m.id, title: m.title, type: m.type })),
   }
 }
 
