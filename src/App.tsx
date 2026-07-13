@@ -13,6 +13,7 @@ import CategoryPreviewPage from './pages/CategoryPreviewPage'
 import ResourcesPage from './pages/ResourcesPage'
 import PricingPage from './pages/PricingPage'
 import AboutPage from './pages/AboutPage'
+import NotFoundPage from './pages/NotFoundPage'
 import PlatformLayout from './components/platform/PlatformLayout'
 import DashboardPage from './pages/platform/DashboardPage'
 import MyBusinessSystemsPage from './pages/platform/MyBusinessSystemsPage'
@@ -68,6 +69,13 @@ export default function App() {
         {/* Long-standing linked-but-unrouted gap (see CLAUDE.md) — now
             resolves into the Workspace Account Area that already exists. */}
         <Route path="/account" element={<Navigate to="/platform/profile" replace />} />
+
+        {/* Catch-all — must stay last. Matches any URL nothing else in this
+            file matches (including a stray /platform/* or /studio/* path
+            that isn't one of their own registered children), so nothing
+            ever renders a blank page. Found during the RC1 review — see
+            docs/development/rc1-review-checklist.md. */}
+        <Route path="*" element={<NotFoundPage />} />
       </Route>
 
       {/* BGrowth Platform Shell — the permanent foundation every future
