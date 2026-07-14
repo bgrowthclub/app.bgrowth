@@ -12,16 +12,20 @@ interface NavItem {
   to: string
 }
 
-// Public nav: Home · Solutions · Knowledge · About. "Solutions" and
-// "Knowledge" are same-page anchors on the homepage (see ScrollToTop.tsx,
-// which already handles hash-based scrolling into the Life Worlds and
-// Knowledge sections); "About" keeps linking to the existing standalone
-// /about page. Business Systems/Workspace/Resources/Pricing remain fully
-// reachable via the Footer and in-section CTAs, same as before.
+// Public nav: Home · Solutions · Knowledge · About. "Solutions" is a
+// same-page anchor on the homepage (see ScrollToTop.tsx, which already
+// handles hash-based scrolling into the Life Worlds section). "Knowledge"
+// now points to the real Knowledge Hub (/knowledge) — the homepage still
+// has its own inline Knowledge preview section (components/sections/
+// Knowledge.tsx, id="knowledge"), reachable by scrolling normally, but the
+// nav item leads to the full Hub instead of anchoring to that preview.
+// "About" keeps linking to the existing standalone /about page. Business
+// Systems/Workspace/Resources/Pricing remain fully reachable via the
+// Footer and in-section CTAs, same as before.
 const PUBLIC_LINKS: NavItem[] = [
   { label: 'Home', to: '/' },
   { label: 'Solutions', to: '/#life-worlds' },
-  { label: 'Knowledge', to: '/#knowledge' },
+  { label: 'Knowledge', to: '/knowledge' },
   { label: 'About', to: '/about' },
 ]
 

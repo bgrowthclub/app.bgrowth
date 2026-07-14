@@ -13,6 +13,10 @@ import CategoryPreviewPage from './pages/CategoryPreviewPage'
 import ResourcesPage from './pages/ResourcesPage'
 import PricingPage from './pages/PricingPage'
 import AboutPage from './pages/AboutPage'
+import KnowledgeHomePage from './pages/knowledge/KnowledgeHomePage'
+import KnowledgeCategoryPage from './pages/knowledge/KnowledgeCategoryPage'
+import KnowledgeArticlePage from './pages/knowledge/KnowledgeArticlePage'
+import KnowledgeSearchPage from './pages/knowledge/KnowledgeSearchPage'
 import NotFoundPage from './pages/NotFoundPage'
 import PlatformLayout from './components/platform/PlatformLayout'
 import DashboardPage from './pages/platform/DashboardPage'
@@ -51,6 +55,16 @@ export default function App() {
         <Route path="/workspaces" element={<WorkspacesPage />} />
         <Route path="/preview/:category" element={<CategoryPreviewPage />} />
         <Route path="/resources" element={<ResourcesPage />} />
+
+        {/* BGrowth Knowledge™ Foundation — the free-content hub, ready to
+            receive future BGrowth Studio-published Knowledge Packages (see
+            modules/knowledge/). Mock data only today; no Studio connection,
+            no API, no backend. */}
+        <Route path="/knowledge" element={<KnowledgeHomePage />} />
+        <Route path="/knowledge/category/:slug" element={<KnowledgeCategoryPage />} />
+        <Route path="/knowledge/article/:slug" element={<KnowledgeArticlePage />} />
+        <Route path="/knowledge/search" element={<KnowledgeSearchPage />} />
+
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/about" element={<AboutPage />} />
 
