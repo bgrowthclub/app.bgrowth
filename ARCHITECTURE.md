@@ -541,11 +541,14 @@ src/modules/commerce/
     provider.ts      ProviderId, CheckoutSessionRequest/Result, ProviderTransactionRef
     webhook.ts       WebhookEvent, WebhookEventType
     paymentProfile.ts   PaymentProfile, PaymentProfileId, KnownPaymentProfileId
-  services/    interfaces only, except where noted
+  services/    interfaces + environment-agnostic factories only — see
+               "Server/client boundary" below for why no concrete
+               repository/provider is ever imported here
     ProductService.ts, AccessService.ts, OrderService.ts, PaymentManager.ts
-      (real implementations — see "Payment completion pipeline" /
-      "The Stripe reference implementation" below)
-    providers/StripeProvider.ts   real — the first PaymentProvider
+      (createXService/createPaymentManager factories, no singleton —
+      the real singletons live in server/ and client/, not here)
+    providers/StripeProvider.ts   real PaymentProvider implementation —
+      imported only by server/paymentManager.ts
     PurchaseService.ts, MembershipService.ts, RewardService.ts,
     BenefitService.ts, PartnerService.ts, PricingService.ts,
     DiscountService.ts, TaxService.ts, CouponService.ts, RefundService.ts,
@@ -553,14 +556,23 @@ src/modules/commerce/
     CheckoutProvider.ts, ProviderAdapter.ts   (superseded, kept — see below)
     ProductRepository.ts, OrderRepository.ts, AccessRepository.ts
       (repository seams — see below)
+  server/      real singletons for server-only code (imported only by
+               /api/*.ts) — orderService.ts, accessService.ts (both
+               Supabase-backed), paymentManager.ts (Stripe-backed; the
+               only file that imports StripeProvider's concrete module)
+  client/      real singletons for browser code — accessService.ts
+               (HTTP-backed, reads through /api/access); no orderService.ts
+               or paymentManager.ts here, since CommerceEngineClient.ts is
+               the browser's whole payment-facing seam (see below)
   store/       the one place each repository's concrete implementation
                lives — publishedProductStore.ts + publishedProductRepository.ts
-               (Product, local/in-memory), LocalOrderRepository.ts (Order,
-               browser-only inert fallback), SupabaseOrderRepository.ts
-               (Order, real — server), LocalAccessRepository.ts (superseded,
-               kept, see below), SupabaseAccessRepository.ts (Access, real —
-               server), HttpAccessRepository.ts (Access, browser — reads
-               through /api/access)
+               (Product, local/in-memory), SupabaseOrderRepository.ts (Order,
+               real — imported only by server/orderService.ts),
+               SupabaseAccessRepository.ts (Access, real — imported only
+               by server/accessService.ts), HttpAccessRepository.ts
+               (Access, browser — imported only by client/accessService.ts,
+               reads through /api/access), LocalOrderRepository.ts /
+               LocalAccessRepository.ts (superseded, kept, see below)
   mock/        realistic BGrowth example data for testing against the
                types/services above, plus mockPaymentProfiles.ts (the
                current Payment Profile -> Provider routing configuration)
@@ -853,12 +865,12 @@ Product Page -> Checkout -> CommerceEngine (client) -> /api/checkout
   remain exactly as unimplemented as they were before this sprint.
   CheckoutPage imports this, never a `PaymentProvider`, never
   `PaymentManager`'s server implementation, never Stripe.
-- `PaymentManager.ts`'s `createPaymentManager()` (server, used only
-  inside `/api/checkout.ts`) — the real implementation: resolves a
-  `PaymentProfileId` (via the new `mock/mockPaymentProfiles.ts` registry)
-  to a `PaymentProvider` (a one-entry `{ stripe: stripeProvider }` map
-  today — adding a second provider is one new registry entry, never a
-  `PaymentManager`, `CommerceEngine`, or Checkout change) and delegates.
+- `server/paymentManager.ts` (server, used only inside `/api/checkout.ts`)
+  — the real singleton: resolves a `PaymentProfileId` (via
+  `mock/mockPaymentProfiles.ts`) to a `PaymentProvider` (a one-entry
+  `{ stripe: stripeProvider }` map today — adding a second provider is one
+  new registry entry, never a `PaymentManager`, `CommerceEngine`, or
+  Checkout change) and delegates.
 
 **Why Orders and Access moved to Supabase.** `/api/checkout.ts` and
 `/api/webhooks/stripe.ts` are separate serverless functions with no
@@ -874,16 +886,46 @@ Workspaces are untouched. Schema: `docs/database/supabase-schema.sql`
 (`orders`, `product_access` — run once in a Supabase project's SQL
 editor).
 
-**Both singletons are now environment-aware** (`OrderService.ts`,
-`AccessService.ts`): `typeof window === 'undefined'` selects the
-Supabase-backed repository server-side, or (for `AccessService`) the new
-`HttpAccessRepository` in the browser — which reads through `/api/access`
-rather than Supabase directly, since the browser must never hold
-`SUPABASE_SERVICE_ROLE_KEY`. This is the same repository-swap pattern
-`ProductRepository` already established, applied to a second axis
-(server vs. browser, not just local-mock vs. real) — every existing
-`AccessService` caller (Product Library, Dashboard sections, My
-Workspaces) is unchanged.
+### Server/client boundary
+
+`services/OrderService.ts`, `services/AccessService.ts`, and
+`services/PaymentManager.ts` each hold only their interface and a
+`createXService(...)` factory — no singleton, no concrete
+repository/provider import, nothing environment-specific. This is
+deliberate: it's what makes these three files safe to import from
+*anywhere* without pulling a server-only SDK along with them.
+
+The real singletons live in two small, environment-labeled folders that
+own nothing but composition:
+
+```
+server/orderService.ts     createOrderService(createSupabaseOrderRepository(), accessService)
+server/accessService.ts    createAccessService(createSupabaseAccessRepository())
+server/paymentManager.ts   createPaymentManager({ stripe: stripeProvider })  <- the only file
+                            that imports StripeProvider's concrete module
+client/accessService.ts    createAccessService(createHttpAccessRepository())
+```
+
+`server/*.ts` is imported **only** by `/api/*.ts` — never by a page,
+component, or anything under `src/pages`/`src/components`. `client/*.ts`
+is imported by browser code (Product Library, Dashboard sections,
+`CheckoutSuccessPage`) exactly where `services/AccessService.ts`'s
+singleton used to live. `CommerceEngineClient.ts` needed no change — it
+already only did `import type` (fully erased at compile time) plus a
+`fetch('/api/checkout')` call, so it was never part of the problem.
+
+**Why this matters, concretely:** before this split, `AccessService.ts`
+picked its repository at runtime (`typeof window === 'undefined' ? ... :
+...`), but *imported both implementations unconditionally* — Vite has no
+way to tree-shake a branch it can't prove is dead, so
+`@supabase/supabase-js` ended up in the client bundle regardless of which
+branch ever actually ran. Splitting construction into separate files
+removes the unreachable branch from the import graph entirely instead of
+relying on it never executing. Measured: the client bundle dropped from
+746,093 bytes to 530,402 bytes (both `grep`-confirmed to contain zero
+Stripe or Supabase SDK signatures in the browser bundle after the split;
+Stripe was already absent before it — see "Known trade-offs" below for
+what this section replaces).
 
 **The webhook handler does exactly two things** — verify + normalize (via
 `StripeProvider.webhook`), then call `OrderService.completeOrder` and
@@ -904,16 +946,16 @@ never Stripe.js/Elements, so no publishable key is needed client-side yet
 
 **Known trade-offs, not fixed by this milestone:**
 
-- **Client bundle size.** `OrderService.ts` and `PaymentManager.ts`
-  statically import `SupabaseOrderRepository`/`StripeProvider` (which
-  import `@supabase/supabase-js`/`stripe`) even though the `isServer`
-  check means that code never *executes* in the browser. Vite still
-  bundles it (dead code, ~220KB gzipped-uncompressed difference measured)
-  since the import is static, not dynamic. No secret leaks — env vars
-  simply resolve to `undefined` client-side — but it's unnecessary weight.
-  Closing this needs converting the affected singletons to dynamic
-  `import()` behind the `isServer` branch, deferred as a follow-up, not
-  done here.
+- **Client bundle size — fixed by "Server/client boundary" above.**
+  Originally, `OrderService.ts`/`AccessService.ts`/`PaymentManager.ts`
+  statically imported their concrete Supabase/Stripe-backed repository
+  even though an `isServer` check meant that code never *executed* in the
+  browser — Vite bundled it anyway (dead code, since the import itself
+  was unconditional), pulling `@supabase/supabase-js` into the client
+  bundle. A follow-up review moved singleton construction into separate
+  `server/`/`client/` entry points instead of runtime branching inside a
+  shared file — see "Server/client boundary" above for the fix and the
+  measured before/after bundle size.
 - **Cross-instance idempotency** — see the updated note above.
 - **No live validation from this session.** No real Stripe Test Mode keys
   or Supabase project were available here — `StripeProvider.webhook`'s

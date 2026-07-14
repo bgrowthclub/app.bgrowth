@@ -6,7 +6,7 @@ import type { Product, ProductType } from '../modules/commerce/types/product'
 import type { ProductAccessState, ProductLibraryStatus, UserProduct } from '../types/productLibrary'
 import { ICONS_BY_CATEGORY } from '../components/systems/categoryIcons'
 import { resolveProductSystem } from './publishedCatalog'
-import { accessService } from '../modules/commerce/services/AccessService'
+import { accessService } from '../modules/commerce/client/accessService'
 import { productService } from '../modules/commerce/services/ProductService'
 
 // Turns a Product this member has access to into a UserProduct — works for

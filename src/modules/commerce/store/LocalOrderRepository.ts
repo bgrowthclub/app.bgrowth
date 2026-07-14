@@ -1,13 +1,13 @@
 import type { Order } from '../types/purchase'
 import type { OrderRepository } from '../services/OrderRepository'
 
-// The only OrderRepository implementation today — an in-memory array,
-// exactly like store/publishedProductStore.ts is for products. No
-// database, Google Sheets, or any other real persistence is wired up
-// here, and no OrderService implementation is built on top of it yet
-// (see OrderRepository.ts) — this milestone prepares the repository
-// abstraction only, so a real implementation can replace this one later
-// without OrderService or CommerceEngine ever changing.
+// Superseded by SupabaseOrderRepository.ts (see server/orderService.ts,
+// the only place OrderService's real singleton is now built). Left in
+// place, unused, per CLAUDE.md §12/§18 — recommend removal once approved.
+//
+// An in-memory array, exactly like store/publishedProductStore.ts is for
+// products. No database, Google Sheets, or any other real persistence is
+// wired up here.
 export function createLocalOrderRepository(): OrderRepository {
   let orders: Order[] = []
 

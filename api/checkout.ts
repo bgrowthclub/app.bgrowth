@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { orderService } from '../src/modules/commerce/services/OrderService'
-import { paymentManager } from '../src/modules/commerce/services/PaymentManager'
+import { orderService } from '../src/modules/commerce/server/orderService'
+import { paymentManager } from '../src/modules/commerce/server/paymentManager'
 import type { Cart } from '../src/modules/commerce/types/purchase'
 import type { PaymentProfileId } from '../src/modules/commerce/types/paymentProfile'
 

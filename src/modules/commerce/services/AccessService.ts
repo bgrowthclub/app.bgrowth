@@ -1,7 +1,5 @@
 import type { ProductAccess } from '../types/access'
 import type { AccessRepository } from './AccessRepository'
-import { createSupabaseAccessRepository } from '../store/SupabaseAccessRepository'
-import { createHttpAccessRepository } from '../store/HttpAccessRepository'
 
 // Deliberately not a PurchaseService — access and payment are separate
 // concerns (see types/access.ts's AccessSource: purchase is only one of
@@ -28,6 +26,14 @@ export interface AccessService {
 // AccessRepository.ts), exactly like ProductService delegates to a
 // ProductRepository. AccessService itself never touches a mock array or
 // any other storage detail directly.
+//
+// Deliberately isomorphic and free of any concrete repository import —
+// this file never imports Supabase or fetch-based code, so it's safe for
+// both server and browser code to import. The two real singletons this
+// factory builds live in separate, environment-specific entry points:
+// server/accessService.ts (Supabase-backed) and client/accessService.ts
+// (HTTP-backed) — see ARCHITECTURE.md's "Server/client boundary" section
+// for why the split exists and what it prevents.
 export function createAccessService(repository: AccessRepository): AccessService {
   return {
     async hasAccess(memberId, productId) {
@@ -48,14 +54,3 @@ export function createAccessService(repository: AccessRepository): AccessService
     },
   }
 }
-
-// Server (Node, e.g. /api/*.ts) gets the real Supabase-backed repository
-// — the shared source of truth OrderService.completeOrder writes into.
-// Browser gets the HTTP-backed repository (reads through /api/access) —
-// it must never hold SUPABASE_SERVICE_ROLE_KEY. Both sides implement the
-// exact same AccessRepository interface; AccessService above never knows
-// which one it's talking to.
-const isServer = typeof window === 'undefined'
-export const accessService: AccessService = createAccessService(
-  isServer ? createSupabaseAccessRepository() : createHttpAccessRepository(),
-)

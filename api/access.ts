@@ -1,5 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
-import { accessService } from '../src/modules/commerce/services/AccessService'
+import { accessService } from '../src/modules/commerce/server/accessService'
 
 // The browser's only way to read ProductAccess — see
 // store/HttpAccessRepository.ts, which every browser-side AccessService

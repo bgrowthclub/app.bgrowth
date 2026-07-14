@@ -2,9 +2,6 @@ import type { Order, Cart } from '../types/purchase'
 import type { Money } from '../types/pricing'
 import type { OrderRepository } from './OrderRepository'
 import type { AccessService } from './AccessService'
-import { createLocalOrderRepository } from '../store/LocalOrderRepository'
-import { createSupabaseOrderRepository } from '../store/SupabaseOrderRepository'
-import { accessService } from './AccessService'
 
 // Owns the whole-cart checkout record (Order) as distinct from
 // PurchaseService, which owns the per-product entitlement record
@@ -40,6 +37,13 @@ let orderCounter = 0
 // AccessService, since completeOrder's job is exactly "an Order completed,
 // now grant access for what was bought" — not persistence, so it isn't
 // threaded through OrderRepository.
+//
+// Deliberately isomorphic and free of any concrete repository import —
+// this file never imports Supabase, so it's safe for both server and
+// browser code to import (even though, today, only server/orderService.ts
+// actually constructs a real singleton from it — nothing in the browser
+// creates or completes an Order in this flow). See ARCHITECTURE.md's
+// "Server/client boundary" section.
 export function createOrderService(repository: OrderRepository, access: AccessService): OrderService {
   // Idempotency for completeOrder — see the doc comment there. Keyed by
   // orderId: while a completion is in flight, a concurrent duplicate call
@@ -174,16 +178,3 @@ export function createOrderService(repository: OrderRepository, access: AccessSe
     },
   }
 }
-
-// Server (Node, e.g. /api/checkout.ts and /api/webhooks/stripe.ts) gets
-// the real Supabase-backed repository — the shared source of truth those
-// two separate serverless functions both need (see ARCHITECTURE.md's
-// "Payment completion pipeline"). Nothing in the browser creates or
-// completes an Order directly in this flow, so the browser side keeps
-// LocalOrderRepository as an inert fallback — safe, since it's never
-// exercised there.
-const isServer = typeof window === 'undefined'
-export const orderService: OrderService = createOrderService(
-  isServer ? createSupabaseOrderRepository() : createLocalOrderRepository(),
-  accessService,
-)

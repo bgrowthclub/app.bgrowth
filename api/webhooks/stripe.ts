@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { stripeProvider } from '../../src/modules/commerce/services/providers/StripeProvider'
-import { orderService } from '../../src/modules/commerce/services/OrderService'
+import { orderService } from '../../src/modules/commerce/server/orderService'
 
 // Stripe signature verification needs the exact raw request body — never
 // Vercel's auto-parsed JSON object — so the default body parser is

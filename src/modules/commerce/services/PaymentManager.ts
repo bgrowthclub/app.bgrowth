@@ -3,7 +3,6 @@ import type { PaymentProvider } from './PaymentProvider'
 import type { ProviderId, CheckoutSessionRequest, CheckoutSessionResult } from '../types/provider'
 import type { Transaction } from '../types/purchase'
 import { getMockPaymentProfile } from '../mock/mockPaymentProfiles'
-import { stripeProvider } from './providers/StripeProvider'
 
 // The seam between CommerceEngine and PaymentProvider:
 //
@@ -32,20 +31,17 @@ export interface PaymentManager {
   cancel(paymentProfileId: PaymentProfileId, transactionId: string): Promise<Transaction>
 }
 
-// Every registered PaymentProvider, keyed by ProviderId — Stripe is the
-// only entry today. Adding a second provider is exactly one new entry
-// here, never a change to PaymentManager's logic below, CommerceEngine,
-// or Checkout — see ARCHITECTURE.md's "Future Stripe integration".
-const PROVIDERS: Partial<Record<ProviderId, PaymentProvider>> = {
-  stripe: stripeProvider,
-}
-
-// The one concrete PaymentManager implementation today. Server-only — it
-// resolves real PaymentProvider instances (StripeProvider reads secret
-// keys), so this must only ever be constructed/called from /api/*.ts, not
-// from a page or component. See CommerceEngineClient.ts for the browser's
-// side of this seam, which calls /api/checkout instead of this directly.
-export function createPaymentManager(): PaymentManager {
+// The one concrete PaymentManager implementation today. Deliberately free
+// of any concrete PaymentProvider import — it takes its provider registry
+// as a parameter instead of importing StripeProvider (or any future
+// provider) itself, so this file is safe to import from anywhere without
+// pulling a provider SDK along with it. The real singleton — built with
+// `{ stripe: stripeProvider }` — lives in server/paymentManager.ts, the
+// only file allowed to construct one; only /api/checkout.ts calls it.
+// See CommerceEngineClient.ts for the browser's side of this seam, which
+// calls /api/checkout instead of this directly, and ARCHITECTURE.md's
+// "Server/client boundary" section for why the split exists.
+export function createPaymentManager(providers: Partial<Record<ProviderId, PaymentProvider>>): PaymentManager {
   async function resolvePaymentProfile(paymentProfileId: PaymentProfileId): Promise<PaymentProfile> {
     const profile = getMockPaymentProfile(paymentProfileId)
     if (!profile) throw new Error(`Unknown PaymentProfileId "${paymentProfileId}"`)
@@ -55,7 +51,7 @@ export function createPaymentManager(): PaymentManager {
   async function resolveProvider(paymentProfileId: PaymentProfileId, region?: string): Promise<PaymentProvider> {
     const profile = await resolvePaymentProfile(paymentProfileId)
     const providerId = (region && profile.regionOverrides?.[region]) || profile.providerId
-    const provider = PROVIDERS[providerId]
+    const provider = providers[providerId]
     if (!provider) throw new Error(`No PaymentProvider registered for provider id "${providerId}"`)
     return provider
   }
@@ -85,5 +81,3 @@ export function createPaymentManager(): PaymentManager {
     },
   }
 }
-
-export const paymentManager: PaymentManager = createPaymentManager()
