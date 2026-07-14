@@ -1,6 +1,7 @@
 import type { ProductAccess } from '../types/access'
 import type { AccessRepository } from './AccessRepository'
-import { createLocalAccessRepository } from '../store/LocalAccessRepository'
+import { createSupabaseAccessRepository } from '../store/SupabaseAccessRepository'
+import { createHttpAccessRepository } from '../store/HttpAccessRepository'
 
 // Deliberately not a PurchaseService — access and payment are separate
 // concerns (see types/access.ts's AccessSource: purchase is only one of
@@ -48,4 +49,13 @@ export function createAccessService(repository: AccessRepository): AccessService
   }
 }
 
-export const accessService: AccessService = createAccessService(createLocalAccessRepository())
+// Server (Node, e.g. /api/*.ts) gets the real Supabase-backed repository
+// — the shared source of truth OrderService.completeOrder writes into.
+// Browser gets the HTTP-backed repository (reads through /api/access) —
+// it must never hold SUPABASE_SERVICE_ROLE_KEY. Both sides implement the
+// exact same AccessRepository interface; AccessService above never knows
+// which one it's talking to.
+const isServer = typeof window === 'undefined'
+export const accessService: AccessService = createAccessService(
+  isServer ? createSupabaseAccessRepository() : createHttpAccessRepository(),
+)

@@ -526,7 +526,9 @@ Commerce talks to a provider through one abstraction seam.
 
 ```
 src/modules/commerce/
-  CommerceEngine.ts   the formal facade — see "The Commerce Engine" below
+  CommerceEngine.ts         the formal facade — see "The Commerce Engine" below
+  CommerceEngineClient.ts   the browser's real CommerceEngine implementation
+                            — see "The Stripe reference implementation"
   types/       domain models — interfaces and types only, no logic
     product.ts      Product, ProductType, ProductSourceRef, ProductBenefit
     membership.ts    MembershipPlan, MembershipTierId, MembershipPermissions
@@ -540,22 +542,29 @@ src/modules/commerce/
     webhook.ts       WebhookEvent, WebhookEventType
     paymentProfile.ts   PaymentProfile, PaymentProfileId, KnownPaymentProfileId
   services/    interfaces only, except where noted
-    ProductService.ts, AccessService.ts, OrderService.ts   (real
-      implementations — see "Payment completion pipeline" below)
+    ProductService.ts, AccessService.ts, OrderService.ts, PaymentManager.ts
+      (real implementations — see "Payment completion pipeline" /
+      "The Stripe reference implementation" below)
+    providers/StripeProvider.ts   real — the first PaymentProvider
     PurchaseService.ts, MembershipService.ts, RewardService.ts,
     BenefitService.ts, PartnerService.ts, PricingService.ts,
     DiscountService.ts, TaxService.ts, CouponService.ts, RefundService.ts,
-    WebhookService.ts, PaymentProvider.ts, PaymentManager.ts
+    WebhookService.ts, PaymentProvider.ts   (interface only)
     CheckoutProvider.ts, ProviderAdapter.ts   (superseded, kept — see below)
     ProductRepository.ts, OrderRepository.ts, AccessRepository.ts
       (repository seams — see below)
-  store/       the one place each repository's concrete (local, in-memory)
-               implementation lives — publishedProductStore.ts +
-               publishedProductRepository.ts (Product),
-               LocalOrderRepository.ts (Order), LocalAccessRepository.ts
-               (Access)
+  store/       the one place each repository's concrete implementation
+               lives — publishedProductStore.ts + publishedProductRepository.ts
+               (Product, local/in-memory), LocalOrderRepository.ts (Order,
+               browser-only inert fallback), SupabaseOrderRepository.ts
+               (Order, real — server), LocalAccessRepository.ts (superseded,
+               kept, see below), SupabaseAccessRepository.ts (Access, real —
+               server), HttpAccessRepository.ts (Access, browser — reads
+               through /api/access)
   mock/        realistic BGrowth example data for testing against the
-               types/services above — not a second product catalog
+               types/services above, plus mockPaymentProfiles.ts (the
+               current Payment Profile -> Provider routing configuration)
+               — not a second product catalog
 ```
 
 `src/modules/` is a new top-level pattern, reserved for large,
@@ -769,16 +778,154 @@ unknown-order calls all behave as below):
   second time — a provider never legitimately re-sends a *different*
   transaction id for an order it already completed.
 
-**Scope of this guarantee:** the in-flight-call guard closes the race
-within one process/mock only. Once a real, database-backed
-`OrderRepository` replaces `LocalOrderRepository` and this code runs
-behind multiple server instances (e.g. several serverless function
-invocations handling retried webhooks concurrently), true cross-process
-idempotency additionally requires enforcing this at the persistence layer
-— e.g. a conditional update (`UPDATE ... WHERE status = 'pending'`,
-checking rows affected) or a unique constraint on `transactionId`. That's
-a property the eventual real `OrderRepository` implementation must
-provide, not something `LocalOrderRepository` or this review builds.
+**Scope of this guarantee, updated now that `SupabaseOrderRepository`
+exists (see "The Stripe reference implementation" below):** the
+in-flight-call guard closes the race within one *warm* server process —
+`/api/checkout.ts` and `/api/webhooks/stripe.ts` are still separate
+Vercel serverless functions with separate `inFlightCompletions` maps, so
+two concurrent duplicate webhook deliveries landing on *different*
+function instances aren't caught by that guard. The sequential-duplicate
+and mismatched-transaction checks (reading the Order's current `status`/
+`transactionId` before acting) still hold regardless, since they're
+enforced against Supabase's stored row on every call. What's still
+missing for *fully* atomic cross-instance concurrent completion is a
+conditional update (`UPDATE orders SET status = 'completed' ... WHERE
+status = 'pending'`, checking rows affected) or a unique constraint on
+`transaction_id` at the database layer — `SupabaseOrderRepository.saveOrder`
+today is a plain upsert, not a conditional one. Given Stripe webhook
+retries are practically always sequential (a retry follows a timeout or
+non-2xx, not a simultaneous duplicate), this is a real but narrow gap,
+worth closing before relying on this in a high-volume production setting,
+not built as part of this milestone's scoped repository swap.
+
+### The Stripe reference implementation
+
+The first real `PaymentProvider` — `StripeProvider`
+(`services/providers/StripeProvider.ts`) — and the infrastructure it
+needed to actually run. This is the reference every future provider
+follows; the shape below is deliberate, not incidental.
+
+**This app gained a backend.** Stripe's secret key and webhook
+verification cannot run in a browser bundle, and this repo had no server
+at all before this milestone (`vercel.json` was a static rewrite only —
+see the earlier readiness review). Three Vercel Serverless Functions were
+added under `/api/` (outside `src/` — a deliberate, explicit exception to
+"`src/` is the only real source tree," scoped to these three thin HTTP
+entry points):
+
+```
+/api/checkout.ts          — POST: creates an Order, starts a Stripe
+                             Checkout Session, returns its checkoutUrl
+/api/webhooks/stripe.ts   — POST: verifies + normalizes a Stripe webhook,
+                             calls OrderService.completeOrder
+/api/access.ts            — GET: the browser's only way to read
+                             ProductAccess (see below)
+```
+
+Every other Commerce type, service, and business-logic file stays in
+`src/modules/commerce/` exactly as before — the `/api/*.ts` files are
+intentionally thin: parse the HTTP request, call into `src/`'s real
+`orderService` / `paymentManager` / `accessService` singletons, serialize
+the HTTP response. `src/` remains where the actual Commerce logic lives,
+including `StripeProvider` and `PaymentManager`'s real implementation —
+matching ARCHITECTURE.md's original "Future Stripe integration" plan
+(`services/providers/StripeProvider.ts`) exactly, now realized.
+
+**The full flow:**
+
+```
+Product Page -> Checkout -> CommerceEngine (client) -> /api/checkout
+   -> Stripe Checkout (hosted page) -> buyer pays
+   -> Stripe Webhook -> /api/webhooks/stripe -> OrderService.completeOrder
+   -> OrderRepository (Supabase) + AccessService -> AccessRepository (Supabase)
+   -> My Workspaces (reads through /api/access) -> Open Workspace
+```
+
+**CheckoutPage still communicates only with `CommerceEngine`** — but
+"CommerceEngine" now has two sides:
+
+- `CommerceEngineClient.ts` (browser) — a real `CommerceEngine`-typed
+  object. Only `paymentManager.createCheckout(...)` does real work: it
+  `fetch`es `/api/checkout`. Every other member (`orders`, `pricing`,
+  `coupons`, `tax`, `refunds`, `webhooks`, and `paymentManager`'s other
+  four methods) throws a clear "not available in the browser" error if
+  actually called — this milestone's flow doesn't need them, and they
+  remain exactly as unimplemented as they were before this sprint.
+  CheckoutPage imports this, never a `PaymentProvider`, never
+  `PaymentManager`'s server implementation, never Stripe.
+- `PaymentManager.ts`'s `createPaymentManager()` (server, used only
+  inside `/api/checkout.ts`) — the real implementation: resolves a
+  `PaymentProfileId` (via the new `mock/mockPaymentProfiles.ts` registry)
+  to a `PaymentProvider` (a one-entry `{ stripe: stripeProvider }` map
+  today — adding a second provider is one new registry entry, never a
+  `PaymentManager`, `CommerceEngine`, or Checkout change) and delegates.
+
+**Why Orders and Access moved to Supabase.** `/api/checkout.ts` and
+`/api/webhooks/stripe.ts` are separate serverless functions with no
+shared memory — an `Order` created by one is invisible to the other if
+both stay in-memory, breaking the pipeline the moment there are two real
+HTTP endpoints instead of one in-process call. `SupabaseOrderRepository`
+and `SupabaseAccessRepository` (`store/`) implement the *exact same*
+`OrderRepository` / `AccessRepository` interfaces `LocalOrderRepository`
+/ `LocalAccessRepository` already did — `OrderService` and `AccessService`
+never changed. Scoped narrowly, per direction: **only** Orders and Access
+persist to a real database; Products, Product Packages, Builders, and
+Workspaces are untouched. Schema: `docs/database/supabase-schema.sql`
+(`orders`, `product_access` — run once in a Supabase project's SQL
+editor).
+
+**Both singletons are now environment-aware** (`OrderService.ts`,
+`AccessService.ts`): `typeof window === 'undefined'` selects the
+Supabase-backed repository server-side, or (for `AccessService`) the new
+`HttpAccessRepository` in the browser — which reads through `/api/access`
+rather than Supabase directly, since the browser must never hold
+`SUPABASE_SERVICE_ROLE_KEY`. This is the same repository-swap pattern
+`ProductRepository` already established, applied to a second axis
+(server vs. browser, not just local-mock vs. real) — every existing
+`AccessService` caller (Product Library, Dashboard sections, My
+Workspaces) is unchanged.
+
+**The webhook handler does exactly two things** — verify + normalize (via
+`StripeProvider.webhook`), then call `OrderService.completeOrder` and
+*nothing else*. It never touches `AccessService` or either repository
+directly — that invariant from "Payment completion pipeline" holds
+exactly as designed. `completeOrder` being idempotent (see above) is what
+makes Stripe's at-least-once webhook delivery safe to retry into this
+handler.
+
+**Environment variables** (see `.env.example`): `STRIPE_SECRET_KEY`,
+`STRIPE_WEBHOOK_SECRET`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY` are
+all server-only, read only inside `/api/*.ts` and the `src/` services they
+call — never `VITE_`-prefixed, never reaching the client bundle.
+`VITE_STRIPE_PUBLISHABLE_KEY` stays documented but unused: this flow uses
+Stripe Checkout (a hosted, redirect-based page returned as `checkoutUrl`),
+never Stripe.js/Elements, so no publishable key is needed client-side yet
+— it's prepared for a future embedded checkout.
+
+**Known trade-offs, not fixed by this milestone:**
+
+- **Client bundle size.** `OrderService.ts` and `PaymentManager.ts`
+  statically import `SupabaseOrderRepository`/`StripeProvider` (which
+  import `@supabase/supabase-js`/`stripe`) even though the `isServer`
+  check means that code never *executes* in the browser. Vite still
+  bundles it (dead code, ~220KB gzipped-uncompressed difference measured)
+  since the import is static, not dynamic. No secret leaks — env vars
+  simply resolve to `undefined` client-side — but it's unnecessary weight.
+  Closing this needs converting the affected singletons to dynamic
+  `import()` behind the `isServer` branch, deferred as a follow-up, not
+  done here.
+- **Cross-instance idempotency** — see the updated note above.
+- **No live validation from this session.** No real Stripe Test Mode keys
+  or Supabase project were available here — `StripeProvider.webhook`'s
+  signature verification and event mapping were verified offline (a
+  locally-generated test signature via Stripe's own
+  `webhooks.generateTestHeaderString` helper, no network call), and every
+  other file type-checks (`tsc -p api/tsconfig.json --noEmit`, new since
+  the root `tsconfig.json` only covers `src/`) and builds cleanly. Live
+  verification (`createCheckout` actually hitting Stripe, a real webhook
+  arriving, Supabase actually persisting) requires the environment
+  variables above to be set and `vercel dev` (or a real deployment) — a
+  plain `npm run dev` (Vite only) doesn't route `/api/*` at all.
 
 ### The Provider Abstraction
 
@@ -818,10 +965,10 @@ one new `PaymentProvider` implementation — it never means touching
 `(string & {})` escape hatch specifically so a not-yet-listed provider
 doesn't require a type change either.
 
-**No `PaymentProvider` implementation exists yet** — not for Stripe, not
-for any other provider. This milestone built the contract it'll be built
-against, not a Stripe integration (explicitly out of scope — see
-CLAUDE.md's Commerce rules).
+**`StripeProvider` (`services/providers/StripeProvider.ts`) is now the
+first real `PaymentProvider` implementation** — see "The Stripe reference
+implementation" above for the full picture (including the `/api/`
+serverless functions it required). No other provider is implemented yet.
 
 `CheckoutProvider.ts` and `ProviderAdapter.ts` (the pre-`CommerceEngine`
 version of this same seam) are now superseded by `CommerceEngine.ts` and
@@ -849,9 +996,11 @@ place a `PaymentProfileId` is ever turned into a concrete
 `PaymentProvider`. A `PaymentProfile` has one default `providerId`, plus
 an optional `regionOverrides` map (e.g. `{ BR: 'mercado-pago' }`) a
 `regional` profile uses to route different countries to different
-providers. Neither mechanism is implemented yet — no `PaymentProfile`
-records or provider routing exist, only the types and the `PaymentManager`
-seam they'll be read through.
+providers. `mock/mockPaymentProfiles.ts` now provides the five named
+profiles from the table above — every one routes to `stripe` today, since
+it's the only registered provider; a `regionOverrides` entry (e.g. routing
+Brazil to Mercado Pago) is exactly what a second provider adds, without
+touching `PaymentManager`, `CommerceEngine`, or Checkout.
 
 ### Base Price, Base Currency, and global commerce
 
@@ -871,19 +1020,25 @@ currency-conversion logic exists yet — `PricingService.convertCurrency`
 remains an interface with no implementation, same as every other Commerce
 service.
 
-### Future Stripe integration (and any other provider)
+### Adding a second provider (e.g. Mercado Pago, PayPal)
 
-1. Add a Stripe-specific file (e.g. `services/providers/StripeProvider.ts`)
-   implementing `PaymentProvider` — this is the *only* file allowed to
-   import a Stripe SDK.
-2. Register it wherever `PaymentManager`'s concrete implementation of
-   `resolveProvider(...)` maps a `PaymentProfile`'s `providerId` (or a
-   `regionOverrides` entry) to a `PaymentProvider` instance (that mapping
-   doesn't exist yet either — it's part of the same future implementation
-   work, not this milestone).
-3. Nothing else changes. Pages and components already only ever call
-   `CommerceEngine` with a `PaymentProfileId`, never a provider directly,
-   because that boundary is what this milestone establishes.
+Now realized for Stripe — see "The Stripe reference implementation"
+above. For the next provider:
+
+1. Add `services/providers/<Provider>.ts` implementing `PaymentProvider`
+   — this is the *only* file allowed to import that provider's SDK, same
+   rule `StripeProvider.ts` follows.
+2. Register it in `PaymentManager.ts`'s `PROVIDERS` map (one new entry —
+   `{ stripe: stripeProvider, 'mercado-pago': mercadoPagoProvider }`).
+3. Point a `PaymentProfile` at it — either as a profile's default
+   `providerId`, or as a `regional` profile's `regionOverrides` entry
+   (`mock/mockPaymentProfiles.ts`).
+4. Nothing else changes. Pages and components already only ever call
+   `CommerceEngine` with a `PaymentProfileId`, never a provider directly —
+   `CommerceEngineClient.ts`, `/api/checkout.ts`, and `/api/webhooks/*.ts`
+   are exactly what a second provider's checkout/webhook entry points
+   mirror (a new `/api/webhooks/<provider>.ts` following the same
+   verify-then-`OrderService.completeOrder` shape).
 
 ### Future Marketplace integration
 

@@ -12,6 +12,8 @@ import { WORKSPACE_CATEGORIES } from '../data/workspaceCategories'
 import { isCheckoutSelection } from '../lib/checkout'
 import { productService } from '../modules/commerce/services/ProductService'
 import { resolveProductSystem } from '../lib/publishedCatalog'
+import { commerceEngine } from '../modules/commerce/CommerceEngineClient'
+import { useIdentity } from '../modules/identity/mock/MockIdentityProvider'
 import type { SystemBenefit } from '../types/system'
 import type { Product } from '../modules/commerce/types/product'
 
@@ -45,19 +47,22 @@ const TRUST_ITEMS = [
 ]
 
 // Checkout — the second step of the purchase flow integration. Lays out a
-// production-ready order summary; it does not process any payment. See
-// handleContinueToPayment below for where this page will call the
-// Commerce Engine (src/modules/commerce/CommerceEngine.ts) — the only
-// layer ever allowed to talk to a payment provider; this page must never
-// call Stripe/PayPal/etc. directly. Loads the product it's selling
-// through ProductService — the navigation state only carries a
-// productId, never a duplicated snapshot of price/title/etc (see
-// types/checkout.ts).
+// production-ready order summary, then hands off to Stripe Checkout (a
+// hosted, redirect-based page) via CommerceEngine — the only layer this
+// page is ever allowed to talk to for anything payment-shaped; it never
+// calls Stripe, PaymentManager, or a PaymentProvider directly (see
+// CommerceEngineClient.ts and ARCHITECTURE.md's "Payment completion
+// pipeline"). Loads the product it's selling through ProductService — the
+// navigation state only carries a productId, never a duplicated snapshot
+// of price/title/etc (see types/checkout.ts).
 export default function CheckoutPage() {
   const location = useLocation()
   const navigate = useNavigate()
+  const { user } = useIdentity()
   const selection = isCheckoutSelection(location.state) ? location.state : null
   const [product, setProduct] = useState<Product | null | undefined>(undefined)
+  const [isRedirecting, setIsRedirecting] = useState(false)
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!selection) return
@@ -73,18 +78,39 @@ export default function CheckoutPage() {
   }, [selection?.productId])
 
   if (!selection || product === null) return <Navigate to="/systems" replace />
-  if (product === undefined) return null
+  if (product === undefined || !user) return null
 
   const system = resolveProductSystem(product)
   const Icon = ICONS_BY_CATEGORY[system?.category ?? ''] ?? ICONS_BY_CATEGORY.Default
   const workspace = WORKSPACE_CATEGORIES.find((w) => w.slug === selection.workspaceId)
   const priceLabel = product.basePrice.toFixed(2)
 
-  function handleContinueToPayment() {
-    // Future: call CommerceEngine.orders.createOrder(...) then
-    // CommerceEngine.paymentManager.createCheckout(product.paymentProfileId, ...)
-    // and redirect to the returned checkoutUrl. This page never calls a
-    // payment provider (Stripe, PayPal, ...) or PaymentManager directly.
+  async function handleContinueToPayment() {
+    if (!product) return
+    setCheckoutError(null)
+    setIsRedirecting(true)
+    try {
+      const successUrl = `${window.location.origin}/checkout/success?productId=${encodeURIComponent(
+        product.id,
+      )}&workspaceId=${encodeURIComponent(selection!.workspaceId)}`
+      const cancelUrl = `${window.location.origin}/checkout`
+
+      const result = await commerceEngine.paymentManager.createCheckout(product.paymentProfileId, {
+        cart: {
+          id: `cart-${Date.now()}`,
+          currency: product.baseCurrency,
+          items: [{ productId: product.id, quantity: 1, unitPrice: { amount: product.basePrice, currency: product.baseCurrency } }],
+        },
+        memberId: user!.id,
+        successUrl,
+        cancelUrl,
+      })
+
+      window.location.href = result.checkoutUrl
+    } catch (err) {
+      setCheckoutError(err instanceof Error ? err.message : 'Something went wrong starting checkout. Please try again.')
+      setIsRedirecting(false)
+    }
   }
 
   return (
@@ -204,14 +230,21 @@ export default function CheckoutPage() {
               </div>
             </div>
 
+            {checkoutError && (
+              <p className="mt-5 rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-[12.5px] font-medium text-red-600">
+                {checkoutError}
+              </p>
+            )}
+
             <div className="mt-7 space-y-3">
               <Button
                 type="button"
                 onClick={handleContinueToPayment}
+                disabled={isRedirecting}
                 icon={<ArrowRight size={16} />}
                 className="w-full"
               >
-                Continue to Secure Checkout
+                {isRedirecting ? 'Redirecting to Stripe…' : 'Continue to Secure Checkout'}
               </Button>
               <Button type="button" onClick={() => navigate(-1)} variant="secondary" className="w-full">
                 Back to Product

@@ -1,15 +1,16 @@
 import { useEffect, useState } from 'react'
-import { useLocation, Navigate } from 'react-router-dom'
-import { ArrowRight, BookOpen, Check, CheckCircle2, LifeBuoy } from 'lucide-react'
+import { useNavigate, useSearchParams, Navigate } from 'react-router-dom'
+import { ArrowRight, BookOpen, Check, CheckCircle2, LifeBuoy, Loader2 } from 'lucide-react'
 import SEO from '../components/seo/SEO'
 import Badge from '../components/ui/Badge'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
 import { ICONS_BY_CATEGORY } from '../components/systems/categoryIcons'
 import { WORKSPACE_CATEGORIES } from '../data/workspaceCategories'
-import { isCheckoutSelection } from '../lib/checkout'
 import { productService } from '../modules/commerce/services/ProductService'
+import { accessService } from '../modules/commerce/services/AccessService'
 import { resolveProductSystem } from '../lib/publishedCatalog'
+import { useIdentity } from '../modules/identity/mock/MockIdentityProvider'
 import type { Product } from '../modules/commerce/types/product'
 
 const TIMELINE_STEPS = [
@@ -18,50 +19,83 @@ const TIMELINE_STEPS = [
   { title: 'Start Your First Workspace', status: 'upcoming' as const, label: 'Ready' },
 ]
 
-// The final step of the purchase flow's navigation architecture — reachable
-// once a real payment provider redirects back here after a successful
-// charge (see CheckoutPage's handleContinueToPayment). No payment
-// verification happens on this page or anywhere in this app yet: it reuses
-// the same CheckoutSelection state Checkout already receives, and only
-// synthesizes a display-only purchase date/order id, since there is no
-// backend to source real ones from.
+// How long to poll AccessService for the webhook's grant before giving up
+// and showing a "still finalizing" fallback — see the polling effect
+// below.
+const ACCESS_POLL_ATTEMPTS = 8
+const ACCESS_POLL_INTERVAL_MS = 1500
+
+// The final step of the purchase flow's navigation architecture — reached
+// by a real, full-page redirect from Stripe Checkout, not client-side
+// router navigation, so this page reads productId/workspaceId from the
+// URL query string (set in CheckoutPage's successUrl) rather than
+// router-state (which a full-page redirect never carries). Stripe's
+// webhook (see api/webhooks/stripe.ts) grants access asynchronously —
+// often before this page even finishes loading, but not guaranteed — so
+// this page polls AccessService briefly rather than assuming access
+// already exists the instant the redirect lands.
 export default function CheckoutSuccessPage() {
-  const location = useLocation()
-  const selection = isCheckoutSelection(location.state) ? location.state : null
+  const navigate = useNavigate()
+  const { user } = useIdentity()
+  const [searchParams] = useSearchParams()
+  const productId = searchParams.get('productId')
+  const workspaceId = searchParams.get('workspaceId')
   const [product, setProduct] = useState<Product | null | undefined>(undefined)
+  const [accessGranted, setAccessGranted] = useState(false)
+  const [pollTimedOut, setPollTimedOut] = useState(false)
 
   useEffect(() => {
-    if (!selection) return
+    if (!productId) return
     let cancelled = false
     setProduct(undefined)
-    productService.getProductById(selection.productId).then((result) => {
+    productService.getProductById(productId).then((result) => {
       if (!cancelled) setProduct(result ?? null)
     })
     return () => {
       cancelled = true
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selection?.productId])
+  }, [productId])
 
-  if (!selection || product === null) return <Navigate to="/systems" replace />
-  if (product === undefined) return null
+  useEffect(() => {
+    if (!productId || !user) return
+    let cancelled = false
+    let attempt = 0
+
+    async function poll() {
+      const hasAccess = await accessService.hasAccess(user!.id, productId!)
+      if (cancelled) return
+      if (hasAccess) {
+        setAccessGranted(true)
+        return
+      }
+      attempt += 1
+      if (attempt >= ACCESS_POLL_ATTEMPTS) {
+        setPollTimedOut(true)
+        return
+      }
+      setTimeout(poll, ACCESS_POLL_INTERVAL_MS)
+    }
+
+    poll()
+    return () => {
+      cancelled = true
+    }
+  }, [productId, user])
+
+  if (!productId || !workspaceId || product === null) return <Navigate to="/systems" replace />
+  if (product === undefined || !user) return null
 
   const system = resolveProductSystem(product)
   const Icon = ICONS_BY_CATEGORY[system?.category ?? ''] ?? ICONS_BY_CATEGORY.Default
-  const workspace = WORKSPACE_CATEGORIES.find((w) => w.slug === selection.workspaceId)
+  const workspace = WORKSPACE_CATEGORIES.find((w) => w.slug === workspaceId)
   const purchaseDate = new Date().toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-  const orderId = `BG-${Date.now().toString(36).toUpperCase()}`
 
   function handleOpenWorkspace() {
-    // Future:
-    // Navigate to /system/:slug once real product access is granted after
-    // a verified Stripe payment.
+    if (system) navigate(`/system/${system.slug}`)
   }
 
   function handleGoToMyProducts() {
-    // Future:
-    // Navigate to the member's My Business Systems page once this purchase
-    // is recorded against a real BGrowth Identity™ account.
+    navigate('/platform/my-systems')
   }
 
   return (
@@ -84,6 +118,21 @@ export default function CheckoutSuccessPage() {
           Your new Workspace is now available in your account. You can start using it immediately.
         </p>
 
+        {!accessGranted && !pollTimedOut && (
+          <div className="mx-auto mt-6 flex max-w-md items-center justify-center gap-2.5 rounded-xl border border-primary/15 bg-bg-soft px-4 py-3">
+            <Loader2 size={16} className="shrink-0 animate-spin text-primary" />
+            <p className="text-[12.5px] font-medium text-navy/60">Finalizing your purchase…</p>
+          </div>
+        )}
+        {pollTimedOut && !accessGranted && (
+          <div className="mx-auto mt-6 max-w-md rounded-xl border border-primary/15 bg-bg-soft px-4 py-3">
+            <p className="text-[12.5px] font-medium text-navy/60">
+              Your payment was received and is still being finalized — check My Workspaces in a moment if it isn't
+              showing up here yet.
+            </p>
+          </div>
+        )}
+
         {/* Purchase Summary */}
         <Card padding="lg" className="mt-10 text-left">
           <div className="flex items-start gap-5">
@@ -101,16 +150,18 @@ export default function CheckoutSuccessPage() {
               <span className="text-navy/50">Purchase Date</span>
               <span className="font-medium text-navy">{purchaseDate}</span>
             </div>
-            <div className="flex items-center justify-between text-[13.5px]">
-              <span className="text-navy/50">Order ID</span>
-              <span className="font-medium text-navy">{orderId}</span>
-            </div>
           </div>
         </Card>
 
         {/* CTAs */}
         <div className="mt-8 space-y-3">
-          <Button type="button" onClick={handleOpenWorkspace} icon={<ArrowRight size={16} />} className="w-full">
+          <Button
+            type="button"
+            onClick={handleOpenWorkspace}
+            disabled={!accessGranted}
+            icon={<ArrowRight size={16} />}
+            className="w-full"
+          >
             Open Workspace
           </Button>
           <Button type="button" onClick={handleGoToMyProducts} variant="secondary" className="w-full">

@@ -43,8 +43,11 @@ export default function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/systems" element={<BrowseSystems />} />
         <Route path="/product/:slug" element={<ProductPage />} />
-        <Route path="/checkout" element={<CheckoutPage />} />
-        <Route path="/checkout/success" element={<CheckoutSuccessPage />} />
+        {/* Requires a signed-in member (see CommerceEngineClient.ts —
+            Checkout needs a memberId to create an Order) — a guest is
+            redirected to /login, matching /platform/*'s existing gate. */}
+        <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
+        <Route path="/checkout/success" element={<ProtectedRoute><CheckoutSuccessPage /></ProtectedRoute>} />
         <Route path="/my-systems" element={<MySystems />} />
         <Route path="/system/:slug" element={<SystemOverviewPage />} />
         <Route path="/system/:slug/module/:moduleSlug" element={<SystemModulePage />} />

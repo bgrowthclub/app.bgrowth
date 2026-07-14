@@ -2,11 +2,14 @@ import type { ProductAccess } from '../types/access'
 import type { AccessRepository } from '../services/AccessRepository'
 import { MOCK_PRODUCT_ACCESS } from '../mock/mockProductAccess'
 
-// The only AccessRepository implementation today — an in-memory array
-// seeded from MOCK_PRODUCT_ACCESS (standing in for grants that already
-// existed before this session), exactly like store/LocalOrderRepository.ts
-// is for Order records. No database or other real persistence is wired up
-// here.
+// Superseded by SupabaseAccessRepository.ts (server) / HttpAccessRepository.ts
+// (browser) — AccessService.ts no longer constructs this. Left in place,
+// unused, per CLAUDE.md §12/§18 — recommend removal once approved.
+//
+// An in-memory array seeded from MOCK_PRODUCT_ACCESS (standing in for
+// grants that already existed before this session), exactly like
+// store/LocalOrderRepository.ts is for Order records. No database or
+// other real persistence is wired up here.
 export function createLocalAccessRepository(): AccessRepository {
   let access: ProductAccess[] = [...MOCK_PRODUCT_ACCESS]
 

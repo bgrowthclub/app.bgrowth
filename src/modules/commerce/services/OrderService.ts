@@ -3,6 +3,7 @@ import type { Money } from '../types/pricing'
 import type { OrderRepository } from './OrderRepository'
 import type { AccessService } from './AccessService'
 import { createLocalOrderRepository } from '../store/LocalOrderRepository'
+import { createSupabaseOrderRepository } from '../store/SupabaseOrderRepository'
 import { accessService } from './AccessService'
 
 // Owns the whole-cart checkout record (Order) as distinct from
@@ -174,4 +175,15 @@ export function createOrderService(repository: OrderRepository, access: AccessSe
   }
 }
 
-export const orderService: OrderService = createOrderService(createLocalOrderRepository(), accessService)
+// Server (Node, e.g. /api/checkout.ts and /api/webhooks/stripe.ts) gets
+// the real Supabase-backed repository — the shared source of truth those
+// two separate serverless functions both need (see ARCHITECTURE.md's
+// "Payment completion pipeline"). Nothing in the browser creates or
+// completes an Order directly in this flow, so the browser side keeps
+// LocalOrderRepository as an inert fallback — safe, since it's never
+// exercised there.
+const isServer = typeof window === 'undefined'
+export const orderService: OrderService = createOrderService(
+  isServer ? createSupabaseOrderRepository() : createLocalOrderRepository(),
+  accessService,
+)
