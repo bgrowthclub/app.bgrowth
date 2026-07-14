@@ -734,6 +734,52 @@ Invariants this pipeline enforces:
   this pipeline is fully wired and testable from `OrderService.completeOrder`
   downward, and fully specified (not yet runnable) from there upward.
 
+### Payment completion pipeline idempotency
+
+Real payment providers deliver webhooks **at-least-once, not
+exactly-once** — a provider that doesn't get a 200 response retries, so
+`OrderService.completeOrder` being called more than once for the same
+transaction is normal operation, not an edge case. Verified end-to-end
+(sequential duplicate, concurrent duplicate, mismatched-transaction, and
+unknown-order calls all behave as below):
+
+- **The same transaction cannot complete an Order twice.** Calling
+  `completeOrder(orderId, transactionId)` again with the transaction that
+  already completed that order returns the existing `Order` unchanged —
+  it does not re-save it and does not call `AccessService` again.
+- **Duplicate webhook deliveries never create duplicate Orders.**
+  `completeOrder` only ever completes an `Order` that `createOrder`
+  already made at checkout — an unknown `orderId` throws rather than
+  fabricating one, so no delivery (duplicate or otherwise) can ever
+  create an `Order` from a webhook.
+- **Duplicate webhook deliveries never grant duplicate Access.** Beyond
+  the same-transaction short-circuit above, `AccessRepository.saveAccess`
+  is itself an upsert keyed by `(memberId, productId)` — even in a
+  worst-case call pattern, a member/product pair can only ever have one
+  `ProductAccess` record, never a growing list of duplicates.
+- **`completeOrder` is safe to call multiple times for the same
+  transaction, including concurrently.** A same-process, near-simultaneous
+  duplicate call (e.g. a retry arriving before the first delivery's
+  handler returned) awaits the exact same in-flight `Promise` instead of
+  independently re-reading the still-`pending` `Order` and double-
+  processing it — see `inFlightCompletions` in `OrderService.ts`.
+- **A mismatched transaction on an already-completed Order is treated as
+  an anomaly, not a normal retry**, and throws rather than silently
+  overwriting the order's original `transactionId` or granting access a
+  second time — a provider never legitimately re-sends a *different*
+  transaction id for an order it already completed.
+
+**Scope of this guarantee:** the in-flight-call guard closes the race
+within one process/mock only. Once a real, database-backed
+`OrderRepository` replaces `LocalOrderRepository` and this code runs
+behind multiple server instances (e.g. several serverless function
+invocations handling retried webhooks concurrently), true cross-process
+idempotency additionally requires enforcing this at the persistence layer
+— e.g. a conditional update (`UPDATE ... WHERE status = 'pending'`,
+checking rows affected) or a unique constraint on `transactionId`. That's
+a property the eventual real `OrderRepository` implementation must
+provide, not something `LocalOrderRepository` or this review builds.
+
 ### The Provider Abstraction
 
 This is the core of "the application must never depend directly on
