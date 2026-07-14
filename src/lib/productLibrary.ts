@@ -51,10 +51,14 @@ function buildUserProduct(product: Product, access: ProductAccess, user: User): 
 
 // The Product Library's data accessor — every "what does this member own"
 // surface (My Workspaces today; My Products, once other product types
-// exist) reads through AccessService + ProductService, never through mock
-// data directly. Today AccessService is backed by mock access grants (see
-// modules/commerce/mock/mockProductAccess.ts); a real purchase completing
-// would call AccessService.grantAccess() instead, and nothing here changes.
+// exist) reads through AccessService + ProductService, never through
+// AccessRepository or mock data directly. Today AccessService is backed
+// by AccessRepository's mock seed data (see
+// modules/commerce/mock/mockProductAccess.ts, store/LocalAccessRepository.ts);
+// a real purchase completing calls OrderService.completeOrder(), which
+// calls AccessService.grantAccess() as its own side effect (see
+// ARCHITECTURE.md's "Payment completion pipeline") — nothing here changes
+// when that's wired to a real payment provider.
 export async function getUserProducts(user: User): Promise<UserProduct[]> {
   const grants = await accessService.listAccessForMember(user.id)
   const products = await Promise.all(

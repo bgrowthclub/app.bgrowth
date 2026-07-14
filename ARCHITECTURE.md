@@ -540,16 +540,20 @@ src/modules/commerce/
     webhook.ts       WebhookEvent, WebhookEventType
     paymentProfile.ts   PaymentProfile, PaymentProfileId, KnownPaymentProfileId
   services/    interfaces only, except where noted
-    ProductService.ts, PurchaseService.ts, MembershipService.ts,
-    RewardService.ts, BenefitService.ts, PartnerService.ts,
-    PricingService.ts, DiscountService.ts,
-    OrderService.ts, TaxService.ts, CouponService.ts, RefundService.ts,
+    ProductService.ts, AccessService.ts, OrderService.ts   (real
+      implementations — see "Payment completion pipeline" below)
+    PurchaseService.ts, MembershipService.ts, RewardService.ts,
+    BenefitService.ts, PartnerService.ts, PricingService.ts,
+    DiscountService.ts, TaxService.ts, CouponService.ts, RefundService.ts,
     WebhookService.ts, PaymentProvider.ts, PaymentManager.ts
     CheckoutProvider.ts, ProviderAdapter.ts   (superseded, kept — see below)
-    ProductRepository.ts, OrderRepository.ts   (repository seams — see below)
+    ProductRepository.ts, OrderRepository.ts, AccessRepository.ts
+      (repository seams — see below)
   store/       the one place each repository's concrete (local, in-memory)
                implementation lives — publishedProductStore.ts +
-               publishedProductRepository.ts (Product), LocalOrderRepository.ts (Order)
+               publishedProductRepository.ts (Product),
+               LocalOrderRepository.ts (Order), LocalAccessRepository.ts
+               (Access)
   mock/        realistic BGrowth example data for testing against the
                types/services above — not a second product catalog
 ```
@@ -645,11 +649,11 @@ records:
 
 ```
 OrderService            (business logic — create / complete / cancel)
-        │  a future implementation is built as
-        │  createOrderService(repository: OrderRepository): OrderService,
-        │  exactly like createProductService(repository: ProductRepository)
-        │  is today — OrderService itself never knows how an Order is
-        │  persisted, it only ever calls the repository it's given
+        │  createOrderService(repository: OrderRepository, access:
+        │  AccessService): OrderService, exactly like
+        │  createProductService(repository: ProductRepository) —
+        │  OrderService itself never knows how an Order is persisted, it
+        │  only ever calls the repository it's given
         ▼
 OrderRepository         (services/OrderRepository.ts)
         │  saveOrder / getOrderById / listOrdersForMember — the only
@@ -665,10 +669,70 @@ LocalOrderRepository    (store/LocalOrderRepository.ts)
    happens.
 ```
 
-**No `OrderService` implementation exists yet** — this milestone prepares
-only the repository abstraction (`OrderRepository` + `LocalOrderRepository`),
-not `OrderService`'s business logic, not database or Google Sheets
-persistence, and not a Stripe integration.
+`OrderService` and `AccessService` both have real implementations today
+(`createOrderService`, `createAccessService`) — a deliberate exception to
+"interfaces only" (see the table above), because this pipeline needed to
+actually run to verify the invariants below, not just type-check.
+
+### Payment completion pipeline
+
+The full chain from an inbound provider webhook to granted access, and
+the one path access is ever allowed to come from for a `purchase` grant:
+
+```
+Stripe Webhook (or any PaymentProvider's webhook)
+        │  provider-specific signature verification + parsing — happens
+        │  entirely inside that PaymentProvider's webhook(payload,
+        │  signature) implementation (see PaymentProvider.ts) — none
+        │  exists yet, so this box isn't implemented
+        ▼
+WebhookService.handleWebhookEvent(...)
+        │  normalizes the result into a WebhookEvent. On
+        │  'checkout.completed' / 'payment.succeeded', its implementation
+        │  calls — and only calls — OrderService.completeOrder(...); see
+        │  WebhookService.ts. Not implemented yet (blocked on a real
+        │  PaymentProvider), but this is the whole of what it must do.
+        ▼
+OrderService.completeOrder(orderId, transactionId)      <- IMPLEMENTED
+        │  the one orchestration point after payment confirmation:
+        │  1. loads the Order via OrderRepository
+        │  2. marks it 'completed', records transactionId, saves it back
+        │  3. grants access for every item the order contained
+        ├──────────────────────────────┐
+        ▼                              ▼
+OrderRepository.saveOrder(...)   AccessService.grantAccess(...)   <- IMPLEMENTED
+   (LocalOrderRepository,               │
+    in-memory)                          ▼
+                               AccessRepository.saveAccess(...)   <- IMPLEMENTED
+                                  (LocalAccessRepository, in-memory)
+```
+
+Invariants this pipeline enforces:
+
+- **Stripe (or any provider) never grants access directly.** No
+  `PaymentProvider` method touches `AccessService`, `AccessRepository`, or
+  `OrderRepository` — a provider only ever reports a payment event; only
+  `OrderService.completeOrder` decides what that means for the order and
+  the member's access.
+- **Access is always granted after a completed Order**, never
+  independently of one. `AccessService.grantAccess` is called from exactly
+  one place — `OrderService.completeOrder` — for `source: 'purchase'`
+  grants (see `AccessService.ts`'s doc comment). Every other `AccessSource`
+  (`membership`, `bundle`, `gift`, ...) is still a separate, documented
+  future caller, not something Order completion decides.
+- **`OrderService` is the orchestration point after payment
+  confirmation** — it, not `WebhookService` and not a page/component,
+  decides to save the Order and grant access. `WebhookService`'s only job
+  is verifying + normalizing; it never reaches into `AccessService` or
+  either repository itself.
+- **Both repositories stay mocked.** `LocalOrderRepository` and
+  `LocalAccessRepository` are both in-memory arrays — no database, no
+  Google Sheets, no API. Real persistence is a distinct future step behind
+  the same `OrderRepository`/`AccessRepository` interfaces.
+- **No Stripe integration exists.** `PaymentProvider.webhook(...)` has no
+  implementation, so nothing can actually reach `WebhookService` yet —
+  this pipeline is fully wired and testable from `OrderService.completeOrder`
+  downward, and fully specified (not yet runnable) from there upward.
 
 ### The Provider Abstraction
 

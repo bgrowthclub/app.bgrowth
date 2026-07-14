@@ -13,6 +13,17 @@ import type { ProviderId } from '../types/provider'
 // to a PaymentProvider (via PaymentManager) and delegates to its
 // `webhook(payload, signature)`, which verifies and parses atomically —
 // see PaymentProvider.ts.
+//
+// The rest of the payment completion pipeline is already implemented —
+// see ARCHITECTURE.md's "Payment completion pipeline". Once
+// `handleWebhookEvent` can produce a real WebhookEvent, its implementation
+// must, for a `checkout.completed` or `payment.succeeded` event, call
+// `orderService.completeOrder(event.orderId, event.transactionId)` and
+// nothing else — that single call is what saves the Order and grants
+// access. This service must never call AccessService (or OrderRepository/
+// AccessRepository) itself; OrderService is the only orchestration point
+// after payment confirmation, and Stripe (or any provider) never grants
+// access directly.
 export interface WebhookService {
   verifyWebhookSignature(provider: ProviderId, payload: string, signature: string): Promise<boolean>
   handleWebhookEvent(provider: ProviderId, payload: string, signature: string): Promise<WebhookEvent>
