@@ -10,7 +10,7 @@ import FeatureGrid from '../components/ui/FeatureGrid'
 import { ICONS_BY_CATEGORY } from '../components/systems/categoryIcons'
 import { WORKSPACE_CATEGORIES } from '../data/workspaceCategories'
 import { isCheckoutSelection } from '../lib/checkout'
-import { productService } from '../modules/commerce/services/ProductService'
+import { productCatalogService } from '../modules/commerce/services/ProductCatalogService'
 import { resolveProductSystem } from '../lib/publishedCatalog'
 import type { SystemBenefit } from '../types/system'
 import type { Product } from '../modules/commerce/types/product'
@@ -60,7 +60,7 @@ export default function CheckoutPage() {
     if (!selection) return
     let cancelled = false
     setProduct(undefined)
-    productService.getProductById(selection.productId).then((result) => {
+    productCatalogService.getById(selection.productId).then((result) => {
       if (!cancelled) setProduct(result ?? null)
     })
     return () => {

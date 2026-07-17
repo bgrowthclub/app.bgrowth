@@ -51,7 +51,7 @@ export const MOCK_ARTICLES: KnowledgeArticle[] = [
       { kind: 'heading', text: 'Finding your first clients' },
       { kind: 'paragraph', text: 'Loan signing agencies are the fastest path to steady work. A simple, professional listing on the major signing-agent directories does more than a paid ad in month one.' },
     ],
-    relatedProductSlugs: ['start-your-notary-business'],
+    relatedProductSlugs: ['notary-basics-workspace'],
     relatedArticleSlugs: ['getting-bonded-and-insured', 'start-a-business-checklist'],
   },
   {
@@ -73,7 +73,7 @@ export const MOCK_ARTICLES: KnowledgeArticle[] = [
       { kind: 'heading', text: 'Where owners overspend early' },
       { kind: 'paragraph', text: 'Booking software and a logo are the two most common early purchases that don’t move the needle. A shared calendar and a clean invoice template do the same job for free.' },
     ],
-    relatedProductSlugs: ['cleaning-business-launch'],
+    relatedProductSlugs: ['cleaning-business-basics'],
     relatedArticleSlugs: ['pressure-washing-launch-video', 'pricing-your-services-planner'],
   },
   {
@@ -95,7 +95,7 @@ export const MOCK_ARTICLES: KnowledgeArticle[] = [
       { kind: 'heading', text: 'Reconcile weekly, not yearly' },
       { kind: 'paragraph', text: 'Fifteen minutes a week matching transactions to your books catches errors while you still remember what they were for.' },
     ],
-    relatedProductSlugs: ['bookkeeping-operations'],
+    relatedProductSlugs: ['bookkeeping-basics'],
     relatedArticleSlugs: ['monthly-close-sheet-template', 'quarterly-tax-calculator-explainer'],
   },
   {

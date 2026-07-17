@@ -1,13 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import SearchBox from './SearchBox'
-import { productService } from '../../modules/commerce/services/ProductService'
+import { productCatalogService } from '../../modules/commerce/services/ProductCatalogService'
 import { searchResources } from '../../data/resources'
 import type { Product } from '../../modules/commerce/types/product'
 
 // Global search across the ecosystem — Products (read through
-// ProductService, the Runtime↔Product Engine connection — see the
-// milestone that wired this up) and Resources are real, Marketplace and
+// ProductCatalogService, the Website's Product Catalog Foundation — see
+// modules/commerce/services/ProductCatalogService.ts) and Resources are
+// real, Marketplace and
 // Community have no data source yet so they're shown as inert placeholder
 // rows, per the current phase (no backend, no search API).
 export default function GlobalSearch() {
@@ -22,7 +23,7 @@ export default function GlobalSearch() {
       return
     }
     let cancelled = false
-    productService.searchProducts(trimmed).then((results) => {
+    productCatalogService.search(trimmed).then((results) => {
       if (!cancelled) setProductResults(results.slice(0, 3))
     })
     return () => {

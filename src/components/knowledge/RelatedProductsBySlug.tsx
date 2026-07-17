@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import SectionHeader from '../ui/SectionHeader'
 import Grid from '../layout/Grid'
 import BusinessSystemCard from '../systems/BusinessSystemCard'
-import { productService } from '../../modules/commerce/services/ProductService'
+import { productCatalogService } from '../../modules/commerce/services/ProductCatalogService'
 import { pairProductsWithSystems, systemForCard } from '../../lib/publishedCatalog'
 import type { PublishedSystemProduct } from '../../lib/publishedCatalog'
 
@@ -21,7 +21,7 @@ export default function RelatedProductsBySlug({ productSlugs }: Props) {
 
   useEffect(() => {
     let cancelled = false
-    Promise.all(productSlugs.map((slug) => productService.getProductBySlug(slug))).then((products) => {
+    Promise.all(productSlugs.map((slug) => productCatalogService.getBySlug(slug))).then((products) => {
       if (!cancelled) {
         const found = products.filter((p): p is NonNullable<typeof p> => Boolean(p))
         setRelated(pairProductsWithSystems(found))

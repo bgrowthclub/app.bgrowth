@@ -1,4 +1,4 @@
-import { productService } from '../modules/commerce/services/ProductService'
+import { productCatalogService } from '../modules/commerce/services/ProductCatalogService'
 import { getSystemBySlug } from '../data/systems'
 import { getMemberPrice } from './checkout'
 import type { Product } from '../modules/commerce/types/product'
@@ -62,12 +62,14 @@ export function systemForCard(pair: PublishedSystemProduct): BusinessSystem {
   }
 }
 
-// The Homepage's featured row — see ProductService.getFeatured().
+// The Homepage's featured row — see ProductCatalogService.getFeatured().
 export async function loadFeaturedSystemProducts(): Promise<PublishedSystemProduct[]> {
-  return pairProductsWithSystems(await productService.getFeatured())
+  return pairProductsWithSystems(await productCatalogService.getFeatured())
 }
 
-// The Workspace Catalog — see ProductService.getPublished().
+// The Workspace Catalog — see ProductCatalogService.getAll() (the Static
+// Product Repository only ever contains published products, so "all" and
+// "published" mean the same thing here — see data/products/staticProducts.ts).
 export async function loadPublishedSystemProducts(): Promise<PublishedSystemProduct[]> {
-  return pairProductsWithSystems(await productService.getPublished())
+  return pairProductsWithSystems(await productCatalogService.getAll())
 }

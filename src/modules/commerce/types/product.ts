@@ -96,6 +96,12 @@ export interface Product {
   whatsIncluded?: string[]
   faq?: ProductFaqItem[]
   relatedProductIds?: string[]
+  // Slugs into modules/knowledge's KnowledgeArticle catalog (see
+  // modules/knowledge/types/article.ts) — lets a Product Page eventually
+  // surface a "Related Knowledge" section without duplicating any article
+  // content onto Product itself. Optional and additive: a product with no
+  // Knowledge content linked simply resolves to an empty list.
+  relatedKnowledgeSlugs?: string[]
   seo?: ProductSeo
   tags: string[]
   difficulty?: ProductDifficulty
