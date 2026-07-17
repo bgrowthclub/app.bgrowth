@@ -18,6 +18,22 @@
 // AccessService's existing mock access grants (see
 // modules/commerce/mock/mockProductAccess.ts) — not a gap, a scoped
 // boundary for this catalog's first pass.
+//
+// Two deliberate gaps in "complete metadata" below, called out rather than
+// silently left incomplete:
+// - `assets.thumbnail`/`heroImage` are intentionally empty. This app has no
+//   real image hosting yet and (per the Knowledge Hub precedent) never uses
+//   stock photography or fake asset URLs — every card/hero already falls
+//   back to a brand-gradient icon block when these are unset (see
+//   BusinessSystemCard, ProductPage, PreviewDialog's own "No hero image
+//   set" fallback). This is the existing, real behavior of every other
+//   product in the app today, not a regression introduced here.
+// - There is no "Membership access" or "Journey" field on `Product` —
+//   `clubDiscountPercent` (already part of Product) is populated below to
+//   represent the Club membership discount every product supports;
+//   `journeyId`/`journeyStep` do not exist on Product and are not added
+//   here, since this sprint's instructions are explicit: reuse the
+//   existing model, do not modify the Commerce domain.
 
 import type { Product } from '../../modules/commerce/types/product'
 import type { ProductSnapshot, ProductVersioning } from '../../modules/commerce/types/version'
@@ -43,8 +59,11 @@ const RAW: ProductSnapshot[] = [
       'Notary Basics Workspace™ walks a newly commissioned notary through every step of actually starting to earn — state requirements, equipment, pricing, and where to find your first clients — so nothing is left to guesswork in your first ninety days.',
     category: 'business-entrepreneurship',
     industry: 'Notary',
+    version: '1.0',
+    language: 'en',
     price: 79,
     currency: 'USD',
+    clubDiscountPercent: 15,
     visibility: 'paid',
     type: 'GrowthSystem',
     assets: {
@@ -78,6 +97,8 @@ const RAW: ProductSnapshot[] = [
     aiEnabled: false,
     partnerOffers: [],
     rewardPoints: 50,
+    createdAt: '2026-06-01T00:00:00.000Z',
+    updatedAt: '2026-06-01T00:00:00.000Z',
     source: { type: 'GrowthSystem', id: 'start-your-notary-business' },
   },
   {
@@ -90,8 +111,11 @@ const RAW: ProductSnapshot[] = [
       'Loan Signing Workspace™ covers signing agent certification, the paperwork walkthrough lenders expect, and how to get listed with the signing services that generate steady, higher-paying bookings.',
     category: 'business-entrepreneurship',
     industry: 'Notary',
+    version: '1.0',
+    language: 'en',
     price: 99,
     currency: 'USD',
+    clubDiscountPercent: 15,
     visibility: 'paid',
     type: 'GrowthSystem',
     assets: {
@@ -122,6 +146,8 @@ const RAW: ProductSnapshot[] = [
     aiEnabled: false,
     partnerOffers: [],
     rewardPoints: 60,
+    createdAt: '2026-06-01T00:00:00.000Z',
+    updatedAt: '2026-06-01T00:00:00.000Z',
   },
   {
     id: 'catalog-cleaning-business-basics',
@@ -133,8 +159,11 @@ const RAW: ProductSnapshot[] = [
       'Cleaning Business Basics™ covers what to actually buy in month one, how to price your first jobs, and where to find your first recurring residential clients — without overspending before you’ve booked a single job.',
     category: 'business-entrepreneurship',
     industry: 'Cleaning',
+    version: '1.0',
+    language: 'en',
     price: 69,
     currency: 'USD',
+    clubDiscountPercent: 15,
     visibility: 'paid',
     type: 'GrowthSystem',
     assets: {
@@ -165,6 +194,8 @@ const RAW: ProductSnapshot[] = [
     aiEnabled: false,
     partnerOffers: [],
     rewardPoints: 50,
+    createdAt: '2026-06-01T00:00:00.000Z',
+    updatedAt: '2026-06-01T00:00:00.000Z',
     source: { type: 'GrowthSystem', id: 'cleaning-business-launch' },
   },
   {
@@ -177,8 +208,11 @@ const RAW: ProductSnapshot[] = [
       'Pressure Washing Workspace™ covers the equipment worth buying first, how to price driveways, siding, and decks, and a script for turning an estimate call into a booked job.',
     category: 'business-entrepreneurship',
     industry: 'Cleaning',
+    version: '1.0',
+    language: 'en',
     price: 59,
     currency: 'USD',
+    clubDiscountPercent: 15,
     visibility: 'paid',
     type: 'GrowthSystem',
     assets: {
@@ -209,6 +243,8 @@ const RAW: ProductSnapshot[] = [
     aiEnabled: false,
     partnerOffers: [],
     rewardPoints: 40,
+    createdAt: '2026-06-01T00:00:00.000Z',
+    updatedAt: '2026-06-01T00:00:00.000Z',
   },
   {
     id: 'catalog-bookkeeping-basics',
@@ -220,8 +256,11 @@ const RAW: ProductSnapshot[] = [
       'Bookkeeping Basics™ walks through separating business and personal money, a weekly reconciliation habit, and a one-page monthly close — everything a solo owner needs to keep books that survive tax season.',
     category: 'business-entrepreneurship',
     industry: 'Bookkeeping',
+    version: '1.0',
+    language: 'en',
     price: 89,
     currency: 'USD',
+    clubDiscountPercent: 15,
     visibility: 'paid',
     type: 'GrowthSystem',
     assets: {
@@ -252,6 +291,8 @@ const RAW: ProductSnapshot[] = [
     aiEnabled: false,
     partnerOffers: [],
     rewardPoints: 50,
+    createdAt: '2026-06-01T00:00:00.000Z',
+    updatedAt: '2026-06-01T00:00:00.000Z',
     source: { type: 'GrowthSystem', id: 'bookkeeping-operations' },
   },
   {
@@ -264,8 +305,11 @@ const RAW: ProductSnapshot[] = [
       'Tax Preparation Basics™ walks through estimating quarterly payments, tracking deductible expenses through the year, and assembling everything a preparer needs come filing season — built for a solo owner, not an accountant.',
     category: 'business-entrepreneurship',
     industry: 'Taxes',
+    version: '1.0',
+    language: 'en',
     price: 99,
     currency: 'USD',
+    clubDiscountPercent: 15,
     visibility: 'paid',
     type: 'GrowthSystem',
     assets: {
@@ -296,6 +340,8 @@ const RAW: ProductSnapshot[] = [
     aiEnabled: false,
     partnerOffers: [],
     rewardPoints: 50,
+    createdAt: '2026-06-01T00:00:00.000Z',
+    updatedAt: '2026-06-01T00:00:00.000Z',
   },
 ]
 
