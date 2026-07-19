@@ -12,6 +12,7 @@ import KnowledgePage from './pages/KnowledgePage'
 import PricingPage from './pages/PricingPage'
 import AboutPage from './pages/AboutPage'
 import ClubPage from './pages/ClubPage'
+import ContactPage from './pages/ContactPage'
 
 export default function App() {
   return (
@@ -29,6 +30,7 @@ export default function App() {
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/about" element={<AboutPage />} />
         <Route path="/club" element={<ClubPage />} />
+        <Route path="/contact" element={<ContactPage />} />
       </Route>
     </Routes>
   )
