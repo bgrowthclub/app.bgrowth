@@ -8,6 +8,7 @@ import SystemOverviewPage from './pages/SystemOverviewPage'
 import SystemModulePage from './pages/SystemModulePage'
 import IndustriesPage from './pages/IndustriesPage'
 import ResourcesPage from './pages/ResourcesPage'
+import KnowledgePage from './pages/KnowledgePage'
 import PricingPage from './pages/PricingPage'
 import AboutPage from './pages/AboutPage'
 
@@ -23,6 +24,7 @@ export default function App() {
         <Route path="/system/:slug/module/:moduleSlug" element={<SystemModulePage />} />
         <Route path="/industries" element={<IndustriesPage />} />
         <Route path="/resources" element={<ResourcesPage />} />
+        <Route path="/knowledge" element={<KnowledgePage />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/about" element={<AboutPage />} />
       </Route>

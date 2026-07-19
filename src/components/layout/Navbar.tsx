@@ -12,11 +12,12 @@ interface NavItem {
   to: string
 }
 
-// Public nav: Home · Business Systems · Industries · Resources · Pricing · About · Login
+// Public nav: Home · Business Systems · Industries · Knowledge · Resources · Pricing · About · Login
 const PUBLIC_LINKS: NavItem[] = [
   { label: 'Home', to: '/' },
   { label: 'Business Systems', to: '/systems' },
   { label: 'Industries', to: '/industries' },
+  { label: 'Knowledge', to: '/knowledge' },
   { label: 'Resources', to: '/resources' },
   { label: 'Pricing', to: '/pricing' },
   { label: 'About', to: '/about' },

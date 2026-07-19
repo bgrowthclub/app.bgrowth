@@ -7,6 +7,7 @@ import Button from '../ui/Button'
 const LINKS = [
   { label: 'Business Systems', to: '/systems' },
   { label: 'Industries', to: '/industries' },
+  { label: 'Knowledge', to: '/knowledge' },
   { label: 'Resources', to: '/resources' },
   { label: 'Pricing', to: '/pricing' },
   { label: 'About', to: '/about' },
