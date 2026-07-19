@@ -9,6 +9,7 @@ const LINKS = [
   { label: 'Industries', to: '/industries' },
   { label: 'Knowledge', to: '/knowledge' },
   { label: 'Resources', to: '/resources' },
+  { label: 'BGrowth Club', to: '/club' },
   { label: 'Pricing', to: '/pricing' },
   { label: 'About', to: '/about' },
 ]

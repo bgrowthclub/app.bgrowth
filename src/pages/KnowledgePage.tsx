@@ -9,7 +9,7 @@ import KnowledgeArticleCard from '../components/knowledge/KnowledgeArticleCard'
 import CategoryCard from '../components/knowledge/CategoryCard'
 import FreeResourceCard from '../components/knowledge/FreeResourceCard'
 import GuideCard from '../components/knowledge/GuideCard'
-import KnowledgeFinalCTA from '../components/knowledge/KnowledgeFinalCTA'
+import PremiumCTA from '../components/ui/PremiumCTA'
 import { FEATURED_ARTICLES, ARTICLE_CATEGORIES, FREE_RESOURCES, FEATURED_GUIDES } from '../data/knowledge'
 
 export default function KnowledgePage() {
@@ -117,7 +117,15 @@ export default function KnowledgePage() {
       </SectionContainer>
 
       <SectionContainer aria-label="Explore BGrowth" className="!pt-0">
-        <KnowledgeFinalCTA />
+        <PremiumCTA
+          eyebrow="BGROWTH CLUB™"
+          title="Ready to Go Beyond Free Content?"
+          description="Discover interactive business systems, premium templates and complete learning experiences inside BGrowth."
+          primaryLabel="Explore Products"
+          primaryTo="/systems"
+          secondaryLabel="Join BGrowth Club"
+          secondaryTo="/club"
+        />
       </SectionContainer>
     </div>
   )

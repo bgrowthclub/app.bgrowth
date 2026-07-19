@@ -1,11 +1,30 @@
 import { motion } from 'framer-motion'
 import { Sparkles } from 'lucide-react'
-import Button from '../ui/Button'
+import Button from './Button'
 
-// Deliberately styled distinctly from the Newsletter section's light
-// glass-card (see MemberBanner) — this is the page's closing, premium
-// upsell band, so it gets the bold navy gradient treatment instead.
-export default function KnowledgeFinalCTA() {
+interface Props {
+  eyebrow: string
+  title: string
+  description: string
+  primaryLabel: string
+  primaryTo: string
+  secondaryLabel: string
+  secondaryTo: string
+}
+
+// The bold navy-gradient closing section used at the end of longer content
+// pages — deliberately distinct from the Newsletter section's light
+// glass-card (see MemberBanner), reserved for a page's single biggest
+// closing moment rather than every "join" prompt.
+export default function PremiumCTA({
+  eyebrow,
+  title,
+  description,
+  primaryLabel,
+  primaryTo,
+  secondaryLabel,
+  secondaryTo,
+}: Props) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 24 }}
@@ -21,26 +40,20 @@ export default function KnowledgeFinalCTA() {
 
       <div className="relative mx-auto inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-4 py-1.5 text-xs font-semibold tracking-wide text-white/90">
         <Sparkles size={14} strokeWidth={2.5} aria-hidden="true" />
-        BGROWTH CLUB™
+        {eyebrow}
       </div>
 
       <h2 className="relative mx-auto mt-5 max-w-xl font-display text-3xl font-bold tracking-tight text-white md:text-4xl">
-        Ready to Go Beyond Free Content?
+        {title}
       </h2>
-      <p className="relative mx-auto mt-4 max-w-md text-[15px] leading-relaxed text-white/70">
-        Discover interactive business systems, premium templates and complete learning experiences inside BGrowth.
-      </p>
+      <p className="relative mx-auto mt-4 max-w-md text-[15px] leading-relaxed text-white/70">{description}</p>
 
       <div className="relative mx-auto mt-8 flex flex-wrap items-center justify-center gap-3">
-        <Button to="/systems" variant="secondary" className="!border-transparent !shadow-none">
-          Explore Products
+        <Button to={primaryTo} variant="secondary" className="!border-transparent !shadow-none">
+          {primaryLabel}
         </Button>
-        <Button
-          to="/pricing"
-          variant="ghost"
-          className="!border !border-white/20 !text-white hover:!bg-white/10 hover:!text-white"
-        >
-          Join BGrowth Club
+        <Button to={secondaryTo} variant="ghost" className="!border !border-white/20 !text-white hover:!bg-white/10 hover:!text-white">
+          {secondaryLabel}
         </Button>
       </div>
     </motion.div>

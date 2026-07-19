@@ -11,6 +11,7 @@ import ResourcesPage from './pages/ResourcesPage'
 import KnowledgePage from './pages/KnowledgePage'
 import PricingPage from './pages/PricingPage'
 import AboutPage from './pages/AboutPage'
+import ClubPage from './pages/ClubPage'
 
 export default function App() {
   return (
@@ -27,6 +28,7 @@ export default function App() {
         <Route path="/knowledge" element={<KnowledgePage />} />
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/about" element={<AboutPage />} />
+        <Route path="/club" element={<ClubPage />} />
       </Route>
     </Routes>
   )
