@@ -5,7 +5,7 @@ import AuthHeader from '../components/auth/AuthHeader'
 import AuthFooterPrompt from '../components/auth/AuthFooterPrompt'
 import AuthTrustNote from '../components/auth/AuthTrustNote'
 import LoginForm from '../components/auth/LoginForm'
-import loginHero from '../assets/auth/login-hero.svg'
+import loginHero from '../assets/auth/login-hero.webp'
 
 export default function LoginPage() {
   return (
