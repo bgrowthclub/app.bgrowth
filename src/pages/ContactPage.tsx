@@ -56,12 +56,18 @@ const CONTACT_FAQ = [
   { question: 'How can I contact support?', answer: 'Select Support when sending a message below — that routes your message straight to the right team.' },
 ]
 
-const COMMUNITY_LINKS = [
+// `to` is omitted for destinations that don't have a real page yet —
+// those cards render inert with a "Coming soon" label instead of linking
+// somewhere unrelated. Wire each one up as its own route ships:
+// TODO: /academy
+// TODO: /marketplace
+// TODO: a dedicated /products catalog page (distinct from /systems)
+const COMMUNITY_LINKS: { title: string; description: string; to?: string }[] = [
   { title: 'Knowledge', description: 'Free guides, articles and practical advice across business, career and more.', to: '/knowledge' },
-  { title: 'Academy', description: 'Structured courses and learning paths — explore our current guides while Academy is built out.', to: '/knowledge' },
-  { title: 'Marketplace', description: 'Browse templates, tools and Business Systems available right now.', to: '/systems' },
+  { title: 'Academy', description: 'Structured courses and learning paths for going deeper on a skill.' },
+  { title: 'Marketplace', description: 'Templates, tools and resources from BGrowth and partner sellers.' },
   { title: 'BGrowth Club', description: 'Membership pricing, exclusive resources and a growing professional community.', to: '/club' },
-  { title: 'Products', description: 'See every Business System built for your profession.', to: '/systems' },
+  { title: 'Products', description: 'The full BGrowth product catalog in one place.' },
 ]
 
 export default function ContactPage() {
@@ -160,24 +166,32 @@ export default function ContactPage() {
           className="mb-10"
         />
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {COMMUNITY_LINKS.map((link) => (
-            <Link
-              key={link.title}
-              to={link.to}
-              className="group flex flex-col rounded-xl3 border border-navy/[0.06] bg-white p-6 shadow-softer transition-all duration-300 hover:-translate-y-1 hover:border-primary/15 hover:shadow-glow"
-            >
-              <h3 className="font-display text-[15px] font-bold text-navy">{link.title}</h3>
-              <p className="mt-1.5 flex-1 text-[13.5px] leading-relaxed text-navy/50">{link.description}</p>
-              <span className="mt-5 inline-flex items-center gap-1 text-[12.5px] font-semibold text-primary">
-                Visit
-                <ArrowRight
-                  size={13}
-                  className="transition-transform duration-300 group-hover:translate-x-0.5"
-                  aria-hidden="true"
-                />
-              </span>
-            </Link>
-          ))}
+          {COMMUNITY_LINKS.map((link) =>
+            link.to ? (
+              <Link
+                key={link.title}
+                to={link.to}
+                className="group flex flex-col rounded-xl3 border border-navy/[0.06] bg-white p-6 shadow-softer transition-all duration-300 hover:-translate-y-1 hover:border-primary/15 hover:shadow-glow"
+              >
+                <h3 className="font-display text-[15px] font-bold text-navy">{link.title}</h3>
+                <p className="mt-1.5 flex-1 text-[13.5px] leading-relaxed text-navy/50">{link.description}</p>
+                <span className="mt-5 inline-flex items-center gap-1 text-[12.5px] font-semibold text-primary">
+                  Visit
+                  <ArrowRight
+                    size={13}
+                    className="transition-transform duration-300 group-hover:translate-x-0.5"
+                    aria-hidden="true"
+                  />
+                </span>
+              </Link>
+            ) : (
+              <div key={link.title} className="flex flex-col rounded-xl3 border border-navy/[0.06] bg-white p-6 opacity-60">
+                <h3 className="font-display text-[15px] font-bold text-navy">{link.title}</h3>
+                <p className="mt-1.5 flex-1 text-[13.5px] leading-relaxed text-navy/50">{link.description}</p>
+                <span className="mt-5 w-fit text-[12.5px] font-semibold text-navy/40">Coming soon</span>
+              </div>
+            ),
+          )}
         </div>
       </SectionContainer>
 
