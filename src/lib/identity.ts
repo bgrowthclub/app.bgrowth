@@ -19,3 +19,14 @@ export interface LoginRequest {
 }
 
 // TODO(identity): export async function login(request: LoginRequest): Promise<void> {}
+
+// Matches src/components/auth/RegisterForm.tsx. confirmPassword is a
+// client-side-only check (see validatePasswordsMatch) and intentionally
+// isn't part of the request.
+export interface RegisterRequest {
+  fullName: string
+  email: string
+  password: string
+}
+
+// TODO(identity): export async function register(request: RegisterRequest): Promise<void> {}
