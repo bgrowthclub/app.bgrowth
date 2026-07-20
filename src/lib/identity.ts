@@ -30,3 +30,11 @@ export interface RegisterRequest {
 }
 
 // TODO(identity): export async function register(request: RegisterRequest): Promise<void> {}
+
+// Matches src/components/auth/ForgotPasswordForm.tsx. On success, the form
+// calls its onSubmitted callback to reveal ForgotPasswordSuccess.
+export interface ForgotPasswordRequest {
+  email: string
+}
+
+// TODO(identity): export async function requestPasswordReset(request: ForgotPasswordRequest): Promise<void> {}

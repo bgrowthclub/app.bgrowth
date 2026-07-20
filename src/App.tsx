@@ -15,6 +15,7 @@ import ClubPage from './pages/ClubPage'
 import ContactPage from './pages/ContactPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
+import ForgotPasswordPage from './pages/ForgotPasswordPage'
 
 export default function App() {
   return (
@@ -38,6 +39,7 @@ export default function App() {
           own full-page shell (AuthLayout) and never shows the public Navbar/Footer. */}
       <Route path="/login" element={<LoginPage />} />
       <Route path="/register" element={<RegisterPage />} />
+      <Route path="/forgot-password" element={<ForgotPasswordPage />} />
     </Routes>
   )
 }
