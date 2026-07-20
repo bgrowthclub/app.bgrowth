@@ -2,8 +2,7 @@ import { FormEvent, useState } from 'react'
 import { Link } from 'react-router-dom'
 import Button from '../ui/Button'
 import AuthInput from './AuthInput'
-
-const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+import { validateEmail, validateRequired } from './validation'
 
 interface FormErrors {
   email?: string
@@ -17,9 +16,10 @@ export default function LoginForm() {
 
   const validate = (): FormErrors => {
     const next: FormErrors = {}
-    if (!email.trim()) next.email = 'Email address is required.'
-    else if (!EMAIL_PATTERN.test(email.trim())) next.email = 'Enter a valid email address.'
-    if (!password) next.password = 'Password is required.'
+    const emailError = validateEmail(email)
+    if (emailError) next.email = emailError
+    const passwordError = validateRequired(password, 'Password')
+    if (passwordError) next.password = passwordError
     return next
   }
 
@@ -29,9 +29,10 @@ export default function LoginForm() {
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length > 0) return
 
-    // TODO: no Identity Authentication API exists yet. Once it does, submit
-    // { email, password } here and handle the real success/error response.
-    // This intentionally does nothing further — no redirect, no fake result.
+    // TODO(identity): see src/lib/identity.ts — the single shared
+    // integration point every Authentication System page connects through.
+    // Not implemented yet; this intentionally does nothing further —
+    // no redirect, no fake result.
   }
 
   return (

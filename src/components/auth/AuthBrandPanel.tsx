@@ -1,3 +1,4 @@
+import { ReactNode } from 'react'
 import { Link } from 'react-router-dom'
 import logo from '../../assets/logo.png'
 import AuthIllustration from './AuthIllustration'
@@ -5,6 +6,7 @@ import AuthIllustration from './AuthIllustration'
 interface Props {
   headline: string
   subtitle: string
+  illustration?: ReactNode
 }
 
 // /privacy and /terms don't exist as routes yet, and Footer.tsx's existing
@@ -13,7 +15,7 @@ interface Props {
 // TODO: link to /privacy and /terms once those pages ship.
 const LEGAL_LINKS = ['Privacy Policy', 'Terms of Service']
 
-export default function AuthBrandPanel({ headline, subtitle }: Props) {
+export default function AuthBrandPanel({ headline, subtitle, illustration = <AuthIllustration /> }: Props) {
   return (
     <aside className="relative flex flex-col justify-between overflow-hidden bg-bg-soft px-8 py-10 lg:px-12 lg:py-12">
       <div className="pointer-events-none absolute inset-0 bg-grad-radial-soft" />
@@ -32,7 +34,7 @@ export default function AuthBrandPanel({ headline, subtitle }: Props) {
         </p>
         <p className="mt-4 max-w-sm text-[15px] leading-relaxed text-navy/55">{subtitle}</p>
 
-        <AuthIllustration />
+        {illustration}
       </div>
 
       <div className="relative z-10 flex gap-6 text-[12.5px] text-navy/35">
