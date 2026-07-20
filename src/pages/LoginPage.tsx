@@ -5,11 +5,10 @@ import AuthHeader from '../components/auth/AuthHeader'
 import AuthFooterPrompt from '../components/auth/AuthFooterPrompt'
 import AuthTrustNote from '../components/auth/AuthTrustNote'
 import LoginForm from '../components/auth/LoginForm'
-import loginHero from '../assets/auth/login-hero.webp'
 
 export default function LoginPage() {
   return (
-    <AuthLayout heroImageSrc={loginHero}>
+    <AuthLayout>
       <SEO title="Sign In" description="Sign in to your BGrowth account." path="/login" />
       <AuthLogo />
       <div className="mt-8">
