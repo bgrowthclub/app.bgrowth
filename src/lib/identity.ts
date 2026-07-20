@@ -48,3 +48,15 @@ export interface ResetPasswordRequest {
 }
 
 // TODO(identity): export async function resetPassword(request: ResetPasswordRequest): Promise<void> {}
+
+// Matches src/pages/VerifyEmailPage.tsx. token comes from the verification
+// link's URL and must be validated by the Identity service.
+export interface VerifyEmailRequest {
+  token: string
+}
+
+// TODO(identity): export async function verifyEmail(request: VerifyEmailRequest): Promise<void> {}
+
+// Matches src/components/auth/VerifyEmailFailed.tsx's "Request a new
+// verification email" button.
+// TODO(identity): export async function resendVerificationEmail(): Promise<void> {}
