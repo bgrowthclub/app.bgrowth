@@ -24,8 +24,10 @@ export default function AuthInput({ label, error, labelAction, id, className = '
         id={id}
         aria-invalid={error ? true : undefined}
         aria-describedby={error ? errorId : undefined}
-        className={`w-full rounded-2xl border bg-white px-5 py-3.5 text-sm text-navy placeholder:text-navy/30 transition-colors ${
-          error ? 'border-red-400 focus:border-red-400' : 'border-navy/10 focus:border-primary/30'
+        className={`w-full rounded-2xl border bg-white px-5 py-4 text-[15px] text-navy placeholder:text-navy/30 transition-all duration-200 ${
+          error
+            ? 'border-red-400 focus:border-red-400 focus:shadow-[0_0_0_4px_rgba(239,68,68,0.08)]'
+            : 'border-navy/10 focus:border-primary/30 focus:shadow-[0_0_0_4px_rgba(16,97,236,0.08)]'
         } ${className}`}
         {...rest}
       />

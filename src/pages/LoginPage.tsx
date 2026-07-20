@@ -7,8 +7,14 @@ import LoginForm from '../components/auth/LoginForm'
 export default function LoginPage() {
   return (
     <AuthLayout
-      headline="Welcome Back."
-      subtitle="Continue building your future with the tools, systems and knowledge designed to help your business grow."
+      headline={
+        <>
+          Your Growth,
+          <br />
+          <span className="bg-grad-primary bg-clip-text text-transparent">Continued.</span>
+        </>
+      }
+      subtitle="Everything you’ve built — your systems, resources and progress — is exactly where you left it."
     >
       <SEO title="Sign In" description="Sign in to your BGrowth account." path="/login" />
       <AuthHeader title="Sign In" subtitle="Access your BGrowth account." />
