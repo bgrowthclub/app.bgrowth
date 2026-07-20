@@ -38,3 +38,13 @@ export interface ForgotPasswordRequest {
 }
 
 // TODO(identity): export async function requestPasswordReset(request: ForgotPasswordRequest): Promise<void> {}
+
+// Matches src/components/auth/ResetPasswordForm.tsx. token comes from the
+// reset link's URL (see ResetPasswordPage) and must be validated by the
+// Identity service before resetPassword() may run.
+export interface ResetPasswordRequest {
+  token: string
+  password: string
+}
+
+// TODO(identity): export async function resetPassword(request: ResetPasswordRequest): Promise<void> {}
