@@ -1,32 +1,29 @@
 import { ReactNode } from 'react'
-import AuthBrandPanel from '../auth/AuthBrandPanel'
+import HeroImage from '../auth/HeroImage'
 import ScrollToTop from './ScrollToTop'
 
 interface Props {
-  headline: ReactNode
-  subtitle: string
+  heroImageSrc: string
+  heroImageAlt?: string
   children: ReactNode
 }
 
 // Shared shell for the whole Authentication System (Login, Register, Forgot
-// Password, Reset Password, Verify Email). Provides the split-screen frame —
-// Brand Panel + centered Authentication Container — so each page only ever
-// needs to supply its own headline/subtitle and the content of the
-// container itself. Mounted outside AppLayout (see App.tsx) so it never
-// carries the public site's Navbar/Footer.
-//
-// 60/40 rather than an even split — gives the Brand Panel (and its
-// illustration) room to be the page's dominant visual, with the
-// Authentication Container still comfortably centered on its own side.
-export default function AuthLayout({ headline, subtitle, children }: Props) {
+// Password, Reset Password, Verify Email). A full-bleed HeroImage behind a
+// single floating Authentication Container — every page supplies its own
+// hero photo and its own container content (logo, heading, form, footer);
+// nothing about this composition needs to change to add a page. Mounted
+// outside AppLayout (see App.tsx) so it never carries the public site's
+// Navbar/Footer.
+export default function AuthLayout({ heroImageSrc, heroImageAlt, children }: Props) {
   return (
-    <div className="relative grid min-h-screen lg:grid-cols-[3fr_2fr]">
+    <div className="relative min-h-screen overflow-hidden">
       <ScrollToTop />
-      <AuthBrandPanel headline={headline} subtitle={subtitle} />
-      <main className="relative flex items-center justify-center overflow-hidden px-6 py-16 sm:px-12 lg:py-20">
-        <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-primary/[0.04] blur-3xl" />
-        <div className="relative w-full max-w-[440px]">{children}</div>
-      </main>
+      <HeroImage src={heroImageSrc} alt={heroImageAlt} />
+
+      <div className="relative z-10 flex min-h-screen items-center justify-center px-6 py-10 lg:justify-end lg:px-16 lg:py-12 xl:px-24">
+        <div className="w-full max-w-[440px] rounded-xl3 bg-white p-8 shadow-glow sm:p-10 lg:p-12">{children}</div>
+      </div>
     </div>
   )
 }

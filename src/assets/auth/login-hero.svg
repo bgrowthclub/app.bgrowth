@@ -1,0 +1,15 @@
+<svg width="1600" height="1200" viewBox="0 0 1600 1200" xmlns="http://www.w3.org/2000/svg">
+  <!--
+    PLACEHOLDER ONLY — not the approved artwork.
+    Replace this file (or the import in LoginPage.tsx) with the real
+    photograph once it's supplied. HeroImage just renders whatever
+    src it's given, so swapping this out requires no layout changes.
+  -->
+  <defs>
+    <linearGradient id="placeholder-gradient" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#E8E3DA" />
+      <stop offset="100%" stop-color="#C7C0B2" />
+    </linearGradient>
+  </defs>
+  <rect width="1600" height="1200" fill="url(#placeholder-gradient)" />
+</svg>

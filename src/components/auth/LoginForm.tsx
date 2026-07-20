@@ -36,7 +36,7 @@ export default function LoginForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} noValidate className="space-y-6">
+    <form onSubmit={handleSubmit} noValidate className="space-y-5">
       <AuthInput
         id="login-email"
         label="Email Address"
@@ -64,7 +64,7 @@ export default function LoginForm() {
         }
       />
 
-      <Button type="submit" className="w-full !py-4 !text-[15px]">
+      <Button type="submit" className="w-full">
         Sign In
       </Button>
     </form>

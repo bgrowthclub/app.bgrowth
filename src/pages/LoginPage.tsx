@@ -1,25 +1,32 @@
 import SEO from '../components/seo/SEO'
 import AuthLayout from '../components/layout/AuthLayout'
+import AuthLogo from '../components/auth/AuthLogo'
 import AuthHeader from '../components/auth/AuthHeader'
 import AuthFooterPrompt from '../components/auth/AuthFooterPrompt'
+import AuthTrustNote from '../components/auth/AuthTrustNote'
 import LoginForm from '../components/auth/LoginForm'
+import loginHero from '../assets/auth/login-hero.svg'
 
 export default function LoginPage() {
   return (
-    <AuthLayout
-      headline={
-        <>
-          Your Growth,
-          <br />
-          <span className="bg-grad-primary bg-clip-text text-transparent">Continued.</span>
-        </>
-      }
-      subtitle="Everything you’ve built — your systems, resources and progress — is exactly where you left it."
-    >
+    <AuthLayout heroImageSrc={loginHero}>
       <SEO title="Sign In" description="Sign in to your BGrowth account." path="/login" />
-      <AuthHeader title="Sign In" subtitle="Access your BGrowth account." />
-      <LoginForm />
-      <AuthFooterPrompt prompt="Don’t have an account?" linkLabel="Create Account" linkTo="/register" />
+      <AuthLogo />
+      <div className="mt-8">
+        <AuthHeader
+          title={
+            <>
+              Build beyond
+              <br />
+              what <span className="text-primary">matters.</span>
+            </>
+          }
+          subtitle="Sign in to your workspace and move your business forward."
+        />
+        <LoginForm />
+        <AuthFooterPrompt prompt="Don’t have an account?" linkLabel="Create Account" linkTo="/register" />
+        <AuthTrustNote>Your data is secure with enterprise-grade protection.</AuthTrustNote>
+      </div>
     </AuthLayout>
   )
 }
