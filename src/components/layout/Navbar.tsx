@@ -84,10 +84,12 @@ export default function Navbar({ mode = 'public' }: { mode?: NavMode }) {
           <div className="hidden items-center gap-2 lg:flex">
             {mode === 'public' ? (
               <>
-                {/* Visual placeholder only — auth is handled outside this project */}
-                <span className="cursor-default rounded-full px-4 py-2 text-[13.5px] font-semibold text-navy/40">
+                <NavLink
+                  to="/login"
+                  className="rounded-full px-4 py-2 text-[13.5px] font-semibold text-navy/70 transition-colors hover:bg-bg-soft hover:text-navy"
+                >
                   Login
-                </span>
+                </NavLink>
                 <Button to="/club" className="!px-5 !py-2.5 !text-[13.5px]">
                   Join BGrowth Club
                 </Button>
@@ -128,9 +130,13 @@ export default function Navbar({ mode = 'public' }: { mode?: NavMode }) {
             <div className="mt-2 flex flex-col gap-2 border-t border-navy/[0.06] pt-3">
               {mode === 'public' ? (
                 <>
-                  <span className="cursor-default rounded-xl border border-navy/10 px-4 py-3 text-center text-sm font-semibold text-navy/40">
+                  <Link
+                    to="/login"
+                    onClick={() => setOpen(false)}
+                    className="rounded-xl border border-navy/10 px-4 py-3 text-center text-sm font-semibold text-navy/70 hover:bg-bg-soft"
+                  >
                     Login
-                  </span>
+                  </Link>
                   <Button to="/club" className="w-full" onClick={() => setOpen(false)}>
                     Join BGrowth Club
                   </Button>

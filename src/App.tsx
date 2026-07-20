@@ -13,6 +13,7 @@ import PricingPage from './pages/PricingPage'
 import AboutPage from './pages/AboutPage'
 import ClubPage from './pages/ClubPage'
 import ContactPage from './pages/ContactPage'
+import LoginPage from './pages/LoginPage'
 
 export default function App() {
   return (
@@ -32,6 +33,9 @@ export default function App() {
         <Route path="/club" element={<ClubPage />} />
         <Route path="/contact" element={<ContactPage />} />
       </Route>
+      {/* Outside AppLayout intentionally — the Authentication System has its
+          own full-page shell (AuthLayout) and never shows the public Navbar/Footer. */}
+      <Route path="/login" element={<LoginPage />} />
     </Routes>
   )
 }
