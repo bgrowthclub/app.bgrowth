@@ -1,5 +1,5 @@
 import type { ProductAccess } from '../types/access'
-import { MOCK_PRODUCT_ACCESS } from '../mock/mockProductAccess'
+import { getMockProductAccess } from '../mock/mockProductAccess'
 
 // Deliberately not a PurchaseService — access and payment are separate
 // concerns (see types/access.ts's AccessSource: purchase is only one of
@@ -16,33 +16,35 @@ export interface AccessService {
 }
 
 // The one concrete AccessService implementation today — an in-memory query
-// (and, for grantAccess, mutation) over MOCK_PRODUCT_ACCESS. A future real
-// implementation swaps the backing store for a database; this interface
-// doesn't change.
+// (and, for grantAccess, mutation) over the array getMockProductAccess()
+// resolves and caches. A future real implementation swaps the backing store
+// for a database; this interface doesn't change.
 export function createAccessService(): AccessService {
   return {
     async hasAccess(memberId, productId) {
-      return MOCK_PRODUCT_ACCESS.some(
-        (a) => a.memberId === memberId && a.productId === productId && a.hasAccess,
-      )
+      const store = await getMockProductAccess()
+      return store.some((a) => a.memberId === memberId && a.productId === productId && a.hasAccess)
     },
 
     async getAccess(memberId, productId) {
-      return MOCK_PRODUCT_ACCESS.find((a) => a.memberId === memberId && a.productId === productId)
+      const store = await getMockProductAccess()
+      return store.find((a) => a.memberId === memberId && a.productId === productId)
     },
 
     async listAccessForMember(memberId) {
-      return MOCK_PRODUCT_ACCESS.filter((a) => a.memberId === memberId)
+      const store = await getMockProductAccess()
+      return store.filter((a) => a.memberId === memberId)
     },
 
     async grantAccess(access) {
-      const existingIndex = MOCK_PRODUCT_ACCESS.findIndex(
+      const store = await getMockProductAccess()
+      const existingIndex = store.findIndex(
         (a) => a.memberId === access.memberId && a.productId === access.productId,
       )
       if (existingIndex >= 0) {
-        MOCK_PRODUCT_ACCESS[existingIndex] = access
+        store[existingIndex] = access
       } else {
-        MOCK_PRODUCT_ACCESS.push(access)
+        store.push(access)
       }
       return access
     },
