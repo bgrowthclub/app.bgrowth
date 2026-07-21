@@ -34,6 +34,19 @@
 //   `journeyId`/`journeyStep` do not exist on Product and are not added
 //   here, since this sprint's instructions are explicit: reuse the
 //   existing model, do not modify the Commerce domain.
+//
+// This whole file is bootstrap/seed data, not a permanent architecture.
+// The long-term source of truth is BGrowth Studio -> Supabase -> Product
+// Catalog; once that pipeline exists, only the repository passed into
+// createProductCatalogService changes (see store/staticProductRepository.ts)
+// — nothing here should ever grow logic that assumes this array is a
+// permanent store. 'start-your-notary-business' and
+// 'daily-notary-operations' below were added for exactly one reason: to
+// give AccessService's existing mock ownership grants (see
+// modules/commerce/mock/mockProductAccess.ts) a real product to resolve
+// against in this catalog, ahead of migrating Product Library reads off
+// the legacy ProductService — their slugs and ids are intentionally
+// stable and match those grants exactly, no other logic depends on them.
 
 import type { Product } from '../../modules/commerce/types/product'
 import type { ProductSnapshot, ProductVersioning } from '../../modules/commerce/types/version'
@@ -148,6 +161,108 @@ const RAW: ProductSnapshot[] = [
     rewardPoints: 60,
     createdAt: '2026-06-01T00:00:00.000Z',
     updatedAt: '2026-06-01T00:00:00.000Z',
+  },
+  // Bootstrap seed only — added to give AccessService's existing mock
+  // ownership grants (mockProductAccess.ts) a real product to resolve in
+  // this catalog. Slug and id are intentionally stable; see the file-level
+  // comment above.
+  {
+    id: 'catalog-start-your-notary-business',
+    slug: 'start-your-notary-business',
+    title: 'Start Your Notary Business™',
+    subtitle: 'Everything to go from licensed to booked.',
+    description: 'A complete launch path from licensing to your first signing appointment.',
+    longDescription:
+      'Start Your Notary Business™ walks you through every decision required to launch, in the order you actually need to make them — entity setup, bonding and insurance, pricing, service area, equipment, and your first booking.',
+    category: 'business-entrepreneurship',
+    industry: 'Notary',
+    version: '1.0',
+    language: 'en',
+    price: 79,
+    currency: 'USD',
+    clubDiscountPercent: 20,
+    visibility: 'paid',
+    type: 'GrowthSystem',
+    assets: {
+      ...createEmptyProductAssets(),
+      downloads: [{ id: 'notary-entity-setup-checklist', url: '#', label: 'Entity & Bonding Setup Checklist (PDF)' }],
+    },
+    featured: false,
+    status: 'published',
+    benefits: [
+      { title: 'Guided sequence', description: 'Every step unlocks the next — no guesswork about order.' },
+      { title: 'Booking-ready', description: 'Ends with your first signing appointment, not just a license.' },
+    ],
+    whatsIncluded: ['Entity & bonding setup checklist', 'Service area worksheet', 'Equipment shopping list'],
+    faq: [{ question: 'Do I need to be licensed first?', answer: 'No — this workspace starts before licensing and walks you through it.' }],
+    relatedProductIds: ['catalog-daily-notary-operations', 'catalog-loan-signing-workspace'],
+    relatedKnowledgeSlugs: ['mobile-notary-guide', 'getting-bonded-and-insured'],
+    seo: {
+      metaTitle: 'Start Your Notary Business™ | BGrowth',
+      metaDescription: 'A complete launch path from notary licensing to your first signing appointment.',
+      keywords: ['start a notary business', 'become a notary', 'mobile notary'],
+    },
+    tags: ['notary', 'launch', 'beginner'],
+    difficulty: 'Beginner',
+    estimatedTime: '2–3 weeks',
+    workspaceEnabled: true,
+    academyEnabled: false,
+    communityEnabled: true,
+    aiEnabled: false,
+    partnerOffers: [],
+    rewardPoints: 50,
+    createdAt: '2026-06-01T00:00:00.000Z',
+    updatedAt: '2026-06-01T00:00:00.000Z',
+    source: { type: 'GrowthSystem', id: 'start-your-notary-business' },
+  },
+  {
+    id: 'catalog-daily-notary-operations',
+    slug: 'daily-notary-operations',
+    title: 'Daily Notary Operations™',
+    subtitle: 'Run every signing the same reliable way.',
+    description: 'Run signings, journals, and client communication in one repeatable flow.',
+    longDescription:
+      'The day-to-day operating system for a working notary — from appointment confirmation through document return, so nothing gets missed on a busy week.',
+    category: 'business-entrepreneurship',
+    industry: 'Notary',
+    version: '1.0',
+    language: 'en',
+    price: 59,
+    currency: 'USD',
+    clubDiscountPercent: 20,
+    visibility: 'paid',
+    type: 'GrowthSystem',
+    assets: {
+      ...createEmptyProductAssets(),
+      downloads: [{ id: 'notary-journal-log-template', url: '#', label: 'Signing Journal Log Template (PDF)' }],
+    },
+    featured: false,
+    status: 'published',
+    benefits: [
+      { title: 'Repeatable per-job flow', description: 'The same reliable sequence, every signing.' },
+      { title: 'Nothing missed', description: 'Confirmation through document return, tracked end to end.' },
+    ],
+    whatsIncluded: ['Appointment confirmation script', 'Signing journal log template', 'Client communication templates'],
+    faq: [{ question: 'Is this only for busy notaries?', answer: 'It scales down fine for occasional signings too — it just matters more the busier you get.' }],
+    relatedProductIds: ['catalog-start-your-notary-business'],
+    relatedKnowledgeSlugs: ['mobile-notary-guide'],
+    seo: {
+      metaTitle: 'Daily Notary Operations™ | BGrowth',
+      metaDescription: 'Run signings, journals, and client communication in one repeatable Workspace™.',
+      keywords: ['notary daily operations', 'notary journal', 'mobile notary workflow'],
+    },
+    tags: ['notary', 'operations'],
+    difficulty: 'Intermediate',
+    estimatedTime: 'Ongoing',
+    workspaceEnabled: true,
+    academyEnabled: false,
+    communityEnabled: true,
+    aiEnabled: false,
+    partnerOffers: [],
+    rewardPoints: 40,
+    createdAt: '2026-06-01T00:00:00.000Z',
+    updatedAt: '2026-06-01T00:00:00.000Z',
+    source: { type: 'GrowthSystem', id: 'daily-notary-operations' },
   },
   {
     id: 'catalog-cleaning-business-basics',
