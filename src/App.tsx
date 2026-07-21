@@ -5,7 +5,6 @@ import BrowseSystems from './pages/BrowseSystems'
 import ProductPage from './pages/ProductPage'
 import CheckoutPage from './pages/CheckoutPage'
 import CheckoutSuccessPage from './pages/CheckoutSuccessPage'
-import MySystems from './pages/MySystems'
 import SystemOverviewPage from './pages/SystemOverviewPage'
 import SystemModulePage from './pages/SystemModulePage'
 import WorkspacesPage from './pages/WorkspacesPage'
@@ -49,7 +48,17 @@ export default function App() {
         <Route path="/product/:slug" element={<ProductPage />} />
         <Route path="/checkout" element={<CheckoutPage />} />
         <Route path="/checkout/success" element={<CheckoutSuccessPage />} />
-        <Route path="/my-systems" element={<MySystems />} />
+        {/* Cleanup Step 1 (Architecture Compliance Review): retired the
+            legacy ownership page — it read data/memberMock.ts's
+            PURCHASED_SLUGS directly, a second, ungated ownership source
+            alongside AccessService. /platform/my-systems is the single,
+            correct source now (via useOwnedProducts -> AccessService); this
+            redirect keeps the old URL alive rather than 404ing it, and
+            ProtectedRoute naturally bounces a guest to /login first. See
+            pages/MySystems.tsx and data/systems.ts's getOwnedSystems, both
+            now unreferenced and left in place per the no-silent-deletion
+            policy. */}
+        <Route path="/my-systems" element={<Navigate to="/platform/my-systems" replace />} />
         <Route path="/system/:slug" element={<SystemOverviewPage />} />
         <Route path="/system/:slug/module/:moduleSlug" element={<SystemModulePage />} />
         <Route path="/workspaces" element={<WorkspacesPage />} />

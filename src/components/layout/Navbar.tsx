@@ -29,9 +29,12 @@ const PUBLIC_LINKS: NavItem[] = [
   { label: 'About', to: '/about' },
 ]
 
-// Member nav: My Systems · Resources · Account · Logout
+// Member nav: My Systems · Resources · Account · Logout. "My Systems"
+// points straight at the Customer Platform's Product Library
+// (/platform/my-systems) — the single ownership source now that the
+// legacy public /my-systems page just redirects there (see App.tsx).
 const MEMBER_LINKS: NavItem[] = [
-  { label: 'My Systems', to: '/my-systems' },
+  { label: 'My Systems', to: '/platform/my-systems' },
   { label: 'Resources', to: '/my-systems#resources' },
   { label: 'Account', to: '/account' },
 ]
@@ -73,7 +76,7 @@ export default function Navbar({ mode = 'public' }: { mode?: NavMode }) {
               : 'border border-transparent bg-transparent'
           }`}
         >
-          <Link to={mode === 'member' ? '/my-systems' : '/'} className="flex items-center gap-2.5">
+          <Link to={mode === 'member' ? '/platform/my-systems' : '/'} className="flex items-center gap-2.5">
             {/* Circular masked container — the source PNG is a square icon
                 on a flat white canvas, which read as "an image pasted on
                 top" once everything else went pill/circle-shaped. Cropping
