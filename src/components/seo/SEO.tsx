@@ -8,7 +8,7 @@ import { useEffect } from 'react'
 // every page already calls <SEO> the same way, so nothing else changes.
 //
 // NOTE: update SITE_URL to the real production domain once it's live.
-const SITE_URL = 'https://bgrowth.club'
+const SITE_URL = 'https://bgrowth.app'
 
 interface Props {
   title: string

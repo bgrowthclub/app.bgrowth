@@ -1,13 +1,19 @@
 import type { ProductAccess } from '../types/access'
-import { MOCK_PRODUCT_ACCESS } from '../mock/mockProductAccess'
+import type { AccessRepository } from './AccessRepository'
 
 // Deliberately not a PurchaseService — access and payment are separate
 // concerns (see types/access.ts's AccessSource: purchase is only one of
 // several ways a member can have access). Every caller that needs to know
 // "can this member use this product" — the Product Library, the Product
 // Engine, a future gated Runtime page — reads through this, never through
-// mock/mockProductAccess.ts or a Purchase record directly. The UI should
-// never need to know *why* access exists, only whether it does.
+// AccessRepository or a Purchase record directly. The UI should never
+// need to know *why* access exists, only whether it does.
+//
+// `grantAccess` is called by OrderService.completeOrder once a webhook
+// confirms payment — see OrderService.ts and ARCHITECTURE.md's "Payment
+// completion pipeline". Nothing else should call it directly, and a
+// PaymentProvider/webhook handler must never call it itself: Order
+// completion is the only thing that grants `purchase`-sourced access.
 export interface AccessService {
   hasAccess(memberId: string, productId: string): Promise<boolean>
   getAccess(memberId: string, productId: string): Promise<ProductAccess | undefined>
@@ -15,38 +21,36 @@ export interface AccessService {
   grantAccess(access: ProductAccess): Promise<ProductAccess>
 }
 
-// The one concrete AccessService implementation today — an in-memory query
-// (and, for grantAccess, mutation) over MOCK_PRODUCT_ACCESS. A future real
-// implementation swaps the backing store for a database; this interface
-// doesn't change.
-export function createAccessService(): AccessService {
+// The one concrete AccessService implementation today — delegates every
+// read/write to whichever AccessRepository it's given (see
+// AccessRepository.ts), exactly like ProductService delegates to a
+// ProductRepository. AccessService itself never touches a mock array or
+// any other storage detail directly.
+//
+// Deliberately isomorphic and free of any concrete repository import —
+// this file never imports Supabase or fetch-based code, so it's safe for
+// both server and browser code to import. The two real singletons this
+// factory builds live in separate, environment-specific entry points:
+// server/accessService.ts (Supabase-backed) and client/accessService.ts
+// (HTTP-backed) — see ARCHITECTURE.md's "Server/client boundary" section
+// for why the split exists and what it prevents.
+export function createAccessService(repository: AccessRepository): AccessService {
   return {
     async hasAccess(memberId, productId) {
-      return MOCK_PRODUCT_ACCESS.some(
-        (a) => a.memberId === memberId && a.productId === productId && a.hasAccess,
-      )
+      const access = await repository.getAccess(memberId, productId)
+      return access?.hasAccess ?? false
     },
 
     async getAccess(memberId, productId) {
-      return MOCK_PRODUCT_ACCESS.find((a) => a.memberId === memberId && a.productId === productId)
+      return repository.getAccess(memberId, productId)
     },
 
     async listAccessForMember(memberId) {
-      return MOCK_PRODUCT_ACCESS.filter((a) => a.memberId === memberId)
+      return repository.listAccessForMember(memberId)
     },
 
     async grantAccess(access) {
-      const existingIndex = MOCK_PRODUCT_ACCESS.findIndex(
-        (a) => a.memberId === access.memberId && a.productId === access.productId,
-      )
-      if (existingIndex >= 0) {
-        MOCK_PRODUCT_ACCESS[existingIndex] = access
-      } else {
-        MOCK_PRODUCT_ACCESS.push(access)
-      }
-      return access
+      return repository.saveAccess(access)
     },
   }
 }
-
-export const accessService: AccessService = createAccessService()

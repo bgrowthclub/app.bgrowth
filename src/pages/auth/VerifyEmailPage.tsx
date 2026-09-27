@@ -12,21 +12,21 @@ export default function VerifyEmailPage() {
   return (
     <>
       <SEO title="Verify Your Email" description="Verify your BGrowth email address." path="/verify-email" />
-      <AuthCard eyebrow="One more step" title="Verify your email">
+      <AuthCard title="Verify your email" subtitle="One more step before you start.">
         {emailVerified ? (
-          <div className="space-y-4">
-            <p className="text-[14px] text-navy/60">Your email is verified.</p>
-            <Button to="/platform/dashboard" className="w-full">
+          <div className="space-y-6">
+            <p className="rounded-xl bg-bg-soft p-4 text-[14px] text-navy/70">Your email is verified.</p>
+            <Button to="/platform/dashboard" className="w-full !py-4 !text-[15px]">
               Continue to Workspace
             </Button>
           </div>
         ) : (
-          <div className="space-y-4">
-            <p className="text-[14px] text-navy/60">
+          <div className="space-y-6">
+            <p className="rounded-xl bg-bg-soft p-4 text-[14px] text-navy/70">
               We sent a verification link to <strong>{user?.email ?? 'your email'}</strong>. This is a simulated
               flow — no email was actually sent.
             </p>
-            <Button onClick={verifyEmail} className="w-full">
+            <Button onClick={verifyEmail} className="w-full !py-4 !text-[15px]">
               Simulate Verification
             </Button>
           </div>

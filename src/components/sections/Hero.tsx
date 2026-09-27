@@ -174,7 +174,8 @@ export default function Hero() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
-    navigate('/systems')
+    const q = query.trim()
+    navigate(q ? `/systems?q=${encodeURIComponent(q)}` : '/systems')
   }
 
   return (
@@ -276,6 +277,7 @@ export default function Hero() {
             onChange={setQuery}
             placeholder="Search your next goal…"
             size="lg"
+            submitLabel="Search"
             className="hover:shadow-glow focus-within:shadow-glow"
           />
         </motion.form>

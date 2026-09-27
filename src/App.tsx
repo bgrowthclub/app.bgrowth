@@ -5,7 +5,6 @@ import BrowseSystems from './pages/BrowseSystems'
 import ProductPage from './pages/ProductPage'
 import CheckoutPage from './pages/CheckoutPage'
 import CheckoutSuccessPage from './pages/CheckoutSuccessPage'
-import MySystems from './pages/MySystems'
 import SystemOverviewPage from './pages/SystemOverviewPage'
 import SystemModulePage from './pages/SystemModulePage'
 import WorkspacesPage from './pages/WorkspacesPage'
@@ -13,6 +12,11 @@ import CategoryPreviewPage from './pages/CategoryPreviewPage'
 import ResourcesPage from './pages/ResourcesPage'
 import PricingPage from './pages/PricingPage'
 import AboutPage from './pages/AboutPage'
+import ContactPage from './pages/ContactPage'
+import KnowledgeHomePage from './pages/knowledge/KnowledgeHomePage'
+import KnowledgeCategoryPage from './pages/knowledge/KnowledgeCategoryPage'
+import KnowledgeArticlePage from './pages/knowledge/KnowledgeArticlePage'
+import KnowledgeSearchPage from './pages/knowledge/KnowledgeSearchPage'
 import NotFoundPage from './pages/NotFoundPage'
 import PlatformLayout from './components/platform/PlatformLayout'
 import DashboardPage from './pages/platform/DashboardPage'
@@ -43,16 +47,43 @@ export default function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/systems" element={<BrowseSystems />} />
         <Route path="/product/:slug" element={<ProductPage />} />
-        <Route path="/checkout" element={<CheckoutPage />} />
-        <Route path="/checkout/success" element={<CheckoutSuccessPage />} />
-        <Route path="/my-systems" element={<MySystems />} />
+        {/* Requires a signed-in member (see CommerceEngineClient.ts —
+            Checkout needs a memberId to create an Order) — a guest is
+            redirected to /login, matching /platform/*'s existing gate. */}
+        <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
+        <Route path="/checkout/success" element={<ProtectedRoute><CheckoutSuccessPage /></ProtectedRoute>} />
+        {/* Cleanup Step 1 (Architecture Compliance Review): retired the
+            legacy ownership page — it read data/memberMock.ts's
+            PURCHASED_SLUGS directly, a second, ungated ownership source
+            alongside AccessService. /platform/my-systems is the single,
+            correct source now (via useOwnedProducts -> AccessService); this
+            redirect keeps the old URL alive rather than 404ing it, and
+            ProtectedRoute naturally bounces a guest to /login first. See
+            pages/MySystems.tsx and data/systems.ts's getOwnedSystems, both
+            now unreferenced and left in place per the no-silent-deletion
+            policy. */}
+        <Route path="/my-systems" element={<Navigate to="/platform/my-systems" replace />} />
         <Route path="/system/:slug" element={<SystemOverviewPage />} />
         <Route path="/system/:slug/module/:moduleSlug" element={<SystemModulePage />} />
         <Route path="/workspaces" element={<WorkspacesPage />} />
         <Route path="/preview/:category" element={<CategoryPreviewPage />} />
         <Route path="/resources" element={<ResourcesPage />} />
+
+        {/* BGrowth Knowledge™ Foundation — the free-content hub, ready to
+            receive future BGrowth Studio-published Knowledge Packages (see
+            modules/knowledge/). Mock data only today; no Studio connection,
+            no API, no backend. */}
+        <Route path="/knowledge" element={<KnowledgeHomePage />} />
+        <Route path="/knowledge/category/:slug" element={<KnowledgeCategoryPage />} />
+        <Route path="/knowledge/article/:slug" element={<KnowledgeArticlePage />} />
+        <Route path="/knowledge/search" element={<KnowledgeSearchPage />} />
+
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/about" element={<AboutPage />} />
+        {/* Plans live on /pricing (BGrowth Club was retired as a name,
+            27/09/2026); /club stays reachable for old links. */}
+        <Route path="/club" element={<Navigate to="/pricing" replace />} />
+        <Route path="/contact" element={<ContactPage />} />
 
         {/* BGrowth Identity™ — mock authentication (see
             modules/identity/mock/MockIdentityProvider.tsx). Guest-only:

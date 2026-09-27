@@ -12,7 +12,7 @@ import BusinessModuleGrid from '../components/runtime/BusinessModuleGrid'
 import ReviewPanel from '../components/runtime/ReviewPanel'
 import FAQPanel from '../components/runtime/FAQPanel'
 import RelatedProductsPanel from '../components/runtime/RelatedProductsPanel'
-import { productService } from '../modules/commerce/services/ProductService'
+import { productCatalogService } from '../modules/commerce/services/ProductCatalogService'
 import { resolveProductSystem } from '../lib/publishedCatalog'
 import { DEFAULT_WORKSPACE_SLUG } from '../data/workspaceCategories'
 import type { Product } from '../modules/commerce/types/product'
@@ -21,9 +21,9 @@ const MODULES_PREVIEW_ID = 'modules-included'
 
 // The Product Page — the Runtime↔Product Engine connection's dynamic
 // product page (see the milestone that introduced this). Loads its data
-// through ProductService, not a hardcoded array; a product created and
-// published in Studio is reachable here immediately, with no new route or
-// component. Marketing-facing content (title, benefits, what's included,
+// through ProductCatalogService, not a hardcoded array; once the Product
+// Engine ships, a product published there is reachable here immediately,
+// with no new route or component. Marketing-facing content (title, benefits, what's included,
 // FAQ, pricing, images) comes straight from the Product record Studio
 // manages. For a GrowthSystem-type product, the underlying BusinessSystem
 // (resolved read-only via `source`, never duplicated onto Product) fills
@@ -38,7 +38,7 @@ export default function ProductPage() {
     let cancelled = false
     setProduct(undefined)
     if (!slug) return
-    productService.getProductBySlug(slug).then((result) => {
+    productCatalogService.getBySlug(slug).then((result) => {
       if (!cancelled) setProduct(result ?? null)
     })
     return () => {

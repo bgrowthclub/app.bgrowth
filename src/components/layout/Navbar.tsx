@@ -12,22 +12,29 @@ interface NavItem {
   to: string
 }
 
-// Public nav: Home · Solutions · Knowledge · About. "Solutions" and
-// "Knowledge" are same-page anchors on the homepage (see ScrollToTop.tsx,
-// which already handles hash-based scrolling into the Life Worlds and
-// Knowledge sections); "About" keeps linking to the existing standalone
-// /about page. Business Systems/Workspace/Resources/Pricing remain fully
-// reachable via the Footer and in-section CTAs, same as before.
+// Public nav: Home · Solutions · Knowledge · About. "Solutions" is a
+// same-page anchor on the homepage (see ScrollToTop.tsx, which already
+// handles hash-based scrolling into the Life Worlds section). "Knowledge"
+// now points to the real Knowledge Hub (/knowledge) — the homepage still
+// has its own inline Knowledge preview section (components/sections/
+// Knowledge.tsx, id="knowledge"), reachable by scrolling normally, but the
+// nav item leads to the full Hub instead of anchoring to that preview.
+// "About" keeps linking to the existing standalone /about page. Business
+// Systems/Workspace/Resources/Pricing remain fully reachable via the
+// Footer and in-section CTAs, same as before.
 const PUBLIC_LINKS: NavItem[] = [
   { label: 'Home', to: '/' },
   { label: 'Solutions', to: '/#life-worlds' },
-  { label: 'Knowledge', to: '/#knowledge' },
+  { label: 'Knowledge', to: '/knowledge' },
   { label: 'About', to: '/about' },
 ]
 
-// Member nav: My Systems · Resources · Account · Logout
+// Member nav: My Systems · Resources · Account · Logout. "My Systems"
+// points straight at the Customer Platform's Product Library
+// (/platform/my-systems) — the single ownership source now that the
+// legacy public /my-systems page just redirects there (see App.tsx).
 const MEMBER_LINKS: NavItem[] = [
-  { label: 'My Systems', to: '/my-systems' },
+  { label: 'My Systems', to: '/platform/my-systems' },
   { label: 'Resources', to: '/my-systems#resources' },
   { label: 'Account', to: '/account' },
 ]
@@ -69,7 +76,7 @@ export default function Navbar({ mode = 'public' }: { mode?: NavMode }) {
               : 'border border-transparent bg-transparent'
           }`}
         >
-          <Link to={mode === 'member' ? '/my-systems' : '/'} className="flex items-center gap-2.5">
+          <Link to={mode === 'member' ? '/platform/my-systems' : '/'} className="flex items-center gap-2.5">
             {/* Circular masked container — the source PNG is a square icon
                 on a flat white canvas, which read as "an image pasted on
                 top" once everything else went pill/circle-shaped. Cropping
@@ -123,7 +130,7 @@ export default function Navbar({ mode = 'public' }: { mode?: NavMode }) {
                   Login
                 </Link>
                 <Button to="/pricing" className="!px-5 !py-2.5 !text-[13.5px]">
-                  Join BGrowth Club
+                  Join BGrowth
                 </Button>
               </>
             ) : (
@@ -192,7 +199,7 @@ export default function Navbar({ mode = 'public' }: { mode?: NavMode }) {
                     Login
                   </Link>
                   <Button to="/pricing" className="!h-14 w-full" onClick={() => setOpen(false)}>
-                    Join BGrowth Club
+                    Join BGrowth
                   </Button>
                 </div>
               ) : (

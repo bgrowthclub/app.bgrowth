@@ -2,6 +2,7 @@ import Field from '../ui/Field'
 import { inputClass, selectClass } from '../ui/formStyles'
 import type { CurrencyCode } from '../../../modules/commerce/types/pricing'
 import type { Product, ProductVisibility } from '../../../modules/commerce/types/product'
+import type { KnownPaymentProfileId } from '../../../modules/commerce/types/paymentProfile'
 
 interface Props {
   product: Product
@@ -10,6 +11,7 @@ interface Props {
 
 const CURRENCIES: CurrencyCode[] = ['USD', 'EUR', 'GBP', 'BRL']
 const VISIBILITIES: ProductVisibility[] = ['free', 'paid', 'coming-soon', 'private']
+const PAYMENT_PROFILES: KnownPaymentProfileId[] = ['standard', 'membership', 'free', 'enterprise', 'regional']
 
 function numberOrUndefined(value: string): number | undefined {
   if (value.trim() === '') return undefined
@@ -20,26 +22,40 @@ function numberOrUndefined(value: string): number | undefined {
 export default function PricingTab({ product, onChange }: Props) {
   return (
     <div className="grid max-w-2xl gap-5 sm:grid-cols-2">
-      <Field label="Price">
+      <Field label="Base Price">
         <input
           type="number"
           min={0}
           step={0.01}
           className={inputClass}
-          value={product.price}
-          onChange={(e) => onChange({ price: Number(e.target.value) || 0 })}
+          value={product.basePrice}
+          onChange={(e) => onChange({ basePrice: Number(e.target.value) || 0 })}
         />
       </Field>
 
-      <Field label="Currency">
+      <Field label="Base Currency">
         <select
           className={selectClass}
-          value={product.currency}
-          onChange={(e) => onChange({ currency: e.target.value as CurrencyCode })}
+          value={product.baseCurrency}
+          onChange={(e) => onChange({ baseCurrency: e.target.value as CurrencyCode })}
         >
           {CURRENCIES.map((c) => (
             <option key={c} value={c}>
               {c}
+            </option>
+          ))}
+        </select>
+      </Field>
+
+      <Field label="Payment Profile" hint="Determines which payment provider processes this product — never set a provider directly">
+        <select
+          className={selectClass}
+          value={product.paymentProfileId}
+          onChange={(e) => onChange({ paymentProfileId: e.target.value })}
+        >
+          {PAYMENT_PROFILES.map((p) => (
+            <option key={p} value={p}>
+              {p}
             </option>
           ))}
         </select>

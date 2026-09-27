@@ -34,7 +34,7 @@ export default function PurchaseCard({ product, workspaceId, previewTargetId, cl
   return (
     <div className={`rounded-xl3 border border-navy/[0.06] bg-white p-6 shadow-glow ${className}`}>
       <div className="flex items-baseline gap-2">
-        <span className="font-display text-3xl font-bold text-navy">${product.price}</span>
+        <span className="font-display text-3xl font-bold text-navy">${product.basePrice}</span>
         <span className="text-[13px] text-navy/40">one-time</span>
       </div>
 

@@ -15,7 +15,7 @@ export function getPublishValidation(product: Product): ValidationCheck[] {
   return [
     { label: 'Required fields complete', passed: Boolean(product.title && product.slug && product.description) },
     { label: 'Content source selected', passed: Boolean(product.source) },
-    { label: 'Price configured', passed: product.price > 0 || product.visibility === 'free' },
+    { label: 'Price configured', passed: product.basePrice > 0 || product.visibility === 'free' },
     { label: 'Thumbnail uploaded', passed: Boolean(product.assets.thumbnail) },
     { label: 'Hero image uploaded', passed: Boolean(product.assets.heroImage) },
     { label: 'SEO completed', passed: Boolean(product.seo?.metaTitle && product.seo?.metaDescription) },

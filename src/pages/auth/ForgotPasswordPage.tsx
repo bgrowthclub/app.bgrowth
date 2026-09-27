@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import SEO from '../../components/seo/SEO'
 import AuthCard from '../../components/ui/AuthCard'
 import Button from '../../components/ui/Button'
+import AuthField from '../../components/ui/AuthField'
 import { useIdentity } from '../../modules/identity/mock/MockIdentityProvider'
 
 export default function ForgotPasswordPage() {
@@ -24,33 +25,31 @@ export default function ForgotPasswordPage() {
     <>
       <SEO title="Forgot Password" description="Reset your BGrowth password." path="/forgot-password" />
       <AuthCard
-        eyebrow="Reset your password"
         title="Forgot password?"
+        subtitle="Enter your email and we’ll send you a link to reset it."
         footer={
           <Link to="/login" className="font-semibold text-primary">
-            Back to log in
+            Back to sign in
           </Link>
         }
       >
         {sent ? (
-          <p className="text-[14px] text-navy/60">
+          <p className="rounded-xl bg-bg-soft p-4 text-[14px] text-navy/70">
             If an account exists for <strong>{email}</strong>, a reset link is on its way. This is a simulated
             flow — no email was actually sent.
           </p>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="forgot-password-email" className="mb-1.5 block text-[13px] font-medium text-navy/60">Email</label>
-              <input
-                id="forgot-password-email"
-                type="email"
-                required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className="w-full rounded-xl border border-navy/10 bg-white px-4 py-3 text-[14px] text-navy placeholder:text-navy/30 focus:border-primary/30"
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={submitting}>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <AuthField
+              id="forgot-password-email"
+              label="Email"
+              type="email"
+              autoComplete="email"
+              placeholder="you@example.com"
+              value={email}
+              onChange={setEmail}
+            />
+            <Button type="submit" className="w-full !py-4 !text-[15px]" disabled={submitting}>
               {submitting ? 'Sending…' : 'Send Reset Link'}
             </Button>
           </form>

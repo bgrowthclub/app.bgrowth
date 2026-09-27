@@ -4,6 +4,8 @@ import { Link } from 'react-router-dom'
 import SEO from '../../components/seo/SEO'
 import AuthCard from '../../components/ui/AuthCard'
 import Button from '../../components/ui/Button'
+import AuthField from '../../components/ui/AuthField'
+import { ArrowRight } from 'lucide-react'
 import { useIdentity } from '../../modules/identity/mock/MockIdentityProvider'
 
 // Wrapped in GuestRoute (see App.tsx) — once register() succeeds,
@@ -27,53 +29,47 @@ export default function RegisterPage() {
     <>
       <SEO title="Sign Up" description="Create a BGrowth account." path="/register" />
       <AuthCard
-        eyebrow="Get started"
-        title="Create your BGrowth account"
+        title="Create your account"
+        subtitle="Start your BGrowth journey in less than a minute."
         footer={
           <>
             Already have an account?{' '}
             <Link to="/login" className="font-semibold text-primary">
-              Log in
+              Sign in
             </Link>
           </>
         }
       >
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="register-name" className="mb-1.5 block text-[13px] font-medium text-navy/60">Name</label>
-            <input
-              id="register-name"
-              type="text"
-              required
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              className="w-full rounded-xl border border-navy/10 bg-white px-4 py-3 text-[14px] text-navy placeholder:text-navy/30 focus:border-primary/30"
-            />
-          </div>
-          <div>
-            <label htmlFor="register-email" className="mb-1.5 block text-[13px] font-medium text-navy/60">Email</label>
-            <input
-              id="register-email"
-              type="email"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-xl border border-navy/10 bg-white px-4 py-3 text-[14px] text-navy placeholder:text-navy/30 focus:border-primary/30"
-            />
-          </div>
-          <div>
-            <label htmlFor="register-password" className="mb-1.5 block text-[13px] font-medium text-navy/60">Password</label>
-            <input
-              id="register-password"
-              type="password"
-              required
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full rounded-xl border border-navy/10 bg-white px-4 py-3 text-[14px] text-navy placeholder:text-navy/30 focus:border-primary/30"
-            />
-          </div>
+        <form onSubmit={handleSubmit} className="space-y-6">
+          <AuthField
+            id="register-name"
+            label="Name"
+            type="text"
+            autoComplete="name"
+            placeholder="Your full name"
+            value={displayName}
+            onChange={setDisplayName}
+          />
+          <AuthField
+            id="register-email"
+            label="Email"
+            type="email"
+            autoComplete="email"
+            placeholder="you@example.com"
+            value={email}
+            onChange={setEmail}
+          />
+          <AuthField
+            id="register-password"
+            label="Password"
+            type="password"
+            autoComplete="new-password"
+            placeholder="Create a password"
+            value={password}
+            onChange={setPassword}
+          />
           {error && <p className="text-[13px] text-red-500">{error}</p>}
-          <Button type="submit" className="w-full" disabled={status === 'loading'}>
+          <Button type="submit" className="w-full !py-4 !text-[15px]" disabled={status === 'loading'} icon={<ArrowRight size={18} aria-hidden="true" />}>
             {status === 'loading' ? 'Creating account…' : 'Create Account'}
           </Button>
         </form>

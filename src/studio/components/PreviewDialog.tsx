@@ -1,6 +1,8 @@
 import { X } from 'lucide-react'
 import Badge from '../../components/ui/Badge'
+import ModuleBadge from '../../components/systems/ModuleBadge'
 import { productPreviewService } from '../../modules/commerce/services/ProductPreviewService'
+import { resolveProductSystem } from '../../lib/publishedCatalog'
 import type { Product } from '../../modules/commerce/types/product'
 
 interface Props {
@@ -19,7 +21,8 @@ export default function PreviewDialog({ open, onClose, product }: Props) {
   if (!open) return null
 
   const { product: p, generatedAt } = productPreviewService.generatePreview(product)
-  const displayPrice = p.salePrice ?? p.price
+  const displayPrice = p.salePrice ?? p.basePrice
+  const system = resolveProductSystem(p)
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -52,14 +55,27 @@ export default function PreviewDialog({ open, onClose, product }: Props) {
 
           <div className="mt-4 flex items-baseline gap-2">
             <span className="font-display text-lg font-bold text-navy">
-              {p.visibility === 'free' ? 'Free' : `${p.currency} ${displayPrice.toFixed(2)}`}
+              {p.visibility === 'free' ? 'Free' : `${p.baseCurrency} ${displayPrice.toFixed(2)}`}
             </span>
             {p.salePrice != null && p.visibility !== 'free' && (
               <span className="text-[13px] text-navy/40 line-through">
-                {p.currency} {p.price.toFixed(2)}
+                {p.baseCurrency} {p.basePrice.toFixed(2)}
               </span>
             )}
           </div>
+
+          {system && system.modules.length > 0 && (
+            <div className="mt-5">
+              <p className="text-[11px] font-semibold uppercase tracking-wide text-navy/35">
+                Modules ({system.modules.length})
+              </p>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {system.modules.map((m) => (
+                  <ModuleBadge key={m.id} type={m.type} />
+                ))}
+              </div>
+            </div>
+          )}
 
           {p.benefits.length > 0 && (
             <ul className="mt-5 space-y-2">

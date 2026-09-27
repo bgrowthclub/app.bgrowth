@@ -6,8 +6,8 @@ import type { Product, ProductType } from '../modules/commerce/types/product'
 import type { ProductAccessState, ProductLibraryStatus, UserProduct } from '../types/productLibrary'
 import { ICONS_BY_CATEGORY } from '../components/systems/categoryIcons'
 import { resolveProductSystem } from './publishedCatalog'
-import { accessService } from '../modules/commerce/services/AccessService'
-import { productService } from '../modules/commerce/services/ProductService'
+import { accessService } from '../modules/commerce/client/accessService'
+import { productCatalogService } from '../modules/commerce/services/ProductCatalogService'
 
 // Turns a Product this member has access to into a UserProduct — works for
 // any ProductType, not only GrowthSystem: icon/subTag get a real BusinessSystem
@@ -51,17 +51,20 @@ function buildUserProduct(product: Product, access: ProductAccess, user: User): 
 
 // The Product Library's data accessor — every "what does this member own"
 // surface (My Workspaces today; My Products, once other product types
-// exist) reads through AccessService + ProductService, never through mock
-// data directly. Today AccessService is backed by mock access grants (see
-// modules/commerce/mock/mockProductAccess.ts); a real purchase completing
-// would call AccessService.grantAccess() instead, and nothing here changes.
+// exist) reads through AccessService + ProductCatalogService, never through
+// AccessRepository or mock data directly. Today the browser's AccessService
+// is backed by mock access grants (see client/accessService.ts and
+// mock/mockProductAccess.ts); a real purchase completing calls
+// OrderService.completeOrder(), which calls AccessService.grantAccess() as
+// its own side effect (see ARCHITECTURE.md's "Payment completion
+// pipeline") — nothing here changes when that's wired to real persistence.
 export async function getUserProducts(user: User): Promise<UserProduct[]> {
   const grants = await accessService.listAccessForMember(user.id)
   const products = await Promise.all(
     grants
       .filter((g) => g.hasAccess)
       .map(async (access) => {
-        const product = await productService.getProductById(access.productId)
+        const product = await productCatalogService.getById(access.productId)
         return product ? buildUserProduct(product, access, user) : undefined
       }),
   )

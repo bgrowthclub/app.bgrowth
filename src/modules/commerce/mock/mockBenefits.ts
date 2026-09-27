@@ -7,22 +7,22 @@ export const MOCK_BENEFITS: Benefit[] = [
     title: '15% off SuretyBond Direct',
     description: 'Member discount on notary bonds and E&O insurance.',
     partnerId: 'partner-suretybond',
-    requiredMembershipTier: 'club',
+    requiredMembershipTier: 'starter',
   },
   {
     id: 'benefit-002',
     type: 'software-discount',
     title: '2 months free on QuickBooks Self-Employed',
-    description: 'Member offer for BGrowth Club members.',
+    description: 'Member offer for BGrowth members.',
     partnerId: 'partner-quickbooks',
-    requiredMembershipTier: 'club',
+    requiredMembershipTier: 'starter',
   },
   {
     id: 'benefit-003',
     type: 'exclusive-offer',
     title: 'Early access to new Business Systems',
     description: 'Club members see new systems before they go public.',
-    requiredMembershipTier: 'club',
+    requiredMembershipTier: 'starter',
   },
   {
     id: 'benefit-004',
@@ -47,7 +47,7 @@ export const MOCK_COUPONS: Coupon[] = [
 ]
 
 export const MOCK_DISCOUNTS: Discount[] = [
-  { id: 'discount-club-all', label: 'Club member pricing', type: 'percent', value: 20, membershipTier: 'club' },
+  { id: 'discount-club-all', label: 'Club member pricing', type: 'percent', value: 20, membershipTier: 'starter' },
 ]
 
 export function getMockCouponByCode(code: string) {

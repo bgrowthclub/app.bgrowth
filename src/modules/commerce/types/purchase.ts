@@ -48,6 +48,11 @@ export interface Order {
   total: Money
   status: PurchaseStatus
   createdAt: string
+  // Set by OrderService.completeOrder once a webhook confirms payment —
+  // the ProviderTransactionRef['providerTransactionId'] that confirmed
+  // this order, kept here (not just on Transaction) so a completed Order
+  // is self-explanatory about what confirmed it.
+  transactionId?: string
 }
 
 // The actual payment event behind an Order, as reported by whichever
