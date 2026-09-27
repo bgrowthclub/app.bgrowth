@@ -89,7 +89,7 @@ export default function KnowledgeArticlePage() {
 
   const Icon = KNOWLEDGE_TYPE_ICONS[article.type]
   const headings = extractHeadings(article.body)
-  const shareUrl = typeof window !== 'undefined' ? window.location.href : `https://bgrowth.club/knowledge/article/${article.slug}`
+  const shareUrl = typeof window !== 'undefined' ? window.location.href : `https://bgrowth.app/knowledge/article/${article.slug}`
 
   return (
     <div className="pb-24 pt-32 md:pt-40">

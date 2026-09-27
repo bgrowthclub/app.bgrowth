@@ -102,8 +102,8 @@ export const stripeProvider: PaymentProvider = {
         },
         quantity: item.quantity,
       })),
-      success_url: request.successUrl ?? 'https://bgrowth.com/checkout/success',
-      cancel_url: request.cancelUrl ?? 'https://bgrowth.com/checkout',
+      success_url: request.successUrl ?? 'https://bgrowth.app/checkout/success',
+      cancel_url: request.cancelUrl ?? 'https://bgrowth.app/checkout',
     })
 
     if (!session.url) throw new Error('Stripe did not return a Checkout Session URL')
