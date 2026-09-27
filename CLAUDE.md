@@ -327,7 +327,7 @@ extension costs every existing caller.
   category's data — see ARCHITECTURE.md §14.
 - Before adding a link (`<Link>`/`<a>`/`to=`), verify the target route
   actually exists in `App.tsx`. Known pre-existing gaps (`/account`,
-  `/privacy`, `/terms`, `/contact`) are linked but unrouted — do not copy
+  `/privacy`, `/terms`) are linked but unrouted — do not copy
   this pattern for new links; either build the page or don't link it.
 - Route param lookups (`useParams` + `getSystemBySlug`/`getModuleBySlug`)
   must always guard the "not found" case with `<Navigate to="/systems" />`,

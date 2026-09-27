@@ -41,7 +41,7 @@ const TIERS = [
       'Priority updates',
     ],
     ctaLabel: 'Join BGrowth Club',
-    ctaTo: '/#become-a-member',
+    ctaTo: '/club',
   },
 ]
 
@@ -145,7 +145,7 @@ export default function PricingPage() {
             description="Join BGrowth Club for member pricing on every Business System, plus exclusive resources."
             footnote="Cancel anytime."
           >
-            <Link to="/#become-a-member" className="btn-primary w-full">
+            <Link to="/club" className="btn-primary w-full">
               Join BGrowth Club
             </Link>
           </MemberBanner>

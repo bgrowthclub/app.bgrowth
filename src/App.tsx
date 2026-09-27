@@ -12,6 +12,8 @@ import CategoryPreviewPage from './pages/CategoryPreviewPage'
 import ResourcesPage from './pages/ResourcesPage'
 import PricingPage from './pages/PricingPage'
 import AboutPage from './pages/AboutPage'
+import ClubPage from './pages/ClubPage'
+import ContactPage from './pages/ContactPage'
 import KnowledgeHomePage from './pages/knowledge/KnowledgeHomePage'
 import KnowledgeCategoryPage from './pages/knowledge/KnowledgeCategoryPage'
 import KnowledgeArticlePage from './pages/knowledge/KnowledgeArticlePage'
@@ -79,6 +81,8 @@ export default function App() {
 
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/about" element={<AboutPage />} />
+        <Route path="/club" element={<ClubPage />} />
+        <Route path="/contact" element={<ContactPage />} />
 
         {/* BGrowth Identity™ — mock authentication (see
             modules/identity/mock/MockIdentityProvider.tsx). Guest-only:
