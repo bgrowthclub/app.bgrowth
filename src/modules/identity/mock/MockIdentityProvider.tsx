@@ -1,25 +1,10 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import type { User } from '../types/user'
 import type { LoginCredentials, RegistrationData } from '../types/auth'
+import { IdentityContext } from '../IdentityContext'
+import type { IdentityStatus } from '../IdentityContext'
 import { MOCK_USER } from './mockUser'
-
-export type IdentityStatus = 'loading' | 'authenticated' | 'guest'
-
-interface IdentityContextValue {
-  status: IdentityStatus
-  user: User | undefined
-  error: string | undefined
-  emailVerified: boolean
-  login: (credentials: LoginCredentials) => Promise<void>
-  register: (data: RegistrationData) => Promise<void>
-  logout: () => void
-  requestPasswordReset: (email: string) => Promise<void>
-  resetPassword: (newPassword: string) => Promise<void>
-  verifyEmail: () => void
-}
-
-const IdentityContext = createContext<IdentityContextValue | undefined>(undefined)
 
 // The only place this milestone touches browser storage — purely to
 // simulate "Remember Me" across a page reload. No backend, no real
@@ -30,6 +15,10 @@ function simulateNetworkDelay() {
   return new Promise((resolve) => setTimeout(resolve, 450))
 }
 
+// NO LONGER MOUNTED — main.tsx now uses SupabaseIdentityProvider (see
+// ../supabase/). Kept, unused, until its removal is approved (CLAUDE.md
+// §12); it still implements the shared IdentityContextValue contract.
+//
 // A complete, self-contained mock implementation of BGrowth Identity™ —
 // login, register, logout, remember me, password reset, and email
 // verification, all simulated in React state (+ localStorage for "Remember
@@ -80,7 +69,7 @@ export function MockIdentityProvider({ children }: { children: ReactNode }) {
     if (!data.email.trim() || !data.password.trim() || !data.displayName.trim()) {
       setError('Fill in every field to create an account.')
       setStatus('guest')
-      return
+      return false
     }
 
     const [firstName, ...lastNameParts] = data.displayName.trim().split(' ')
@@ -94,6 +83,7 @@ export function MockIdentityProvider({ children }: { children: ReactNode }) {
     setEmailVerified(false)
     setStatus('authenticated')
     window.localStorage.setItem(STORAGE_KEY, 'true')
+    return true
   }
 
   const logout = () => {
@@ -107,6 +97,7 @@ export function MockIdentityProvider({ children }: { children: ReactNode }) {
     setError(undefined)
     await simulateNetworkDelay()
     // Simulated only — no email is actually sent.
+    return true
   }
 
   const resetPassword = async (newPassword: string) => {
@@ -119,21 +110,30 @@ export function MockIdentityProvider({ children }: { children: ReactNode }) {
     // Simulated only — no password is actually stored anywhere.
   }
 
-  const verifyEmail = () => {
+  const resendVerification = async (_email: string) => {
+    // Simulated only — the mock marks the member verified instead.
     setEmailVerified(true)
+    return true
   }
 
   return (
     <IdentityContext.Provider
-      value={{ status, user, error, emailVerified, login, register, logout, requestPasswordReset, resetPassword, verifyEmail }}
+      value={{
+        status,
+        busy: false,
+        user,
+        error,
+        emailVerified,
+        passwordRecovery: false,
+        login,
+        register,
+        resendVerification,
+        logout,
+        requestPasswordReset,
+        resetPassword,
+      }}
     >
       {children}
     </IdentityContext.Provider>
   )
-}
-
-export function useIdentity() {
-  const ctx = useContext(IdentityContext)
-  if (!ctx) throw new Error('useIdentity must be used within a MockIdentityProvider')
-  return ctx
 }

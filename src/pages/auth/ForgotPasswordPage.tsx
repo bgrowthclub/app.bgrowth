@@ -5,10 +5,10 @@ import SEO from '../../components/seo/SEO'
 import AuthCard from '../../components/ui/AuthCard'
 import Button from '../../components/ui/Button'
 import AuthField from '../../components/ui/AuthField'
-import { useIdentity } from '../../modules/identity/mock/MockIdentityProvider'
+import { useIdentity } from '../../modules/identity/IdentityContext'
 
 export default function ForgotPasswordPage() {
-  const { requestPasswordReset } = useIdentity()
+  const { requestPasswordReset, error } = useIdentity()
   const [email, setEmail] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [sent, setSent] = useState(false)
@@ -16,9 +16,9 @@ export default function ForgotPasswordPage() {
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
     setSubmitting(true)
-    await requestPasswordReset(email)
+    const ok = await requestPasswordReset(email)
     setSubmitting(false)
-    setSent(true)
+    if (ok) setSent(true)
   }
 
   return (
@@ -35,8 +35,8 @@ export default function ForgotPasswordPage() {
       >
         {sent ? (
           <p className="rounded-xl bg-bg-soft p-4 text-[14px] text-navy/70">
-            If an account exists for <strong>{email}</strong>, a reset link is on its way. This is a simulated
-            flow — no email was actually sent.
+            If an account exists for <strong>{email}</strong>, a reset link is on its way. Check your inbox
+            (and spam folder).
           </p>
         ) : (
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -49,6 +49,7 @@ export default function ForgotPasswordPage() {
               value={email}
               onChange={setEmail}
             />
+            {error && <p className="text-[13px] text-red-500">{error}</p>}
             <Button type="submit" className="w-full !py-4 !text-[15px]" disabled={submitting}>
               {submitting ? 'Sending…' : 'Send Reset Link'}
             </Button>

@@ -1,6 +1,6 @@
 import { Navigate } from 'react-router-dom'
 import type { ReactNode } from 'react'
-import { useIdentity } from '../mock/MockIdentityProvider'
+import { useIdentity } from '../IdentityContext'
 
 interface Props {
   children: ReactNode

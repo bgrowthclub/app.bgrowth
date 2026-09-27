@@ -10,7 +10,7 @@ import { WORKSPACE_CATEGORIES } from '../data/workspaceCategories'
 import { productCatalogService } from '../modules/commerce/services/ProductCatalogService'
 import { accessService } from '../modules/commerce/client/accessService'
 import { resolveProductSystem } from '../lib/publishedCatalog'
-import { useIdentity } from '../modules/identity/mock/MockIdentityProvider'
+import { useIdentity } from '../modules/identity/IdentityContext'
 import type { Product } from '../modules/commerce/types/product'
 
 const TIMELINE_STEPS = [

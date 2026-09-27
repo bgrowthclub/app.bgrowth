@@ -21,6 +21,8 @@ function SidebarBody({ collapsed, onNavigate }: { collapsed: boolean; onNavigate
   )
 }
 
+// The logo leads to the site's Home ("/"), same as on the auth screens —
+// Dashboard stays one click away as the first sidebar item.
 export default function Sidebar({ collapsed, onToggleCollapsed, mobileOpen, onCloseMobile }: Props) {
   return (
     <>
@@ -32,7 +34,7 @@ export default function Sidebar({ collapsed, onToggleCollapsed, mobileOpen, onCl
         }`}
       >
         <div className={`flex items-center gap-2.5 px-4 py-5 ${collapsed ? 'justify-center' : ''}`}>
-          <Link to="/platform/dashboard" className="flex items-center gap-2.5 overflow-hidden">
+          <Link to="/" aria-label="BGrowth — home" className="flex items-center gap-2.5 overflow-hidden">
             <img src={logo} alt="BGrowth" className="h-8 w-8 shrink-0 object-contain" />
             {!collapsed && (
               <span className="truncate font-display text-[16px] font-bold tracking-tight text-navy">
@@ -65,7 +67,7 @@ export default function Sidebar({ collapsed, onToggleCollapsed, mobileOpen, onCl
           <div className="absolute inset-0 bg-navy/20 backdrop-blur-sm" onClick={onCloseMobile} />
           <aside className="relative flex h-full w-72 max-w-[80vw] flex-col bg-white shadow-glow">
             <div className="flex items-center justify-between px-4 py-5">
-              <Link to="/platform/dashboard" className="flex items-center gap-2.5" onClick={onCloseMobile}>
+              <Link to="/" aria-label="BGrowth — home" className="flex items-center gap-2.5" onClick={onCloseMobile}>
                 <img src={logo} alt="BGrowth" className="h-8 w-8 object-contain" />
                 <span className="font-display text-[16px] font-bold tracking-tight text-navy">BGrowth</span>
               </Link>

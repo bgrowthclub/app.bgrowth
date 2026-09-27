@@ -13,7 +13,7 @@ import { isCheckoutSelection } from '../lib/checkout'
 import { productCatalogService } from '../modules/commerce/services/ProductCatalogService'
 import { resolveProductSystem } from '../lib/publishedCatalog'
 import { commerceEngine } from '../modules/commerce/CommerceEngineClient'
-import { useIdentity } from '../modules/identity/mock/MockIdentityProvider'
+import { useIdentity } from '../modules/identity/IdentityContext'
 import type { SystemBenefit } from '../types/system'
 import type { Product } from '../modules/commerce/types/product'
 

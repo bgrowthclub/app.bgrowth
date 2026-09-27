@@ -5,7 +5,7 @@ import Button from '../ui/Button'
 import EmptyState from '../ui/EmptyState'
 import ProductLibraryCard from '../systems/ProductLibraryCard'
 import { useOwnedProducts } from '../../lib/productLibrary'
-import { useIdentity } from '../../modules/identity/mock/MockIdentityProvider'
+import { useIdentity } from '../../modules/identity/IdentityContext'
 
 export default function MyBusinessSystemsSection() {
   const { user } = useIdentity()

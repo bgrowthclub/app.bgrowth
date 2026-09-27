@@ -2,7 +2,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { User, Sparkles, Settings, LifeBuoy, LogOut } from 'lucide-react'
 import Popover from './Popover'
 import Avatar from '../ui/Avatar'
-import { useIdentity } from '../../modules/identity/mock/MockIdentityProvider'
+import { useIdentity } from '../../modules/identity/IdentityContext'
 
 // Sign Out is wired to BGrowth Identity™'s mock session (see
 // MockIdentityProvider) — it ends the mock session and returns to the

@@ -1,7 +1,7 @@
 import SectionHeader from '../ui/SectionHeader'
 import ProductLibraryCard from '../systems/ProductLibraryCard'
 import { useOwnedProducts } from '../../lib/productLibrary'
-import { useIdentity } from '../../modules/identity/mock/MockIdentityProvider'
+import { useIdentity } from '../../modules/identity/IdentityContext'
 
 export default function ContinueBuildingSection() {
   const { user } = useIdentity()
