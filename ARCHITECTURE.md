@@ -573,6 +573,30 @@ When a second Growth Category or a Course/Marketplace product exists, it
 gets its own `Product` entry the same way — Commerce never needs its own
 parallel content catalog.
 
+### Content Source import — how a Product picks up a Workspace's fields
+
+The Product Engine's Content Source tab (`studio/components/tabs/ContentSourceTab.tsx`)
+is what turns "point a Product at a Workspace" into practice. Selecting a
+Workspace calls a `ContentSourceProvider` (`studio/lib/contentSources/`,
+`growthSystemSource.ts` is the only registered one today) which reads a
+`ContentSourceSnapshot` off the `BusinessSystem` and writes a few of its
+fields onto the `Product` draft — title, description, industry,
+difficulty, estimated time, thumbnail — all still editable afterward, per
+`ContentSourceProvider.applyToProduct`. `Product.category` (a
+`GrowthCategoryId`) is deliberately never auto-filled from
+`BusinessSystem.category` (a narrower catalog string like "Notary") —
+they're different concepts; it defaults to `business-entrepreneurship` at
+draft creation, today's only populated category.
+
+The snapshot also carries a read-only `modules` summary (module `type` +
+`title` only, never a module's `content`/sections/fields) so the Content
+Source tab and `PreviewDialog` can show what the Workspace actually
+contains — reusing `ModuleBadge` for consistent labeling everywhere else
+that already renders a `BusinessModule`. This is informational only: it's
+never written onto the `Product` itself, since `Product` doesn't model
+modules — the Workspace stays the one source of truth for its own content,
+exactly as `source: { type, id }` above already guarantees.
+
 ### ProductAccess — access is Commerce's decision, not the provider's
 
 `ProductAccess`/`UserEntitlement` (`types/access.ts`) are the single
