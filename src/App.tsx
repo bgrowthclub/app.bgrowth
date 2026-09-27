@@ -46,8 +46,11 @@ export default function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/systems" element={<BrowseSystems />} />
         <Route path="/product/:slug" element={<ProductPage />} />
-        <Route path="/checkout" element={<CheckoutPage />} />
-        <Route path="/checkout/success" element={<CheckoutSuccessPage />} />
+        {/* Requires a signed-in member (see CommerceEngineClient.ts —
+            Checkout needs a memberId to create an Order) — a guest is
+            redirected to /login, matching /platform/*'s existing gate. */}
+        <Route path="/checkout" element={<ProtectedRoute><CheckoutPage /></ProtectedRoute>} />
+        <Route path="/checkout/success" element={<ProtectedRoute><CheckoutSuccessPage /></ProtectedRoute>} />
         {/* Cleanup Step 1 (Architecture Compliance Review): retired the
             legacy ownership page — it read data/memberMock.ts's
             PURCHASED_SLUGS directly, a second, ungated ownership source

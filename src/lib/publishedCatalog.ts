@@ -57,7 +57,7 @@ export function systemForCard(pair: PublishedSystemProduct): BusinessSystem {
     shortDescription: product.description,
     difficulty: product.difficulty ?? system.difficulty,
     estimatedTime: product.estimatedTime ?? system.estimatedTime,
-    price: product.price,
+    price: product.basePrice,
     memberPrice: getMemberPrice(product),
   }
 }

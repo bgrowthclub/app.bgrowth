@@ -1,6 +1,12 @@
 import type { ProviderId, CheckoutSessionRequest, CheckoutSessionResult } from '../types/provider'
 import type { Transaction } from '../types/purchase'
 
+// Superseded by PaymentProvider (see ./PaymentProvider.ts), the Commerce
+// Engine's renamed, expanded version of this same seam (adds
+// verifyPayment(), webhook(), and cancel() to what this interface
+// defined). Left in place, unused, per CLAUDE.md §12/§18 — recommend
+// removal once every future caller targets PaymentProvider instead.
+//
 // The seam every payment provider integration implements — Stripe, PayPal,
 // Mercado Pago, Apple Pay, Google Pay, Hotmart, Paddle, Lemon Squeezy, or
 // any future provider. Nothing in this application or the rest of Commerce
