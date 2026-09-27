@@ -277,6 +277,7 @@ export default function Hero() {
             onChange={setQuery}
             placeholder="Search your next goal…"
             size="lg"
+            submitLabel="Search"
             className="hover:shadow-glow focus-within:shadow-glow"
           />
         </motion.form>
