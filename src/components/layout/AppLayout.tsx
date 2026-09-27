@@ -12,9 +12,25 @@ function isMemberRoute(pathname: string) {
   return MEMBER_ROUTE_PREFIXES.some((prefix) => pathname.startsWith(prefix))
 }
 
+// The five auth pages render full-screen (ui/AuthCard: brand photo + form)
+// with no Navbar or Footer — still inside this layout, so the project keeps
+// exactly two top-level layouts (CLAUDE.md §7). AuthCard's logo links home.
+const AUTH_ROUTES = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email']
+
 export default function AppLayout() {
   const { pathname } = useLocation()
   const mode = isMemberRoute(pathname) ? 'member' : 'public'
+
+  if (AUTH_ROUTES.includes(pathname)) {
+    return (
+      <div className="relative min-h-screen overflow-x-clip bg-bg">
+        <ScrollToTop />
+        <main>
+          <Outlet />
+        </main>
+      </div>
+    )
+  }
 
   return (
     // overflow-x-clip (not overflow-x-hidden): identical horizontal-bleed

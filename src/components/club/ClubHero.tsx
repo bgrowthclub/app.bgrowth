@@ -106,8 +106,8 @@ export default function ClubHero() {
             <div className="grid h-9 w-9 place-items-center rounded-xl bg-grad-primary text-white">
               <Users size={17} strokeWidth={2} aria-hidden="true" />
             </div>
-            <p className="mt-3 text-[12.5px] font-semibold leading-snug text-navy">12,400+ members</p>
-            <p className="mt-0.5 text-[11px] text-navy/40">growing together every week</p>
+            <p className="mt-3 text-[12.5px] font-semibold leading-snug text-navy">Professional community</p>
+            <p className="mt-0.5 text-[11px] text-navy/40">learn and grow with other members</p>
           </motion.div>
         </motion.div>
       </div>

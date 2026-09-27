@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom'
 import SEO from '../../components/seo/SEO'
 import AuthCard from '../../components/ui/AuthCard'
 import Button from '../../components/ui/Button'
+import AuthField from '../../components/ui/AuthField'
 import { useIdentity } from '../../modules/identity/mock/MockIdentityProvider'
 
 export default function ResetPasswordPage() {
@@ -36,50 +37,44 @@ export default function ResetPasswordPage() {
     <>
       <SEO title="Reset Password" description="Choose a new BGrowth password." path="/reset-password" />
       <AuthCard
-        eyebrow="Almost done"
         title="Choose a new password"
+        subtitle="Almost done — pick a password you haven’t used before."
         footer={
           <Link to="/login" className="font-semibold text-primary">
-            Back to log in
+            Back to sign in
           </Link>
         }
       >
         {done ? (
-          <div className="space-y-4">
-            <p className="text-[14px] text-navy/60">
+          <div className="space-y-6">
+            <p className="rounded-xl bg-bg-soft p-4 text-[14px] text-navy/70">
               Your password has been reset. This is a simulated flow — nothing was actually stored.
             </p>
-            <Button to="/login" className="w-full">
-              Log In
+            <Button to="/login" className="w-full !py-4 !text-[15px]">
+              Sign In
             </Button>
           </div>
         ) : (
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label htmlFor="reset-password-new" className="mb-1.5 block text-[13px] font-medium text-navy/60">New password</label>
-              <input
-                id="reset-password-new"
-                type="password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-xl border border-navy/10 bg-white px-4 py-3 text-[14px] text-navy placeholder:text-navy/30 focus:border-primary/30"
-              />
-            </div>
-            <div>
-              <label htmlFor="reset-password-confirm" className="mb-1.5 block text-[13px] font-medium text-navy/60">Confirm new password</label>
-              <input
-                id="reset-password-confirm"
-                type="password"
-                required
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                className="w-full rounded-xl border border-navy/10 bg-white px-4 py-3 text-[14px] text-navy placeholder:text-navy/30 focus:border-primary/30"
-              />
-            </div>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <AuthField
+              id="reset-password-new"
+              label="New password"
+              type="password"
+              autoComplete="new-password"
+              value={password}
+              onChange={setPassword}
+            />
+            <AuthField
+              id="reset-password-confirm"
+              label="Confirm new password"
+              type="password"
+              autoComplete="new-password"
+              value={confirmPassword}
+              onChange={setConfirmPassword}
+            />
             {mismatch && <p className="text-[13px] text-red-500">Passwords don&rsquo;t match.</p>}
             {error && <p className="text-[13px] text-red-500">{error}</p>}
-            <Button type="submit" className="w-full" disabled={submitting}>
+            <Button type="submit" className="w-full !py-4 !text-[15px]" disabled={submitting}>
               {submitting ? 'Saving…' : 'Reset Password'}
             </Button>
           </form>
