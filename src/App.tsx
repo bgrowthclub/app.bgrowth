@@ -85,17 +85,18 @@ export default function App() {
         <Route path="/club" element={<Navigate to="/pricing" replace />} />
         <Route path="/contact" element={<ContactPage />} />
 
-        {/* BGrowth Identity™ — mock authentication (see
-            modules/identity/mock/MockIdentityProvider.tsx). Guest-only:
-            an already-authenticated member is redirected into Workspace
-            instead of seeing these forms again. */}
+        {/* BGrowth Identity™ — Supabase Auth, shared with the Portal (see
+            modules/identity/supabase/). Guest-only: an already-authenticated
+            member is redirected into Workspace instead of seeing these
+            forms again. */}
         <Route path="/login" element={<GuestRoute><LoginPage /></GuestRoute>} />
         <Route path="/register" element={<GuestRoute><RegisterPage /></GuestRoute>} />
         <Route path="/forgot-password" element={<GuestRoute><ForgotPasswordPage /></GuestRoute>} />
-        <Route path="/reset-password" element={<GuestRoute><ResetPasswordPage /></GuestRoute>} />
-        {/* Not guest-only: reachable right after Register while already
-            authenticated (see RegisterPage), so it must not bounce an
-            authenticated member away. */}
+        {/* Not guest-only: the reset email's link arrives signed in with a
+            recovery session (see ResetPasswordPage). */}
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
+        {/* Not guest-only: shown to a guest right after Register, and to the
+            same member once the email's link signs them in verified. */}
         <Route path="/verify-email" element={<VerifyEmailPage />} />
         {/* Long-standing linked-but-unrouted gap (see CLAUDE.md) — now
             resolves into the Workspace Account Area that already exists. */}

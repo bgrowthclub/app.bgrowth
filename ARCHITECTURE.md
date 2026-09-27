@@ -306,6 +306,21 @@ function boundary:
 
 ## 8. BGrowth Identity™ Architecture
 
+> **Sprint 35 update — real sign-in.** Identity now runs on **Supabase
+> Auth, on the same project and `portal` schema as BGrowth Portal** — one
+> account (e-mail = identity) works on both. `main.tsx` mounts
+> `supabase/SupabaseIdentityProvider.tsx`; the shared contract every
+> provider fills lives in `IdentityContext.ts` (`useIdentity()` is imported
+> from there now). `supabase/portalMember.ts` builds the `User` from
+> `portal.users` plus ownership from `portal.licenses` and
+> `portal.access_grants` (same rule as `portal.has_workspace_access()`).
+> Fields with no backing store yet (settings, rewards, achievements) start
+> from the neutral values in `defaults.ts`. `MockIdentityProvider` is kept
+> but no longer mounted. Needs `VITE_SUPABASE_URL`/`VITE_SUPABASE_ANON_KEY`
+> in Vercel; without them the site still renders and sign-in reports it is
+> unavailable. Where this section below still says "mock", read it as
+> history.
+
 ### What BGrowth Identity™ is
 
 BGrowth Identity™ (`src/modules/identity/`) is the provider-agnostic

@@ -8,7 +8,7 @@ import Button from '../../components/ui/Button'
 import Grid from '../../components/layout/Grid'
 import ProductLibraryCard from '../../components/systems/ProductLibraryCard'
 import { useOwnedProducts } from '../../lib/productLibrary'
-import { useIdentity } from '../../modules/identity/mock/MockIdentityProvider'
+import { useIdentity } from '../../modules/identity/IdentityContext'
 
 const SORT_OPTIONS = [
   { label: 'Recently Opened', value: 'recent' },

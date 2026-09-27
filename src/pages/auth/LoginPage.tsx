@@ -6,14 +6,14 @@ import AuthCard from '../../components/ui/AuthCard'
 import Button from '../../components/ui/Button'
 import AuthField from '../../components/ui/AuthField'
 import { ArrowRight } from 'lucide-react'
-import { useIdentity } from '../../modules/identity/mock/MockIdentityProvider'
+import { useIdentity } from '../../modules/identity/IdentityContext'
 
 // Wrapped in GuestRoute (see App.tsx) — once login() succeeds, GuestRoute
 // itself redirects into Workspace on the next render. This page doesn't
 // navigate on its own, so there's only one place deciding where an
 // authenticated visitor of a guest route goes.
 export default function LoginPage() {
-  const { login, error, status } = useIdentity()
+  const { login, error, busy } = useIdentity()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   // No "Remember me" checkbox in the approved design — sessions are
@@ -65,8 +65,8 @@ export default function LoginPage() {
             }
           />
           {error && <p className="text-[13px] text-red-500">{error}</p>}
-          <Button type="submit" className="w-full !py-4 !text-[15px]" disabled={status === 'loading'} icon={<ArrowRight size={18} aria-hidden="true" />}>
-            {status === 'loading' ? 'Signing in…' : 'Sign In'}
+          <Button type="submit" className="w-full !py-4 !text-[15px]" disabled={busy} icon={<ArrowRight size={18} aria-hidden="true" />}>
+            {busy ? 'Signing in…' : 'Sign In'}
           </Button>
         </form>
       </AuthCard>

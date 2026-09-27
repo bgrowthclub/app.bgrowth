@@ -1,7 +1,7 @@
 import Avatar from '../ui/Avatar'
 import MembershipBadge from './MembershipBadge'
 import { getTimeOfDayGreeting } from '../../lib/greeting'
-import { useIdentity } from '../../modules/identity/mock/MockIdentityProvider'
+import { useIdentity } from '../../modules/identity/IdentityContext'
 import { getMockMembershipPlanByTier } from '../../modules/commerce/mock/mockMembershipPlans'
 
 export default function WorkspaceHero() {

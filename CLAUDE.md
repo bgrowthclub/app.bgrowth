@@ -111,22 +111,20 @@ Category.
 
 This repo is a **static, client-only MVP**:
 
-- React + Vite SPA. No backend, no database, no *real* authentication —
-  but **BGrowth Identity™'s mock authentication is real, working
-  behavior** (see ARCHITECTURE.md §8): Login, Register, Sign Out, and
-  route protection actually function today, simulated entirely
-  client-side via React state and localStorage — there is no server, no
-  credential check, and no real session token behind any of it.
+- React + Vite SPA. **Sign-in is real since Sprint 35** (explicitly
+  approved by the user as step 3 of the Portal plan): BGrowth Identity™
+  runs on Supabase Auth, on the same project and `portal` schema as
+  BGrowth Portal, so one account works on both (see ARCHITECTURE.md §8).
+  The catalog, checkout and Workspace content are not yet read from
+  Supabase — those are the next, separately-approved steps.
 - Business System catalog data is hardcoded TypeScript (`src/data/`),
   standing in for a future export from **BGrowth Studio**. It covers only
   the Business & Entrepreneurship Growth Category today (see §2).
 - Two layouts exist side by side: `AppLayout` (public marketing site,
   "member" vs "public" nav is a route-prefix visual switch only, plus the
   new auth pages under `pages/auth/`) and `PlatformLayout` (the Workspace
-  shell). **`/platform/*` is now gated behind BGrowth Identity™'s mock
-  session** via `ProtectedRoute` — a guest is redirected to `/login`; this
-  is a real (if mock) behavior change from earlier milestones, not a
-  placeholder.
+  shell). **`/platform/*` is gated behind BGrowth Identity™'s real
+  session** via `ProtectedRoute` — a guest is redirected to `/login`.
 - Module field values (checklists/planners a user fills in) live in
   transient React state only. Nothing persists. "Save PDF" is the browser's
   native print dialog.
@@ -228,11 +226,11 @@ src/
                      any page or component yet.
     identity/       BGrowth Identity™ — the provider-agnostic identity
                      layer every future auth provider is built on (types +
-                     service interfaces, no implementation), PLUS a real,
-                     working mock/ implementation (MockIdentityProvider,
-                     the useIdentity() hook) and routing/ (ProtectedRoute,
-                     GuestRoute) — actually wired into App.tsx and
-                     main.tsx. See ARCHITECTURE.md §8.
+                     service interfaces), IdentityContext.ts (the
+                     useIdentity() hook + contract), supabase/ (the real,
+                     mounted provider — Supabase Auth shared with the
+                     Portal), mock/ (kept, no longer mounted) and routing/
+                     (ProtectedRoute, GuestRoute). See ARCHITECTURE.md §8.
   pages/            one file per marketing route; composes the above, adds
                      <SEO>, does param/slug lookup — pages should stay thin
     auth/           one file per auth route (Login, Register, Forgot
@@ -249,7 +247,7 @@ src/
   App.tsx           route table — two sibling layouts, AppLayout and
                      PlatformLayout (the latter wrapped in ProtectedRoute
                      — see ARCHITECTURE.md §1, §8)
-  main.tsx          app entry / providers (BrowserRouter, MockIdentityProvider)
+  main.tsx          app entry / providers (BrowserRouter, SupabaseIdentityProvider)
 ```
 
 **Known issue, do not treat as reference:** the repo root also contains a
@@ -618,10 +616,10 @@ rules are permanent, not specific to whichever milestone introduced them:
 **BGrowth Identity™** (`src/modules/identity/`) is the permanent,
 provider-agnostic identity layer for every authentication and member-data
 concern (see ARCHITECTURE.md §8). It exists precisely so this application
-never depends on a specific auth provider. Unlike Commerce's `mock/`
-(static example data), Identity's `mock/` is a real, working
-implementation (`MockIdentityProvider`, `useIdentity()`) — these rules
-apply to it exactly as they would to a real provider integration:
+never depends on a specific auth provider. The mounted provider is
+`supabase/SupabaseIdentityProvider.tsx`; `useIdentity()` and its contract
+live in `IdentityContext.ts`. The Supabase SDK is imported only inside
+`modules/identity/supabase/` — never by a page or component:
 
 - **Always reuse Identity's models — never redefine them.** A `User`,
   `Session`, `UserSettings`, or any other type already has a canonical
@@ -642,8 +640,8 @@ apply to it exactly as they would to a real provider integration:
   in `types/session.ts` — a new auth flow reuses `Session`/`AuthResult`,
   it doesn't invent a new one.
 - **Always use BGrowth Identity™ for "is this member signed in" and "who
-  is this member."** Never check `window.localStorage` for the mock
-  session key directly outside `MockIdentityProvider`, and never
+  is this member."** Never read the Supabase session or client
+  directly outside `modules/identity/supabase/`, and never
   reintroduce a direct `data/memberMock.ts` import in a Workspace
   component now that `useIdentity()` is the established path (see
   ARCHITECTURE.md §8's Workspace Integration note) — the legacy
@@ -653,12 +651,11 @@ apply to it exactly as they would to a real provider integration:
   decision inside a page wrapped in it (see ARCHITECTURE.md §8 on the bug
   this caused during Milestone 5.2: a page's own effect racing against
   `GuestRoute`'s redirect).
-- **Never implement a real `IdentityProviderAdapter`, real credential
-  validation, or backend session storage without explicit user
-  direction.** Milestone 5.2 built working *mock* auth only — see §3 on
-  this repo's current static-MVP phase, which Identity's mock
-  implementation does not change the *reality* of, only the *simulated
-  behavior* of.
+- **Never switch Identity to a different provider, or write to the
+  Portal's tables from the browser, without explicit user direction.**
+  Sprint 35 connected sign-in only; the member's data is read from
+  `portal.users`/`licenses`/`access_grants` under the Portal's row-level
+  security, never with a service-role key in the browser.
 
 ## 18. Things Claude Should NEVER Do
 

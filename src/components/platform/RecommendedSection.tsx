@@ -5,7 +5,7 @@ import BusinessSystemCard from '../systems/BusinessSystemCard'
 import { loadRecommendedSystemProducts, systemForCard } from '../../lib/publishedCatalog'
 import type { PublishedSystemProduct } from '../../lib/publishedCatalog'
 import { useOwnedProducts } from '../../lib/productLibrary'
-import { useIdentity } from '../../modules/identity/mock/MockIdentityProvider'
+import { useIdentity } from '../../modules/identity/IdentityContext'
 
 // Reads the Product Catalog Foundation (via ProductCatalogService, see
 // lib/publishedCatalog.ts's loadRecommendedSystemProducts) instead of

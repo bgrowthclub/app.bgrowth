@@ -5,10 +5,15 @@ import SEO from '../../components/seo/SEO'
 import AuthCard from '../../components/ui/AuthCard'
 import Button from '../../components/ui/Button'
 import AuthField from '../../components/ui/AuthField'
-import { useIdentity } from '../../modules/identity/mock/MockIdentityProvider'
+import { useIdentity } from '../../modules/identity/IdentityContext'
 
+// Opened from the password-reset email: its link signs the visitor in with
+// a short-lived recovery session, so this route is deliberately NOT wrapped
+// in GuestRoute (which would bounce that session into Workspace). Without
+// a recovery session or a signed-in member there is nothing to reset —
+// the link was invalid or expired.
 export default function ResetPasswordPage() {
-  const { resetPassword, error } = useIdentity()
+  const { resetPassword, error, status, passwordRecovery } = useIdentity()
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [submitting, setSubmitting] = useState(false)
@@ -45,13 +50,20 @@ export default function ResetPasswordPage() {
           </Link>
         }
       >
-        {done ? (
+        {status === 'loading' ? null : done ? (
+          <div className="space-y-6">
+            <p className="rounded-xl bg-bg-soft p-4 text-[14px] text-navy/70">Your password has been updated.</p>
+            <Button to="/platform/dashboard" className="w-full !py-4 !text-[15px]">
+              Continue to Workspace
+            </Button>
+          </div>
+        ) : status !== 'authenticated' && !passwordRecovery ? (
           <div className="space-y-6">
             <p className="rounded-xl bg-bg-soft p-4 text-[14px] text-navy/70">
-              Your password has been reset. This is a simulated flow — nothing was actually stored.
+              This reset link is invalid or has expired. Request a new one to continue.
             </p>
-            <Button to="/login" className="w-full !py-4 !text-[15px]">
-              Sign In
+            <Button to="/forgot-password" className="w-full !py-4 !text-[15px]">
+              Request a New Link
             </Button>
           </div>
         ) : (

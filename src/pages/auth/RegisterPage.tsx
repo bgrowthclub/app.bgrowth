@@ -1,28 +1,29 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import SEO from '../../components/seo/SEO'
 import AuthCard from '../../components/ui/AuthCard'
 import Button from '../../components/ui/Button'
 import AuthField from '../../components/ui/AuthField'
 import { ArrowRight } from 'lucide-react'
-import { useIdentity } from '../../modules/identity/mock/MockIdentityProvider'
+import { useIdentity } from '../../modules/identity/IdentityContext'
 
-// Wrapped in GuestRoute (see App.tsx) — once register() succeeds,
-// GuestRoute itself sends a freshly-registered (unverified) member to
-// /verify-email on the next render, exactly like it sends an existing
-// verified member to Workspace on /login. This page doesn't navigate on
-// its own, so there's only one place deciding where an authenticated
-// visitor of a guest route goes.
+// Wrapped in GuestRoute (see App.tsx). A new account is NOT signed in until
+// its email is verified, so the visitor is still a guest after register()
+// succeeds — this page sends them to /verify-email itself (GuestRoute only
+// decides where *authenticated* visitors go, so the two never race).
+// The address travels in router state so Verify Email can offer "Resend".
 export default function RegisterPage() {
-  const { register, error, status } = useIdentity()
+  const { register, error, busy } = useIdentity()
+  const navigate = useNavigate()
   const [displayName, setDisplayName] = useState('')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
 
-  const handleSubmit = (e: FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
-    register({ displayName, email, password })
+    const created = await register({ displayName, email, password })
+    if (created) navigate('/verify-email', { state: { email: email.trim() } })
   }
 
   return (
@@ -69,8 +70,8 @@ export default function RegisterPage() {
             onChange={setPassword}
           />
           {error && <p className="text-[13px] text-red-500">{error}</p>}
-          <Button type="submit" className="w-full !py-4 !text-[15px]" disabled={status === 'loading'} icon={<ArrowRight size={18} aria-hidden="true" />}>
-            {status === 'loading' ? 'Creating account…' : 'Create Account'}
+          <Button type="submit" className="w-full !py-4 !text-[15px]" disabled={busy} icon={<ArrowRight size={18} aria-hidden="true" />}>
+            {busy ? 'Creating account…' : 'Create Account'}
           </Button>
         </form>
       </AuthCard>
