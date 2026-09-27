@@ -1,8 +1,22 @@
 import type { ProductBenefit, ProductType, ProductStatus } from './product'
+import type { CurrencyCode } from './pricing'
 
-// The six membership tiers BGrowth supports today, per PRODUCT_CATALOG.md's
-// ecosystem shape. Deliberately no pricing here yet — see MembershipPlan.
-export type MembershipTierId = 'free' | 'club' | 'workspace' | 'creator' | 'business' | 'enterprise'
+// BGrowth's subscription tiers (decided 27/09/2026): Free → Starter → Pro →
+// Enterprise. Academies are sold separately (with member discounts), so a
+// tier never replaces a premium purchase. A new tier is a new id here plus
+// a new entry in data/membershipPlans.ts — never a second plan shape.
+export type MembershipTierId = 'free' | 'starter' | 'pro' | 'enterprise'
+
+// What a tier costs. `price` is the regular price; `salePrice`, when set,
+// is a promotion and is what the member actually pays (the regular price
+// is shown struck through). Until the Administration area exists, these
+// values are edited in data/membershipPlans.ts.
+export interface MembershipPricing {
+  price: number
+  salePrice?: number
+  currency: CurrencyCode
+  interval: 'month' | 'year'
+}
 
 export interface MembershipPermissions {
   workspaceAccess: boolean
@@ -22,14 +36,14 @@ export interface MembershipDiscount {
   appliesTo: ProductType[] | 'all'
 }
 
-// A reusable membership tier definition. Intentionally has no price field —
-// Milestone 5.1 is architecture only; pricing a tier is a future, separate
-// decision layered on top of this shape.
+// A reusable membership tier definition.
 export interface MembershipPlan {
   id: string
   tier: MembershipTierId
   name: string
   description: string
+  // Absent = no public price (e.g. Enterprise: "talk to us").
+  pricing?: MembershipPricing
   features: string[]
   benefits: ProductBenefit[]
   discounts: MembershipDiscount[]

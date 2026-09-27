@@ -174,7 +174,8 @@ export default function Hero() {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
-    navigate('/systems')
+    const q = query.trim()
+    navigate(q ? `/systems?q=${encodeURIComponent(q)}` : '/systems')
   }
 
   return (

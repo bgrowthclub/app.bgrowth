@@ -129,8 +129,8 @@ export default function Navbar({ mode = 'public' }: { mode?: NavMode }) {
                 >
                   Login
                 </Link>
-                <Button to="/club" className="!px-5 !py-2.5 !text-[13.5px]">
-                  Join BGrowth Club
+                <Button to="/pricing" className="!px-5 !py-2.5 !text-[13.5px]">
+                  Join BGrowth
                 </Button>
               </>
             ) : (
@@ -198,8 +198,8 @@ export default function Navbar({ mode = 'public' }: { mode?: NavMode }) {
                   >
                     Login
                   </Link>
-                  <Button to="/club" className="!h-14 w-full" onClick={() => setOpen(false)}>
-                    Join BGrowth Club
+                  <Button to="/pricing" className="!h-14 w-full" onClick={() => setOpen(false)}>
+                    Join BGrowth
                   </Button>
                 </div>
               ) : (

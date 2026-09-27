@@ -32,7 +32,7 @@ export default function PricingCard({ product, workspaceId }: Props) {
         <div className="mt-5 flex items-center gap-3 rounded-xl border border-primary/15 bg-bg-soft px-4 py-3">
           <Sparkles size={16} className="shrink-0 text-primary" />
           <p className="text-[12.5px] leading-snug text-navy/60">
-            BGrowth Club members pay <span className="font-semibold text-primary">${memberPrice.toFixed(2)}</span> —{' '}
+            BGrowth members pay <span className="font-semibold text-primary">${memberPrice.toFixed(2)}</span> —{' '}
             <span className="whitespace-nowrap">save ${(product.basePrice - memberPrice).toFixed(2)}</span>.
           </p>
         </div>

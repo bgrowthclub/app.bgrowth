@@ -12,7 +12,6 @@ import CategoryPreviewPage from './pages/CategoryPreviewPage'
 import ResourcesPage from './pages/ResourcesPage'
 import PricingPage from './pages/PricingPage'
 import AboutPage from './pages/AboutPage'
-import ClubPage from './pages/ClubPage'
 import ContactPage from './pages/ContactPage'
 import KnowledgeHomePage from './pages/knowledge/KnowledgeHomePage'
 import KnowledgeCategoryPage from './pages/knowledge/KnowledgeCategoryPage'
@@ -81,7 +80,9 @@ export default function App() {
 
         <Route path="/pricing" element={<PricingPage />} />
         <Route path="/about" element={<AboutPage />} />
-        <Route path="/club" element={<ClubPage />} />
+        {/* Plans live on /pricing (BGrowth Club was retired as a name,
+            27/09/2026); /club stays reachable for old links. */}
+        <Route path="/club" element={<Navigate to="/pricing" replace />} />
         <Route path="/contact" element={<ContactPage />} />
 
         {/* BGrowth Identity™ — mock authentication (see

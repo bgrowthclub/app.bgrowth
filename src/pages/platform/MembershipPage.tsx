@@ -4,7 +4,7 @@ export default function MembershipPage() {
   return (
     <PlaceholderPage
       title="Membership"
-      description="Review your BGrowth Club plan, billing, and member pricing."
+      description="Review your BGrowth plan, billing, and member pricing."
       path="/platform/membership"
     />
   )

@@ -5,6 +5,8 @@ import Button from './Button'
 interface Props {
   name: string
   price: string
+  // Shown struck through before `price` — e.g. the regular price during a promotion.
+  regularPrice?: string
   priceNote?: string
   description: string
   features: string[]
@@ -18,6 +20,7 @@ interface Props {
 export default function PricingTierCard({
   name,
   price,
+  regularPrice,
   priceNote,
   description,
   features,
@@ -41,6 +44,7 @@ export default function PricingTierCard({
       <p className="mt-1.5 text-[13.5px] leading-relaxed text-navy/50">{description}</p>
 
       <div className="mt-6 flex items-baseline gap-1.5">
+        {regularPrice && <span className="text-lg font-semibold text-navy/35 line-through">{regularPrice}</span>}
         <span className="font-display text-3xl font-bold text-navy">{price}</span>
         {priceNote && <span className="text-[13px] text-navy/40">{priceNote}</span>}
       </div>

@@ -18,10 +18,26 @@ const SORT_OPTIONS = [
   { label: 'Name: A–Z', value: 'name-asc' },
 ]
 
+// Goal-style searches from the Home hero ("Become a Mobile Notary") rarely
+// match a title word for word, so a system also matches when any of the
+// query's meaningful words appears in it ("mobile", "notary"). Generic verbs
+// and filler words are ignored so they don't match everything.
+const SEARCH_STOPWORDS = new Set(['become', 'start', 'business', 'improve', 'build', 'better', 'learn', 'with', 'your', 'from', 'that', 'this', 'want'])
+
+function matchesSearch(query: string, text: string) {
+  const q = query.trim().toLowerCase()
+  if (q === '') return true
+  const haystack = text.toLowerCase()
+  if (haystack.includes(q)) return true
+  const words = q.split(/\s+/).filter((w) => w.length >= 4 && !SEARCH_STOPWORDS.has(w))
+  return words.some((w) => haystack.includes(w))
+}
+
 export default function BrowseSystems() {
   const [searchParams, setSearchParams] = useSearchParams()
   const initialCategory = searchParams.get('category') ?? 'All'
-  const [query, setQuery] = useState('')
+  // Seeded from ?q= so the Home hero search lands on already-filtered results.
+  const [query, setQuery] = useState(searchParams.get('q') ?? '')
   const [category, setCategory] = useState(
     (CATEGORIES as readonly string[]).includes(initialCategory) ? initialCategory : 'All',
   )
@@ -65,10 +81,7 @@ export default function BrowseSystems() {
     let list = publishedList.filter((s) => {
       const matchesCategory = category === 'All' || s.category === category
       const matchesModule = moduleType === 'All' || s.modules.some((m) => m.type === moduleType)
-      const matchesQuery =
-        query.trim() === '' ||
-        s.title.toLowerCase().includes(query.toLowerCase()) ||
-        s.shortDescription.toLowerCase().includes(query.toLowerCase())
+      const matchesQuery = matchesSearch(query, `${s.title} ${s.shortDescription}`)
       return matchesCategory && matchesModule && matchesQuery
     })
 

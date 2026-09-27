@@ -174,7 +174,7 @@ const RAW_PRODUCTS: ProductSnapshot[] = [
   {
     id: 'prod-007',
     slug: 'bgrowth-club-membership',
-    title: 'BGrowth Club™ Membership',
+    title: 'BGrowth Membership',
     subtitle: 'Member pricing on every Business System.',
     description: 'Recurring membership unlocking member pricing, exclusive resources, and priority access.',
     category: 'business-entrepreneurship',

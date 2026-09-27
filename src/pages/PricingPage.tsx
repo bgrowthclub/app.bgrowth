@@ -6,59 +6,49 @@ import PricingTierCard from '../components/ui/PricingTierCard'
 import FAQ from '../components/ui/FAQ'
 import MemberBanner from '../components/ui/MemberBanner'
 import Badge from '../components/ui/Badge'
+import { MEMBERSHIP_PLANS, formatPlanPrice, formatPlanRegularPrice } from '../data/membershipPlans'
 
-const TIERS = [
-  {
-    name: 'Free',
-    price: '$0',
-    priceNote: 'forever',
-    description: 'Get started before you buy anything.',
-    features: ['Free Business Systems', 'Free Resources™', 'Newsletter', 'Club updates'],
-    ctaLabel: 'Browse Free Systems',
-    ctaTo: '/systems',
-  },
-  {
-    name: 'Buy Individually',
-    price: 'From $39',
-    priceNote: 'one-time',
-    description: 'Own exactly the systems you need.',
-    features: ['Own the Business System', 'No subscription', 'Lifetime access', 'Download anytime'],
-    ctaLabel: 'Browse Business Systems',
-    ctaTo: '/systems',
-    highlighted: true,
-    badge: <Badge variant="solid">Most Popular</Badge>,
-  },
-  {
-    name: 'BGrowth Club',
-    price: 'Membership',
-    description: 'Everything, for less, as you grow.',
-    features: [
-      'Unlimited premium Business Systems',
-      'Member pricing on every system',
-      'Exclusive Resources™',
-      'Future courses',
-      'Club community',
-      'Priority updates',
-    ],
-    ctaLabel: 'Join BGrowth Club',
-    ctaTo: '/club',
-  },
-]
+// Plans, prices and promotions come from data/membershipPlans.ts — the one
+// place they are edited. This page only decides how each plan is presented.
+const PLAN_PRESENTATION: Record<string, { priceNote?: string; ctaLabel: string; ctaTo: string; highlighted?: boolean }> = {
+  free: { priceNote: 'forever', ctaLabel: 'Start Free', ctaTo: '/register' },
+  starter: { priceNote: '/month', ctaLabel: 'Choose Starter', ctaTo: '/register' },
+  pro: { priceNote: '/month', ctaLabel: 'Choose Pro', ctaTo: '/register', highlighted: true },
+  enterprise: { ctaLabel: 'Talk to Us', ctaTo: '/contact' },
+}
+
+const TIERS = MEMBERSHIP_PLANS.filter((plan) => plan.status === 'published').map((plan) => {
+  const presentation = PLAN_PRESENTATION[plan.tier]
+  return {
+    name: plan.name,
+    price: formatPlanPrice(plan) ?? 'Custom',
+    regularPrice: formatPlanRegularPrice(plan),
+    priceNote: presentation.priceNote,
+    description: plan.description,
+    features: plan.features,
+    ctaLabel: presentation.ctaLabel,
+    ctaTo: presentation.ctaTo,
+    highlighted: presentation.highlighted,
+    badge: presentation.highlighted ? <Badge variant="solid">Recommended</Badge> : undefined,
+  }
+})
 
 const COMPARISON_ROWS = [
-  { label: 'Access individual Business Systems', free: false, individual: true, club: true },
-  { label: 'Member pricing on every system', free: false, individual: false, club: true },
-  { label: 'Free resources & templates', free: true, individual: true, club: true },
-  { label: 'Exclusive member-only resources', free: false, individual: false, club: true },
-  { label: 'Newsletter & Club updates', free: true, individual: true, club: true },
-  { label: 'Future courses', free: false, individual: false, club: true },
+  { label: 'Free Business Systems & resources', free: true, starter: true, pro: true, enterprise: true },
+  { label: 'Newsletter', free: true, starter: true, pro: true, enterprise: true },
+  { label: 'Community access', free: false, starter: true, pro: true, enterprise: true },
+  { label: 'Member pricing on Business Systems', free: false, starter: true, pro: true, enterprise: true },
+  { label: 'Unlimited premium Business Systems', free: false, starter: false, pro: true, enterprise: true },
+  { label: 'Exclusive Resources™', free: false, starter: false, pro: true, enterprise: true },
+  { label: 'Priority support', free: false, starter: false, pro: true, enterprise: true },
+  { label: 'Team seats & shared access', free: false, starter: false, pro: false, enterprise: true },
 ]
 
 const PRICING_FAQ = [
-  { question: 'Is BGrowth Club a subscription?', answer: 'Yes — it renews on a recurring schedule and unlocks member pricing and exclusive resources across every Business System.' },
-  { question: 'Do individually purchased systems expire?', answer: 'No. Buying a system individually gives you lifetime access to that system, with no subscription required.' },
-  { question: 'Can I cancel BGrowth Club anytime?', answer: 'Yes, you can cancel anytime — you\u2019ll keep access through the end of your current billing period.' },
-  { question: 'What\u2019s included for free?', answer: 'A rotating set of free Business Systems, free resources and templates, and our newsletter — no purchase required.' },
+  { question: 'Are Starter and Pro subscriptions?', answer: 'Yes — they renew monthly and unlock member pricing and the benefits of your plan.' },
+  { question: 'Can I buy a single Business System without a plan?', answer: 'Yes. Any Business System can be bought individually, with lifetime access and no subscription.' },
+  { question: 'Can I cancel anytime?', answer: 'Yes, you can cancel anytime — you\u2019ll keep access through the end of your current billing period.' },
+  { question: 'What\u2019s included for free?', answer: 'Free Business Systems, free resources and templates, and our newsletter — no purchase required.' },
 ]
 
 function ComparisonCell({ value }: { value: boolean }) {
@@ -74,8 +64,8 @@ export default function PricingPage() {
     <div className="pb-24 pt-32 md:pt-40">
       <SEO
         title="Pricing"
-        description="Simple BGrowth pricing — free resources, buy Business Systems individually, or join BGrowth Club for member pricing on everything."
-        keywords={['bgrowth pricing', 'business systems pricing', 'bgrowth club membership']}
+        description="Simple BGrowth pricing — free resources, buy Business Systems individually, or choose a Starter or Pro plan for member pricing."
+        keywords={['bgrowth pricing', 'business systems pricing', 'bgrowth plans']}
         path="/pricing"
       />
 
@@ -85,16 +75,27 @@ export default function PricingPage() {
           Simple, straightforward pricing.
         </h1>
         <p className="mx-auto mt-3 max-w-lg text-[15px] leading-relaxed text-navy/55">
-          Start free, buy exactly what you need, or go unlimited with BGrowth Club.
+          Start free, buy exactly what you need, or choose the plan that fits how you grow.
         </p>
       </section>
 
       <section className="section-py">
         <div className="container-px mx-auto max-w-page">
-          <div className="grid gap-6 lg:grid-cols-3">
+          <div className="grid gap-6 sm:grid-cols-2 xl:grid-cols-4">
             {TIERS.map((tier) => (
               <PricingTierCard key={tier.name} {...tier} />
             ))}
+          </div>
+          <div className="mt-8 flex flex-col items-center justify-between gap-4 rounded-xl3 border border-navy/[0.06] bg-bg-soft p-6 text-center sm:flex-row sm:text-left">
+            <div>
+              <p className="font-display text-[16px] font-bold text-navy">Prefer to own a single system?</p>
+              <p className="mt-1 text-[13.5px] text-navy/55">
+                Buy any Business System individually — one-time payment, lifetime access, no subscription.
+              </p>
+            </div>
+            <Link to="/systems" className="btn-secondary shrink-0">
+              Browse Business Systems
+            </Link>
           </div>
         </div>
       </section>
@@ -109,8 +110,9 @@ export default function PricingPage() {
                 <tr className="border-b border-navy/[0.06]">
                   <th className="px-6 py-4 text-[12.5px] font-semibold text-navy/50">Feature</th>
                   <th className="px-6 py-4 text-center text-[12.5px] font-semibold text-navy/50">Free</th>
-                  <th className="px-6 py-4 text-center text-[12.5px] font-semibold text-navy/50">Individually</th>
-                  <th className="px-6 py-4 text-center text-[12.5px] font-semibold text-primary">Club</th>
+                  <th className="px-6 py-4 text-center text-[12.5px] font-semibold text-navy/50">Starter</th>
+                  <th className="px-6 py-4 text-center text-[12.5px] font-semibold text-primary">Pro</th>
+                  <th className="px-6 py-4 text-center text-[12.5px] font-semibold text-navy/50">Enterprise</th>
                 </tr>
               </thead>
               <tbody>
@@ -118,8 +120,9 @@ export default function PricingPage() {
                   <tr key={row.label} className="border-b border-navy/[0.04] last:border-0">
                     <td className="px-6 py-4 text-[13.5px] text-navy/70">{row.label}</td>
                     <td className="px-6 py-4"><ComparisonCell value={row.free} /></td>
-                    <td className="px-6 py-4"><ComparisonCell value={row.individual} /></td>
-                    <td className="px-6 py-4"><ComparisonCell value={row.club} /></td>
+                    <td className="px-6 py-4"><ComparisonCell value={row.starter} /></td>
+                    <td className="px-6 py-4"><ComparisonCell value={row.pro} /></td>
+                    <td className="px-6 py-4"><ComparisonCell value={row.enterprise} /></td>
                   </tr>
                 ))}
               </tbody>
@@ -140,13 +143,13 @@ export default function PricingPage() {
       <section className="pb-4">
         <div className="container-px mx-auto max-w-page">
           <MemberBanner
-            eyebrow="BGrowth Club"
+            eyebrow="BGrowth Pro"
             title="Ready to go unlimited?"
-            description="Join BGrowth Club for member pricing on every Business System, plus exclusive resources."
+            description="Go Pro for unlimited premium Business Systems and member pricing on everything."
             footnote="Cancel anytime."
           >
-            <Link to="/club" className="btn-primary w-full">
-              Join BGrowth Club
+            <Link to="/register" className="btn-primary w-full">
+              Choose Pro
             </Link>
           </MemberBanner>
         </div>

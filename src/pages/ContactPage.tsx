@@ -21,7 +21,7 @@ import ContactForm, { CONTACT_CATEGORIES } from '../components/contact/ContactFo
 const HELP_REASONS = [
   { icon: MessageCircle, title: 'General Questions', description: 'Not sure where to start? Ask us anything about BGrowth.', category: CONTACT_CATEGORIES[0] },
   { icon: LifeBuoy, title: 'Support', description: 'Need help with a Business System or your account? We’ve got you.', category: CONTACT_CATEGORIES[1] },
-  { icon: DollarSign, title: 'Sales', description: 'Questions about pricing, plans, or BGrowth Club membership.', category: CONTACT_CATEGORIES[2] },
+  { icon: DollarSign, title: 'Sales', description: 'Questions about pricing, plans, or membership.', category: CONTACT_CATEGORIES[2] },
   { icon: Handshake, title: 'Partnerships', description: 'Interested in partnering with BGrowth? Let’s talk.', category: CONTACT_CATEGORIES[3] },
   { icon: Briefcase, title: 'Business Opportunities', description: 'Bring us an idea, a collaboration, or a new opportunity.', category: CONTACT_CATEGORIES[4] },
   { icon: Newspaper, title: 'Media', description: 'Press and media inquiries about BGrowth.', category: CONTACT_CATEGORIES[5] },
@@ -53,7 +53,7 @@ const COMMUNITY_LINKS: { title: string; description: string; to?: string }[] = [
   { title: 'Knowledge', description: 'Free guides, articles and practical advice across business, career and more.', to: '/knowledge' },
   { title: 'Academy', description: 'Structured courses and learning paths for going deeper on a skill.' },
   { title: 'Marketplace', description: 'Templates, tools and resources from BGrowth and partner sellers.' },
-  { title: 'BGrowth Club', description: 'Membership pricing, exclusive resources and a growing professional community.', to: '/club' },
+  { title: 'Plans', description: 'Free, Starter, Pro and Enterprise — member pricing and exclusive resources.', to: '/pricing' },
   { title: 'Products', description: 'The full BGrowth product catalog in one place.' },
 ]
 
@@ -170,8 +170,8 @@ export default function ContactPage() {
           description="Explore our products, join the community and discover practical solutions designed to help you learn, launch, work, manage and grow."
           primaryLabel="Explore Products"
           primaryTo="/systems"
-          secondaryLabel="Join BGrowth Club"
-          secondaryTo="/club"
+          secondaryLabel="See Plans"
+          secondaryTo="/pricing"
         />
       </SectionContainer>
     </div>
