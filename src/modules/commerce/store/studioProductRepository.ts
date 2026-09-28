@@ -1,0 +1,176 @@
+import type { ProductRepository } from '../services/ProductRepository'
+import type { Product, ProductIndexEntry } from '../types/product'
+import type { CurrencyCode } from '../types/pricing'
+import { createEmptyProductAssets } from '../types/assets'
+import { createInitialVersioning } from '../types/version'
+import { studioWorkspaceService, isStudioCatalogAvailable } from '../../workspace/services/studioWorkspaceService'
+import type {
+  PortalCatalogRow,
+  PortalCategoryRow,
+  PortalMarketingMetadata,
+  PortalProductRow,
+} from '../../workspace/types/portal'
+
+// The real catalog: every Workspace BGrowth Studio has published to the
+// Portal's database, mapped onto Commerce's Product. Only what Studio
+// actually publishes is filled in — nothing is invented (no difficulty,
+// no estimated time, no benefits unless Studio sent them).
+//
+// Product ids are prefixed ("studio-<portal uuid>") so the composite
+// repository (see ProductCatalogService.ts) knows where to load each one.
+
+const ID_PREFIX = 'studio-'
+const CACHE_MS = 60_000
+const KNOWN_CURRENCIES: CurrencyCode[] = ['USD', 'EUR', 'GBP', 'BRL', 'MXN', 'CAD']
+
+export function isStudioProductId(id: string) {
+  return id.startsWith(ID_PREFIX)
+}
+
+function toCurrency(code: string): CurrencyCode {
+  const upper = code.toUpperCase() as CurrencyCode
+  return KNOWN_CURRENCIES.includes(upper) ? upper : 'USD'
+}
+
+function price(isFree: boolean, cents: number | null) {
+  return isFree || cents == null ? 0 : cents / 100
+}
+
+interface CatalogSnapshot {
+  rows: PortalCatalogRow[]
+  categoryName: Map<string, string>
+}
+
+let cache: { at: number; snapshot: Promise<CatalogSnapshot> } | undefined
+
+function loadSnapshot(): Promise<CatalogSnapshot> {
+  if (cache && Date.now() - cache.at < CACHE_MS) return cache.snapshot
+  const snapshot = Promise.all([studioWorkspaceService.listCatalog(), studioWorkspaceService.listCategories()]).then(
+    ([rows, categories]: [PortalCatalogRow[], PortalCategoryRow[]]) => ({
+      // Only Workspaces for now — the one content type the viewer opens.
+      rows: rows.filter((r) => r.content_type === 'workspace'),
+      categoryName: new Map(categories.map((c) => [c.id, c.name])),
+    }),
+  )
+  // A failed load isn't cached — the next caller retries.
+  snapshot.catch(() => {
+    cache = undefined
+  })
+  cache = { at: Date.now(), snapshot }
+  return snapshot
+}
+
+function baseProduct(
+  row: Pick<PortalCatalogRow, 'slug' | 'name' | 'short_description' | 'cover_image_url' | 'is_free' | 'price_cents' | 'currency'>,
+  portalId: string,
+  industry: string | undefined,
+): Product {
+  const assets = createEmptyProductAssets()
+  if (row.cover_image_url) {
+    assets.thumbnail = row.cover_image_url
+    assets.heroImage = row.cover_image_url
+  }
+  return {
+    id: `${ID_PREFIX}${portalId}`,
+    slug: row.slug,
+    title: row.name,
+    description: row.short_description,
+    category: 'business-entrepreneurship',
+    industry,
+    basePrice: price(row.is_free, row.price_cents),
+    baseCurrency: toCurrency(row.currency),
+    paymentProfileId: row.is_free ? 'free' : 'standard',
+    visibility: row.is_free ? 'free' : 'paid',
+    type: 'GrowthSystem',
+    assets,
+    featured: false,
+    status: 'published',
+    benefits: [],
+    tags: [],
+    workspaceEnabled: true,
+    academyEnabled: false,
+    communityEnabled: false,
+    aiEnabled: false,
+    partnerOffers: [],
+    rewardPoints: 0,
+    source: { type: 'StudioWorkspace', id: row.slug },
+    versioning: createInitialVersioning(),
+  }
+}
+
+function fromCatalogRow(row: PortalCatalogRow, categoryName: Map<string, string>): Product {
+  return {
+    ...baseProduct(row, row.product_id, row.category_id ? categoryName.get(row.category_id) : undefined),
+    featured: row.is_featured,
+    tags: row.tags ?? [],
+    createdAt: row.published_at ?? undefined,
+    updatedAt: row.updated_at,
+  }
+}
+
+// The full product adds Studio's optional marketing fields from
+// products.metadata (Portal: src/types/productMarketing.ts).
+function fromProductRow(row: PortalProductRow, industry: string | undefined, featured: boolean): Product {
+  const meta = (row.metadata ?? {}) as PortalMarketingMetadata
+  const product = baseProduct(row, row.id, industry)
+  const screenshots = (meta.screenshots ?? []).map((url, i) => ({ id: `screenshot-${i + 1}`, url }))
+  return {
+    ...product,
+    featured,
+    longDescription: meta.longDescription || undefined,
+    benefits: (meta.features ?? []).map(({ title, description }) => ({ title, description })),
+    whatsIncluded: meta.included?.length ? meta.included : undefined,
+    faq: meta.faq?.length ? meta.faq : undefined,
+    tags: meta.tags ?? [],
+    assets: { ...product.assets, previewImages: screenshots, gallery: screenshots },
+    createdAt: row.last_published_at ?? row.created_at,
+  }
+}
+
+export function createStudioProductRepository(): ProductRepository {
+  return {
+    async loadIndex() {
+      if (!isStudioCatalogAvailable) return { generatedAt: new Date().toISOString(), products: [] }
+      const { rows, categoryName } = await loadSnapshot()
+      const products: ProductIndexEntry[] = rows.map((row) => {
+        const p = fromCatalogRow(row, categoryName)
+        return {
+          id: p.id,
+          slug: p.slug,
+          title: p.title,
+          description: p.description,
+          type: p.type,
+          category: p.category,
+          status: p.status,
+          featured: p.featured,
+          tags: p.tags,
+        }
+      })
+      return { generatedAt: new Date().toISOString(), products }
+    },
+
+    loadProduct(id) {
+      if (!isStudioCatalogAvailable || !isStudioProductId(id)) return Promise.resolve(undefined)
+      const hit = productCache.get(id)
+      if (hit && Date.now() - hit.at < CACHE_MS) return hit.product
+      const product = loadFullProduct(id.slice(ID_PREFIX.length))
+      product.catch(() => productCache.delete(id))
+      productCache.set(id, { at: Date.now(), product })
+      return product
+    },
+  }
+}
+
+const productCache = new Map<string, { at: number; product: Promise<Product | undefined> }>()
+
+async function loadFullProduct(portalId: string): Promise<Product | undefined> {
+  const [rows, snapshot] = await Promise.all([
+    studioWorkspaceService.getProductsByIds([portalId]),
+    loadSnapshot().catch(() => undefined),
+  ])
+  const row = rows[0]
+  if (!row) return undefined
+  const catalogRow = snapshot?.rows.find((r) => r.product_id === portalId)
+  const industry = row.category_id ? snapshot?.categoryName.get(row.category_id) : undefined
+  return fromProductRow(row, industry, catalogRow?.is_featured ?? false)
+}

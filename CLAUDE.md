@@ -115,8 +115,15 @@ This repo is a **static, client-only MVP**:
   approved by the user as step 3 of the Portal plan): BGrowth Identity™
   runs on Supabase Auth, on the same project and `portal` schema as
   BGrowth Portal, so one account works on both (see ARCHITECTURE.md §8).
-  The catalog, checkout and Workspace content are not yet read from
-  Supabase — those are the next, separately-approved steps.
+  **Since Sprint 38 the catalog and the customer area also read the
+  Portal's database:** Workspaces published from BGrowth Studio
+  (`portal.catalog_index`/`products`) list first in the catalog, Home and
+  product pages (the static example products follow, by the user's
+  choice), a member's licenses/grants fill My Workspaces, and
+  `/platform/workspace/:slug` opens and saves them (`workspace_instances`)
+  with the Studio Workspace viewer ported from the Portal (see
+  ARCHITECTURE.md §8a). Checkout is still not here: buying a Studio
+  Workspace links to BGrowth Portal (step 4 brings it in).
 - Business System catalog data is hardcoded TypeScript (`src/data/`),
   standing in for a future export from **BGrowth Studio**. It covers only
   the Business & Entrepreneurship Growth Category today (see §2).
@@ -224,6 +231,13 @@ src/
                      membership, reward, benefit, and partner relationship
                      is built on. See ARCHITECTURE.md §9. Not imported by
                      any page or component yet.
+    workspace/      Studio Workspaces from the Portal's database: content
+                     and row types, studioWorkspaceService (the only
+                     place that queries them), access rules, theme/icons/
+                     PDF helpers, config (Portal URL, viewer route).
+                     Rendered by components/workspace/ (the Document V1
+                     viewer, ported from the Portal) and opened at
+                     /platform/workspace/:slug.
     identity/       BGrowth Identity™ — the provider-agnostic identity
                      layer every future auth provider is built on (types +
                      service interfaces), IdentityContext.ts (the

@@ -29,7 +29,7 @@ export default function Sidebar({ collapsed, onToggleCollapsed, mobileOpen, onCl
       {/* Desktop / tablet — persistent column from md upward, collapsible to
           icon-only (defaults collapsed on tablet widths, see PlatformLayout) */}
       <aside
-        className={`sticky top-0 hidden h-screen shrink-0 flex-col border-r border-navy/[0.06] bg-white transition-all duration-300 md:flex ${
+        className={`no-print sticky top-0 hidden h-screen shrink-0 flex-col border-r border-navy/[0.06] bg-white transition-all duration-300 md:flex ${
           collapsed ? 'w-[76px]' : 'w-64'
         }`}
       >

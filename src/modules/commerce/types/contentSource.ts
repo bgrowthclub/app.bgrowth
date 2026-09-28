@@ -16,6 +16,11 @@ export type ContentSourceType =
   | 'MembershipPlan'
   | 'Bundle'
   | 'External'
+  // A Workspace built in BGrowth Studio and published to the Portal's
+  // database (portal.products) — `id` is the product slug. Opened with the
+  // Studio Workspace viewer (/platform/workspace/:slug), not the
+  // BusinessSystem Runtime.
+  | 'StudioWorkspace'
 
 // Points a Product back at the real content it sells — Commerce never
 // forks or re-authors that content, it only records how something already

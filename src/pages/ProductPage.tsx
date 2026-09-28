@@ -12,8 +12,13 @@ import BusinessModuleGrid from '../components/runtime/BusinessModuleGrid'
 import ReviewPanel from '../components/runtime/ReviewPanel'
 import FAQPanel from '../components/runtime/FAQPanel'
 import RelatedProductsPanel from '../components/runtime/RelatedProductsPanel'
+import StudioPurchaseCard from '../components/systems/StudioPurchaseCard'
+import StudioWorkspaceOutline from '../components/systems/StudioWorkspaceOutline'
 import { productCatalogService } from '../modules/commerce/services/ProductCatalogService'
-import { resolveProductSystem } from '../lib/publishedCatalog'
+import { isStudioWorkspaceProduct, loadStudioWorkspaceOutline, resolveProductSystem } from '../lib/publishedCatalog'
+import { useIdentity } from '../modules/identity/IdentityContext'
+import { portalProductUrl, workspaceViewerPath } from '../modules/workspace/config'
+import type { SectionConfig } from '../modules/workspace/types/content'
 import { DEFAULT_WORKSPACE_SLUG } from '../data/workspaceCategories'
 import type { Product } from '../modules/commerce/types/product'
 
@@ -33,13 +38,23 @@ const MODULES_PREVIEW_ID = 'modules-included'
 export default function ProductPage() {
   const { slug } = useParams<{ slug: string }>()
   const [product, setProduct] = useState<Product | null | undefined>(undefined)
+  const [outline, setOutline] = useState<SectionConfig[]>([])
+  const { user } = useIdentity()
 
   useEffect(() => {
     let cancelled = false
     setProduct(undefined)
     if (!slug) return
+    setOutline([])
     productCatalogService.getBySlug(slug).then((result) => {
-      if (!cancelled) setProduct(result ?? null)
+      if (cancelled) return
+      setProduct(result ?? null)
+      // A Studio Workspace's real steps, for the "What's inside" preview.
+      if (result && isStudioWorkspaceProduct(result)) {
+        loadStudioWorkspaceOutline(result.slug).then((sections) => {
+          if (!cancelled) setOutline(sections)
+        })
+      }
     })
     return () => {
       cancelled = true
@@ -55,6 +70,19 @@ export default function ProductPage() {
   const heroDescription = product.longDescription ?? product.description
   const whatsIncluded = product.whatsIncluded ?? []
   const resources = system?.resources ?? []
+  // Published from BGrowth Studio (Portal database): bought on the Portal
+  // for now, opened in this site's Workspace viewer once owned.
+  const studio = isStudioWorkspaceProduct(product)
+  const owned = Boolean(user?.ownedProducts.includes(product.slug))
+  const studioCard = (className?: string) => (
+    <StudioPurchaseCard
+      product={product}
+      owned={owned}
+      openTo={workspaceViewerPath(product.slug)}
+      getHref={portalProductUrl(product.slug)}
+      className={className}
+    />
+  )
 
   return (
     <div className="pt-32 md:pt-40">
@@ -67,8 +95,12 @@ export default function ProductPage() {
         <div className="mt-6 grid gap-14 lg:grid-cols-[1fr_0.9fr] lg:items-start">
           <div>
             <div className="flex flex-wrap items-center gap-2">
-              <Badge>{system?.category ?? product.industry ?? product.category}</Badge>
-              <Badge variant="outline">{system?.type ?? product.type}</Badge>
+              {studio ? (
+                product.industry && <Badge>{product.industry}</Badge>
+              ) : (
+                <Badge>{system?.category ?? product.industry ?? product.category}</Badge>
+              )}
+              <Badge variant="outline">{studio ? 'Workspace™' : system?.type ?? product.type}</Badge>
               {(product.difficulty ?? system?.difficulty) && (
                 <Badge variant="outline">{product.difficulty ?? system?.difficulty}</Badge>
               )}
@@ -140,12 +172,16 @@ export default function ProductPage() {
               </motion.div>
             ) : null}
 
-            <PurchaseCard
-              product={product}
-              workspaceId={DEFAULT_WORKSPACE_SLUG}
-              previewTargetId={MODULES_PREVIEW_ID}
-              className="lg:sticky lg:top-[100px]"
-            />
+            {studio ? (
+              studioCard('lg:sticky lg:top-[100px]')
+            ) : (
+              <PurchaseCard
+                product={product}
+                workspaceId={DEFAULT_WORKSPACE_SLUG}
+                previewTargetId={MODULES_PREVIEW_ID}
+                className="lg:sticky lg:top-[100px]"
+              />
+            )}
           </div>
         </div>
       </section>
@@ -156,6 +192,16 @@ export default function ProductPage() {
           <div className="container-px mx-auto max-w-page">
             <SectionHeader eyebrow="Modules Included" title="What's inside this system" className="mb-10" />
             <BusinessModuleGrid system={system} actionable={false} />
+          </div>
+        </section>
+      )}
+
+      {/* What's inside a Studio Workspace — its published steps */}
+      {studio && outline.length > 0 && (
+        <section className="section-py bg-bg-soft">
+          <div className="container-px mx-auto max-w-page">
+            <SectionHeader eyebrow="What's Inside" title={`${outline.length} steps, in order`} className="mb-10" />
+            <StudioWorkspaceOutline sections={outline} />
           </div>
         </section>
       )}
@@ -217,12 +263,14 @@ export default function ProductPage() {
         </section>
       )}
 
-      {/* Related Products */}
-      <section className="section-py bg-bg-soft">
-        <div className="container-px mx-auto max-w-page">
-          <RelatedProductsPanel productId={product.id} />
-        </div>
-      </section>
+      {/* Related Products — Studio doesn't publish related products yet */}
+      {!studio && (
+        <section className="section-py bg-bg-soft">
+          <div className="container-px mx-auto max-w-page">
+            <RelatedProductsPanel productId={product.id} />
+          </div>
+        </section>
+      )}
 
       {/* Reviews */}
       {system && system.reviews.length > 0 && (
@@ -233,17 +281,19 @@ export default function ProductPage() {
         </section>
       )}
 
-      {/* FAQ */}
-      <section className="section-py bg-bg-soft">
-        <div className="container-px mx-auto max-w-narrow">
-          <FAQPanel items={product.faq ?? []} />
-        </div>
-      </section>
+      {/* FAQ — for a Studio Workspace, only when Studio published one */}
+      {(!studio || (product.faq?.length ?? 0) > 0) && (
+        <section className="section-py bg-bg-soft">
+          <div className="container-px mx-auto max-w-narrow">
+            <FAQPanel items={product.faq ?? []} />
+          </div>
+        </section>
+      )}
 
       {/* Purchase */}
       <section className="pb-28 pt-20">
         <div className="container-px mx-auto max-w-narrow">
-          <PricingCard product={product} workspaceId={DEFAULT_WORKSPACE_SLUG} />
+          {studio ? studioCard() : <PricingCard product={product} workspaceId={DEFAULT_WORKSPACE_SLUG} />}
         </div>
       </section>
     </div>

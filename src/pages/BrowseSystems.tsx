@@ -4,11 +4,13 @@ import { motion } from 'framer-motion'
 import SearchToolbar from '../components/ui/SearchToolbar'
 import FilterPill from '../components/ui/FilterPill'
 import BusinessSystemCard from '../components/systems/BusinessSystemCard'
+import StudioWorkspaceCard from '../components/systems/StudioWorkspaceCard'
 import { MODULE_TYPE_CONFIG } from '../components/systems/ModuleBadge'
 import EmptyState from '../components/ui/EmptyState'
 import Grid from '../components/layout/Grid'
 import { CATEGORIES } from '../data/systems'
-import { loadPublishedSystemProducts, systemForCard } from '../lib/publishedCatalog'
+import { loadPublishedSystemProducts, loadStudioWorkspaceProducts, systemForCard } from '../lib/publishedCatalog'
+import type { Product } from '../modules/commerce/types/product'
 import type { ModuleType } from '../types/system'
 
 const SORT_OPTIONS = [
@@ -53,10 +55,17 @@ export default function BrowseSystems() {
     [],
   )
 
+  // Workspaces published from BGrowth Studio — listed before the example
+  // systems (see lib/publishedCatalog.ts).
+  const [studioProducts, setStudioProducts] = useState<Product[]>([])
+
   useEffect(() => {
     let cancelled = false
     loadPublishedSystemProducts().then((pairs) => {
       if (!cancelled) setPublishedSystems(pairs)
+    })
+    loadStudioWorkspaceProducts().then((products) => {
+      if (!cancelled) setStudioProducts(products)
     })
     return () => {
       cancelled = true
@@ -76,6 +85,22 @@ export default function BrowseSystems() {
     () => Array.from(new Set(publishedList.flatMap((s) => s.modules.map((m) => m.type)))),
     [publishedList],
   )
+
+  // Studio Workspaces carry no module types, so a Module Type filter hides
+  // them; Industry matches the Workspace's Studio category.
+  const studioResults = useMemo(() => {
+    if (moduleType !== 'All') return []
+    const list = studioProducts.filter(
+      (p) =>
+        (category === 'All' || p.industry === category) && matchesSearch(query, `${p.title} ${p.description}`),
+    )
+    return [...list].sort((a, b) => {
+      if (sort === 'price-asc') return a.basePrice - b.basePrice
+      if (sort === 'price-desc') return b.basePrice - a.basePrice
+      if (sort === 'name-asc') return a.title.localeCompare(b.title)
+      return 0
+    })
+  }, [studioProducts, query, category, moduleType, sort])
 
   const results = useMemo(() => {
     let list = publishedList.filter((s) => {
@@ -136,8 +161,18 @@ export default function BrowseSystems() {
           </div>
         </div>
 
-        {results.length > 0 ? (
+        {studioResults.length + results.length > 0 ? (
           <Grid cols={3} className="mt-10">
+            {studioResults.map((product, i) => (
+              <motion.div
+                key={product.id}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: (i % 6) * 0.06, duration: 0.5 }}
+              >
+                <StudioWorkspaceCard product={product} />
+              </motion.div>
+            ))}
             {results.map((sys, i) => (
               <motion.div
                 key={sys.slug}

@@ -54,14 +54,20 @@ export default function ProductLibraryCard({ product, size = 'default' }: Props)
         featured ? 'md:flex-row md:hover:-translate-y-0' : ''
       }`}
     >
-      {/* Cover — icon tile stands in until Studio provides a real thumbnail */}
-      <div
-        className={`grid shrink-0 place-items-center bg-grad-primary text-white ${
-          featured ? 'h-40 md:h-auto md:w-64' : 'h-32'
-        }`}
-      >
-        <Icon size={featured ? 44 : 30} strokeWidth={1.7} />
-      </div>
+      {/* Cover — Studio's cover image when there is one, otherwise the icon tile */}
+      {product.coverImage ? (
+        <div className={`shrink-0 overflow-hidden bg-bg-soft ${featured ? 'h-40 md:h-auto md:w-64' : 'h-32'}`}>
+          <img src={product.coverImage} alt="" className="h-full w-full object-cover" />
+        </div>
+      ) : (
+        <div
+          className={`grid shrink-0 place-items-center bg-grad-primary text-white ${
+            featured ? 'h-40 md:h-auto md:w-64' : 'h-32'
+          }`}
+        >
+          <Icon size={featured ? 44 : 30} strokeWidth={1.7} />
+        </div>
+      )}
 
       <div className={`flex flex-1 flex-col p-6 ${featured ? 'md:p-8' : ''}`}>
         <div className={`flex flex-wrap items-center gap-2 ${library ? 'justify-between' : ''}`}>

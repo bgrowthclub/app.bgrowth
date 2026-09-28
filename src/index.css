@@ -41,6 +41,47 @@ body {
   }
 }
 
+/* Studio Workspace document (Print / Download PDF) — the same rules as the
+   Portal and Studio, so all three produce the same document. The
+   container stays laid out but invisible on screen (html2canvas can't
+   capture display:none) and only joins the normal flow for a real print.
+   See modules/workspace/viewer/DocumentPrintSummary.tsx and lib/pdf.ts. */
+.printable-summary-container {
+  width: 0;
+  height: 0;
+  overflow: hidden;
+  position: absolute;
+  top: 0;
+  left: 0;
+}
+
+.printable-summary {
+  width: 100%;
+  background-color: #ffffff;
+  position: relative;
+}
+
+/* Named page so these margins apply only to the Workspace document, not
+   to any other page of the site that gets printed. */
+@page workspace-document {
+  size: letter;
+  margin: 5mm 10mm;
+}
+
+@media print {
+  .printable-summary-container {
+    width: auto;
+    height: auto;
+    overflow: visible;
+    position: static;
+  }
+  .printable-summary {
+    position: static;
+    width: auto;
+    page: workspace-document;
+  }
+}
+
 @layer components {
   .container-px {
     @apply px-6 md:px-10 lg:px-16;

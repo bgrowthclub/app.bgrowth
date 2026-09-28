@@ -12,6 +12,12 @@ export default {
         accent: 'rgb(var(--color-primary-accent-rgb) / <alpha-value>)',
         bg: 'var(--color-bg)',
         'bg-soft': 'rgb(var(--color-bg-soft-rgb) / <alpha-value>)',
+        workspace: Object.fromEntries(
+          [50, 100, 200, 300, 400, 500, 600, 700, 800, 900].map((shade) => [
+            shade,
+            `rgb(var(--color-workspace-${shade}) / <alpha-value>)`,
+          ]),
+        ),
       },
       fontFamily: {
         display: ['var(--font-display)'],
