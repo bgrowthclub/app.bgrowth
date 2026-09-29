@@ -61,7 +61,8 @@ export interface PortalLicenseRow {
   access_policy: 'expiring' | 'lifetime'
   activated_at: string
   expires_at: string | null
-  last_opened_at: string | null
+  // Only on databases with the Portal's migration 0019 applied.
+  last_opened_at?: string | null
 }
 
 export interface PortalAccessGrantRow {

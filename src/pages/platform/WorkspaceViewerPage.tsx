@@ -32,7 +32,8 @@ export default function WorkspaceViewerPage() {
   // "Recently opened" on the member's license — once per visit.
   const recordedRef = useRef(false)
   useEffect(() => {
-    if (ws.hasAccess && ws.license && !recordedRef.current) {
+    // Skipped when the Portal database has no last_opened_at column yet.
+    if (ws.hasAccess && ws.license && 'last_opened_at' in ws.license && !recordedRef.current) {
       recordedRef.current = true
       void studioWorkspaceService.recordOpened(ws.license.id).catch(() => undefined)
     }

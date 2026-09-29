@@ -33,7 +33,7 @@ function notExpired(expiresAt: string | null, now: number) {
 // (trial or purchase) OR an active, unexpired manual access grant.
 async function loadOwnedProductSlugs(supabase: PortalClient, userId: string): Promise<string[]> {
   const [licenses, grants] = await Promise.all([
-    supabase.from('licenses').select('status, access_policy, expires_at, products(slug)').eq('user_id', userId),
+    supabase.from('licenses').select('*, products(slug)').eq('user_id', userId),
     supabase
       .from('access_grants')
       .select('expires_at, revoked_at, products(slug)')

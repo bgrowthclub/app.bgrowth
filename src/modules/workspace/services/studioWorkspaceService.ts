@@ -74,7 +74,10 @@ export const studioWorkspaceService = {
   async listLicenses(userId: string): Promise<PortalLicenseRow[]> {
     const { data, error } = await client()
       .from('licenses')
-      .select('id, product_id, type, status, access_policy, activated_at, expires_at, last_opened_at')
+      // '*' on purpose: some Portal databases don't have every column yet
+      // (e.g. last_opened_at, added by the Portal's migration 0019) — asking
+      // for a missing column by name fails the whole query.
+      .select('*')
       .eq('user_id', userId)
     if (error) throw error
     return (data ?? []) as PortalLicenseRow[]
@@ -83,14 +86,15 @@ export const studioWorkspaceService = {
   async listAccessGrants(userId: string): Promise<PortalAccessGrantRow[]> {
     const { data, error } = await client()
       .from('access_grants')
-      .select('scope, product_id, expires_at, revoked_at, created_at')
+      .select('*')
       .eq('user_id', userId)
     if (error) throw error
     return (data ?? []) as PortalAccessGrantRow[]
   },
 
   // "Recently opened" — the one self-service column (with is_favorite) a
-  // member may update on their own license row.
+  // member may update on their own license row. Callers only call this when
+  // the license row actually has the column (see WorkspaceViewerPage).
   async recordOpened(licenseId: string): Promise<void> {
     const { error } = await client()
       .from('licenses')
