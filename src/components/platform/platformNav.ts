@@ -1,6 +1,7 @@
 import {
   LayoutDashboard,
   FolderOpen,
+  FileText,
   LayoutGrid,
   GraduationCap,
   Users,
@@ -43,6 +44,9 @@ export const PLATFORM_NAV_GROUPS: PlatformNavGroup[] = [
       // legacy /my-systems page (marketing AppLayout) is untouched and still
       // reachable from its own nav, but the Workspace no longer points at it.
       { label: 'My Workspaces', to: '/platform/my-systems', icon: FolderOpen },
+      // Every saved record across Studio Workspaces — the Portal's "My
+      // Documents" (see pages/platform/MyDocumentsPage.tsx).
+      { label: 'My Documents', to: '/platform/documents', icon: FileText },
       // BGrowth App still points at the existing catalog browse page (see
       // ARCHITECTURE.md on the Runtime) but is locked here — it isn't
       // available as its own experience inside the Workspace yet. /systems

@@ -44,7 +44,7 @@ export default function ProductLibraryCard({ product, size = 'default' }: Props)
   const featured = size === 'featured'
   const library = size === 'library'
   const Icon = product.icon
-  const actionLabel = featured ? 'Continue' : getProductActionLabel(product.type)
+  const actionLabel = product.expired ? 'Renew Access' : featured ? 'Continue' : getProductActionLabel(product.type)
   const actionRoute = getProductActionRoute(product)
   const status = getProductLibraryStatus(product)
 
@@ -73,8 +73,12 @@ export default function ProductLibraryCard({ product, size = 'default' }: Props)
         <div className={`flex flex-wrap items-center gap-2 ${library ? 'justify-between' : ''}`}>
           <Badge variant="soft">{product.tag}</Badge>
           {library ? (
-            <span className={`rounded-full px-2.5 py-1 text-[10.5px] font-semibold ${STATUS_CLASS[status]}`}>
-              {STATUS_LABEL[status]}
+            <span
+              className={`rounded-full px-2.5 py-1 text-[10.5px] font-semibold ${
+                product.expired ? 'bg-navy/[0.06] text-navy/50' : STATUS_CLASS[status]
+              }`}
+            >
+              {product.expired ? 'Expired' : STATUS_LABEL[status]}
             </span>
           ) : (
             product.subTag && <Badge variant="outline">{product.subTag}</Badge>
@@ -96,7 +100,9 @@ export default function ProductLibraryCard({ product, size = 'default' }: Props)
         {library ? (
           <div className="mt-4 space-y-1.5 border-t border-navy/[0.06] pt-4 text-[12px]">
             <div className="flex items-center justify-between">
-              <span className="text-navy/40">Purchased</span>
+              <span className="text-navy/40">
+                {product.access.source === 'trial' ? 'Trial started' : product.access.source === 'gift' ? 'Access since' : 'Purchased'}
+              </span>
               <span className="font-medium text-navy/60">{formatDate(product.purchase.createdAt)}</span>
             </div>
             <div className="flex items-center justify-between">

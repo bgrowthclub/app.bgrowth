@@ -7,7 +7,6 @@ import { studioWorkspaceService, isStudioCatalogAvailable } from '../../workspac
 import type {
   PortalCatalogRow,
   PortalCategoryRow,
-  PortalMarketingMetadata,
   PortalProductRow,
 } from '../../workspace/types/portal'
 
@@ -108,20 +107,36 @@ function fromCatalogRow(row: PortalCatalogRow, categoryName: Map<string, string>
   }
 }
 
+// Studio's metadata is free-form JSON — every field is read defensively so
+// one unexpected shape never hides a product.
+function arrayOf<T>(value: unknown, keep: (item: unknown) => item is T): T[] {
+  return Array.isArray(value) ? value.filter(keep) : []
+}
+const isString = (v: unknown): v is string => typeof v === 'string' && v.trim().length > 0
+const isTitled = (v: unknown): v is { title: string; description?: string } =>
+  typeof v === 'object' && v !== null && typeof (v as { title?: unknown }).title === 'string'
+const isFaq = (v: unknown): v is { question: string; answer: string } =>
+  typeof v === 'object' &&
+  v !== null &&
+  typeof (v as { question?: unknown }).question === 'string' &&
+  typeof (v as { answer?: unknown }).answer === 'string'
+
 // The full product adds Studio's optional marketing fields from
 // products.metadata (Portal: src/types/productMarketing.ts).
-function fromProductRow(row: PortalProductRow, industry: string | undefined, featured: boolean): Product {
-  const meta = (row.metadata ?? {}) as PortalMarketingMetadata
+export function studioProductFromRow(row: PortalProductRow, industry: string | undefined, featured = false): Product {
+  const meta = (row.metadata ?? {}) as Record<string, unknown>
   const product = baseProduct(row, row.id, industry)
-  const screenshots = (meta.screenshots ?? []).map((url, i) => ({ id: `screenshot-${i + 1}`, url }))
+  const screenshots = arrayOf(meta.screenshots, isString).map((url, i) => ({ id: `screenshot-${i + 1}`, url }))
+  const included = arrayOf(meta.included, isString)
+  const faq = arrayOf(meta.faq, isFaq)
   return {
     ...product,
     featured,
-    longDescription: meta.longDescription || undefined,
-    benefits: (meta.features ?? []).map(({ title, description }) => ({ title, description })),
-    whatsIncluded: meta.included?.length ? meta.included : undefined,
-    faq: meta.faq?.length ? meta.faq : undefined,
-    tags: meta.tags ?? [],
+    longDescription: isString(meta.longDescription) ? meta.longDescription : undefined,
+    benefits: arrayOf(meta.features, isTitled).map(({ title, description }) => ({ title, description: description ?? '' })),
+    whatsIncluded: included.length ? included : undefined,
+    faq: faq.length ? faq : undefined,
+    tags: arrayOf(meta.tags, isString),
     assets: { ...product.assets, previewImages: screenshots, gallery: screenshots },
     createdAt: row.last_published_at ?? row.created_at,
   }
@@ -172,5 +187,5 @@ async function loadFullProduct(portalId: string): Promise<Product | undefined> {
   if (!row) return undefined
   const catalogRow = snapshot?.rows.find((r) => r.product_id === portalId)
   const industry = row.category_id ? snapshot?.categoryName.get(row.category_id) : undefined
-  return fromProductRow(row, industry, catalogRow?.is_featured ?? false)
+  return studioProductFromRow(row, industry, catalogRow?.is_featured ?? false)
 }

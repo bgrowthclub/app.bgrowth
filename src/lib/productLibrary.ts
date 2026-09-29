@@ -8,7 +8,7 @@ import { ICONS_BY_CATEGORY } from '../components/systems/categoryIcons'
 import { resolveProductSystem } from './publishedCatalog'
 import { accessService } from '../modules/commerce/client/accessService'
 import { productCatalogService } from '../modules/commerce/services/ProductCatalogService'
-import { listStudioProductAccess } from '../modules/workspace/services/studioAccess'
+import { listStudioLibrary } from '../modules/workspace/services/studioAccess'
 import type { StudioProductAccess } from '../modules/workspace/services/studioAccess'
 import { workspaceViewerPath } from '../modules/workspace/config'
 
@@ -37,7 +37,9 @@ function buildUserProduct(product: Product, access: ProductAccess | StudioProduc
     title: product.title,
     description: product.description,
     icon: ICONS_BY_CATEGORY[system?.category ?? ''] ?? ICONS_BY_CATEGORY.Default,
-    tag: product.industry ?? product.category,
+    // A Studio Workspace without a Studio category shows a plain label, not
+    // the raw Growth Category id.
+    tag: product.industry ?? (product.source?.type === 'StudioWorkspace' ? 'Workspace' : product.category),
     subTag: system?.category,
     difficulty: product.difficulty,
     estimatedTime: product.estimatedTime,
@@ -51,6 +53,7 @@ function buildUserProduct(product: Product, access: ProductAccess | StudioProduc
     progress: user.progress.find((p) => p.productId === product.slug),
     coverImage: product.assets.thumbnail,
     sourceType: product.source?.type,
+    expired: 'accessState' in access ? access.accessState === 'expired' : undefined,
   }
 }
 
@@ -64,46 +67,67 @@ function buildUserProduct(product: Product, access: ProductAccess | StudioProduc
 // its own side effect (see ARCHITECTURE.md's "Payment completion
 // pipeline") — nothing here changes when that's wired to real persistence.
 export async function getUserProducts(user: User): Promise<UserProduct[]> {
-  // Studio-published Workspaces (Portal licenses/grants) first, then
-  // Commerce's own access records. A failed Portal read shows nothing
-  // owned there rather than breaking the page.
-  const [studioGrants, grants] = await Promise.all([
-    listStudioProductAccess(user.id).catch(() => [] as StudioProductAccess[]),
+  // Studio-published Workspaces (Portal licenses/grants — the Portal's
+  // "My Library" list, expired ones included) first, then Commerce's own
+  // access records. A failed Portal read is thrown so the page can say so
+  // instead of pretending the member owns nothing.
+  const [studioItems, grants] = await Promise.all([
+    listStudioLibrary(user.id),
     accessService.listAccessForMember(user.id),
   ])
+  const studio = studioItems.map(({ product, access }) => buildUserProduct(product, access, user))
   const products = await Promise.all(
-    [...studioGrants, ...grants]
+    grants
       .filter((g) => g.hasAccess)
       .map(async (access) => {
         const product = await productCatalogService.getById(access.productId)
         return product ? buildUserProduct(product, access, user) : undefined
       }),
   )
-  return products.filter((p): p is UserProduct => Boolean(p))
+  return [...studio, ...products.filter((p): p is UserProduct => Boolean(p))]
 }
 
 // Shared loading state for every surface that renders a member's owned
 // products (MyBusinessSystemsPage, MyBusinessSystemsSection,
 // ContinueBuildingSection) — avoids repeating the same effect/state
 // boilerplate three times for what is otherwise a one-line data need.
-export function useOwnedProducts(user: User | null | undefined): UserProduct[] {
-  const [owned, setOwned] = useState<UserProduct[]>([])
+export interface OwnedProductsState {
+  products: UserProduct[]
+  status: 'loading' | 'ready' | 'error'
+  error?: string
+}
+
+export function useOwnedProductsState(user: User | null | undefined): OwnedProductsState {
+  const [state, setState] = useState<OwnedProductsState>({ products: [], status: 'loading' })
 
   useEffect(() => {
     if (!user) {
-      setOwned([])
+      setState({ products: [], status: 'ready' })
       return
     }
     let cancelled = false
-    getUserProducts(user).then((products) => {
-      if (!cancelled) setOwned(products)
-    })
+    setState((prev) => ({ ...prev, status: 'loading' }))
+    getUserProducts(user)
+      .then((products) => {
+        if (!cancelled) setState({ products, status: 'ready' })
+      })
+      .catch((err: unknown) => {
+        if (cancelled) return
+        const message =
+          err && typeof err === 'object' && 'message' in err ? String((err as { message: unknown }).message) : String(err)
+        console.error('[My Workspaces] Could not load owned products:', err)
+        setState({ products: [], status: 'error', error: message })
+      })
     return () => {
       cancelled = true
     }
   }, [user])
 
-  return owned
+  return state
+}
+
+export function useOwnedProducts(user: User | null | undefined): UserProduct[] {
+  return useOwnedProductsState(user).products
 }
 
 // Derives the card's "Status" from BGrowth Identity™'s own UserProgress —
@@ -152,6 +176,8 @@ export function getProductActionLabel(type: ProductType): string {
 // built, matching how Continue to Payment/Continue to Secure Checkout were
 // left as prepared-but-unwired TODOs earlier in this purchase flow.
 export function getProductActionRoute(product: UserProduct): string {
+  // Access ended — the product page is where it's renewed.
+  if (product.expired) return `/product/${product.slug}`
   // A Studio-published Workspace opens in the Studio Workspace viewer.
   if (product.sourceType === 'StudioWorkspace') return workspaceViewerPath(product.slug)
   switch (product.type) {

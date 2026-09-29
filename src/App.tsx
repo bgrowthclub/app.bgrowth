@@ -31,6 +31,7 @@ import ProfilePage from './pages/platform/ProfilePage'
 import MembershipPage from './pages/platform/MembershipPage'
 import SettingsPage from './pages/platform/SettingsPage'
 import SupportPage from './pages/platform/SupportPage'
+import MyDocumentsPage from './pages/platform/MyDocumentsPage'
 // Lazy: the Workspace viewer carries the full icon set and the PDF engine,
 // so it loads only when a member actually opens a Workspace.
 const WorkspaceViewerPage = lazy(() => import('./pages/platform/WorkspaceViewerPage'))
@@ -130,6 +131,7 @@ export default function App() {
         <Route index element={<Navigate to="/platform/dashboard" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="my-systems" element={<MyBusinessSystemsPage />} />
+        <Route path="documents" element={<MyDocumentsPage />} />
         {/* A Studio-published Workspace, opened and filled in (Portal data). */}
         <Route
           path="workspace/:slug"

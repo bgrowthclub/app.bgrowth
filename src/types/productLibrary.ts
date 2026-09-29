@@ -50,6 +50,9 @@ export interface UserProduct {
   // Where the product's content lives — decides which runtime opens it
   // (see lib/productLibrary.ts getProductActionRoute).
   sourceType?: ContentSourceType
+  // Access has ended (e.g. a finished trial) — listed like the Portal's My
+  // Library does, with a way to renew instead of Open.
+  expired?: boolean
 }
 
 export type ProductLibraryStatus = 'not-started' | 'in-progress' | 'completed'

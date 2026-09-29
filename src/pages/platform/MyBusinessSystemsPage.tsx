@@ -7,7 +7,7 @@ import EmptyState from '../../components/ui/EmptyState'
 import Button from '../../components/ui/Button'
 import Grid from '../../components/layout/Grid'
 import ProductLibraryCard from '../../components/systems/ProductLibraryCard'
-import { useOwnedProducts } from '../../lib/productLibrary'
+import { useOwnedProductsState } from '../../lib/productLibrary'
 import { useIdentity } from '../../modules/identity/IdentityContext'
 
 const SORT_OPTIONS = [
@@ -20,7 +20,8 @@ const DIFFICULTY_ORDER: Record<string, number> = { Beginner: 0, Intermediate: 1,
 
 export default function MyBusinessSystemsPage() {
   const { user } = useIdentity()
-  const owned = useOwnedProducts(user)
+  const ownedState = useOwnedProductsState(user)
+  const owned = ownedState.products
 
   const industries = Array.from(new Set(owned.map((p) => p.tag)))
   const categories = Array.from(new Set(owned.map((p) => p.subTag).filter((c): c is string => Boolean(c))))
@@ -152,6 +153,15 @@ export default function MyBusinessSystemsPage() {
           </div>
         )
       ) : (
+        ownedState.status === 'loading' ? (
+          <p className="py-16 text-center text-[14px] text-navy/40">Loading your Workspaces…</p>
+        ) : ownedState.status === 'error' ? (
+          <EmptyState
+            icon={FolderOpen}
+            title="We couldn’t load your Workspaces."
+            description={`Please refresh the page. If it keeps happening, send us this message: ${ownedState.error ?? 'unknown error'}`}
+          />
+        ) : (
         <EmptyState
           icon={FolderOpen}
           title={owned.length === 0 ? 'No Workspaces yet.' : 'No Workspaces match your filters.'}
@@ -162,6 +172,7 @@ export default function MyBusinessSystemsPage() {
           }
           action={owned.length === 0 ? <Button to="/systems">Browse Workspaces</Button> : undefined}
         />
+        )
       )}
     </div>
   )

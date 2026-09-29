@@ -92,6 +92,17 @@ export const studioWorkspaceService = {
     if (error) throw error
   },
 
+  // Every saved record of every Workspace — the "My Documents" list.
+  async listAllInstances(userId: string): Promise<WorkspaceInstanceRow[]> {
+    const { data, error } = await client()
+      .from('workspace_instances')
+      .select('*')
+      .eq('user_id', userId)
+      .order('updated_at', { ascending: false })
+    if (error) throw error
+    return (data ?? []) as WorkspaceInstanceRow[]
+  },
+
   async listInstances(userId: string, productId: string): Promise<WorkspaceInstanceRow[]> {
     const { data, error } = await client()
       .from('workspace_instances')

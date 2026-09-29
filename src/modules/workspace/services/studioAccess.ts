@@ -1,48 +1,71 @@
 import type { ProductAccess } from '../../commerce/types/access'
+import type { Product } from '../../commerce/types/product'
+import { studioProductFromRow } from '../../commerce/store/studioProductRepository'
 import { studioWorkspaceService, isStudioCatalogAvailable } from './studioWorkspaceService'
-import { canOpen, deriveAccessState, isGrantActive } from '../lib/access'
+import { deriveAccessState, isGrantActive } from '../lib/access'
+import type { StudioAccessState } from '../lib/access'
+import type { PortalProductRow } from '../types/portal'
 
 export interface StudioProductAccess extends ProductAccess {
   lastOpenedAt?: string
+  accessState: StudioAccessState
 }
 
-// A member's access to Studio-published Workspaces, as Commerce's
-// ProductAccess (productId = "studio-<portal id>", the id the catalog uses
-// — see commerce/store/studioProductRepository.ts). Same OR-rule as the
-// Portal: live license (trial or purchase) or active access grant.
-export async function listStudioProductAccess(memberId: string): Promise<StudioProductAccess[]> {
+export interface StudioLibraryItem {
+  product: Product
+  access: StudioProductAccess
+}
+
+// A member's Studio Workspaces — the same list the Portal's "My Library"
+// shows: everything they can open (live license or active access grant —
+// the portal.has_workspace_access() rule) plus anything whose access has
+// ended (marked expired, so it can be renewed). Loaded in one batch: the
+// member's licenses and grants, then every product involved in a single
+// query (RLS returns published products, and archived ones the member
+// owns).
+export async function listStudioLibrary(memberId: string): Promise<StudioLibraryItem[]> {
   if (!isStudioCatalogAvailable) return []
-  const [licenses, grants] = await Promise.all([
+  const [licenses, grants, categories] = await Promise.all([
     studioWorkspaceService.listLicenses(memberId),
     studioWorkspaceService.listAccessGrants(memberId),
+    studioWorkspaceService.listCategories(),
   ])
   const activeGrants = grants.filter((g) => isGrantActive(g))
-  const allGrant = activeGrants.find((g) => g.scope === 'all')
+  const hasAllGrant = activeGrants.some((g) => g.scope === 'all')
 
-  const productIds = new Set<string>([
+  const ids = new Set<string>([
     ...licenses.map((l) => l.product_id),
     ...activeGrants.flatMap((g) => (g.scope === 'specific' && g.product_id ? [g.product_id] : [])),
   ])
+  let rows: PortalProductRow[] = await studioWorkspaceService.getProductsByIds([...ids])
   // An "all Workspaces" grant covers every published Workspace.
-  if (allGrant) {
-    for (const p of await studioWorkspaceService.listPublishedProducts()) productIds.add(p.id)
+  if (hasAllGrant) {
+    const published = await studioWorkspaceService.listPublishedProducts()
+    const seen = new Set(rows.map((r) => r.id))
+    rows = [...rows, ...published.filter((p) => !seen.has(p.id))]
   }
 
-  const result: StudioProductAccess[] = []
-  for (const productId of productIds) {
-    const license = licenses.find((l) => l.product_id === productId) ?? null
-    const grant = activeGrants.find((g) => g.scope === 'all' || g.product_id === productId)
-    const state = deriveAccessState(license, Boolean(grant))
-    if (!canOpen(state)) continue
-    result.push({
-      productId: `studio-${productId}`,
-      memberId,
-      hasAccess: true,
-      source: state === 'trial' ? 'trial' : state === 'unlocked' ? 'gift' : 'purchase',
-      grantedAt: license?.activated_at ?? grant?.created_at ?? new Date().toISOString(),
-      expiresAt: state === 'trial' ? license?.expires_at ?? undefined : undefined,
-      lastOpenedAt: license?.last_opened_at ?? undefined,
+  const categoryName = new Map(categories.map((c) => [c.id, c.name]))
+  const items: StudioLibraryItem[] = []
+  for (const row of rows) {
+    if (row.content_type !== 'workspace') continue
+    const license = licenses.find((l) => l.product_id === row.id) ?? null
+    const grant = activeGrants.find((g) => g.scope === 'all' || g.product_id === row.id)
+    const accessState = deriveAccessState(license, Boolean(grant))
+    if (accessState === 'locked') continue
+    items.push({
+      product: studioProductFromRow(row, row.category_id ? categoryName.get(row.category_id) : undefined),
+      access: {
+        productId: `studio-${row.id}`,
+        memberId,
+        hasAccess: accessState !== 'expired',
+        source: accessState === 'unlocked' ? 'gift' : license?.type === 'trial' ? 'trial' : 'purchase',
+        grantedAt: license?.activated_at ?? grant?.created_at ?? row.created_at,
+        expiresAt: license?.access_policy === 'expiring' ? license.expires_at ?? undefined : undefined,
+        lastOpenedAt: license?.last_opened_at ?? undefined,
+        accessState,
+      },
     })
   }
-  return result
+  return items
 }

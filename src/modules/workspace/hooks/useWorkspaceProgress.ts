@@ -40,13 +40,15 @@ function progressForSection(section: SectionConfig, data: WorkspaceData): Sectio
 
 // Same progress rules as the Portal's viewer, so a member sees the same
 // percentage on both.
+export function computeWorkspaceProgress(content: WorkspaceContent, data: WorkspaceData) {
+  const sections: Record<string, SectionProgress> = {}
+  for (const section of content.sections) sections[section.id] = progressForSection(section, data)
+  const countable = Object.values(sections).filter((s) => !s.isOptional)
+  const total = countable.reduce((sum, s) => sum + s.total, 0)
+  const done = countable.reduce((sum, s) => sum + s.filled, 0)
+  return { sections, percent: total === 0 ? 0 : Math.round((done / total) * 100) }
+}
+
 export function useWorkspaceProgress(content: WorkspaceContent, data: WorkspaceData) {
-  return useMemo(() => {
-    const sections: Record<string, SectionProgress> = {}
-    for (const section of content.sections) sections[section.id] = progressForSection(section, data)
-    const countable = Object.values(sections).filter((s) => !s.isOptional)
-    const total = countable.reduce((sum, s) => sum + s.total, 0)
-    const done = countable.reduce((sum, s) => sum + s.filled, 0)
-    return { sections, percent: total === 0 ? 0 : Math.round((done / total) * 100) }
-  }, [content, data])
+  return useMemo(() => computeWorkspaceProgress(content, data), [content, data])
 }
