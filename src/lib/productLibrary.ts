@@ -176,7 +176,7 @@ export function getProductActionLabel(type: ProductType): string {
 // built, matching how Continue to Payment/Continue to Secure Checkout were
 // left as prepared-but-unwired TODOs earlier in this purchase flow.
 export function getProductActionRoute(product: UserProduct): string {
-  // Access ended — the product page is where it's renewed.
+  // Trial ended — the product page is where it's bought.
   if (product.expired) return `/product/${product.slug}`
   // A Studio-published Workspace opens in the Studio Workspace viewer.
   if (product.sourceType === 'StudioWorkspace') return workspaceViewerPath(product.slug)

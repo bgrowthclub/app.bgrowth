@@ -19,7 +19,7 @@ export interface StudioLibraryItem {
 // A member's Studio Workspaces — the same list the Portal's "My Library"
 // shows: everything they can open (live license or active access grant —
 // the portal.has_workspace_access() rule) plus anything whose access has
-// ended (marked expired, so it can be renewed). Loaded in one batch: the
+// ended (a finished trial, marked so it can be bought). Loaded in one batch: the
 // member's licenses and grants, then every product involved in a single
 // query (RLS returns published products, and archived ones the member
 // owns).

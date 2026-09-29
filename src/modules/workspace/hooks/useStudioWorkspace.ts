@@ -13,6 +13,8 @@ export interface StudioWorkspaceState {
   records: WorkspaceInstanceRow[]
   reloadRecords: () => Promise<void>
   retry: () => void
+  // What failed, for the error screen (step + database message).
+  error?: string
 }
 
 // Everything the Workspace viewer needs for one product and one member:
@@ -25,11 +27,14 @@ export function useStudioWorkspace(slug: string | undefined, userId: string | un
   const [accessState, setAccessState] = useState<StudioAccessState>('locked')
   const [records, setRecords] = useState<WorkspaceInstanceRow[]>([])
   const [attempt, setAttempt] = useState(0)
+  const [error, setError] = useState<string>()
 
   useEffect(() => {
     if (!slug || !userId) return
     let cancelled = false
     setStatus('loading')
+    setError(undefined)
+    let step = 'product'
     ;(async () => {
       try {
         const found = await studioWorkspaceService.getProductBySlug(slug)
@@ -38,11 +43,12 @@ export function useStudioWorkspace(slug: string | undefined, userId: string | un
           setStatus('not-found')
           return
         }
-        const [licenses, grants, instances] = await Promise.all([
-          studioWorkspaceService.listLicenses(userId),
-          studioWorkspaceService.listAccessGrants(userId),
-          studioWorkspaceService.listInstances(userId, found.id),
-        ])
+        step = 'licenses'
+        const licenses = await studioWorkspaceService.listLicenses(userId)
+        step = 'access grants'
+        const grants = await studioWorkspaceService.listAccessGrants(userId)
+        step = 'records'
+        const instances = await studioWorkspaceService.listInstances(userId, found.id)
         if (cancelled) return
         const own = licenses.find((l) => l.product_id === found.id) ?? null
         setProduct(found)
@@ -50,8 +56,13 @@ export function useStudioWorkspace(slug: string | undefined, userId: string | un
         setAccessState(deriveAccessState(own, hasActiveGrantFor(grants, found.id)))
         setRecords(instances)
         setStatus('ready')
-      } catch {
-        if (!cancelled) setStatus('error')
+      } catch (err) {
+        if (cancelled) return
+        const message =
+          err && typeof err === 'object' && 'message' in err ? String((err as { message: unknown }).message) : String(err)
+        console.error(`[Workspace viewer] Failed loading ${step}:`, err)
+        setError(`${step}: ${message}`)
+        setStatus('error')
       }
     })()
     return () => {
@@ -73,5 +84,6 @@ export function useStudioWorkspace(slug: string | undefined, userId: string | un
     records,
     reloadRecords,
     retry: () => setAttempt((n) => n + 1),
+    error,
   }
 }

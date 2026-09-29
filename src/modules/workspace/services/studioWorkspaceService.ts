@@ -46,9 +46,16 @@ export const studioWorkspaceService = {
   // Full product row (content JSON + marketing metadata). RLS returns an
   // archived product only to a member who owns it.
   async getProductBySlug(slug: string): Promise<PortalProductRow | null> {
-    const { data, error } = await client().from('products').select('*').eq('slug', slug).maybeSingle()
+    // A list query (not maybeSingle) so a repeated slug can't turn into an
+    // error — the most recently published one wins.
+    const { data, error } = await client()
+      .from('products')
+      .select('*')
+      .eq('slug', slug)
+      .order('last_published_at', { ascending: false, nullsFirst: false })
+      .limit(1)
     if (error) throw error
-    return data as PortalProductRow | null
+    return ((data ?? [])[0] as PortalProductRow | undefined) ?? null
   },
 
   async getProductsByIds(ids: string[]): Promise<PortalProductRow[]> {
@@ -115,9 +122,9 @@ export const studioWorkspaceService = {
   },
 
   async getInstance(instanceId: string): Promise<WorkspaceInstanceRow | null> {
-    const { data, error } = await client().from('workspace_instances').select('*').eq('id', instanceId).maybeSingle()
+    const { data, error } = await client().from('workspace_instances').select('*').eq('id', instanceId).limit(1)
     if (error) throw error
-    return data as WorkspaceInstanceRow | null
+    return ((data ?? [])[0] as WorkspaceInstanceRow | undefined) ?? null
   },
 
   async createInstance(userId: string, productId: string, label: string): Promise<WorkspaceInstanceRow> {

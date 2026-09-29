@@ -44,7 +44,7 @@ export default function ProductLibraryCard({ product, size = 'default' }: Props)
   const featured = size === 'featured'
   const library = size === 'library'
   const Icon = product.icon
-  const actionLabel = product.expired ? 'Renew Access' : featured ? 'Continue' : getProductActionLabel(product.type)
+  const actionLabel = product.expired ? 'Buy Workspace' : featured ? 'Continue' : getProductActionLabel(product.type)
   const actionRoute = getProductActionRoute(product)
   const status = getProductLibraryStatus(product)
 
@@ -78,7 +78,7 @@ export default function ProductLibraryCard({ product, size = 'default' }: Props)
                 product.expired ? 'bg-navy/[0.06] text-navy/50' : STATUS_CLASS[status]
               }`}
             >
-              {product.expired ? 'Expired' : STATUS_LABEL[status]}
+              {product.expired ? 'Trial Ended' : STATUS_LABEL[status]}
             </span>
           ) : (
             product.subTag && <Badge variant="outline">{product.subTag}</Badge>

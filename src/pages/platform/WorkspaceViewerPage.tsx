@@ -47,6 +47,11 @@ export default function WorkspaceViewerPage() {
       <div className={`${CARD} mx-auto mt-10 max-w-lg p-8 text-center`}>
         <p className="font-display text-lg font-bold text-navy">Couldn&rsquo;t load this Workspace.</p>
         <p className="mt-2 text-[14px] text-navy/50">Check your connection and try again.</p>
+        {ws.error && (
+          <p className="mt-4 break-words rounded-xl bg-bg-soft px-4 py-3 text-left text-[12px] text-navy/60">
+            Details: {ws.error}
+          </p>
+        )}
         <Button type="button" onClick={ws.retry} className="mt-6">
           Try Again
         </Button>
