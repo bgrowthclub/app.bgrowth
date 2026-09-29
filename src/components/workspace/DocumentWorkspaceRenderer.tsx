@@ -19,6 +19,8 @@ interface Props {
   // on this screen only (the viewer page offers "New Record" to save).
   onSave?: (data: WorkspaceData) => Promise<void>
   instanceLabel?: string
+  // Where the completion panel's "Back to …" goes.
+  back: { to: string; label: string }
 }
 
 interface MenuItem {
@@ -64,7 +66,7 @@ function ActionMenu({ icon, label, items }: { icon: React.ReactNode; label: stri
 // same step-by-step fill flow, progress rules, save points, and the same
 // print/PDF document. On screen it uses this site's look (tokens); the
 // accent comes from the Workspace's own brand color.
-export default function DocumentWorkspaceRenderer({ content, initialData, onSave, instanceLabel }: Props) {
+export default function DocumentWorkspaceRenderer({ content, initialData, onSave, instanceLabel, back }: Props) {
   const [data, setData] = useState<WorkspaceData>(initialData ?? {})
   const [activeId, setActiveId] = useState(content.sections[0]?.id ?? '')
   const [hasReachedEnd, setHasReachedEnd] = useState(false)
@@ -245,6 +247,7 @@ export default function DocumentWorkspaceRenderer({ content, initialData, onSave
             <WorkspaceCompletionPanel
               workspaceName={content.brand.name}
               saved={Boolean(onSave)}
+              back={back}
               onReviewSections={() => setHasReachedEnd(false)}
             />
           </div>

@@ -61,10 +61,15 @@ export default function WorkspaceViewerPage() {
   }
 
   const product = ws.product
+  // A saved record goes back to My Documents (where records live); the
+  // blank copy goes back to My Workspaces.
+  const back = instanceId
+    ? { to: '/platform/documents', label: 'My Documents' }
+    : { to: '/platform/my-systems', label: 'My Workspaces' }
   const backLink = (
-    <Link to="/platform/my-systems" className="no-print inline-flex items-center gap-1.5 text-[13px] font-semibold text-primary">
+    <Link to={back.to} className="no-print inline-flex items-center gap-1.5 text-[13px] font-semibold text-primary">
       <ArrowLeft className="h-4 w-4" />
-      My Workspaces
+      {back.label}
     </Link>
   )
 
@@ -145,6 +150,7 @@ export default function WorkspaceViewerPage() {
             initialData={instance?.data as WorkspaceData | undefined}
             onSave={instance ? handleSave : undefined}
             instanceLabel={instance?.label}
+            back={back}
           />
         ) : (
           <div className={`${CARD} flex min-h-[40vh] flex-col items-center justify-center gap-3 p-12 text-center`}>
