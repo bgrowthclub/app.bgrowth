@@ -3,6 +3,8 @@ import type { ProductIndexEntry } from '../types/product'
 import type { GrowthCategoryId } from '../../../types/growth'
 import type { ProductRepository } from './ProductRepository'
 import { createStaticProductRepository } from '../store/staticProductRepository'
+import { createStudioProductRepository } from '../store/studioProductRepository'
+import { createCompositeProductRepository } from '../store/compositeProductRepository'
 
 // The Website's single entry point for reading products — every
 // marketing-site page and component is expected to depend on this instead
@@ -99,4 +101,9 @@ export function createProductCatalogService(repository: ProductRepository): Prod
 
 // Ready-to-use singleton every Website page/component reads through —
 // backed by the Static Product Repository (see store/staticProductRepository.ts).
-export const productCatalogService: ProductCatalogService = createProductCatalogService(createStaticProductRepository())
+// Real Studio-published Workspaces first (Portal database), then the
+// example products (data/products/staticProducts.ts), which stay until
+// there are enough real ones — the user's decision, 27/09/2026.
+export const productCatalogService: ProductCatalogService = createProductCatalogService(
+  createCompositeProductRepository([createStudioProductRepository(), createStaticProductRepository()]),
+)

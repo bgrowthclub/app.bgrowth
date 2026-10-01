@@ -3,6 +3,8 @@ import { getSystemBySlug } from '../data/systems'
 import { getMemberPrice } from './checkout'
 import type { Product } from '../modules/commerce/types/product'
 import type { BusinessSystem } from '../types/system'
+import type { SectionConfig } from '../modules/workspace/types/content'
+import { studioWorkspaceService } from '../modules/workspace/services/studioWorkspaceService'
 
 // Resolves a product's underlying BusinessSystem when it's GrowthSystem-
 // sourced — the one place every marketing-site page bridges Commerce's
@@ -60,6 +62,28 @@ export function systemForCard(pair: PublishedSystemProduct): BusinessSystem {
     price: product.basePrice,
     memberPrice: getMemberPrice(product),
   }
+}
+
+// Workspaces published from BGrowth Studio (Portal database) — rendered
+// with StudioWorkspaceCard, since they have no BusinessSystem behind them.
+// The catalog lists them first (see ProductCatalogService.ts).
+export function isStudioWorkspaceProduct(product: Product): boolean {
+  return product.source?.type === 'StudioWorkspace'
+}
+
+// The published steps of a Studio Workspace, for its product page's
+// "What's inside" preview. Empty when the content isn't available.
+export async function loadStudioWorkspaceOutline(slug: string): Promise<SectionConfig[]> {
+  try {
+    const row = await studioWorkspaceService.getProductBySlug(slug)
+    return row?.content?.sections ?? []
+  } catch {
+    return []
+  }
+}
+
+export async function loadStudioWorkspaceProducts(): Promise<Product[]> {
+  return (await productCatalogService.getAll()).filter(isStudioWorkspaceProduct)
 }
 
 // The Homepage's featured row — see ProductCatalogService.getFeatured().

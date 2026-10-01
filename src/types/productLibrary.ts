@@ -3,6 +3,7 @@ import type { ProductType } from '../modules/commerce/types/product'
 import type { Purchase } from '../modules/commerce/types/purchase'
 import type { ProductAccess } from '../modules/commerce/types/access'
 import type { UserProgress } from '../modules/identity/types/user'
+import type { ContentSourceType } from '../modules/commerce/types/contentSource'
 
 // One member's owned/accessible instance of any BGrowth product — the
 // Product Library's view-model ("My Workspaces" today; the same shape will
@@ -43,6 +44,15 @@ export interface UserProduct {
   access: ProductAccess
   lastOpenedAt?: string // ISO date string — omitted if never opened
   progress?: UserProgress
+  // The product's cover (Studio-published Workspaces have one); cards fall
+  // back to the category icon tile when absent.
+  coverImage?: string
+  // Where the product's content lives — decides which runtime opens it
+  // (see lib/productLibrary.ts getProductActionRoute).
+  sourceType?: ContentSourceType
+  // Access has ended (a finished trial) — listed like the Portal's My
+  // Library does, with Buy Workspace instead of Open.
+  expired?: boolean
 }
 
 export type ProductLibraryStatus = 'not-started' | 'in-progress' | 'completed'

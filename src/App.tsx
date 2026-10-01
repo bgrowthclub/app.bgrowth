@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import AppLayout from './components/layout/AppLayout'
 import HomePage from './pages/HomePage'
@@ -30,6 +31,10 @@ import ProfilePage from './pages/platform/ProfilePage'
 import MembershipPage from './pages/platform/MembershipPage'
 import SettingsPage from './pages/platform/SettingsPage'
 import SupportPage from './pages/platform/SupportPage'
+import MyDocumentsPage from './pages/platform/MyDocumentsPage'
+// Lazy: the Workspace viewer carries the full icon set and the PDF engine,
+// so it loads only when a member actually opens a Workspace.
+const WorkspaceViewerPage = lazy(() => import('./pages/platform/WorkspaceViewerPage'))
 import LoginPage from './pages/auth/LoginPage'
 import RegisterPage from './pages/auth/RegisterPage'
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage'
@@ -126,6 +131,16 @@ export default function App() {
         <Route index element={<Navigate to="/platform/dashboard" replace />} />
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="my-systems" element={<MyBusinessSystemsPage />} />
+        <Route path="documents" element={<MyDocumentsPage />} />
+        {/* A Studio-published Workspace, opened and filled in (Portal data). */}
+        <Route
+          path="workspace/:slug"
+          element={
+            <Suspense fallback={null}>
+              <WorkspaceViewerPage />
+            </Suspense>
+          }
+        />
         <Route path="academy" element={<AcademyPage />} />
         <Route path="community" element={<CommunityPage />} />
         <Route path="marketplace" element={<MarketplacePage />} />

@@ -3,9 +3,11 @@ import type { RefObject } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react'
 import WorkspaceCoverCard from '../systems/WorkspaceCoverCard'
+import StudioWorkspaceCard from '../systems/StudioWorkspaceCard'
 import SectionHeader from '../ui/SectionHeader'
 import Button from '../ui/Button'
-import { loadFeaturedSystemProducts, systemForCard } from '../../lib/publishedCatalog'
+import { loadFeaturedSystemProducts, loadStudioWorkspaceProducts, systemForCard } from '../../lib/publishedCatalog'
+import type { Product } from '../../modules/commerce/types/product'
 import { fadeUp, viewportOnce } from '../../lib/motion'
 
 // Lets a vertical mouse-wheel gesture drive the horizontal carousel — same
@@ -82,10 +84,17 @@ export default function StartHere() {
   // published it and marked it Featured. See lib/publishedCatalog.ts.
   const [workspaces, setWorkspaces] = useState<Awaited<ReturnType<typeof loadFeaturedSystemProducts>>>([])
 
+  // Every Workspace published from BGrowth Studio leads the row, before
+  // the featured examples.
+  const [studioProducts, setStudioProducts] = useState<Product[]>([])
+
   useEffect(() => {
     let cancelled = false
     loadFeaturedSystemProducts().then((pairs) => {
       if (!cancelled) setWorkspaces(pairs)
+    })
+    loadStudioWorkspaceProducts().then((products) => {
+      if (!cancelled) setStudioProducts(products)
     })
     return () => {
       cancelled = true
@@ -116,6 +125,19 @@ export default function StartHere() {
           ref={trackRef}
           className="container-px flex cursor-grab snap-x snap-mandatory gap-5 overflow-x-auto pb-2 pt-1 active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
+          {studioProducts.map((product, i) => (
+            <motion.div
+              key={product.id}
+              variants={fadeUp}
+              custom={i}
+              initial="hidden"
+              whileInView="show"
+              viewport={viewportOnce}
+              className="w-[260px] shrink-0 sm:w-[300px] lg:w-[320px]"
+            >
+              <StudioWorkspaceCard product={product} />
+            </motion.div>
+          ))}
           {workspaces.map((pair, i) => (
             <motion.div
               key={pair.product.id}

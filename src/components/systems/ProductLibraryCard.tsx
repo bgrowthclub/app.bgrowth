@@ -44,7 +44,7 @@ export default function ProductLibraryCard({ product, size = 'default' }: Props)
   const featured = size === 'featured'
   const library = size === 'library'
   const Icon = product.icon
-  const actionLabel = featured ? 'Continue' : getProductActionLabel(product.type)
+  const actionLabel = product.expired ? 'Buy Workspace' : featured ? 'Continue' : getProductActionLabel(product.type)
   const actionRoute = getProductActionRoute(product)
   const status = getProductLibraryStatus(product)
 
@@ -54,21 +54,31 @@ export default function ProductLibraryCard({ product, size = 'default' }: Props)
         featured ? 'md:flex-row md:hover:-translate-y-0' : ''
       }`}
     >
-      {/* Cover — icon tile stands in until Studio provides a real thumbnail */}
-      <div
-        className={`grid shrink-0 place-items-center bg-grad-primary text-white ${
-          featured ? 'h-40 md:h-auto md:w-64' : 'h-32'
-        }`}
-      >
-        <Icon size={featured ? 44 : 30} strokeWidth={1.7} />
-      </div>
+      {/* Cover — Studio's cover image when there is one, otherwise the icon tile */}
+      {product.coverImage ? (
+        <div className={`shrink-0 overflow-hidden bg-bg-soft ${featured ? 'h-40 md:h-auto md:w-64' : 'h-32'}`}>
+          <img src={product.coverImage} alt="" className="h-full w-full object-cover" />
+        </div>
+      ) : (
+        <div
+          className={`grid shrink-0 place-items-center bg-grad-primary text-white ${
+            featured ? 'h-40 md:h-auto md:w-64' : 'h-32'
+          }`}
+        >
+          <Icon size={featured ? 44 : 30} strokeWidth={1.7} />
+        </div>
+      )}
 
       <div className={`flex flex-1 flex-col p-6 ${featured ? 'md:p-8' : ''}`}>
         <div className={`flex flex-wrap items-center gap-2 ${library ? 'justify-between' : ''}`}>
           <Badge variant="soft">{product.tag}</Badge>
           {library ? (
-            <span className={`rounded-full px-2.5 py-1 text-[10.5px] font-semibold ${STATUS_CLASS[status]}`}>
-              {STATUS_LABEL[status]}
+            <span
+              className={`rounded-full px-2.5 py-1 text-[10.5px] font-semibold ${
+                product.expired ? 'bg-navy/[0.06] text-navy/50' : STATUS_CLASS[status]
+              }`}
+            >
+              {product.expired ? 'Trial Ended' : STATUS_LABEL[status]}
             </span>
           ) : (
             product.subTag && <Badge variant="outline">{product.subTag}</Badge>
@@ -90,7 +100,9 @@ export default function ProductLibraryCard({ product, size = 'default' }: Props)
         {library ? (
           <div className="mt-4 space-y-1.5 border-t border-navy/[0.06] pt-4 text-[12px]">
             <div className="flex items-center justify-between">
-              <span className="text-navy/40">Purchased</span>
+              <span className="text-navy/40">
+                {product.access.source === 'trial' ? 'Trial started' : product.access.source === 'gift' ? 'Access since' : 'Purchased'}
+              </span>
               <span className="font-medium text-navy/60">{formatDate(product.purchase.createdAt)}</span>
             </div>
             <div className="flex items-center justify-between">

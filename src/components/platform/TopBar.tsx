@@ -12,7 +12,7 @@ interface Props {
 
 export default function TopBar({ onOpenMobileSidebar }: Props) {
   return (
-    <header className="sticky top-0 z-30 border-b border-navy/[0.06] bg-white/90 backdrop-blur-xl">
+    <header className="no-print sticky top-0 z-30 border-b border-navy/[0.06] bg-white/90 backdrop-blur-xl">
       <div className="flex items-center gap-3 px-4 py-3 md:px-6">
         <button
           onClick={onOpenMobileSidebar}

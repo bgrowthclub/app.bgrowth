@@ -517,6 +517,35 @@ that page (see CLAUDE.md §3 on not silently upgrading this phase).
    are the same `User` type, just with different fields populated —
    no separate "creator account" type is needed.
 
+## 8a. Studio Workspaces (Portal data) — Sprint 38
+
+Workspaces built in BGrowth Studio are published to the Portal's database
+(`portal.products`, with the public list in `portal.catalog_index`). This
+site now reads them directly, with the same Supabase session as sign-in:
+
+- **Catalog.** `commerce/store/studioProductRepository.ts` maps each
+  published Workspace onto Commerce's `Product` (`source.type =
+  'StudioWorkspace'`, id `studio-<portal id>`, cover → `assets.thumbnail`,
+  optional marketing fields from `products.metadata`). A composite
+  repository lists them before the static example products.
+  `StudioWorkspaceCard` renders them on Browse and Home;
+  `ProductPage` shows their real steps (`StudioWorkspaceOutline`) and
+  `StudioPurchaseCard` (Open Workspace when owned; otherwise the Portal's
+  product page, until checkout moves here).
+- **Ownership.** `workspace/services/studioAccess.ts` turns licenses and
+  access grants into `ProductAccess` (same OR-rule as
+  `portal.has_workspace_access()`), merged into My Workspaces with covers.
+- **Viewer.** `/platform/workspace/:slug` (lazy route) —
+  `components/workspace/` is the Portal's Document V1 runtime, restyled
+  with this site's tokens: one step open at a time, progress, named saved
+  records (`workspace_instances`), Print and Download PDF through the same
+  document design and html2pdf options as Portal and Studio. The accent
+  color comes from each Workspace (`workspace-*` tokens).
+- **Not the BusinessSystem Runtime.** The BusinessSystem Runtime
+  (`/system/*`) keeps rendering the example systems in `data/systems.ts`;
+  Studio's Workspace JSON is a different content model and has its own
+  viewer rather than being bent into `BusinessSystem`.
+
 ## 9. BGrowth Commerce™ Architecture
 
 **Current, pre-Commerce-module state:** commerce fields (`price`,
