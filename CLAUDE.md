@@ -122,8 +122,12 @@ This repo is a **static, client-only MVP**:
   choice), a member's licenses/grants fill My Workspaces, and
   `/platform/workspace/:slug` opens and saves them (`workspace_instances`)
   with the Studio Workspace viewer ported from the Portal (see
-  ARCHITECTURE.md §8a). Checkout is still not here: buying a Studio
-  Workspace links to BGrowth Portal (step 4 brings it in).
+  ARCHITECTURE.md §8a). **Since Sprint 44 Studio Workspaces are bought
+  here too** (step 4, approved by the user): `api/studio-checkout.ts`
+  mirrors the Portal's checkout (free → instant license; paid → Stripe
+  Checkout with the same metadata), the Portal's existing Stripe webhook
+  grants the license, and the one free trial starts from the product
+  page. The Portal keeps selling in parallel until the site replaces it.
 - Business System catalog data is hardcoded TypeScript (`src/data/`),
   standing in for a future export from **BGrowth Studio**. It covers only
   the Business & Entrepreneurship Growth Category today (see §2).
@@ -615,6 +619,11 @@ rules are permanent, not specific to whichever milestone introduced them:
   Club, Workspace, Creator, Business, Enterprise) live in one place,
   `types/membership.ts` — a new tier is a new entry there, never a
   separate ad hoc "plan" shape.
+- **The one sanctioned exception (Sprint 44):** `api/studio-checkout.ts`
+  calls Stripe directly, deliberately mirroring the Portal's own
+  checkout so both sell Studio Workspaces identically while both are
+  live. It stays server-side and self-contained; folding it into a
+  `ProviderAdapter` is part of retiring the Portal.
 - **Never implement a `ProviderAdapter`, checkout flow, webhook, or
   backend persistence without explicit user direction.** Milestone 5.1
   built the architecture only — see CLAUDE.md §3 on this repo's current

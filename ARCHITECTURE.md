@@ -541,6 +541,18 @@ site now reads them directly, with the same Supabase session as sign-in:
   records (`workspace_instances`), Print and Download PDF through the same
   document design and html2pdf options as Portal and Studio. The accent
   color comes from each Workspace (`workspace-*` tokens).
+- **Buying (Sprint 44).** `api/studio-checkout.ts` (server, Vercel
+  function) mirrors the Portal's `api/checkout/create-session.ts`: free →
+  `grant_purchased_license()`; paid → Stripe Checkout Session in the same
+  Stripe account with the same metadata (`userId`, `productId`,
+  `productSlug`), success back to `/product/:slug?checkout=success`, where
+  the page waits for the license. The **Portal's** Stripe webhook grants it
+  — one webhook for both sites until the Portal is retired, then it moves
+  here. The free trial is the Portal's client-side insert (one per member,
+  enforced by the database). Needs `SUPABASE_URL`,
+  `SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET_KEY` (server-only) in Vercel.
+  Not yet here: the Portal's confirmation e-mails for free claims and
+  trials (paid purchases still get the Portal's e-mail via its webhook).
 - **Not the BusinessSystem Runtime.** The BusinessSystem Runtime
   (`/system/*`) keeps rendering the example systems in `data/systems.ts`;
   Studio's Workspace JSON is a different content model and has its own

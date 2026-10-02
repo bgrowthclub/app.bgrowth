@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams, Link, Navigate } from 'react-router-dom'
+import { useParams, useSearchParams, Link, Navigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { CheckSquare, Square } from 'lucide-react'
 import Badge from '../components/ui/Badge'
@@ -17,7 +17,8 @@ import StudioWorkspaceOutline from '../components/systems/StudioWorkspaceOutline
 import { productCatalogService } from '../modules/commerce/services/ProductCatalogService'
 import { isStudioWorkspaceProduct, loadStudioWorkspaceOutline, resolveProductSystem } from '../lib/publishedCatalog'
 import { useIdentity } from '../modules/identity/IdentityContext'
-import { portalProductUrl, workspaceViewerPath } from '../modules/workspace/config'
+import { workspaceViewerPath } from '../modules/workspace/config'
+import { useStudioPurchase } from '../modules/workspace/hooks/useStudioPurchase'
 import type { SectionConfig } from '../modules/workspace/types/content'
 import { DEFAULT_WORKSPACE_SLUG } from '../data/workspaceCategories'
 import type { Product } from '../modules/commerce/types/product'
@@ -40,6 +41,9 @@ export default function ProductPage() {
   const [product, setProduct] = useState<Product | null | undefined>(undefined)
   const [outline, setOutline] = useState<SectionConfig[]>([])
   const { user } = useIdentity()
+  const [searchParams] = useSearchParams()
+  // Studio Workspaces: ownership, trial and checkout (no-op for other products).
+  const purchase = useStudioPurchase(slug, user?.id, searchParams.get('checkout'))
 
   useEffect(() => {
     let cancelled = false
@@ -70,16 +74,24 @@ export default function ProductPage() {
   const heroDescription = product.longDescription ?? product.description
   const whatsIncluded = product.whatsIncluded ?? []
   const resources = system?.resources ?? []
-  // Published from BGrowth Studio (Portal database): bought on the Portal
-  // for now, opened in this site's Workspace viewer once owned.
+  // Published from BGrowth Studio (Portal database): bought, claimed free
+  // or trialled right here, opened in this site's Workspace viewer.
   const studio = isStudioWorkspaceProduct(product)
-  const owned = Boolean(user?.ownedProducts.includes(product.slug))
   const studioCard = (className?: string) => (
     <StudioPurchaseCard
       product={product}
-      owned={owned}
+      status={purchase.loading ? 'loading' : purchase.info?.owned ? 'owned' : 'available'}
+      signedIn={Boolean(user)}
+      trialDays={purchase.info?.trialDays}
+      canStartTrial={Boolean(purchase.info?.canStartTrial)}
+      trialActive={purchase.info?.accessState === 'trial'}
+      busy={purchase.busy}
+      confirming={purchase.confirming}
+      error={purchase.error}
       openTo={workspaceViewerPath(product.slug)}
-      getHref={portalProductUrl(product.slug)}
+      signInTo="/login"
+      onBuy={purchase.buy}
+      onStartTrial={purchase.startTrial}
       className={className}
     />
   )

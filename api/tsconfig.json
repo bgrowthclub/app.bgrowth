@@ -9,7 +9,7 @@
     "isolatedModules": true,
     "noEmit": true,
     "strict": true,
-    "types": ["node"]
+    "types": ["node", "vite/client"]
   },
   "include": ["**/*.ts", "../src/modules/commerce/**/*.ts", "../src/types/**/*.ts"]
 }
