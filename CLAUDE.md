@@ -128,6 +128,12 @@ This repo is a **static, client-only MVP**:
   Checkout with the same metadata), the Portal's existing Stripe webhook
   grants the license, and the one free trial starts from the product
   page. The Portal keeps selling in parallel until the site replaces it.
+  **Since Sprint 46 the site has an Admin area** (step 7, approved by
+  the user): `/platform/admin/*` (short link `/admin`), shown only to
+  members listed in `portal.website_admins` (`User.isAdmin`, gated by
+  `AdminRoute`). It lists members and manages their licenses, trials and
+  manual access grants through `api/admin.ts`, which re-checks the admin
+  table with the service role on every request (see ARCHITECTURE.md §8b).
 - Business System catalog data is hardcoded TypeScript (`src/data/`),
   standing in for a future export from **BGrowth Studio**. It covers only
   the Business & Entrepreneurship Growth Category today (see §2).
@@ -679,6 +685,11 @@ live in `IdentityContext.ts`. The Supabase SDK is imported only inside
   Sprint 35 connected sign-in only; the member's data is read from
   `portal.users`/`licenses`/`access_grants` under the Portal's row-level
   security, never with a service-role key in the browser.
+- **Admin writes go only through `api/admin.ts`.** The Admin area
+  (`src/modules/admin/`, `pages/platform/admin/`) never queries Supabase
+  directly; the endpoint verifies the caller against
+  `portal.website_admins` on every request. A new admin capability is a
+  new `resource` there, never a browser-side write.
 
 ## 18. Things Claude Should NEVER Do
 

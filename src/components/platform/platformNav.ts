@@ -10,6 +10,7 @@ import {
   BookOpen,
   Settings,
   LifeBuoy,
+  UserCog,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -30,6 +31,9 @@ export interface PlatformNavItem {
 export interface PlatformNavGroup {
   label?: string
   items: PlatformNavItem[]
+  // Shown only to BGrowth administrators (User.isAdmin) — see Sidebar.tsx.
+  // The routes themselves are gated by AdminRoute and the server.
+  adminOnly?: boolean
 }
 
 export const PLATFORM_NAV_GROUPS: PlatformNavGroup[] = [
@@ -74,5 +78,10 @@ export const PLATFORM_NAV_GROUPS: PlatformNavGroup[] = [
       { label: 'Settings', to: '/platform/settings', icon: Settings },
       { label: 'Support', to: '/platform/support', icon: LifeBuoy },
     ],
+  },
+  {
+    label: 'Admin',
+    adminOnly: true,
+    items: [{ label: 'Members', to: '/platform/admin/members', icon: UserCog }],
   },
 ]
