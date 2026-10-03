@@ -11,6 +11,7 @@ import {
   Settings,
   LifeBuoy,
   UserCog,
+  Receipt,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -82,6 +83,9 @@ export const PLATFORM_NAV_GROUPS: PlatformNavGroup[] = [
   {
     label: 'Admin',
     adminOnly: true,
-    items: [{ label: 'Members', to: '/platform/admin/members', icon: UserCog }],
+    items: [
+      { label: 'Members', to: '/platform/admin/members', icon: UserCog },
+      { label: 'Sales', to: '/platform/admin/sales', icon: Receipt },
+    ],
   },
 ]

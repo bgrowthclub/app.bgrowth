@@ -65,3 +65,26 @@ export interface NewGrantInput {
 }
 
 export type CreateGrantResult = { grant: AdminGrant } | { requiresConfirmation: true; warning: string }
+
+// One paid Stripe Checkout (Website or Portal) — amounts in cents.
+export interface AdminSale {
+  id: string
+  createdAt: string
+  amount: number
+  currency: string
+  // Cents refunded so far; null when the Stripe key can't read refunds.
+  refunded: number | null
+  email: string | null
+  userId: string | null
+  productSlug: string | null
+  productName: string | null
+  source: 'website' | 'portal'
+}
+
+export interface AdminSalesReport {
+  sales: AdminSale[]
+  since: string
+  months: number
+  refundsAvailable: boolean
+  truncated: boolean
+}
