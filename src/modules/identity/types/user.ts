@@ -74,6 +74,10 @@ export interface User {
   settings: UserSettings
   createdAt: string
   updatedAt: string
+  // A BGrowth staff administrator of the Website (a row in
+  // portal.website_admins) — unlocks the Admin area. Not an organization
+  // role: those are FutureRoles (types/future.ts). Absent = not an admin.
+  isAdmin?: boolean
   // Escape hatch for a field a future product needs before this interface
   // is formally extended — never read ad hoc without adding the field
   // properly once its shape is known.

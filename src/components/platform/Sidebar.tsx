@@ -3,6 +3,7 @@ import { PanelLeftClose, PanelLeft, X } from 'lucide-react'
 import logo from '../../assets/logo.png'
 import SidebarGroup from './SidebarGroup'
 import { PLATFORM_NAV_GROUPS } from './platformNav'
+import { useIdentity } from '../../modules/identity/IdentityContext'
 
 interface Props {
   collapsed: boolean
@@ -12,9 +13,11 @@ interface Props {
 }
 
 function SidebarBody({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
+  const { user } = useIdentity()
+  const groups = PLATFORM_NAV_GROUPS.filter((group) => !group.adminOnly || user?.isAdmin)
   return (
     <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
-      {PLATFORM_NAV_GROUPS.map((group, i) => (
+      {groups.map((group, i) => (
         <SidebarGroup key={group.label ?? i} group={group} collapsed={collapsed} onNavigate={onNavigate} />
       ))}
     </nav>

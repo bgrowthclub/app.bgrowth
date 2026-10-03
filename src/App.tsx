@@ -32,6 +32,9 @@ import MembershipPage from './pages/platform/MembershipPage'
 import SettingsPage from './pages/platform/SettingsPage'
 import SupportPage from './pages/platform/SupportPage'
 import MyDocumentsPage from './pages/platform/MyDocumentsPage'
+import AdminMembersPage from './pages/platform/admin/AdminMembersPage'
+import AdminMemberPage from './pages/platform/admin/AdminMemberPage'
+import AdminRoute from './modules/identity/routing/AdminRoute'
 // Lazy: the Workspace viewer carries the full icon set and the PDF engine,
 // so it loads only when a member actually opens a Workspace.
 const WorkspaceViewerPage = lazy(() => import('./pages/platform/WorkspaceViewerPage'))
@@ -106,6 +109,8 @@ export default function App() {
         {/* Long-standing linked-but-unrouted gap (see CLAUDE.md) — now
             resolves into the Workspace Account Area that already exists. */}
         <Route path="/account" element={<Navigate to="/platform/profile" replace />} />
+        {/* Short address for the Admin area (inside the Workspace shell). */}
+        <Route path="/admin" element={<Navigate to="/platform/admin" replace />} />
 
         {/* Catch-all — must stay last. Matches any URL nothing else in this
             file matches (including a stray /platform/* or /studio/* path
@@ -150,6 +155,11 @@ export default function App() {
         <Route path="membership" element={<MembershipPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="support" element={<SupportPage />} />
+        {/* Admin — BGrowth administrators only (portal.website_admins),
+            re-checked by api/admin.ts on every request. */}
+        <Route path="admin" element={<AdminRoute><Navigate to="/platform/admin/members" replace /></AdminRoute>} />
+        <Route path="admin/members" element={<AdminRoute><AdminMembersPage /></AdminRoute>} />
+        <Route path="admin/members/:id" element={<AdminRoute><AdminMemberPage /></AdminRoute>} />
       </Route>
 
       {/* BGrowth Studio — a deliberate, explicit third layout. This is the

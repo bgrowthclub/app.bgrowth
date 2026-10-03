@@ -61,13 +61,23 @@ async function loadProfile(supabase: PortalClient, userId: string): Promise<Prof
   return data as ProfileRow | null
 }
 
+// True when this member is a Website administrator. The table only lets a
+// member read their own row; any failure (including the table not existing
+// yet) simply means "not an admin" — the server re-checks every admin call.
+async function loadIsAdmin(supabase: PortalClient, userId: string): Promise<boolean> {
+  const { data, error } = await supabase.from('website_admins').select('user_id').eq('user_id', userId).maybeSingle()
+  if (error) throw error
+  return Boolean(data)
+}
+
 // Builds BGrowth Identity™'s User from a real Supabase account. Profile and
 // ownership are read best-effort: if either read fails the member is still
 // signed in, just with nothing owned shown yet.
 export async function loadPortalMember(supabase: PortalClient, authUser: AuthUser): Promise<User> {
-  const [profile, ownedProducts] = await Promise.all([
+  const [profile, ownedProducts, isAdmin] = await Promise.all([
     loadProfile(supabase, authUser.id).catch(() => null),
     loadOwnedProductSlugs(supabase, authUser.id).catch(() => [] as string[]),
+    loadIsAdmin(supabase, authUser.id).catch(() => false),
   ])
 
   const email = authUser.email ?? ''
@@ -95,5 +105,6 @@ export async function loadPortalMember(supabase: PortalClient, authUser: AuthUse
     settings: DEFAULT_SETTINGS,
     createdAt: profile?.created_at ?? authUser.created_at,
     updatedAt: authUser.updated_at ?? authUser.created_at,
+    isAdmin,
   }
 }

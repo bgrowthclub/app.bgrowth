@@ -558,6 +558,29 @@ site now reads them directly, with the same Supabase session as sign-in:
   Studio's Workspace JSON is a different content model and has its own
   viewer rather than being bent into `BusinessSystem`.
 
+## 8b. Website Administration — Sprint 46
+
+Step 7 of absorbing the Portal. The Admin area lives inside the Workspace
+shell (no new layout): `/platform/admin/members` (list, search) and
+`/platform/admin/members/:id` (one member), reached from an "Admin"
+sidebar group that `platformNav.ts` marks `adminOnly`.
+
+- **Who is an admin:** a row in `portal.website_admins` (Portal migration
+  0030; separate from Studio's `studio_admins`, as 0022 anticipated).
+  `portalMember.ts` reads the member's own row (RLS allows only that) into
+  `User.isAdmin`; `AdminRoute` sends everyone else to the Dashboard.
+- **Every admin call** goes to `api/admin.ts` (one function, `?resource=`)
+  with the admin's access token; the server re-checks the table with the
+  service role before doing anything.
+- **What it manages:** licenses (extend or change a trial's end date, end
+  access, restore, record a purchase via `grant_purchased_license`) and
+  manual access grants (one Workspace or all, optional end date, note,
+  revoke — the same duplicate rules as Studio's Access Management; grants
+  are never deleted). Documents are never touched.
+- **Planned next** (user's plan): dashboard (MRR, churn, revenue), orders
+  and revenue from Stripe, plans and prices with promotional prices,
+  catalog management, system health.
+
 ## 9. BGrowth Commerce™ Architecture
 
 **Current, pre-Commerce-module state:** commerce fields (`price`,
