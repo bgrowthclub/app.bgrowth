@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import ConfirmDialog from '../ui/ConfirmDialog'
 import type { AdminLicense } from '../../modules/admin/types'
 import { INPUT, LINK_BUTTON, endOfDayIso, formatDate, pillClass, todayInput } from './styles'
 import type { Tone } from './styles'
@@ -33,6 +34,7 @@ const TYPE_LABEL: Record<AdminLicense['type'], string> = {
 // about it: move the end date, end it now, or restore an ended one.
 export default function AdminLicenseRow({ license, documents, busy, onExtend, onEnd, onRestore }: Props) {
   const [editing, setEditing] = useState(false)
+  const [confirming, setConfirming] = useState(false)
   const [date, setDate] = useState(todayInput(7))
   const status = describe(license)
   const lifetime = license.access_policy === 'lifetime'
@@ -70,9 +72,7 @@ export default function AdminLicenseRow({ license, documents, busy, onExtend, on
           <button
             type="button"
             disabled={busy}
-            onClick={() => {
-              if (window.confirm(`End access to “${license.products?.name ?? 'this Workspace'}” now? Their documents are kept.`)) onEnd()
-            }}
+            onClick={() => setConfirming(true)}
             className={`${LINK_BUTTON} text-red-600 hover:bg-red-50`}
           >
             End access
@@ -109,6 +109,25 @@ export default function AdminLicenseRow({ license, documents, busy, onExtend, on
           </button>
         </form>
       )}
+
+      <ConfirmDialog
+        open={confirming}
+        tone="danger"
+        title={license.type === 'trial' ? 'End this trial now?' : 'End this access now?'}
+        description={
+          <>
+            <strong className="font-semibold text-navy">{license.products?.name ?? 'This Workspace'}</strong> will close
+            for this member right away. Everything they filled in is kept, and you can restore it any time.
+          </>
+        }
+        confirmLabel="End access"
+        busy={busy}
+        onCancel={() => setConfirming(false)}
+        onConfirm={() => {
+          setConfirming(false)
+          onEnd()
+        }}
+      />
     </div>
   )
 }

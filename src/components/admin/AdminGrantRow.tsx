@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import ConfirmDialog from '../ui/ConfirmDialog'
 import type { AdminGrant } from '../../modules/admin/types'
 import { LINK_BUTTON, formatDate, pillClass } from './styles'
 import type { Tone } from './styles'
@@ -23,6 +25,7 @@ function describe(grant: AdminGrant): { label: string; tone: Tone; active: boole
 // One manual access grant (given by an admin, not bought). Grants are
 // never deleted — revoking keeps the history.
 export default function AdminGrantRow({ grant, busy, onRevoke }: Props) {
+  const [confirming, setConfirming] = useState(false)
   const status = describe(grant)
   const target = grant.scope === 'all' ? 'All Workspaces' : grant.products?.name ?? 'Removed Workspace'
 
@@ -45,15 +48,33 @@ export default function AdminGrantRow({ grant, busy, onRevoke }: Props) {
           <button
             type="button"
             disabled={busy}
-            onClick={() => {
-              if (window.confirm(`Revoke access to ${target}? Their documents are kept.`)) onRevoke()
-            }}
+            onClick={() => setConfirming(true)}
             className={`${LINK_BUTTON} text-red-600 hover:bg-red-50`}
           >
             Revoke
           </button>
         </div>
       )}
+
+      <ConfirmDialog
+        open={confirming}
+        tone="danger"
+        title="Revoke this access?"
+        description={
+          <>
+            <strong className="font-semibold text-navy">{target}</strong> will close for this member right away, unless
+            they bought it or have another access. Everything they filled in is kept, and you can give access again
+            any time.
+          </>
+        }
+        confirmLabel="Revoke access"
+        busy={busy}
+        onCancel={() => setConfirming(false)}
+        onConfirm={() => {
+          setConfirming(false)
+          onRevoke()
+        }}
+      />
     </div>
   )
 }
