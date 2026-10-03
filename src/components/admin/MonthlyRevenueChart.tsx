@@ -17,11 +17,13 @@ const W = 720
 const H = 220
 const PAD = { top: 12, right: 8, bottom: 28, left: 52 }
 
-function niceMax(value: number) {
-  if (value <= 0) return 100
-  const magnitude = 10 ** Math.floor(Math.log10(value))
-  const step = [1, 2, 2.5, 5, 10].find((m) => m * magnitude >= value) ?? 10
-  return step * magnitude
+// Axis steps of 1, 2 or 5 × 10ⁿ cents, never under $1, so every tick label
+// is a whole-dollar value that reads exactly.
+function niceStep(value: number) {
+  const raw = Math.max(value / 4, 100)
+  const magnitude = 10 ** Math.floor(Math.log10(raw))
+  const m = [1, 2, 5, 10].find((f) => f * magnitude >= raw) ?? 10
+  return m * magnitude
 }
 
 // Net revenue per month — one series, so no legend: the section title names
@@ -29,12 +31,14 @@ function niceMax(value: number) {
 // the top, recessive grid, a tooltip per bar on hover or focus.
 export default function MonthlyRevenueChart({ months, formatMoney }: Props) {
   const [active, setActive] = useState<number | null>(null)
-  const max = niceMax(Math.max(...months.map((m) => m.amount), 0))
+  const top = Math.max(...months.map((m) => m.amount), 0)
+  const step = niceStep(top)
+  const max = Math.max(step, Math.ceil(top / step) * step)
   const plotW = W - PAD.left - PAD.right
   const plotH = H - PAD.top - PAD.bottom
   const slot = plotW / months.length
   const barW = Math.min(36, slot * 0.6)
-  const ticks = [0, 0.25, 0.5, 0.75, 1].map((t) => t * max)
+  const ticks = Array.from({ length: Math.round(max / step) + 1 }, (_, i) => i * step)
   const y = (v: number) => PAD.top + plotH - (v / max) * plotH
 
   const hovered = active === null ? null : months[active]
@@ -52,8 +56,8 @@ export default function MonthlyRevenueChart({ months, formatMoney }: Props) {
         ))}
         {months.map((m, i) => {
           const cx = PAD.left + slot * i + slot / 2
-          const top = y(m.amount)
-          const h = PAD.top + plotH - top
+          const barTop = y(m.amount)
+          const h = PAD.top + plotH - barTop
           const r = Math.min(4, h)
           const x0 = cx - barW / 2
           const x1 = cx + barW / 2
@@ -73,7 +77,7 @@ export default function MonthlyRevenueChart({ months, formatMoney }: Props) {
               <rect x={cx - slot / 2} y={PAD.top} width={slot} height={plotH} fill="transparent" />
               {h > 0 && (
                 <path
-                  d={`M${x0},${base} V${top + r} Q${x0},${top} ${x0 + r},${top} H${x1 - r} Q${x1},${top} ${x1},${top + r} V${base} Z`}
+                  d={`M${x0},${base} V${barTop + r} Q${x0},${barTop} ${x0 + r},${barTop} H${x1 - r} Q${x1},${barTop} ${x1},${barTop + r} V${base} Z`}
                   className={active === i ? 'fill-primary' : 'fill-primary/75'}
                 />
               )}
