@@ -5,6 +5,8 @@ export interface MonthPoint {
   label: string // "Oct"
   fullLabel: string // "October 2026"
   amount: number // cents, net of refunds
+  gross: number // cents, before refunds
+  refunded: number // cents
   orders: number
 }
 
@@ -70,7 +72,7 @@ export default function MonthlyRevenueChart({ months, formatMoney }: Props) {
               onMouseLeave={() => setActive(null)}
               onFocus={() => setActive(i)}
               onBlur={() => setActive(null)}
-              aria-label={`${m.fullLabel}: ${formatMoney(m.amount)}, ${m.orders} orders`}
+              aria-label={`${m.fullLabel}: ${formatMoney(m.amount)} net, ${m.orders} orders`}
               className="outline-none"
             >
               {/* Hit target wider and taller than the bar. */}
@@ -91,13 +93,18 @@ export default function MonthlyRevenueChart({ months, formatMoney }: Props) {
 
       {hovered && active !== null && (
         <div
-          className="pointer-events-none absolute top-0 z-10 -translate-x-1/2 rounded-xl border border-navy/[0.08] bg-white px-3 py-2 text-[12px] shadow-soft"
-          style={{ left: `${((PAD.left + slot * active + slot / 2) / W) * 100}%` }}
+          className="pointer-events-none absolute top-0 z-10 -translate-x-1/2 whitespace-nowrap rounded-xl border border-navy/[0.08] bg-white px-3 py-2 text-[12px] shadow-soft"
+          style={{ left: `${Math.min(86, Math.max(14, ((PAD.left + slot * active + slot / 2) / W) * 100))}%` }}
         >
           <p className="font-semibold text-navy">{hovered.fullLabel}</p>
           <p className="text-navy/60">
-            {formatMoney(hovered.amount)} · {hovered.orders} {hovered.orders === 1 ? 'order' : 'orders'}
+            {formatMoney(hovered.amount)} net · {hovered.orders} {hovered.orders === 1 ? 'order' : 'orders'}
           </p>
+          {hovered.refunded > 0 && (
+            <p className="text-navy/45">
+              {formatMoney(hovered.gross)} gross − {formatMoney(hovered.refunded)} refunded
+            </p>
+          )}
         </div>
       )}
     </div>

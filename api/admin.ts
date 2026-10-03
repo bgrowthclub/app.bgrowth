@@ -323,6 +323,8 @@ interface SaleRow {
   productSlug: string | null
   productName: string | null
   source: 'website' | 'portal'
+  // Opens the payment in the Stripe Dashboard.
+  stripeUrl: string | null
 }
 
 function refundedOf(session: Stripe.Checkout.Session): number | null {
@@ -384,6 +386,10 @@ async function listSales(db: Db) {
       productSlug: slug,
       productName: slug ? names[slug] ?? slug : null,
       source: s.metadata?.source === 'website' ? 'website' : 'portal',
+      stripeUrl: (() => {
+        const pi = typeof s.payment_intent === 'string' ? s.payment_intent : s.payment_intent?.id
+        return pi ? `https://dashboard.stripe.com/${s.livemode ? '' : 'test/'}payments/${pi}` : null
+      })(),
     }
   })
 

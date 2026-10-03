@@ -79,6 +79,7 @@ export interface AdminSale {
   productSlug: string | null
   productName: string | null
   source: 'website' | 'portal'
+  stripeUrl: string | null
 }
 
 export interface AdminSalesReport {
