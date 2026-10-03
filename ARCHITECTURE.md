@@ -577,9 +577,16 @@ sidebar group that `platformNav.ts` marks `adminOnly`.
   manual access grants (one Workspace or all, optional end date, note,
   revoke — the same duplicate rules as Studio's Access Management; grants
   are never deleted). Documents are never touched.
-- **Planned next** (user's plan): dashboard (MRR, churn, revenue), orders
-  and revenue from Stripe, plans and prices with promotional prices,
-  catalog management, system health.
+- **Sales (Sprint 47):** `/platform/admin/sales` reads paid Checkout
+  Sessions of the last 12 months straight from Stripe (`?resource=sales`;
+  Website and Portal share the account — `metadata.source = 'website'`
+  tells them apart). Month totals, net revenue chart, searchable orders
+  linked to the member. Refunds show only when `STRIPE_SECRET_KEY` can read
+  PaymentIntents/Charges. There is no orders table: Stripe stays the
+  source of truth until subscriptions need one.
+- **Planned next** (user's plan): plans and subscriptions (with
+  promotional prices) and the dashboard they unlock (MRR, churn), catalog
+  management, system health.
 
 ## 9. BGrowth Commerce™ Architecture
 

@@ -5,6 +5,7 @@ import type {
   AdminMemberDetail,
   AdminMemberPage,
   AdminProduct,
+  AdminSalesReport,
   CreateGrantResult,
   NewGrantInput,
 } from './types'
@@ -38,6 +39,9 @@ export const adminService = {
   },
   getMember(id: string) {
     return call<AdminMemberDetail>('GET', 'member', { id })
+  },
+  listSales() {
+    return call<AdminSalesReport>('GET', 'sales')
   },
   async listProducts() {
     return (await call<{ products: AdminProduct[] }>('GET', 'products')).products

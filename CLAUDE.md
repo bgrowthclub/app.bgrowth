@@ -134,6 +134,7 @@ This repo is a **static, client-only MVP**:
   `AdminRoute`). It lists members and manages their licenses, trials and
   manual access grants through `api/admin.ts`, which re-checks the admin
   table with the service role on every request (see ARCHITECTURE.md §8b).
+  Since Sprint 47 it also shows Sales, read from Stripe by that endpoint.
 - Business System catalog data is hardcoded TypeScript (`src/data/`),
   standing in for a future export from **BGrowth Studio**. It covers only
   the Business & Entrepreneurship Growth Category today (see §2).

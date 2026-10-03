@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import Stripe from 'stripe'
 
 // BGrowth Website — Administration endpoint (members, licenses, trials,
 // manual access grants). One Serverless Function routed by ?resource=
@@ -14,7 +15,7 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 //
 // Self-contained (no relative imports) for the same reason as
 // api/studio-checkout.ts. Server-only env: SUPABASE_URL,
-// SUPABASE_SERVICE_ROLE_KEY.
+// SUPABASE_SERVICE_ROLE_KEY, and STRIPE_SECRET_KEY for ?resource=sales.
 
 type Admin = { id: string; email: string }
 type Db = SupabaseClient<any, 'portal', any>
@@ -303,6 +304,99 @@ async function updateLicense(req: VercelRequest, db: Db) {
 }
 
 // ---------------------------------------------------------------------------
+// Sales — read straight from Stripe, the source of truth for payments. The
+// Website and the Portal sell through the same account, so this lists both
+// (a Website session carries metadata.source = 'website'). Free claims and
+// trials never touch Stripe; they live on licenses (see members).
+// ---------------------------------------------------------------------------
+const SALES_MONTHS = 12
+const SALES_MAX = 2000
+
+interface SaleRow {
+  id: string
+  createdAt: string
+  amount: number
+  currency: string
+  refunded: number | null
+  email: string | null
+  userId: string | null
+  productSlug: string | null
+  productName: string | null
+  source: 'website' | 'portal'
+  // Opens the payment in the Stripe Dashboard.
+  stripeUrl: string | null
+}
+
+function refundedOf(session: Stripe.Checkout.Session): number | null {
+  const pi = session.payment_intent
+  if (!pi || typeof pi === 'string') return null
+  const charge = pi.latest_charge
+  if (!charge || typeof charge === 'string') return null
+  return charge.amount_refunded
+}
+
+async function listSales(db: Db) {
+  const key = process.env.STRIPE_SECRET_KEY
+  if (!key) throw new HttpError(500, 'Stripe isn’t configured on this site yet.')
+  const stripe = new Stripe(key)
+
+  const since = new Date()
+  since.setUTCDate(1)
+  since.setUTCHours(0, 0, 0, 0)
+  since.setUTCMonth(since.getUTCMonth() - (SALES_MONTHS - 1))
+  const params: Stripe.Checkout.SessionListParams = {
+    status: 'complete',
+    created: { gte: Math.floor(since.getTime() / 1000) },
+    limit: 100,
+  }
+
+  // Refund status needs PaymentIntents/Charges read access; a key limited to
+  // Checkout Sessions still lists the sales, just without refunds.
+  let refundsAvailable = true
+  let sessions: Stripe.Checkout.Session[]
+  try {
+    sessions = await stripe.checkout.sessions
+      .list({ ...params, expand: ['data.payment_intent.latest_charge'] })
+      .autoPagingToArray({ limit: SALES_MAX })
+  } catch (err) {
+    if (!(err instanceof Stripe.errors.StripePermissionError)) throw err
+    refundsAvailable = false
+    sessions = await stripe.checkout.sessions.list(params).autoPagingToArray({ limit: SALES_MAX })
+  }
+
+  const paid = sessions.filter((s) => s.payment_status === 'paid' && (s.amount_total ?? 0) > 0)
+  const slugs = Array.from(new Set(paid.map((s) => s.metadata?.productSlug).filter((v): v is string => Boolean(v))))
+  const names: Record<string, string> = {}
+  if (slugs.length) {
+    const { data, error } = await db.from('products').select('slug, name').in('slug', slugs)
+    if (error) throw error
+    for (const row of data ?? []) names[row.slug] = row.name
+  }
+
+  const sales: SaleRow[] = paid.map((s) => {
+    const slug = s.metadata?.productSlug ?? null
+    return {
+      id: s.id,
+      createdAt: new Date(s.created * 1000).toISOString(),
+      amount: s.amount_total ?? 0,
+      currency: s.currency ?? 'usd',
+      refunded: refundsAvailable ? refundedOf(s) ?? 0 : null,
+      email: s.customer_details?.email ?? s.customer_email ?? null,
+      userId: s.metadata?.userId ?? s.client_reference_id ?? null,
+      productSlug: slug,
+      productName: slug ? names[slug] ?? slug : null,
+      source: s.metadata?.source === 'website' ? 'website' : 'portal',
+      stripeUrl: (() => {
+        const pi = typeof s.payment_intent === 'string' ? s.payment_intent : s.payment_intent?.id
+        return pi ? `https://dashboard.stripe.com/${s.livemode ? '' : 'test/'}payments/${pi}` : null
+      })(),
+    }
+  })
+
+  return { sales, since: since.toISOString(), months: SALES_MONTHS, refundsAvailable, truncated: sessions.length >= SALES_MAX }
+}
+
+// ---------------------------------------------------------------------------
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const db = client()
@@ -317,6 +411,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ ok: true, ...(await listMembers(req, db)) })
       case 'GET member':
         return res.status(200).json({ ok: true, ...(await getMember(req, db)) })
+      case 'GET sales':
+        return res.status(200).json({ ok: true, ...(await listSales(db)) })
       case 'GET products':
         return res.status(200).json({ ok: true, ...(await listProducts(db)) })
       case 'POST grants':

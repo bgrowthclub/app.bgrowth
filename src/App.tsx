@@ -34,6 +34,7 @@ import SupportPage from './pages/platform/SupportPage'
 import MyDocumentsPage from './pages/platform/MyDocumentsPage'
 import AdminMembersPage from './pages/platform/admin/AdminMembersPage'
 import AdminMemberPage from './pages/platform/admin/AdminMemberPage'
+import AdminSalesPage from './pages/platform/admin/AdminSalesPage'
 import AdminRoute from './modules/identity/routing/AdminRoute'
 // Lazy: the Workspace viewer carries the full icon set and the PDF engine,
 // so it loads only when a member actually opens a Workspace.
@@ -160,6 +161,7 @@ export default function App() {
         <Route path="admin" element={<AdminRoute><Navigate to="/platform/admin/members" replace /></AdminRoute>} />
         <Route path="admin/members" element={<AdminRoute><AdminMembersPage /></AdminRoute>} />
         <Route path="admin/members/:id" element={<AdminRoute><AdminMemberPage /></AdminRoute>} />
+        <Route path="admin/sales" element={<AdminRoute><AdminSalesPage /></AdminRoute>} />
       </Route>
 
       {/* BGrowth Studio — a deliberate, explicit third layout. This is the

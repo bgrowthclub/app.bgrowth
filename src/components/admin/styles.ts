@@ -21,7 +21,7 @@ const TONES: Record<Tone, string> = {
 }
 
 export function pillClass(tone: Tone) {
-  return `inline-flex items-center rounded-full px-2.5 py-1 text-[11px] font-semibold ${TONES[tone]}`
+  return `inline-flex items-center whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-semibold ${TONES[tone]}`
 }
 
 export function formatDate(iso: string | null | undefined) {
