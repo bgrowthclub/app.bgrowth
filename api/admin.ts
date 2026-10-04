@@ -422,6 +422,59 @@ async function listSales(db: Db) {
 }
 
 // ---------------------------------------------------------------------------
+// Refund — one click from Admin → Sales: refunds the payment in Stripe and
+// ends the member's access to that Workspace (the same as "End access" on
+// their record; documents are kept). Needs the Stripe key to have
+// Refunds: Write.
+// ---------------------------------------------------------------------------
+async function refundSale(req: VercelRequest, db: Db, admin: Admin) {
+  const sessionId = str(req.body?.sessionId)
+  if (!sessionId) throw new HttpError(400, 'sessionId is required.')
+  const key = process.env.STRIPE_SECRET_KEY
+  if (!key) throw new HttpError(500, 'Stripe isn’t configured on this site yet.')
+  const stripe = new Stripe(key)
+
+  const session = await stripe.checkout.sessions.retrieve(sessionId)
+  const paymentIntent = typeof session.payment_intent === 'string' ? session.payment_intent : session.payment_intent?.id
+  if (!paymentIntent || session.payment_status !== 'paid') throw new HttpError(409, 'This order has no paid payment to refund.')
+
+  let refund: Stripe.Refund
+  try {
+    refund = await stripe.refunds.create({
+      payment_intent: paymentIntent,
+      reason: 'requested_by_customer',
+      metadata: { source: 'bgrowth-admin', refundedBy: admin.email },
+    })
+  } catch (err) {
+    if (err instanceof Stripe.errors.StripePermissionError) {
+      throw new HttpError(403, 'The Stripe key can’t create refunds yet — add “Refunds: Write” to its permissions in Stripe.')
+    }
+    if (err instanceof Stripe.errors.StripeInvalidRequestError && /already been refunded/i.test(err.message)) {
+      throw new HttpError(409, 'This order was already refunded.')
+    }
+    throw err
+  }
+
+  // End access to what was refunded. Best effort: the refund already went
+  // through, so a failure here is reported, not thrown.
+  const userId = session.metadata?.userId ?? session.client_reference_id
+  const productId = session.metadata?.productId
+  let accessEnded = false
+  if (userId && productId) {
+    const { error } = await db
+      .from('licenses')
+      .update({ status: 'revoked' })
+      .eq('user_id', userId)
+      .eq('product_id', productId)
+      .neq('type', 'trial')
+    if (error) console.error('[admin] refund: ending access failed:', error)
+    else accessEnded = true
+  }
+
+  return { refund: { id: refund.id, amount: refund.amount, status: refund.status }, accessEnded }
+}
+
+// ---------------------------------------------------------------------------
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const db = client()
@@ -438,6 +491,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ ok: true, ...(await getMember(req, db)) })
       case 'POST confirmation':
         return res.status(200).json({ ok: true, ...(await resendConfirmation(req, db)) })
+      case 'POST refunds':
+        return res.status(200).json({ ok: true, ...(await refundSale(req, db, admin)) })
       case 'GET sales':
         return res.status(200).json({ ok: true, ...(await listSales(db)) })
       case 'GET products':

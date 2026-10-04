@@ -43,6 +43,14 @@ export const adminService = {
   async resendConfirmation(userId: string) {
     return (await call<{ sentTo: string }>('POST', 'confirmation', undefined, { userId })).sentTo
   },
+  refundSale(sessionId: string) {
+    return call<{ refund: { id: string; amount: number; status: string | null }; accessEnded: boolean }>(
+      'POST',
+      'refunds',
+      undefined,
+      { sessionId },
+    )
+  },
   listSales() {
     return call<AdminSalesReport>('GET', 'sales')
   },

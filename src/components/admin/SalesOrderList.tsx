@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ExternalLink, MoreHorizontal, UserRound } from 'lucide-react'
+import { ExternalLink, MoreHorizontal, RotateCcw, UserRound } from 'lucide-react'
 import Popover from '../platform/Popover'
 import type { AdminSale } from '../../modules/admin/types'
 import { CARD, pillClass } from './styles'
@@ -8,6 +8,8 @@ import type { Tone } from './styles'
 interface Props {
   sales: AdminSale[]
   formatMoney: (cents: number, currency: string) => string
+  // Opens the refund confirmation for this order.
+  onRefund?: (sale: AdminSale) => void
 }
 
 export function saleStatus(sale: AdminSale): { label: string; tone: Tone } {
@@ -21,8 +23,9 @@ function dateTime(iso: string) {
   return new Date(iso).toLocaleString('en-US', { month: 'short', day: 'numeric', year: 'numeric', hour: 'numeric', minute: '2-digit' })
 }
 
-function Actions({ sale }: { sale: AdminSale }) {
-  if (!sale.stripeUrl && !sale.userId) return null
+function Actions({ sale, onRefund }: { sale: AdminSale; onRefund?: (sale: AdminSale) => void }) {
+  const refundable = Boolean(onRefund) && (sale.refunded ?? 0) < sale.amount
+  if (!sale.stripeUrl && !sale.userId && !refundable) return null
   return (
     <Popover
       panelClassName="w-48 py-1.5"
@@ -52,6 +55,15 @@ function Actions({ sale }: { sale: AdminSale }) {
           <ExternalLink size={14} /> Open in Stripe
         </a>
       )}
+      {refundable && (
+        <button
+          type="button"
+          onClick={() => onRefund?.(sale)}
+          className="flex w-full items-center gap-2.5 px-4 py-2 text-left text-[13px] text-red-600 hover:bg-red-50"
+        >
+          <RotateCcw size={14} /> Refund
+        </button>
+      )}
     </Popover>
   )
 }
@@ -69,7 +81,7 @@ function Customer({ sale }: { sale: AdminSale }) {
 
 // The orders list on Admin → Sales: a table on wide screens, cards on
 // phones (a 7-column table doesn't fit a phone).
-export default function SalesOrderList({ sales, formatMoney }: Props) {
+export default function SalesOrderList({ sales, formatMoney, onRefund }: Props) {
   return (
     <div className={CARD}>
       <table className="hidden w-full table-fixed text-left text-[13px] md:table">
@@ -114,7 +126,7 @@ export default function SalesOrderList({ sales, formatMoney }: Props) {
                   <span className={pillClass(status.tone)}>{status.label}</span>
                 </td>
                 <td className="px-3 py-2">
-                  <Actions sale={sale} />
+                  <Actions sale={sale} onRefund={onRefund} />
                 </td>
               </tr>
             )
@@ -135,7 +147,7 @@ export default function SalesOrderList({ sales, formatMoney }: Props) {
                   </p>
                   <p className="text-[12px] text-navy/40">{dateTime(sale.createdAt)}</p>
                 </div>
-                <Actions sale={sale} />
+                <Actions sale={sale} onRefund={onRefund} />
               </div>
               <div className="mt-2 flex items-center gap-2">
                 <span className={pillClass(sale.source === 'website' ? 'blue' : 'gray')}>{sale.source === 'website' ? 'Website' : 'Portal'}</span>

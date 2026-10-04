@@ -584,6 +584,13 @@ sidebar group that `platformNav.ts` marks `adminOnly`.
   linked to the member. Refunds show only when `STRIPE_SECRET_KEY` can read
   PaymentIntents/Charges. There is no orders table: Stripe stays the
   source of truth until subscriptions need one.
+- **Refunds (Sprint 49):** Sales → ⋯ → Refund refunds the Checkout's
+  payment in Stripe (`?resource=refunds`, key needs Refunds: Write) and
+  ends that member's purchased license for the Workspace; documents stay.
+- **Confirmation reminders (Sprint 49):** "Resend confirmation e-mail" on a
+  member's record (`?resource=confirmation`), plus a daily Vercel cron
+  (`api/cron/confirmation-reminders.ts`, needs `CRON_SECRET`) that resends
+  Supabase's sign-up confirmation on day 1 and day 3 after sign-up.
 - **Planned next** (user's plan): plans and subscriptions (with
   promotional prices) and the dashboard they unlock (MRR, churn), catalog
   management, system health.

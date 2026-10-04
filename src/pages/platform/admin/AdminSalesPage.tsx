@@ -6,6 +6,7 @@ import SearchBar from '../../../components/ui/SearchBar'
 import EmptyState from '../../../components/ui/EmptyState'
 import Pagination from '../../../components/ui/Pagination'
 import Button from '../../../components/ui/Button'
+import ConfirmDialog from '../../../components/ui/ConfirmDialog'
 import MonthlyRevenueChart from '../../../components/admin/MonthlyRevenueChart'
 import type { MonthPoint } from '../../../components/admin/MonthlyRevenueChart'
 import AdminStatTile from '../../../components/admin/AdminStatTile'
@@ -95,6 +96,33 @@ export default function AdminSalesPage() {
   const [query, setQuery] = useState('')
   const [page, setPage] = useState(1)
 
+  const [reload, setReload] = useState(0)
+  const [refundTarget, setRefundTarget] = useState<AdminSale | null>(null)
+  const [refunding, setRefunding] = useState(false)
+  const [message, setMessage] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null)
+
+  async function confirmRefund() {
+    if (!refundTarget) return
+    setRefunding(true)
+    setMessage(null)
+    try {
+      const result = await adminService.refundSale(refundTarget.id)
+      setMessage({
+        tone: 'ok',
+        text: `Refunded ${money(result.refund.amount, refundTarget.currency)} to ${refundTarget.email ?? 'the customer'}.${
+          result.accessEnded ? ' Their access to this Workspace has ended.' : ' End their access on the member’s record if needed.'
+        }`,
+      })
+      setReload((n) => n + 1)
+    } catch (err) {
+      setMessage({ tone: 'error', text: err instanceof Error ? err.message : String(err) })
+    } finally {
+      setRefunding(false)
+      setRefundTarget(null)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
+  }
+
   useEffect(() => {
     let cancelled = false
     adminService
@@ -112,7 +140,7 @@ export default function AdminSalesPage() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [reload])
 
   const currency = report?.sales[0]?.currency ?? 'usd'
 
@@ -187,6 +215,15 @@ export default function AdminSalesPage() {
         <EmptyState icon={Receipt} title="We couldn’t load the sales." description={error} />
       ) : (
         <div className="space-y-8">
+          {message && (
+            <p
+              className={`rounded-xl px-4 py-3 text-[13px] ${
+                message.tone === 'ok' ? 'bg-emerald-50 text-emerald-700' : 'bg-red-50 text-red-600'
+              }`}
+            >
+              {message.text}
+            </p>
+          )}
           <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
             <select value={period} onChange={(e) => setPeriod(Number(e.target.value) as Period)} className={SELECT} aria-label="Period">
               {PERIODS.map((p) => (
@@ -277,11 +314,32 @@ export default function AdminSalesPage() {
                 description={report.sales.length === 0 ? 'Paid purchases show up here as soon as Stripe confirms them.' : undefined}
               />
             ) : (
-              <SalesOrderList sales={visible} formatMoney={(cents, cur) => money(cents, cur)} />
+              <SalesOrderList sales={visible} formatMoney={(cents, cur) => money(cents, cur)} onRefund={setRefundTarget} />
             )}
             <div className="mt-6">
               <Pagination page={page} pageCount={pageCount} onChange={setPage} />
             </div>
+            <ConfirmDialog
+              open={refundTarget !== null}
+              tone="danger"
+              title="Refund this order?"
+              description={
+                refundTarget && (
+                  <>
+                    <strong className="font-semibold text-navy">
+                      {money(refundTarget.amount - (refundTarget.refunded ?? 0), refundTarget.currency)}
+                    </strong>{' '}
+                    goes back to {refundTarget.email ?? 'the customer'} for{' '}
+                    <strong className="font-semibold text-navy">{refundTarget.productName ?? 'this Workspace'}</strong>, and
+                    their access to it ends. Their documents are kept. This can’t be undone in Stripe.
+                  </>
+                )
+              }
+              confirmLabel="Refund"
+              busy={refunding}
+              onCancel={() => setRefundTarget(null)}
+              onConfirm={confirmRefund}
+            />
             {report.truncated && (
               <p className="mt-4 text-center text-[12px] text-navy/40">Showing the most recent 2,000 sales.</p>
             )}
