@@ -4,6 +4,8 @@ import type { CurrencyCode } from '../types/pricing'
 import { createEmptyProductAssets } from '../types/assets'
 import { createInitialVersioning } from '../types/version'
 import { studioWorkspaceService, isStudioCatalogAvailable } from '../../workspace/services/studioWorkspaceService'
+import { categoryResolver } from '../../workspace/categories'
+import type { CategoryPlacement, ResolveCategory } from '../../workspace/categories'
 import type {
   PortalCatalogRow,
   PortalCategoryRow,
@@ -37,7 +39,7 @@ function price(isFree: boolean, cents: number | null) {
 
 interface CatalogSnapshot {
   rows: PortalCatalogRow[]
-  categoryName: Map<string, string>
+  resolveCategory: ResolveCategory
 }
 
 let cache: { at: number; snapshot: Promise<CatalogSnapshot> } | undefined
@@ -48,7 +50,7 @@ function loadSnapshot(): Promise<CatalogSnapshot> {
     ([rows, categories]: [PortalCatalogRow[], PortalCategoryRow[]]) => ({
       // Only Workspaces for now — the one content type the viewer opens.
       rows: rows.filter((r) => r.content_type === 'workspace'),
-      categoryName: new Map(categories.map((c) => [c.id, c.name])),
+      resolveCategory: categoryResolver(categories),
     }),
   )
   // A failed load isn't cached — the next caller retries.
@@ -62,7 +64,7 @@ function loadSnapshot(): Promise<CatalogSnapshot> {
 function baseProduct(
   row: Pick<PortalCatalogRow, 'slug' | 'name' | 'short_description' | 'cover_image_url' | 'is_free' | 'price_cents' | 'currency'>,
   portalId: string,
-  industry: string | undefined,
+  placement: CategoryPlacement,
 ): Product {
   const assets = createEmptyProductAssets()
   if (row.cover_image_url) {
@@ -74,8 +76,8 @@ function baseProduct(
     slug: row.slug,
     title: row.name,
     description: row.short_description,
-    category: 'business-entrepreneurship',
-    industry,
+    category: placement.area,
+    industry: placement.industry,
     basePrice: price(row.is_free, row.price_cents),
     baseCurrency: toCurrency(row.currency),
     paymentProfileId: row.is_free ? 'free' : 'standard',
@@ -97,9 +99,9 @@ function baseProduct(
   }
 }
 
-function fromCatalogRow(row: PortalCatalogRow, categoryName: Map<string, string>): Product {
+function fromCatalogRow(row: PortalCatalogRow, resolveCategory: ResolveCategory): Product {
   return {
-    ...baseProduct(row, row.product_id, row.category_id ? categoryName.get(row.category_id) : undefined),
+    ...baseProduct(row, row.product_id, resolveCategory(row.category_id)),
     featured: row.is_featured,
     tags: row.tags ?? [],
     createdAt: row.published_at ?? undefined,
@@ -123,9 +125,9 @@ const isFaq = (v: unknown): v is { question: string; answer: string } =>
 
 // The full product adds Studio's optional marketing fields from
 // products.metadata (Portal: src/types/productMarketing.ts).
-export function studioProductFromRow(row: PortalProductRow, industry: string | undefined, featured = false): Product {
+export function studioProductFromRow(row: PortalProductRow, placement: CategoryPlacement, featured = false): Product {
   const meta = (row.metadata ?? {}) as Record<string, unknown>
-  const product = baseProduct(row, row.id, industry)
+  const product = baseProduct(row, row.id, placement)
   const screenshots = arrayOf(meta.screenshots, isString).map((url, i) => ({ id: `screenshot-${i + 1}`, url }))
   const included = arrayOf(meta.included, isString)
   const faq = arrayOf(meta.faq, isFaq)
@@ -146,9 +148,9 @@ export function createStudioProductRepository(): ProductRepository {
   return {
     async loadIndex() {
       if (!isStudioCatalogAvailable) return { generatedAt: new Date().toISOString(), products: [] }
-      const { rows, categoryName } = await loadSnapshot()
+      const { rows, resolveCategory } = await loadSnapshot()
       const products: ProductIndexEntry[] = rows.map((row) => {
-        const p = fromCatalogRow(row, categoryName)
+        const p = fromCatalogRow(row, resolveCategory)
         return {
           id: p.id,
           slug: p.slug,
@@ -186,6 +188,6 @@ async function loadFullProduct(portalId: string): Promise<Product | undefined> {
   const row = rows[0]
   if (!row) return undefined
   const catalogRow = snapshot?.rows.find((r) => r.product_id === portalId)
-  const industry = row.category_id ? snapshot?.categoryName.get(row.category_id) : undefined
-  return studioProductFromRow(row, industry, catalogRow?.is_featured ?? false)
+  const placement = snapshot ? snapshot.resolveCategory(row.category_id) : categoryResolver([])(null)
+  return studioProductFromRow(row, placement, catalogRow?.is_featured ?? false)
 }

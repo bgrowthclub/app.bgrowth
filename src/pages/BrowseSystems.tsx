@@ -11,6 +11,7 @@ import Grid from '../components/layout/Grid'
 import { CATEGORIES } from '../data/systems'
 import { loadPublishedSystemProducts, loadStudioWorkspaceProducts, systemForCard } from '../lib/publishedCatalog'
 import type { Product } from '../modules/commerce/types/product'
+import { GROWTH_CATEGORIES } from '../types/growth'
 import type { ModuleType } from '../types/system'
 
 const SORT_OPTIONS = [
@@ -40,9 +41,10 @@ export default function BrowseSystems() {
   const initialCategory = searchParams.get('category') ?? 'All'
   // Seeded from ?q= so the Home hero search lands on already-filtered results.
   const [query, setQuery] = useState(searchParams.get('q') ?? '')
-  const [category, setCategory] = useState(
-    (CATEGORIES as readonly string[]).includes(initialCategory) ? initialCategory : 'All',
-  )
+  // Any value from ?category= is kept: Studio categories come from the
+  // database (Admin → Categories), not only the static list.
+  const [category, setCategory] = useState(initialCategory)
+  const [area, setArea] = useState(searchParams.get('area') ?? 'All')
   const [moduleType, setModuleType] = useState<ModuleType | 'All'>('All')
   const [sort, setSort] = useState('featured')
 
@@ -86,13 +88,31 @@ export default function BrowseSystems() {
     [publishedList],
   )
 
+  // Industry pills: the static examples' categories plus every category a
+  // published Studio Workspace uses (Admin → Categories).
+  const industries = useMemo(() => {
+    const fromStudio = Array.from(new Set(studioProducts.flatMap((p) => (p.industry ? [p.industry] : []))))
+    const known = CATEGORIES.filter((c) => c !== 'All') as string[]
+    return ['All', ...known, ...fromStudio.filter((c) => !known.includes(c)).sort()]
+  }, [studioProducts])
+
+  // Area pills (Growth Categories) appear once Workspaces exist in more than
+  // one Area; the static examples are all Business & Entrepreneurship.
+  const areas = useMemo(() => {
+    const present = new Set<string>(studioProducts.map((p) => p.category))
+    if (publishedList.length) present.add('business-entrepreneurship')
+    return GROWTH_CATEGORIES.filter((g) => present.has(g.id))
+  }, [studioProducts, publishedList])
+
   // Studio Workspaces carry no module types, so a Module Type filter hides
   // them; Industry matches the Workspace's Studio category.
   const studioResults = useMemo(() => {
     if (moduleType !== 'All') return []
     const list = studioProducts.filter(
       (p) =>
-        (category === 'All' || p.industry === category) && matchesSearch(query, `${p.title} ${p.description}`),
+        (area === 'All' || p.category === area) &&
+        (category === 'All' || p.industry === category) &&
+        matchesSearch(query, `${p.title} ${p.description}`),
     )
     return [...list].sort((a, b) => {
       if (sort === 'price-asc') return a.basePrice - b.basePrice
@@ -100,10 +120,11 @@ export default function BrowseSystems() {
       if (sort === 'name-asc') return a.title.localeCompare(b.title)
       return 0
     })
-  }, [studioProducts, query, category, moduleType, sort])
+  }, [studioProducts, query, category, area, moduleType, sort])
 
   const results = useMemo(() => {
     let list = publishedList.filter((s) => {
+      if (area !== 'All' && area !== 'business-entrepreneurship') return false
       const matchesCategory = category === 'All' || s.category === category
       const matchesModule = moduleType === 'All' || s.modules.some((m) => m.type === moduleType)
       const matchesQuery = matchesSearch(query, `${s.title} ${s.shortDescription}`)
@@ -118,11 +139,23 @@ export default function BrowseSystems() {
     })
 
     return list
-  }, [publishedList, query, category, moduleType, sort])
+  }, [publishedList, query, category, area, moduleType, sort])
+
+  const updateParams = (nextArea: string, nextCategory: string) => {
+    const params: Record<string, string> = {}
+    if (nextArea !== 'All') params.area = nextArea
+    if (nextCategory !== 'All') params.category = nextCategory
+    setSearchParams(params)
+  }
 
   const handleCategory = (c: string) => {
     setCategory(c)
-    setSearchParams(c === 'All' ? {} : { category: c })
+    updateParams(area, c)
+  }
+
+  const handleArea = (a: string) => {
+    setArea(a)
+    updateParams(a, category)
   }
 
   return (
@@ -146,9 +179,18 @@ export default function BrowseSystems() {
         </div>
 
         <div className="mt-6 space-y-3">
+          {areas.length > 1 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="mr-1 text-[12px] font-semibold uppercase tracking-wide text-navy/30">Area</span>
+              <FilterPill label="All" active={area === 'All'} onClick={() => handleArea('All')} />
+              {areas.map((g) => (
+                <FilterPill key={g.id} label={g.label} active={area === g.id} onClick={() => handleArea(g.id)} />
+              ))}
+            </div>
+          )}
           <div className="flex flex-wrap items-center gap-2">
             <span className="mr-1 text-[12px] font-semibold uppercase tracking-wide text-navy/30">Industry</span>
-            {CATEGORIES.map((c) => (
+            {industries.map((c) => (
               <FilterPill key={c} label={c} active={category === c} onClick={() => handleCategory(c)} />
             ))}
           </div>

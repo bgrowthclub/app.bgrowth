@@ -38,7 +38,7 @@ export const studioWorkspaceService = {
   },
 
   async listCategories(): Promise<PortalCategoryRow[]> {
-    const { data, error } = await client().from('workspace_categories').select('id, name, slug')
+    const { data, error } = await client().from('workspace_categories').select('*')
     if (error) throw error
     return (data ?? []) as PortalCategoryRow[]
   },

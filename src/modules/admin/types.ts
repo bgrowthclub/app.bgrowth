@@ -114,3 +114,27 @@ export interface AdminSupportThread {
   conversation: AdminSupportConversation & { customer_read_at: string }
   messages: SupportMessage[]
 }
+
+// Admin → Categories (Portal migration 0032). An Area has parent_id null;
+// a category inside it points at the Area.
+export interface AdminCategory {
+  id: string
+  name: string
+  slug: string
+  parent_id: string | null
+  sort_order: number
+}
+
+export interface AdminCatalogProduct {
+  id: string
+  name: string
+  slug: string
+  status: string
+  category_id: string | null
+  cover_image_url: string | null
+}
+
+export interface AdminCatalogCategories {
+  categories: AdminCategory[]
+  products: AdminCatalogProduct[]
+}

@@ -599,6 +599,17 @@ sidebar group that `platformNav.ts` marks `adminOnly`.
   effort — a failed e-mail never fails a message. Shared logic lives in
   `modules/support/`, components in `components/support/`. Planned:
   e-mails sent to support@ showing up in the same inbox.
+- **Categories (Sprint 52):** `/platform/admin/categories` manages the one
+  category list (`portal.workspace_categories`, Portal migration 0032): the
+  Growth Categories as Areas (`parent_id` null, same slugs as
+  `types/growth.ts`) and categories inside them (Notary, Cleaning…). A
+  product keeps one `category_id` (a category, or an Area for a general
+  Workspace); `modules/workspace/categories.ts` turns it into the product's
+  Area (`Product.category`) and category (`Product.industry`). The catalog's
+  Industry pills add every category in use, and Area pills appear once
+  Workspaces exist in more than one Area. Studio's Category field reads the
+  same list; Admin can also set a Workspace's category directly
+  (`products` + `catalog_index`), and Studio keeps it on its next publish.
 - **Planned next** (user's plan): plans and subscriptions (with
   promotional prices) and the dashboard they unlock (MRR, churn), catalog
   management, system health.
