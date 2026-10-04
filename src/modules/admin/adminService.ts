@@ -40,6 +40,9 @@ export const adminService = {
   getMember(id: string) {
     return call<AdminMemberDetail>('GET', 'member', { id })
   },
+  async resendConfirmation(userId: string) {
+    return (await call<{ sentTo: string }>('POST', 'confirmation', undefined, { userId })).sentTo
+  },
   listSales() {
     return call<AdminSalesReport>('GET', 'sales')
   },

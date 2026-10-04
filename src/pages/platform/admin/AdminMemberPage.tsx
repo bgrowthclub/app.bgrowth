@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, Navigate, useParams } from 'react-router-dom'
-import { ArrowLeft, KeyRound, Plus, UserRound } from 'lucide-react'
+import { ArrowLeft, KeyRound, MailCheck, Plus, UserRound } from 'lucide-react'
 import SEO from '../../../components/seo/SEO'
 import Button from '../../../components/ui/Button'
 import EmptyState from '../../../components/ui/EmptyState'
@@ -8,7 +8,7 @@ import AdminLicenseRow from '../../../components/admin/AdminLicenseRow'
 import AdminGrantRow from '../../../components/admin/AdminGrantRow'
 import GiveAccessForm from '../../../components/admin/GiveAccessForm'
 import type { GiveAccessValues } from '../../../components/admin/GiveAccessForm'
-import { CARD, SMALL_BUTTON, formatDate, pillClass } from '../../../components/admin/styles'
+import { CARD, LINK_BUTTON, SMALL_BUTTON, formatDate, pillClass } from '../../../components/admin/styles'
 import { adminService } from '../../../modules/admin/adminService'
 import type { AdminMemberDetail, AdminProduct } from '../../../modules/admin/types'
 
@@ -25,6 +25,7 @@ export default function AdminMemberPage() {
   const [loadError, setLoadError] = useState<string>()
   const [busy, setBusy] = useState(false)
   const [actionError, setActionError] = useState<string | null>(null)
+  const [notice, setNotice] = useState<string | null>(null)
 
   const [products, setProducts] = useState<AdminProduct[]>([])
   const [giving, setGiving] = useState(false)
@@ -63,6 +64,7 @@ export default function AdminMemberPage() {
   async function run(action: () => Promise<unknown>) {
     setBusy(true)
     setActionError(null)
+    setNotice(null)
     try {
       await action()
       await load()
@@ -153,6 +155,21 @@ export default function AdminMemberPage() {
               {member.hasUsedTrial ? 'Free trial used' : 'Free trial available'}
             </span>
           </div>
+          {!member.emailConfirmed && (
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() =>
+                run(async () => {
+                  const sentTo = await adminService.resendConfirmation(member.id)
+                  setNotice(`Confirmation e-mail sent again to ${sentTo}.`)
+                })
+              }
+              className={`${LINK_BUTTON} mt-3 inline-flex items-center gap-1.5 !px-0 text-primary hover:underline`}
+            >
+              <MailCheck size={14} /> Resend confirmation e-mail
+            </button>
+          )}
         </div>
         <dl className="grid shrink-0 grid-cols-2 gap-x-6 gap-y-1 text-[12.5px]">
           <dt className="text-navy/40">Joined</dt>
@@ -163,6 +180,7 @@ export default function AdminMemberPage() {
       </section>
 
       {actionError && <p className="rounded-xl bg-red-50 px-4 py-3 text-[13px] text-red-600">{actionError}</p>}
+      {notice && <p className="rounded-xl bg-emerald-50 px-4 py-3 text-[13px] text-emerald-700">{notice}</p>}
 
       <section>
         <div className="mb-3 flex items-center justify-between gap-3">

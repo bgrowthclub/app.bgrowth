@@ -304,6 +304,31 @@ async function updateLicense(req: VercelRequest, db: Db) {
 }
 
 // ---------------------------------------------------------------------------
+// Confirmation e-mail — resend Supabase's sign-up confirmation to a member
+// who never confirmed (same e-mail and template as at sign-up).
+// ---------------------------------------------------------------------------
+function siteOrigin(req: VercelRequest): string {
+  const host = req.headers['x-forwarded-host'] ?? req.headers.host
+  const proto = req.headers['x-forwarded-proto'] ?? 'https'
+  return `${Array.isArray(proto) ? proto[0] : proto}://${Array.isArray(host) ? host[0] : host}`
+}
+
+async function resendConfirmation(req: VercelRequest, db: Db) {
+  const userId = str(req.body?.userId)
+  if (!userId) throw new HttpError(400, 'userId is required.')
+  const { data, error } = await db.auth.admin.getUserById(userId)
+  if (error || !data.user?.email) throw new HttpError(404, 'Member not found.')
+  if (data.user.email_confirmed_at) throw new HttpError(409, 'This member has already confirmed their e-mail.')
+  const { error: resendError } = await db.auth.resend({
+    type: 'signup',
+    email: data.user.email,
+    options: { emailRedirectTo: `${siteOrigin(req)}/verify-email` },
+  })
+  if (resendError) throw new HttpError(429, resendError.message)
+  return { sentTo: data.user.email }
+}
+
+// ---------------------------------------------------------------------------
 // Sales — read straight from Stripe, the source of truth for payments. The
 // Website and the Portal sell through the same account, so this lists both
 // (a Website session carries metadata.source = 'website'). Free claims and
@@ -411,6 +436,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ ok: true, ...(await listMembers(req, db)) })
       case 'GET member':
         return res.status(200).json({ ok: true, ...(await getMember(req, db)) })
+      case 'POST confirmation':
+        return res.status(200).json({ ok: true, ...(await resendConfirmation(req, db)) })
       case 'GET sales':
         return res.status(200).json({ ok: true, ...(await listSales(db)) })
       case 'GET products':
