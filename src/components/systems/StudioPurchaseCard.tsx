@@ -1,6 +1,8 @@
+import { Link } from 'react-router-dom'
 import { ArrowRight, Check, Loader2 } from 'lucide-react'
 import Button from '../ui/Button'
 import type { Product } from '../../modules/commerce/types/product'
+import { REFUND_WINDOW_DAYS } from '../../data/legal'
 
 interface Props {
   product: Product
@@ -117,7 +119,12 @@ export default function StudioPurchaseCard({
                 </Button>
               )}
               {!free && (
-                <p className="mt-3 text-center text-[12px] text-navy/45">Secure checkout by Stripe. Instant access.</p>
+                <p className="mt-3 text-center text-[12px] text-navy/45">
+                  Secure checkout by Stripe. Instant access.{' '}
+                  <Link to="/refund-policy" className="underline hover:text-navy">
+                    {REFUND_WINDOW_DAYS}-day refund
+                  </Link>
+                </p>
               )}
             </>
           )}

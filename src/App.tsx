@@ -14,6 +14,9 @@ import ResourcesPage from './pages/ResourcesPage'
 import PricingPage from './pages/PricingPage'
 import AboutPage from './pages/AboutPage'
 import ContactPage from './pages/ContactPage'
+import PrivacyPage from './pages/PrivacyPage'
+import TermsPage from './pages/TermsPage'
+import RefundPolicyPage from './pages/RefundPolicyPage'
 import KnowledgeHomePage from './pages/knowledge/KnowledgeHomePage'
 import KnowledgeCategoryPage from './pages/knowledge/KnowledgeCategoryPage'
 import KnowledgeArticlePage from './pages/knowledge/KnowledgeArticlePage'
@@ -93,6 +96,9 @@ export default function App() {
             27/09/2026); /club stays reachable for old links. */}
         <Route path="/club" element={<Navigate to="/pricing" replace />} />
         <Route path="/contact" element={<ContactPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/terms" element={<TermsPage />} />
+        <Route path="/refund-policy" element={<RefundPolicyPage />} />
 
         {/* BGrowth Identity™ — Supabase Auth, shared with the Portal (see
             modules/identity/supabase/). Guest-only: an already-authenticated

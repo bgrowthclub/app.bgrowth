@@ -17,6 +17,7 @@ import FAQ from '../components/ui/FAQ'
 import PremiumCTA from '../components/ui/PremiumCTA'
 import ContactHero from '../components/contact/ContactHero'
 import ContactForm, { CONTACT_CATEGORIES } from '../components/contact/ContactForm'
+import { LEGAL_EMAIL } from '../data/legal'
 
 const HELP_REASONS = [
   { icon: MessageCircle, title: 'General Questions', description: 'Not sure where to start? Ask us anything about BGrowth.', category: CONTACT_CATEGORIES[0] },
@@ -28,11 +29,12 @@ const HELP_REASONS = [
 ]
 
 // Only real, confirmed contact details belong here — no placeholder phone
-// numbers, hours or social links. info@benterprises.biz is the support
-// address BGrowth's transactional emails already reply to. Add a row (or a
-// social-media card) only once the real value exists.
+// numbers, hours or social links. The contact e-mail is the one the owner
+// chose for customers (data/legal.ts), delivered to the same inbox as
+// info@benterprises.biz. Add a row (or a social-media card) only once the
+// real value exists.
 const CONTACT_INFO = [
-  { icon: Mail, label: 'Email', value: 'info@benterprises.biz' },
+  { icon: Mail, label: 'Email', value: LEGAL_EMAIL },
 ]
 
 const CONTACT_FAQ = [
