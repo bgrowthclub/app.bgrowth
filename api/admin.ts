@@ -422,6 +422,177 @@ async function listSales(db: Db) {
 }
 
 // ---------------------------------------------------------------------------
+// Support Center — the team side (members talk through api/support.ts).
+// Hours logic and e-mail are duplicated from there on purpose: functions
+// stay self-contained.
+// ---------------------------------------------------------------------------
+interface SupportHours {
+  timezone: string
+  days: number[]
+  start: string
+  end: string
+}
+
+const DEFAULT_HOURS: SupportHours = { timezone: 'America/Los_Angeles', days: [1, 2, 3, 4, 5], start: '09:00', end: '18:00' }
+const WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+const TIME = /^([01]\d|2[0-3]):[0-5]\d$/
+
+function isOnline(hours: SupportHours, now = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-US', {
+    timeZone: hours.timezone,
+    weekday: 'short',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23',
+  }).formatToParts(now)
+  const get = (type: string) => parts.find((p) => p.type === type)?.value ?? ''
+  const day = WEEKDAYS.indexOf(get('weekday'))
+  const minutes = Number(get('hour')) * 60 + Number(get('minute'))
+  const toMin = (t: string) => Number(t.slice(0, 2)) * 60 + Number(t.slice(3, 5))
+  return hours.days.includes(day) && minutes >= toMin(hours.start) && minutes < toMin(hours.end)
+}
+
+async function loadHours(db: Db): Promise<SupportHours> {
+  const { data } = await db.from('site_settings').select('value').eq('key', 'support_hours').maybeSingle()
+  return { ...DEFAULT_HOURS, ...((data?.value as Partial<SupportHours>) ?? {}) }
+}
+
+function escapeHtml(text: string) {
+  return text.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string)
+}
+
+async function emailMember(to: string, subject: string, html: string) {
+  const key = process.env.RESEND_API_KEY
+  if (!key) return false
+  const from = process.env.SUPPORT_FROM_EMAIL || 'BGrowth Support <support@bgrowth.app>'
+  try {
+    const res = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from, to, subject, html, reply_to: 'support@bgrowth.app' }),
+    })
+    if (!res.ok) console.error('[admin] support e-mail failed:', res.status, await res.text())
+    return res.ok
+  } catch (err) {
+    console.error('[admin] support e-mail failed:', err)
+    return false
+  }
+}
+
+async function listSupport(req: VercelRequest, db: Db) {
+  const status = str(req.query.status) === 'closed' ? 'closed' : 'open'
+  const hours = await loadHours(db)
+  const { data, error } = await db
+    .from('support_conversations')
+    .select('id, user_id, subject, status, last_sender, last_message_at, created_at, users(email, full_name)')
+    .eq('status', status)
+    .order('last_message_at', { ascending: false })
+    .limit(200)
+  if (error) throw error
+  // Waiting for the team first, then the most recent.
+  const conversations = (data ?? []).sort((a, b) =>
+    a.last_sender === b.last_sender ? 0 : a.last_sender === 'customer' ? -1 : 1,
+  )
+  const { count } = await db
+    .from('support_conversations')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'open')
+    .eq('last_sender', 'customer')
+  return { hours, online: isOnline(hours), conversations, waiting: count ?? 0 }
+}
+
+async function getSupportThread(req: VercelRequest, db: Db) {
+  const id = str(req.query.id)
+  const { data: conversation, error } = await db
+    .from('support_conversations')
+    .select('id, user_id, subject, status, last_sender, last_message_at, customer_read_at, created_at, users(email, full_name)')
+    .eq('id', id)
+    .maybeSingle()
+  if (error) throw error
+  if (!conversation) throw new HttpError(404, 'Conversation not found.')
+  const { data: messages, error: msgError } = await db
+    .from('support_messages')
+    .select('id, sender, author_name, body, created_at')
+    .eq('conversation_id', id)
+    .order('created_at')
+  if (msgError) throw msgError
+  return { conversation, messages: messages ?? [] }
+}
+
+async function replySupport(req: VercelRequest, db: Db, admin: Admin) {
+  const id = str(req.body?.conversationId)
+  const body = str(req.body?.body)
+  if (!body) throw new HttpError(400, 'Write your reply.')
+  if (body.length > 5000) throw new HttpError(400, 'The reply is too long (5,000 characters max).')
+  const { data: conversation, error } = await db
+    .from('support_conversations')
+    .select('id, subject, customer_read_at, users(email, full_name)')
+    .eq('id', id)
+    .maybeSingle()
+  if (error) throw error
+  if (!conversation) throw new HttpError(404, 'Conversation not found.')
+
+  const now = new Date()
+  const { error: msgError } = await db
+    .from('support_messages')
+    .insert({ conversation_id: id, sender: 'staff', author_id: admin.id, author_name: 'BGrowth Support', body })
+  if (msgError) throw msgError
+  await db
+    .from('support_conversations')
+    .update({ last_sender: 'staff', last_message_at: now.toISOString(), status: 'open' })
+    .eq('id', id)
+
+  // E-mail the member unless they are in the chat right now (opened it in
+  // the last 3 minutes during support hours).
+  const hours = await loadHours(db)
+  const watching = isOnline(hours) && now.getTime() - new Date(conversation.customer_read_at).getTime() < 3 * 60_000
+  const member = conversation.users as unknown as { email: string; full_name: string | null } | null
+  let emailed = false
+  if (!watching && member?.email) {
+    const first = member.full_name?.split(' ')[0] || 'there'
+    emailed = await emailMember(
+      member.email,
+      `Re: ${conversation.subject}`,
+      `<p>Hi ${escapeHtml(first)},</p>
+       <p>BGrowth Support replied to your message:</p>
+       <blockquote style="border-left:3px solid #1061EC;margin:0;padding:4px 12px;color:#0A1B4D">${escapeHtml(body).replace(/\n/g, '<br>')}</blockquote>
+       <p><a href="${siteOrigin(req)}/platform/support?c=${id}">Open the conversation</a> to reply.</p>
+       <p style="color:#6b7280">— BGrowth Support</p>`,
+    )
+  }
+  return { emailed }
+}
+
+async function setSupportStatus(req: VercelRequest, db: Db) {
+  const id = str(req.body?.conversationId)
+  const status = req.body?.status
+  if (status !== 'open' && status !== 'closed') throw new HttpError(400, "status must be 'open' or 'closed'.")
+  const { error } = await db.from('support_conversations').update({ status }).eq('id', id)
+  if (error) throw error
+  return {}
+}
+
+async function saveSupportHours(req: VercelRequest, db: Db, admin: Admin) {
+  const timezone = str(req.body?.timezone)
+  const start = str(req.body?.start)
+  const end = str(req.body?.end)
+  const days = Array.isArray(req.body?.days) ? (req.body.days as unknown[]).map(Number).filter((d) => d >= 0 && d <= 6) : []
+  try {
+    new Intl.DateTimeFormat('en-US', { timeZone: timezone })
+  } catch {
+    throw new HttpError(400, 'Unknown time zone.')
+  }
+  if (!TIME.test(start) || !TIME.test(end) || start >= end) throw new HttpError(400, 'Opening must be before closing (HH:MM).')
+  if (days.length === 0) throw new HttpError(400, 'Pick at least one day.')
+  const value: SupportHours = { timezone, days: Array.from(new Set(days)).sort(), start, end }
+  const { error } = await db
+    .from('site_settings')
+    .upsert({ key: 'support_hours', value, updated_at: new Date().toISOString(), updated_by: admin.email })
+  if (error) throw error
+  return { hours: value, online: isOnline(value) }
+}
+
+// ---------------------------------------------------------------------------
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const db = client()
@@ -438,6 +609,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ ok: true, ...(await getMember(req, db)) })
       case 'POST confirmation':
         return res.status(200).json({ ok: true, ...(await resendConfirmation(req, db)) })
+      case 'GET support':
+        return res.status(200).json({ ok: true, ...(await listSupport(req, db)) })
+      case 'GET support-thread':
+        return res.status(200).json({ ok: true, ...(await getSupportThread(req, db)) })
+      case 'POST support-reply':
+        return res.status(200).json({ ok: true, ...(await replySupport(req, db, admin)) })
+      case 'PATCH support-status':
+        return res.status(200).json({ ok: true, ...(await setSupportStatus(req, db)) })
+      case 'PUT support-hours':
+        return res.status(200).json({ ok: true, ...(await saveSupportHours(req, db, admin)) })
       case 'GET sales':
         return res.status(200).json({ ok: true, ...(await listSales(db)) })
       case 'GET products':

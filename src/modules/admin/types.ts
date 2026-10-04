@@ -1,4 +1,5 @@
 import type { PortalAccessGrantRow, PortalLicenseRow } from '../workspace/types/portal'
+import type { SupportConversationSummary, SupportHours, SupportMessage } from '../support/types'
 
 // Shapes returned by the Website's Admin endpoint (api/admin.ts). Licenses
 // and grants are the Portal's own rows (types/portal.ts) with their
@@ -88,4 +89,28 @@ export interface AdminSalesReport {
   months: number
   refundsAvailable: boolean
   truncated: boolean
+}
+
+// Admin → Support (the team side of modules/support).
+export interface AdminSupportMember {
+  email: string
+  full_name: string | null
+}
+
+export interface AdminSupportConversation extends SupportConversationSummary {
+  user_id: string
+  users: AdminSupportMember | null
+}
+
+export interface AdminSupportInbox {
+  hours: SupportHours
+  online: boolean
+  conversations: AdminSupportConversation[]
+  // Open conversations waiting for the team.
+  waiting: number
+}
+
+export interface AdminSupportThread {
+  conversation: AdminSupportConversation & { customer_read_at: string }
+  messages: SupportMessage[]
 }

@@ -6,16 +6,19 @@ import type {
   AdminMemberPage,
   AdminProduct,
   AdminSalesReport,
+  AdminSupportInbox,
+  AdminSupportThread,
   CreateGrantResult,
   NewGrantInput,
 } from './types'
+import type { SupportHours } from '../support/types'
 
 // The browser side of the Website's Administration — every call goes to
 // api/admin.ts with the signed-in admin's access token. Nothing here talks
 // to the database directly: admin writes need the service role, which only
 // the server has.
 
-async function call<T>(method: 'GET' | 'POST' | 'PATCH', resource: string, params?: Record<string, string>, body?: unknown): Promise<T> {
+async function call<T>(method: 'GET' | 'POST' | 'PATCH' | 'PUT', resource: string, params?: Record<string, string>, body?: unknown): Promise<T> {
   const session = supabase ? (await supabase.auth.getSession()).data.session : null
   if (!session) throw new Error('Sign in to continue.')
 
@@ -42,6 +45,21 @@ export const adminService = {
   },
   async resendConfirmation(userId: string) {
     return (await call<{ sentTo: string }>('POST', 'confirmation', undefined, { userId })).sentTo
+  },
+  listSupport(status: 'open' | 'closed') {
+    return call<AdminSupportInbox>('GET', 'support', { status })
+  },
+  getSupportThread(id: string) {
+    return call<AdminSupportThread>('GET', 'support-thread', { id })
+  },
+  async replySupport(conversationId: string, body: string) {
+    return (await call<{ emailed: boolean }>('POST', 'support-reply', undefined, { conversationId, body })).emailed
+  },
+  async setSupportStatus(conversationId: string, status: 'open' | 'closed') {
+    await call('PATCH', 'support-status', undefined, { conversationId, status })
+  },
+  saveSupportHours(hours: SupportHours) {
+    return call<{ hours: SupportHours; online: boolean }>('PUT', 'support-hours', undefined, hours)
   },
   listSales() {
     return call<AdminSalesReport>('GET', 'sales')
