@@ -1,13 +1,15 @@
 import SidebarItem from './SidebarItem'
 import type { PlatformNavGroup } from './platformNav'
+import type { NavBadges } from './useNavBadges'
 
 interface Props {
   group: PlatformNavGroup
   collapsed?: boolean
+  badges?: NavBadges
   onNavigate?: () => void
 }
 
-export default function SidebarGroup({ group, collapsed = false, onNavigate }: Props) {
+export default function SidebarGroup({ group, collapsed = false, badges = {}, onNavigate }: Props) {
   return (
     <div>
       {group.label && !collapsed && (
@@ -17,7 +19,13 @@ export default function SidebarGroup({ group, collapsed = false, onNavigate }: P
       )}
       <div className="space-y-0.5">
         {group.items.map((item) => (
-          <SidebarItem key={item.to} item={item} collapsed={collapsed} onNavigate={onNavigate} />
+          <SidebarItem
+            key={item.to}
+            item={item}
+            count={item.badge ? badges[item.badge] : undefined}
+            collapsed={collapsed}
+            onNavigate={onNavigate}
+          />
         ))}
       </div>
     </div>

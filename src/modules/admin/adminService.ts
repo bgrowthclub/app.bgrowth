@@ -46,6 +46,9 @@ export const adminService = {
   async resendConfirmation(userId: string) {
     return (await call<{ sentTo: string }>('POST', 'confirmation', undefined, { userId })).sentTo
   },
+  async countSupportWaiting() {
+    return (await call<{ waiting: number }>('GET', 'support-waiting')).waiting
+  },
   listSupport(status: 'open' | 'closed') {
     return call<AdminSupportInbox>('GET', 'support', { status })
   },

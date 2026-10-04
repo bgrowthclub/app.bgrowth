@@ -501,6 +501,17 @@ async function listSupport(req: VercelRequest, db: Db) {
   return { hours, online: isOnline(hours), conversations, waiting: count ?? 0 }
 }
 
+// The sidebar badge: open conversations waiting for the team.
+async function countSupportWaiting(db: Db) {
+  const { count, error } = await db
+    .from('support_conversations')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'open')
+    .eq('last_sender', 'customer')
+  if (error) throw error
+  return { waiting: count ?? 0 }
+}
+
 async function getSupportThread(req: VercelRequest, db: Db) {
   const id = str(req.query.id)
   const { data: conversation, error } = await db
@@ -611,6 +622,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ ok: true, ...(await resendConfirmation(req, db)) })
       case 'GET support':
         return res.status(200).json({ ok: true, ...(await listSupport(req, db)) })
+      case 'GET support-waiting':
+        return res.status(200).json({ ok: true, ...(await countSupportWaiting(db)) })
       case 'GET support-thread':
         return res.status(200).json({ ok: true, ...(await getSupportThread(req, db)) })
       case 'POST support-reply':

@@ -5,6 +5,7 @@ import PageContainer from '../layout/PageContainer'
 import Sidebar from './Sidebar'
 import TopBar from './TopBar'
 import { ComingSoonModalProvider } from './ComingSoonModalProvider'
+import { useNavBadges } from './useNavBadges'
 
 // Responsive decision for the sidebar (Milestone 4.1 review):
 // - Desktop (>=1024px, "lg"): persistent, expanded by default.
@@ -21,6 +22,8 @@ export default function PlatformLayout() {
   const [collapsed, setCollapsed] = useState(() => window.matchMedia(TABLET_QUERY).matches)
   const [mobileOpen, setMobileOpen] = useState(false)
   const userToggledRef = useRef(false)
+  const badges = useNavBadges()
+  const hasBadge = Object.values(badges).some((n) => (n ?? 0) > 0)
 
   useEffect(() => {
     const mql = window.matchMedia(TABLET_QUERY)
@@ -45,10 +48,11 @@ export default function PlatformLayout() {
           onToggleCollapsed={handleToggleCollapsed}
           mobileOpen={mobileOpen}
           onCloseMobile={() => setMobileOpen(false)}
+          badges={badges}
         />
 
         <div className="flex min-w-0 flex-1 flex-col">
-          <TopBar onOpenMobileSidebar={() => setMobileOpen(true)} />
+          <TopBar onOpenMobileSidebar={() => setMobileOpen(true)} menuBadge={hasBadge} />
           <main className="flex-1">
             <PageContainer width="page" className="py-10">
               <Outlet />

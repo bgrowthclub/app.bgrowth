@@ -28,7 +28,13 @@ export interface PlatformNavItem {
   // the ComingSoonModal instead of navigating — see SidebarItem.tsx. Only
   // Dashboard, My Workspaces, Settings, and Support are unlocked today.
   locked?: boolean
+  // A live count shown next to the label (see useNavBadges.ts).
+  badge?: NavBadgeKey
 }
+
+// supportUnread: the member's conversations with a reply they haven't
+// read; supportWaiting: open conversations waiting for the team (admins).
+export type NavBadgeKey = 'supportUnread' | 'supportWaiting'
 
 export interface PlatformNavGroup {
   label?: string
@@ -78,7 +84,7 @@ export const PLATFORM_NAV_GROUPS: PlatformNavGroup[] = [
     label: 'Account',
     items: [
       { label: 'Settings', to: '/platform/settings', icon: Settings },
-      { label: 'Support', to: '/platform/support', icon: LifeBuoy },
+      { label: 'Support', to: '/platform/support', icon: LifeBuoy, badge: 'supportUnread' },
     ],
   },
   {
@@ -87,7 +93,7 @@ export const PLATFORM_NAV_GROUPS: PlatformNavGroup[] = [
     items: [
       { label: 'Members', to: '/platform/admin/members', icon: UserCog },
       { label: 'Sales', to: '/platform/admin/sales', icon: Receipt },
-      { label: 'Support', to: '/platform/admin/support', icon: Headset },
+      { label: 'Support', to: '/platform/admin/support', icon: Headset, badge: 'supportWaiting' },
     ],
   },
 ]
