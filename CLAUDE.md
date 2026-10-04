@@ -349,9 +349,10 @@ extension costs every existing caller.
   `/system/:slug`, and `/platform/my-systems` already work for any
   category's data — see ARCHITECTURE.md §14.
 - Before adding a link (`<Link>`/`<a>`/`to=`), verify the target route
-  actually exists in `App.tsx`. Known pre-existing gaps (`/account`,
-  `/privacy`, `/terms`) are linked but unrouted — do not copy
-  this pattern for new links; either build the page or don't link it.
+  actually exists in `App.tsx`. The old linked-but-unrouted gaps are
+  closed (`/account` redirects to the profile; `/privacy`, `/terms` and
+  `/refund-policy` are real pages since Sprint 48, text in
+  `data/legal.ts`) — either build the page or don't link it.
 - Route param lookups (`useParams` + `getSystemBySlug`/`getModuleBySlug`)
   must always guard the "not found" case with `<Navigate to="/systems" />`,
   matching the existing pattern in `ProductPage`, `SystemOverviewPage`,

@@ -15,6 +15,7 @@ const LINKS = [
 const LEGAL_LINKS = [
   { label: 'Privacy Policy', to: '/privacy' },
   { label: 'Terms', to: '/terms' },
+  { label: 'Refund Policy', to: '/refund-policy' },
   { label: 'Contact', to: '/contact' },
 ]
 
