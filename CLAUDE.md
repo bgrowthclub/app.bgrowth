@@ -135,6 +135,11 @@ This repo is a **static, client-only MVP**:
   manual access grants through `api/admin.ts`, which re-checks the admin
   table with the service role on every request (see ARCHITECTURE.md §8b).
   Since Sprint 47 it also shows Sales, read from Stripe by that endpoint.
+  **Since Sprint 50 there is a Support Center** (approved by the user):
+  members chat with the team at `/platform/support` (live during support
+  hours, a ticket answered by e-mail too outside them) through
+  `api/support.ts`; the team answers in Admin → Support (see
+  ARCHITECTURE.md §8b).
 - Business System catalog data is hardcoded TypeScript (`src/data/`),
   standing in for a future export from **BGrowth Studio**. It covers only
   the Business & Entrepreneurship Growth Category today (see §2).

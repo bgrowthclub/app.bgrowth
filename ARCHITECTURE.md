@@ -584,6 +584,21 @@ sidebar group that `platformNav.ts` marks `adminOnly`.
   linked to the member. Refunds show only when `STRIPE_SECRET_KEY` can read
   PaymentIntents/Charges. There is no orders table: Stripe stays the
   source of truth until subscriptions need one.
+- **Support Center (Sprint 50):** signed-in members talk to the team at
+  `/platform/support`; the team answers at `/platform/admin/support`.
+  During support hours it is a live chat (the page polls every few
+  seconds); outside them the same conversation works as a ticket and the
+  reply also goes out by e-mail. Hours live in `portal.site_settings`
+  (`support_hours`: time zone, days, opens/closes) and are edited in the
+  Admin screen. Tables `support_conversations`/`support_messages` (Portal
+  migration 0031) have no browser access: the member side goes through
+  `api/support.ts` (member's token, own conversations only), the team side
+  through `api/admin.ts` (`support`, `support-thread`, `support-reply`,
+  `support-status`, `support-hours`). E-mails use Resend (`RESEND_API_KEY`;
+  optional `SUPPORT_NOTIFY_EMAIL`, `SUPPORT_FROM_EMAIL`) and are best
+  effort — a failed e-mail never fails a message. Shared logic lives in
+  `modules/support/`, components in `components/support/`. Planned:
+  e-mails sent to support@ showing up in the same inbox.
 - **Planned next** (user's plan): plans and subscriptions (with
   promotional prices) and the dashboard they unlock (MRR, churn), catalog
   management, system health.

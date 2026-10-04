@@ -4,21 +4,23 @@ import logo from '../../assets/logo.png'
 import SidebarGroup from './SidebarGroup'
 import { PLATFORM_NAV_GROUPS } from './platformNav'
 import { useIdentity } from '../../modules/identity/IdentityContext'
+import type { NavBadges } from './useNavBadges'
 
 interface Props {
   collapsed: boolean
   onToggleCollapsed: () => void
   mobileOpen: boolean
   onCloseMobile: () => void
+  badges: NavBadges
 }
 
-function SidebarBody({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
+function SidebarBody({ collapsed, badges, onNavigate }: { collapsed: boolean; badges: NavBadges; onNavigate?: () => void }) {
   const { user } = useIdentity()
   const groups = PLATFORM_NAV_GROUPS.filter((group) => !group.adminOnly || user?.isAdmin)
   return (
     <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
       {groups.map((group, i) => (
-        <SidebarGroup key={group.label ?? i} group={group} collapsed={collapsed} onNavigate={onNavigate} />
+        <SidebarGroup key={group.label ?? i} group={group} collapsed={collapsed} badges={badges} onNavigate={onNavigate} />
       ))}
     </nav>
   )
@@ -26,7 +28,7 @@ function SidebarBody({ collapsed, onNavigate }: { collapsed: boolean; onNavigate
 
 // The logo leads to the site's Home ("/"), same as on the auth screens —
 // Dashboard stays one click away as the first sidebar item.
-export default function Sidebar({ collapsed, onToggleCollapsed, mobileOpen, onCloseMobile }: Props) {
+export default function Sidebar({ collapsed, onToggleCollapsed, mobileOpen, onCloseMobile, badges }: Props) {
   return (
     <>
       {/* Desktop / tablet — persistent column from md upward, collapsible to
@@ -47,7 +49,7 @@ export default function Sidebar({ collapsed, onToggleCollapsed, mobileOpen, onCl
           </Link>
         </div>
 
-        <SidebarBody collapsed={collapsed} />
+        <SidebarBody collapsed={collapsed} badges={badges} />
 
         <div className="border-t border-navy/[0.06] p-3">
           <button
@@ -82,7 +84,7 @@ export default function Sidebar({ collapsed, onToggleCollapsed, mobileOpen, onCl
                 <X size={18} />
               </button>
             </div>
-            <SidebarBody collapsed={false} onNavigate={onCloseMobile} />
+            <SidebarBody collapsed={false} badges={badges} onNavigate={onCloseMobile} />
           </aside>
         </div>
       )}
