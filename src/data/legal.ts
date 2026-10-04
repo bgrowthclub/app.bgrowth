@@ -8,6 +8,7 @@ export const LEGAL_COMPANY = 'BGrowth'
 export const LEGAL_SITE = 'bgrowth.app'
 export const LEGAL_EMAIL = 'info@bgrowth.app'
 export const LEGAL_UPDATED = 'October 3, 2026'
+export const LEGAL_JURISDICTION = 'California, United States'
 export const REFUND_WINDOW_DAYS = 7
 
 export interface LegalSection {
@@ -84,6 +85,7 @@ export const PRIVACY_POLICY: LegalDocumentData = {
       heading: 'Your choices and rights',
       paragraphs: [
         `You can update your name in your account settings. You can ask us to access, correct, export or delete your personal information, or to close your account, by writing to ${LEGAL_EMAIL}. We will answer within 30 days.`,
+        'California residents may also ask what personal information we collected about them in the last 12 months and ask us to delete it. We do not sell or share personal information for advertising, and we will not treat you differently for using these rights.',
       ],
     },
     {
@@ -183,6 +185,12 @@ export const TERMS_OF_SERVICE: LegalDocumentData = {
       heading: 'Limitation of liability',
       paragraphs: [
         `To the extent allowed by law, ${LEGAL_COMPANY} is not liable for indirect or consequential losses, and our total liability for any claim is limited to the amount you paid us for the product in question.`,
+      ],
+    },
+    {
+      heading: 'Governing law',
+      paragraphs: [
+        'These Terms are governed by the laws of the State of California, United States, without regard to its conflict-of-law rules. Any dispute that cannot be resolved informally will be handled by the state or federal courts located in California, unless the law where you live gives you the right to bring it elsewhere.',
       ],
     },
     {
