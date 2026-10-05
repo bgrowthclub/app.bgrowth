@@ -2,6 +2,7 @@ import type { ProductAccess } from '../../commerce/types/access'
 import type { Product } from '../../commerce/types/product'
 import { studioProductFromRow } from '../../commerce/store/studioProductRepository'
 import { studioWorkspaceService, isStudioCatalogAvailable } from './studioWorkspaceService'
+import { categoryResolver } from '../categories'
 import { deriveAccessState, isGrantActive } from '../lib/access'
 import type { StudioAccessState } from '../lib/access'
 import type { PortalProductRow } from '../types/portal'
@@ -45,7 +46,7 @@ export async function listStudioLibrary(memberId: string): Promise<StudioLibrary
     rows = [...rows, ...published.filter((p) => !seen.has(p.id))]
   }
 
-  const categoryName = new Map(categories.map((c) => [c.id, c.name]))
+  const resolveCategory = categoryResolver(categories)
   const items: StudioLibraryItem[] = []
   for (const row of rows) {
     if (row.content_type !== 'workspace') continue
@@ -54,7 +55,7 @@ export async function listStudioLibrary(memberId: string): Promise<StudioLibrary
     const accessState = deriveAccessState(license, Boolean(grant))
     if (accessState === 'locked') continue
     items.push({
-      product: studioProductFromRow(row, row.category_id ? categoryName.get(row.category_id) : undefined),
+      product: studioProductFromRow(row, resolveCategory(row.category_id)),
       access: {
         productId: `studio-${row.id}`,
         memberId,

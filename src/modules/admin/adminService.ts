@@ -9,8 +9,7 @@ import type {
   AdminSupportInbox,
   AdminSupportThread,
   CreateGrantResult,
-  NewGrantInput,
-} from './types'
+  NewGrantInput, AdminCatalogCategories, AdminCategory } from './types'
 import type { SupportHours } from '../support/types'
 
 // The browser side of the Website's Administration — every call goes to
@@ -18,7 +17,7 @@ import type { SupportHours } from '../support/types'
 // to the database directly: admin writes need the service role, which only
 // the server has.
 
-async function call<T>(method: 'GET' | 'POST' | 'PATCH' | 'PUT', resource: string, params?: Record<string, string>, body?: unknown): Promise<T> {
+async function call<T>(method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE', resource: string, params?: Record<string, string>, body?: unknown): Promise<T> {
   const session = supabase ? (await supabase.auth.getSession()).data.session : null
   if (!session) throw new Error('Sign in to continue.')
 
@@ -48,6 +47,21 @@ export const adminService = {
   },
   async countSupportWaiting() {
     return (await call<{ waiting: number }>('GET', 'support-waiting')).waiting
+  },
+  listCategories() {
+    return call<AdminCatalogCategories>('GET', 'categories')
+  },
+  async createCategory(name: string, parentId: string) {
+    return (await call<{ category: AdminCategory }>('POST', 'categories', undefined, { name, parentId })).category
+  },
+  async updateCategory(id: string, patch: { name?: string; parentId?: string }) {
+    return (await call<{ category: AdminCategory }>('PATCH', 'categories', undefined, { id, ...patch })).category
+  },
+  async deleteCategory(id: string) {
+    await call('DELETE', 'categories', undefined, { id })
+  },
+  async setProductCategory(productId: string, categoryId: string | null) {
+    await call('PATCH', 'product-category', undefined, { productId, categoryId })
   },
   listSupport(status: 'open' | 'closed') {
     return call<AdminSupportInbox>('GET', 'support', { status })

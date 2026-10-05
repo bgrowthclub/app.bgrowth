@@ -51,6 +51,8 @@ export interface PortalCategoryRow {
   id: string
   name: string
   slug: string
+  // Area → category (Portal migration 0032); absent on older databases.
+  parent_id?: string | null
 }
 
 export interface PortalLicenseRow {

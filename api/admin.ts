@@ -604,6 +604,136 @@ async function saveSupportHours(req: VercelRequest, db: Db, admin: Admin) {
 }
 
 // ---------------------------------------------------------------------------
+// Categories — Area → Ramo (Portal migration 0032). Areas are the Growth
+// Categories (parent_id null); a Ramo has parent_id = its Area. A product
+// keeps one category_id (a Ramo, or an Area for a general Workspace). Studio
+// and the Website's catalog filters read this same list.
+// ---------------------------------------------------------------------------
+type CategoryRow = { id: string; name: string; slug: string; parent_id: string | null; sort_order: number }
+
+function slugify(text: string) {
+  return text
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/&/g, ' and ')
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60)
+}
+
+async function loadCategories(db: Db): Promise<CategoryRow[]> {
+  const { data, error } = await db
+    .from('workspace_categories')
+    .select('id, name, slug, parent_id, sort_order')
+    .order('sort_order')
+    .order('name')
+  if (error) throw error
+  return (data ?? []) as CategoryRow[]
+}
+
+async function listCatalogCategories(db: Db) {
+  const categories = await loadCategories(db)
+  const { data, error } = await db
+    .from('products')
+    .select('id, name, slug, status, category_id, cover_image_url')
+    .neq('status', 'archived')
+    .order('name')
+  if (error) throw error
+  return { categories, products: data ?? [] }
+}
+
+async function createCategory(req: VercelRequest, db: Db) {
+  const name = str(req.body?.name).slice(0, 80)
+  const parentId = str(req.body?.parentId) || null
+  if (!name) throw new HttpError(400, 'Give the category a name.')
+  if (!parentId) throw new HttpError(400, 'Choose the area this category belongs to.')
+  const categories = await loadCategories(db)
+  const parent = categories.find((c) => c.id === parentId)
+  if (!parent || parent.parent_id) throw new HttpError(400, 'Categories can only go inside an area.')
+  const slug = slugify(name)
+  if (!slug) throw new HttpError(400, 'Use letters or numbers in the name.')
+  if (categories.some((c) => c.slug === slug)) throw new HttpError(409, `A category called “${name}” already exists.`)
+  const sortOrder = categories.filter((c) => c.parent_id === parentId).length
+  const { data, error } = await db
+    .from('workspace_categories')
+    .insert({ name, slug, parent_id: parentId, sort_order: sortOrder })
+    .select('id, name, slug, parent_id, sort_order')
+    .single()
+  if (error) throw error
+  return { category: data }
+}
+
+// Rename or move to another area. The slug never changes: Studio and
+// published products refer to it.
+async function updateCategory(req: VercelRequest, db: Db) {
+  const id = str(req.body?.id)
+  const categories = await loadCategories(db)
+  const current = categories.find((c) => c.id === id)
+  if (!current) throw new HttpError(404, 'Category not found.')
+  const patch: Record<string, unknown> = {}
+  if (req.body?.name !== undefined) {
+    const name = str(req.body.name).slice(0, 80)
+    if (!name) throw new HttpError(400, 'Give the category a name.')
+    patch.name = name
+  }
+  if (req.body?.parentId !== undefined) {
+    if (!current.parent_id) throw new HttpError(400, 'Areas stay at the top level.')
+    const parent = categories.find((c) => c.id === str(req.body.parentId))
+    if (!parent || parent.parent_id) throw new HttpError(400, 'Categories can only go inside an area.')
+    patch.parent_id = parent.id
+  }
+  if (Object.keys(patch).length === 0) throw new HttpError(400, 'Nothing to change.')
+  const { data, error } = await db
+    .from('workspace_categories')
+    .update(patch)
+    .eq('id', id)
+    .select('id, name, slug, parent_id, sort_order')
+    .single()
+  if (error) throw error
+  return { category: data }
+}
+
+async function deleteCategory(req: VercelRequest, db: Db) {
+  const id = str(req.body?.id)
+  const categories = await loadCategories(db)
+  const current = categories.find((c) => c.id === id)
+  if (!current) throw new HttpError(404, 'Category not found.')
+  if (!current.parent_id) throw new HttpError(400, 'Areas can’t be deleted.')
+  const { count, error } = await db
+    .from('products')
+    .select('id', { count: 'exact', head: true })
+    .eq('category_id', id)
+  if (error) throw error
+  if ((count ?? 0) > 0) throw new HttpError(409, 'Move the Workspaces in this category to another one first.')
+  const { error: delError } = await db.from('workspace_categories').delete().eq('id', id)
+  if (delError) throw delError
+  return { deleted: id }
+}
+
+// Sets a product's category straight away (products + catalog_index), so
+// the site's filters change without republishing. Studio reads it back the
+// next time the Workspace is opened there.
+async function setProductCategory(req: VercelRequest, db: Db) {
+  const productId = str(req.body?.productId)
+  const categoryId = str(req.body?.categoryId) || null
+  if (!productId) throw new HttpError(400, 'Missing product.')
+  if (categoryId && !(await loadCategories(db)).some((c) => c.id === categoryId)) {
+    throw new HttpError(400, 'Category not found.')
+  }
+  const { data, error } = await db
+    .from('products')
+    .update({ category_id: categoryId })
+    .eq('id', productId)
+    .select('id, category_id')
+    .single()
+  if (error) throw error
+  const { error: indexError } = await db.from('catalog_index').update({ category_id: categoryId }).eq('product_id', productId)
+  if (indexError) throw indexError
+  return { product: data }
+}
+
+// ---------------------------------------------------------------------------
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const db = client()
@@ -632,6 +762,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ ok: true, ...(await setSupportStatus(req, db)) })
       case 'PUT support-hours':
         return res.status(200).json({ ok: true, ...(await saveSupportHours(req, db, admin)) })
+      case 'GET categories':
+        return res.status(200).json({ ok: true, ...(await listCatalogCategories(db)) })
+      case 'POST categories':
+        return res.status(200).json({ ok: true, ...(await createCategory(req, db)) })
+      case 'PATCH categories':
+        return res.status(200).json({ ok: true, ...(await updateCategory(req, db)) })
+      case 'DELETE categories':
+        return res.status(200).json({ ok: true, ...(await deleteCategory(req, db)) })
+      case 'PATCH product-category':
+        return res.status(200).json({ ok: true, ...(await setProductCategory(req, db)) })
       case 'GET sales':
         return res.status(200).json({ ok: true, ...(await listSales(db)) })
       case 'GET products':
