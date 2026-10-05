@@ -2,12 +2,12 @@ import { Bell } from 'lucide-react'
 import Popover from './Popover'
 import EmptyState from '../ui/EmptyState'
 
-// Placeholder only — there is no notification backend yet. The dot is a
-// static visual affordance, not tied to any real unread count.
+// Placeholder only — there is no notification backend yet, so no unread dot
+// is shown (it used to be static and suggested news that wasn't there).
 export default function NotificationButton() {
   return (
     <Popover
-      panelClassName="w-72 p-3"
+      panelClassName="w-72 p-3 max-sm:fixed max-sm:inset-x-4 max-sm:top-16 max-sm:w-auto"
       trigger={({ open, toggle }) => (
         <button
           onClick={toggle}
@@ -17,7 +17,6 @@ export default function NotificationButton() {
           className="relative grid h-9 w-9 place-items-center rounded-full text-navy/50 transition-colors hover:bg-bg-soft hover:text-navy"
         >
           <Bell size={17} strokeWidth={2} />
-          <span className="absolute right-2 top-2 h-1.5 w-1.5 rounded-full bg-primary" />
         </button>
       )}
     >

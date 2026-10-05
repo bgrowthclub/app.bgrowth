@@ -20,7 +20,7 @@ export default function DocumentCard({ document, to }: Props) {
       className={`${CARD} group flex flex-col p-5 transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/15 hover:shadow-glow`}
     >
       <div className="flex items-start justify-between gap-3">
-        <p className="min-w-0 truncate font-display text-[15px] font-bold text-navy">{document.label}</p>
+        <p className="min-w-0 break-words font-display text-[15px] font-bold text-navy">{document.label}</p>
         <ArrowRight className="h-4 w-4 shrink-0 text-navy/30 transition-transform group-hover:translate-x-0.5 group-hover:text-primary" />
       </div>
       <div className="mt-4 flex items-center gap-3">
