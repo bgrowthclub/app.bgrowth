@@ -610,6 +610,14 @@ sidebar group that `platformNav.ts` marks `adminOnly`.
   Workspaces exist in more than one Area. Studio's Category field reads the
   same list; Admin can also set a Workspace's category directly
   (`products` + `catalog_index`), and Studio keeps it on its next publish.
+- **Security hardening (Sprint 53):** the legacy `api/checkout.ts`,
+  `api/access.ts` and `api/webhooks/stripe.ts` are switched off (410 / 200
+  ignored) — they took price, member and redirect URLs from the request
+  without sign-in; Studio Workspaces sell through `api/studio-checkout.ts`.
+  New support conversations need a confirmed e-mail and are capped at 3 per
+  hour; Workspace content links go through `lib/safeUrl.ts`; `vercel.json`
+  sends security headers. Portal migration 0033 limits database functions
+  to the service role and tightens the trial-license insert.
 - **Planned next** (user's plan): plans and subscriptions (with
   promotional prices) and the dashboard they unlock (MRR, churn), catalog
   management, system health.

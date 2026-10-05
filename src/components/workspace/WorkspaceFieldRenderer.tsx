@@ -1,3 +1,4 @@
+import { safeUrl } from '../../lib/safeUrl'
 import type { WorkspaceFieldConfig } from '../../modules/workspace/types/content'
 import { getWorkspaceIcon } from '../../modules/workspace/lib/icons'
 import { INPUT } from './styles'
@@ -45,7 +46,7 @@ export default function WorkspaceFieldRenderer({ field, value, onChange }: Props
       <div className={field.fullWidth !== false ? 'sm:col-span-2' : undefined}>
         {field.placeholder && (
           <a
-            href={field.placeholder}
+            href={safeUrl(field.placeholder)}
             download={field.label || 'file'}
             className="inline-flex items-center gap-2 rounded-lg border border-navy/10 bg-bg-soft px-4 py-2.5 text-sm font-medium text-navy/75 hover:bg-navy/[0.06]"
           >
@@ -63,7 +64,7 @@ export default function WorkspaceFieldRenderer({ field, value, onChange }: Props
     return (
       <div className={field.fullWidth ? 'sm:col-span-2' : undefined}>
         <a
-          href={href}
+          href={safeUrl(href)}
           target="_blank"
           rel="noopener noreferrer"
           className="inline-flex items-center gap-1.5 text-sm font-medium text-workspace-600 hover:underline"
