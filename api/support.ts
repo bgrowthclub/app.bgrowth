@@ -157,6 +157,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     if (key2 === 'POST conversations') {
+      if (!user.email_confirmed_at) throw new HttpError(403, 'Confirm your e-mail address first — check your inbox for our link.')
+      // At most 3 new conversations per member per hour (each one e-mails the team).
+      const hourAgo = new Date(Date.now() - 60 * 60_000).toISOString()
+      const { count: recent } = await db
+        .from('support_conversations')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', user.id)
+        .gte('created_at', hourAgo)
+      if ((recent ?? 0) >= 3) throw new HttpError(429, 'You’ve opened several conversations recently — please continue in one of them.')
       const subject = str(req.body?.subject).slice(0, 200)
       const body = str(req.body?.message)
       if (!subject) throw new HttpError(400, 'Add a subject.')
@@ -223,7 +232,6 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (err) {
     if (err instanceof HttpError) return res.status(err.status).json({ ok: false, error: err.message })
     console.error('[support] error:', err)
-    const message = err && typeof err === 'object' && 'message' in err ? String((err as { message: unknown }).message) : String(err)
-    return res.status(500).json({ ok: false, error: message })
+    return res.status(500).json({ ok: false, error: 'Something went wrong. Please try again.' })
   }
 }

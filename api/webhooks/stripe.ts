@@ -32,7 +32,15 @@ function readRawBody(req: VercelRequest): Promise<string> {
 // WebhookService.ts's doc comment on this exact invariant). completeOrder
 // is idempotent, so a Stripe retry (at-least-once delivery) is always
 // safe to re-process.
+// Disabled (security audit, Sprint 53): the legacy webhook for the old
+// checkout. Purchases of Studio Workspaces are granted by the Portal's
+// webhook. Answers 200 so Stripe never retries if this URL is registered.
+const DISABLED = true
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (DISABLED) {
+    res.status(200).json({ received: true, ignored: true })
+    return
+  }
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' })
     return

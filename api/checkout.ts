@@ -25,7 +25,15 @@ interface CheckoutRequestBody {
 // later completes it through) and only then starts the Stripe Checkout
 // Session, reusing Cart.id as the correlation key StripeProvider sets as
 // client_reference_id — no CheckoutSessionRequest field changes needed.
+// Disabled (security audit, Sprint 53): this legacy route took the price,
+// member and redirect URLs from the request without any sign-in. Studio
+// Workspaces are sold through api/studio-checkout.ts. Kept in place, off.
+const DISABLED = true
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (DISABLED) {
+    res.status(410).json({ error: 'This checkout is no longer available.' })
+    return
+  }
   if (req.method !== 'POST') {
     res.status(405).json({ error: 'Method not allowed' })
     return

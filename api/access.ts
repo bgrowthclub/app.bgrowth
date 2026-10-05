@@ -6,7 +6,13 @@ import { accessService } from '../src/modules/commerce/server/accessService'
 // call (Product Library, Dashboard sections, ...) is transparently backed
 // by. Read-only: this endpoint never grants access — that only ever
 // happens server-side, from OrderService.completeOrder.
+// Disabled (security audit, Sprint 53): this legacy route returned any member's access with no sign-in. Kept in place, off.
+const DISABLED = true
 export default async function handler(req: VercelRequest, res: VercelResponse) {
+  if (DISABLED) {
+    res.status(410).json({ error: 'Not available.' })
+    return
+  }
   if (req.method !== 'GET') {
     res.status(405).json({ error: 'Method not allowed' })
     return
