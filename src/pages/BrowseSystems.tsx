@@ -8,7 +8,6 @@ import StudioWorkspaceCard from '../components/systems/StudioWorkspaceCard'
 import { MODULE_TYPE_CONFIG } from '../components/systems/ModuleBadge'
 import EmptyState from '../components/ui/EmptyState'
 import Grid from '../components/layout/Grid'
-import { CATEGORIES } from '../data/systems'
 import { loadPublishedSystemProducts, loadStudioWorkspaceProducts, systemForCard } from '../lib/publishedCatalog'
 import type { Product } from '../modules/commerce/types/product'
 import { GROWTH_CATEGORIES } from '../types/growth'
@@ -88,13 +87,12 @@ export default function BrowseSystems() {
     [publishedList],
   )
 
-  // Industry pills: the static examples' categories plus every category a
-  // published Studio Workspace uses (Admin → Categories).
-  const industries = useMemo(() => {
-    const fromStudio = Array.from(new Set(studioProducts.flatMap((p) => (p.industry ? [p.industry] : []))))
-    const known = CATEGORIES.filter((c) => c !== 'All') as string[]
-    return ['All', ...known, ...fromStudio.filter((c) => !known.includes(c)).sort()]
-  }, [studioProducts])
+  // Industry pills: every category a published Studio Workspace uses
+  // (Admin → Categories).
+  const industries = useMemo(
+    () => ['All', ...Array.from(new Set(studioProducts.flatMap((p) => (p.industry ? [p.industry] : [])))).sort()],
+    [studioProducts],
+  )
 
   // Area pills (Growth Categories) appear once Workspaces exist in more than
   // one Area; the static examples are all Business & Entrepreneurship.
