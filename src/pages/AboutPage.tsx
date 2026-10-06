@@ -5,7 +5,7 @@ import Button from '../components/ui/Button'
 
 const METHOD_STEPS = [
   { icon: Compass, title: 'Choose', description: 'Pick the Workspace built for what you actually want to achieve.' },
-  { icon: GitBranch, title: 'Follow', description: 'Work through Planners™, Workflows™, and Toolkits™ in order.' },
+  { icon: GitBranch, title: 'Follow', description: 'Work through Planners™, Workflows™, and Toolkits™ in the order that fits your work.' },
   { icon: Layers, title: 'Repeat', description: 'Reuse the same system every time you need it — it never changes on you.' },
 ]
 
@@ -63,7 +63,7 @@ export default function AboutPage() {
           <SectionHeader
             eyebrow="Why BGrowth Exists"
             title="Advice is everywhere. Structure isn’t."
-            description="Anyone can find advice about reaching a goal. What's missing is a system that turns that advice into action — the actual steps, in order, ready to work through."
+            description="Anyone can find advice about reaching a goal. What's missing is a system that turns that advice into action — the actual steps, ready to work through in the order that fits you."
             className="max-w-2xl"
           />
         </div>

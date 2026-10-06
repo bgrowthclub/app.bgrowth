@@ -212,7 +212,7 @@ export default function ProductPage() {
       {studio && outline.length > 0 && (
         <section className="section-py bg-bg-soft">
           <div className="container-px mx-auto max-w-page">
-            <SectionHeader eyebrow="What's Inside" title={`${outline.length} steps, in order`} className="mb-10" />
+            <SectionHeader eyebrow="What's Inside" title={`${outline.length} steps — fill them in any order`} className="mb-10" />
             <StudioWorkspaceOutline sections={outline} />
           </div>
         </section>
