@@ -25,6 +25,18 @@ export interface PortalProductRow {
   created_at: string
 }
 
+// One section of a Workspace's public outline — portal.get_workspace_outline()
+// (titles only; no fields, items or texts).
+export interface WorkspaceOutlineSection {
+  id: string
+  number: number | null
+  type: 'form' | 'checklist' | 'notes' | 'outcome'
+  title: string
+  description: string
+  icon: string
+  optional: boolean | null
+}
+
 export interface PortalCatalogRow {
   product_id: string
   slug: string

@@ -3,7 +3,7 @@ import { getSystemBySlug } from '../data/systems'
 import { getMemberPrice } from './checkout'
 import type { Product } from '../modules/commerce/types/product'
 import type { BusinessSystem } from '../types/system'
-import type { SectionConfig } from '../modules/workspace/types/content'
+import type { WorkspaceOutlineSection } from '../modules/workspace/types/portal'
 import { studioWorkspaceService } from '../modules/workspace/services/studioWorkspaceService'
 
 // Resolves a product's underlying BusinessSystem when it's GrowthSystem-
@@ -71,12 +71,11 @@ export function isStudioWorkspaceProduct(product: Product): boolean {
   return product.source?.type === 'StudioWorkspace'
 }
 
-// The published steps of a Studio Workspace, for its product page's
-// "What's inside" preview. Empty when the content isn't available.
-export async function loadStudioWorkspaceOutline(slug: string): Promise<SectionConfig[]> {
+// The published steps of a Studio Workspace (titles only), for its product
+// page's "What's inside" preview. Empty when it isn't available.
+export async function loadStudioWorkspaceOutline(slug: string): Promise<WorkspaceOutlineSection[]> {
   try {
-    const row = await studioWorkspaceService.getProductBySlug(slug)
-    return row?.content?.sections ?? []
+    return await studioWorkspaceService.getOutline(slug)
   } catch {
     return []
   }
