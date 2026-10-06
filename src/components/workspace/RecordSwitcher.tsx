@@ -21,7 +21,7 @@ export default function RecordSwitcher({ records, currentId, recordPath, onNew }
   return (
     <Popover
       align="right"
-      panelClassName="w-72 p-1.5"
+      panelClassName="w-72 p-1.5 max-sm:fixed max-sm:inset-x-4 max-sm:top-20 max-sm:w-auto"
       trigger={({ toggle }) => (
         <button
           type="button"
@@ -51,7 +51,7 @@ export default function RecordSwitcher({ records, currentId, recordPath, onNew }
             to={recordPath(record.id)}
             className={`flex flex-col rounded-lg px-3 py-2.5 hover:bg-bg-soft ${record.id === currentId ? 'bg-bg-soft' : ''}`}
           >
-            <span className="truncate text-[13px] font-semibold text-navy">{record.label}</span>
+            <span className="break-words text-[13px] font-semibold text-navy">{record.label}</span>
             <span className="text-[12px] text-navy/45">Updated {formatDate(record.updated_at)}</span>
           </Link>
         ))}

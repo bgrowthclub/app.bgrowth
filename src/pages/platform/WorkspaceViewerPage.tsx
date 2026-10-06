@@ -5,6 +5,7 @@ import SEO from '../../components/seo/SEO'
 import Button from '../../components/ui/Button'
 import DocumentWorkspaceRenderer from '../../components/workspace/DocumentWorkspaceRenderer'
 import RecordSwitcher from '../../components/workspace/RecordSwitcher'
+import RecordsPanel from '../../components/workspace/RecordsPanel'
 import NewRecordDialog from '../../components/workspace/NewRecordDialog'
 import { CARD } from '../../components/workspace/styles'
 import { useIdentity } from '../../modules/identity/IdentityContext'
@@ -141,6 +142,12 @@ export default function WorkspaceViewerPage() {
           onNew={() => setNaming(true)}
         />
       </div>
+
+      {!instance && (
+        <div className="mt-6">
+          <RecordsPanel records={ws.records} recordPath={recordPath} onNew={() => setNaming(true)} />
+        </div>
+      )}
 
       <div className="mt-8">
         {product.content ? (
