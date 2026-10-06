@@ -1,6 +1,6 @@
 import { Briefcase, Building2, PiggyBank, HeartPulse, GraduationCap, Home as HomeIcon } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { SYSTEMS } from './systems'
+import type { GrowthCategoryId } from '../types/growth'
 
 // The six Workspace™ categories — a curated, homepage-and-marketing-only
 // presentation of BGrowth's Growth Categories (see src/types/growth.ts and
@@ -16,18 +16,20 @@ export interface WorkspaceCategory {
   icon: LucideIcon
   name: string
   description: string
+  // The Growth Categories (Admin → Categories areas) this card groups.
+  areas: GrowthCategoryId[]
+  // Static fallback only — the live count comes from the published Studio
+  // Workspaces (lib/useWorkspaceCategories.ts).
   count: number
 }
 
-const publishedCount = SYSTEMS.filter((s) => s.status === 'published').length
-
 export const WORKSPACE_CATEGORIES: WorkspaceCategory[] = [
-  { slug: 'business', icon: Briefcase, name: 'Business', description: 'Launch, organize and grow your next business with interactive workspaces.', count: publishedCount },
-  { slug: 'career', icon: Building2, name: 'Career', description: 'Plan your career, build new skills and move toward better opportunities.', count: 0 },
-  { slug: 'finance', icon: PiggyBank, name: 'Finance', description: 'Take control of your money, budgeting and long-term financial goals.', count: 0 },
-  { slug: 'health', icon: HeartPulse, name: 'Health', description: 'Create healthier habits, routines and wellness plans that last.', count: 0 },
-  { slug: 'learning', icon: GraduationCap, name: 'Learning', description: 'Learn new skills, languages and knowledge through guided workspaces.', count: 0 },
-  { slug: 'lifestyle', icon: HomeIcon, name: 'Lifestyle', description: 'Organize your home, routines and personal projects with confidence.', count: 0 },
+  { slug: 'business', icon: Briefcase, name: 'Business', description: 'Launch, organize and grow your next business with interactive workspaces.', areas: ['business-entrepreneurship'], count: 0 },
+  { slug: 'career', icon: Building2, name: 'Career', description: 'Plan your career, build new skills and move toward better opportunities.', areas: ['careers-professions'], count: 0 },
+  { slug: 'finance', icon: PiggyBank, name: 'Finance', description: 'Take control of your money, budgeting and long-term financial goals.', areas: ['personal-finance'], count: 0 },
+  { slug: 'health', icon: HeartPulse, name: 'Health', description: 'Create healthier habits, routines and wellness plans that last.', areas: ['health-wellness'], count: 0 },
+  { slug: 'learning', icon: GraduationCap, name: 'Learning', description: 'Learn new skills, languages and knowledge through guided workspaces.', areas: ['education', 'languages'], count: 0 },
+  { slug: 'lifestyle', icon: HomeIcon, name: 'Lifestyle', description: 'Organize your home, routines and personal projects with confidence.', areas: ['family-lifestyle', 'productivity'], count: 0 },
 ]
 
 // Every system in today's catalog belongs to the Business & Entrepreneurship

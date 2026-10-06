@@ -4,10 +4,11 @@ import SectionHeader from '../ui/SectionHeader'
 import IndustryCard from '../systems/IndustryCard'
 import Card from '../ui/Card'
 import Button from '../ui/Button'
-import { WORKSPACE_CATEGORIES } from '../../data/workspaceCategories'
+import { categoryCatalogPath, useWorkspaceCategories } from '../../lib/useWorkspaceCategories'
 import { fadeUp, viewportOnce } from '../../lib/motion'
 
 export default function LifeWorlds() {
+  const categories = useWorkspaceCategories()
   return (
     <section id="life-worlds" className="section-py relative">
       <div className="container-px mx-auto max-w-page">
@@ -35,13 +36,13 @@ export default function LifeWorlds() {
         />
 
         <div className="grid gap-4 sm:grid-cols-2 sm:gap-5 lg:grid-cols-3 lg:gap-6">
-          {WORKSPACE_CATEGORIES.map((category, i) => (
+          {categories.map((category, i) => (
             <IndustryCard
               key={category.slug}
               icon={category.icon}
               name={category.name}
               description={category.description}
-              to={category.count > 0 ? '/systems' : `/preview/${category.slug}`}
+              to={category.count > 0 ? categoryCatalogPath(category) : `/preview/${category.slug}`}
               index={i}
               count={category.count}
               ctaLabel={category.count > 0 ? 'Explore' : 'Preview'}

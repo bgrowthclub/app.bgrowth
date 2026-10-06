@@ -6,7 +6,7 @@ import SearchBar from '../components/ui/SearchBar'
 import IndustryCard from '../components/systems/IndustryCard'
 import Card from '../components/ui/Card'
 import Button from '../components/ui/Button'
-import { WORKSPACE_CATEGORIES } from '../data/workspaceCategories'
+import { categoryCatalogPath, useWorkspaceCategories } from '../lib/useWorkspaceCategories'
 import { fadeUp, viewportOnce } from '../lib/motion'
 
 // The standalone entry point into the Workspace™ ecosystem — same content
@@ -14,15 +14,16 @@ import { fadeUp, viewportOnce } from '../lib/motion'
 // (components/sections/LifeWorlds.tsx).
 export default function WorkspacesPage() {
   const [query, setQuery] = useState('')
+  const categories = useWorkspaceCategories()
 
   const results = useMemo(() => {
-    if (!query.trim()) return WORKSPACE_CATEGORIES
-    return WORKSPACE_CATEGORIES.filter(
+    if (!query.trim()) return categories
+    return categories.filter(
       (c) =>
         c.name.toLowerCase().includes(query.toLowerCase()) ||
         c.description.toLowerCase().includes(query.toLowerCase()),
     )
-  }, [query])
+  }, [query, categories])
 
   return (
     <div className="pb-24 pt-32 md:pt-40">
@@ -61,7 +62,7 @@ export default function WorkspacesPage() {
                   icon={category.icon}
                   name={category.name}
                   description={category.description}
-                  to={category.count > 0 ? '/systems' : `/preview/${category.slug}`}
+                  to={category.count > 0 ? categoryCatalogPath(category) : `/preview/${category.slug}`}
                   index={i}
                   count={category.count}
                   ctaLabel={category.count > 0 ? 'Explore' : 'Preview'}
