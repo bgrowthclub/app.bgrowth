@@ -118,8 +118,8 @@ This repo is a **static, client-only MVP**:
   **Since Sprint 38 the catalog and the customer area also read the
   Portal's database:** Workspaces published from BGrowth Studio
   (`portal.catalog_index`/`products`) list first in the catalog, Home and
-  product pages (the static example products follow, by the user's
-  choice), a member's licenses/grants fill My Workspaces, and
+  product pages (the static example products were taken off the
+  site on 05/10/2026, Sprint 54, by the user's choice), a member's licenses/grants fill My Workspaces, and
   `/platform/workspace/:slug` opens and saves them (`workspace_instances`)
   with the Studio Workspace viewer ported from the Portal (see
   ARCHITECTURE.md §8a). **Since Sprint 44 Studio Workspaces are bought
