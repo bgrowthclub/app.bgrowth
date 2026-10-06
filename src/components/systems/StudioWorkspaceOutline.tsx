@@ -1,11 +1,11 @@
 import { CheckCircle2, ListChecks, NotebookPen, ClipboardList } from 'lucide-react'
-import type { SectionConfig } from '../../modules/workspace/types/content'
+import type { WorkspaceOutlineSection } from '../../modules/workspace/types/portal'
 
 interface Props {
-  sections: SectionConfig[]
+  sections: WorkspaceOutlineSection[]
 }
 
-const KIND: Record<SectionConfig['type'], { label: string; Icon: typeof ClipboardList }> = {
+const KIND: Record<WorkspaceOutlineSection['type'], { label: string; Icon: typeof ClipboardList }> = {
   form: { label: 'Form', Icon: ClipboardList },
   checklist: { label: 'Checklist', Icon: ListChecks },
   notes: { label: 'Notes', Icon: NotebookPen },
@@ -13,12 +13,12 @@ const KIND: Record<SectionConfig['type'], { label: string; Icon: typeof Clipboar
 }
 
 // "What's inside" for a Studio-published Workspace — its real steps, in
-// order, straight from the published content (read-only preview).
+// order, from the published Workspace's public outline (titles only).
 export default function StudioWorkspaceOutline({ sections }: Props) {
   return (
     <ol className="grid gap-3 md:grid-cols-2">
       {sections.map((section, i) => {
-        const { label, Icon } = KIND[section.type]
+        const { label, Icon } = KIND[section.type] ?? KIND.form
         return (
           <li
             key={section.id}

@@ -24,7 +24,7 @@ export async function listStudioDocuments(userId: string): Promise<StudioDocumen
   if (!isStudioCatalogAvailable) return []
   const instances = await studioWorkspaceService.listAllInstances(userId)
   const productIds = [...new Set(instances.map((i) => i.product_id))]
-  const products = await studioWorkspaceService.getProductsByIds(productIds)
+  const products = await studioWorkspaceService.getProductsByIds(productIds, { withContent: true })
   const byId = new Map(products.map((p) => [p.id, p]))
 
   const groups = new Map<string, StudioDocumentGroup>()

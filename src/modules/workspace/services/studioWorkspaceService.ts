@@ -6,7 +6,9 @@ import type {
   PortalLicenseRow,
   PortalProductRow,
   WorkspaceInstanceRow,
+  WorkspaceOutlineSection,
 } from '../types/portal'
+import type { WorkspaceContent } from '../types/content'
 
 // Every read/write this site makes against the Studio-published Workspaces
 // in the Portal's Supabase (`portal` schema). The shared browser client
@@ -24,6 +26,33 @@ function client() {
 }
 
 export const isStudioCatalogAvailable = Boolean(supabase)
+
+// Every products column except `content`. The Workspace JSON isn't readable
+// from the browser (Portal migration 0034/0035): a member with access gets
+// it from portal.get_workspace_content(); visitors get only the outline.
+const PRODUCT_COLUMNS =
+  'id, slug, name, short_description, cover_image_url, category_id, is_trial_eligible, trial_duration, content_type, metadata, status, welcome_pdf_url, is_free, price_cents, currency, last_published_at, created_at'
+
+type ProductRowWithoutContent = Omit<PortalProductRow, 'content'>
+
+const withoutContent = (rows: unknown): PortalProductRow[] =>
+  ((rows ?? []) as ProductRowWithoutContent[]).map((row) => ({ ...row, content: null }))
+
+// The function isn't there yet (0034 not run) — fall back to the old column read.
+function isMissingFunction(error: { code?: string } | null): boolean {
+  return error?.code === 'PGRST202' || error?.code === '42883'
+}
+
+// The full Workspace JSON, or null without access (or signed out).
+async function getContent(productId: string): Promise<WorkspaceContent | null> {
+  const { data, error } = await client().rpc('get_workspace_content', { p_product_id: productId })
+  if (!error) return (data as WorkspaceContent | null) ?? null
+  if (isMissingFunction(error)) {
+    const legacy = await client().from('products').select('content').eq('id', productId).maybeSingle()
+    return ((legacy.data as { content?: WorkspaceContent | null } | null)?.content ?? null)
+  }
+  return null
+}
 
 export const studioWorkspaceService = {
   // The public catalog — portal.catalog_index only ever holds published
@@ -43,32 +72,58 @@ export const studioWorkspaceService = {
     return (data ?? []) as PortalCategoryRow[]
   },
 
-  // Full product row (content JSON + marketing metadata). RLS returns an
-  // archived product only to a member who owns it.
+  // Product row with its content JSON when the signed-in member has access
+  // (null otherwise). RLS returns an archived product only to a member who
+  // owns it.
   async getProductBySlug(slug: string): Promise<PortalProductRow | null> {
     // A list query (not maybeSingle) so a repeated slug can't turn into an
     // error — the most recently published one wins.
     const { data, error } = await client()
       .from('products')
-      .select('*')
+      .select(PRODUCT_COLUMNS)
       .eq('slug', slug)
       .order('last_published_at', { ascending: false, nullsFirst: false })
       .limit(1)
     if (error) throw error
-    return ((data ?? [])[0] as PortalProductRow | undefined) ?? null
+    const row = withoutContent(data)[0]
+    if (!row) return null
+    return { ...row, content: await getContent(row.id) }
   },
 
-  async getProductsByIds(ids: string[]): Promise<PortalProductRow[]> {
+  // Product rows without content; pass withContent for the ones the member
+  // has access to (e.g. My Documents' progress).
+  async getProductsByIds(ids: string[], options: { withContent?: boolean } = {}): Promise<PortalProductRow[]> {
     if (ids.length === 0) return []
-    const { data, error } = await client().from('products').select('*').in('id', ids)
+    const { data, error } = await client().from('products').select(PRODUCT_COLUMNS).in('id', ids)
     if (error) throw error
-    return (data ?? []) as PortalProductRow[]
+    const rows = withoutContent(data)
+    if (!options.withContent) return rows
+    return Promise.all(rows.map(async (row) => ({ ...row, content: await getContent(row.id) })))
   },
 
   async listPublishedProducts(): Promise<PortalProductRow[]> {
-    const { data, error } = await client().from('products').select('*').eq('status', 'published')
+    const { data, error } = await client().from('products').select(PRODUCT_COLUMNS).eq('status', 'published')
     if (error) throw error
-    return (data ?? []) as PortalProductRow[]
+    return withoutContent(data)
+  },
+
+  // The public outline of a published Workspace — section titles only.
+  async getOutline(slug: string): Promise<WorkspaceOutlineSection[]> {
+    const { data, error } = await client().rpc('get_workspace_outline', { p_slug: slug })
+    if (!error) return (data as WorkspaceOutlineSection[] | null) ?? []
+    if (isMissingFunction(error)) {
+      const row = await this.getProductBySlug(slug)
+      return (row?.content?.sections ?? []).map((section) => ({
+        id: section.id,
+        number: section.number ?? null,
+        type: section.type,
+        title: section.title,
+        description: section.description ?? '',
+        icon: section.icon ?? '',
+        optional: section.optional ?? null,
+      }))
+    }
+    return []
   },
 
   async listLicenses(userId: string): Promise<PortalLicenseRow[]> {

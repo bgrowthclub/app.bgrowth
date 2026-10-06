@@ -19,7 +19,7 @@ import { isStudioWorkspaceProduct, loadStudioWorkspaceOutline, resolveProductSys
 import { useIdentity } from '../modules/identity/IdentityContext'
 import { workspaceViewerPath } from '../modules/workspace/config'
 import { useStudioPurchase } from '../modules/workspace/hooks/useStudioPurchase'
-import type { SectionConfig } from '../modules/workspace/types/content'
+import type { WorkspaceOutlineSection } from '../modules/workspace/types/portal'
 import { DEFAULT_WORKSPACE_SLUG } from '../data/workspaceCategories'
 import type { Product } from '../modules/commerce/types/product'
 
@@ -39,7 +39,7 @@ const MODULES_PREVIEW_ID = 'modules-included'
 export default function ProductPage() {
   const { slug } = useParams<{ slug: string }>()
   const [product, setProduct] = useState<Product | null | undefined>(undefined)
-  const [outline, setOutline] = useState<SectionConfig[]>([])
+  const [outline, setOutline] = useState<WorkspaceOutlineSection[]>([])
   const { user } = useIdentity()
   const [searchParams] = useSearchParams()
   // Studio Workspaces: ownership, trial and checkout (no-op for other products).
