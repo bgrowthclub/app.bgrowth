@@ -10,7 +10,7 @@ import type {
   AdminSupportThread,
   CreateGrantResult,
   NewGrantInput, AdminCatalogCategories, AdminCategory,
-  AdminNewsletterCampaign, AdminNewsletterDraft, AdminNewsletterOverview } from './types'
+  AdminNewsletterCampaign, AdminNewsletterDraft, AdminNewsletterOverview, AdminReview } from './types'
 import type { SupportHours } from '../support/types'
 
 // The browser side of the Website's Administration — every call goes to
@@ -108,6 +108,12 @@ export const adminService = {
   },
   async deleteNewsletterCampaign(id: string) {
     await call('DELETE', 'newsletter-campaign', undefined, { id })
+  },
+  async listReviews() {
+    return (await call<{ reviews: AdminReview[] }>('GET', 'reviews')).reviews
+  },
+  async removeReview(id: string) {
+    await call('DELETE', 'reviews', undefined, { id })
   },
   async createLaunchCampaign(productId: string) {
     return (await call<{ campaign: AdminNewsletterCampaign }>('POST', 'newsletter-launch', undefined, { productId })).campaign

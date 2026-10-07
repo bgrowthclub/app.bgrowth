@@ -1106,6 +1106,55 @@ async function saveNewsletterAddress(req: VercelRequest, db: Db, admin: Admin) {
 }
 
 // ---------------------------------------------------------------------------
+// Reviews (portal.reviews, Portal migration 0009) — members' public reviews
+// of Workspaces, shared by the Portal and the site. The team can read them
+// all and remove one that breaks the rules (spam, abuse, personal data).
+// ---------------------------------------------------------------------------
+async function listReviews(db: Db) {
+  const { data, error } = await db.from('reviews').select('*').order('created_at', { ascending: false }).limit(1000)
+  if (error) throw error
+  const rows = (data ?? []) as {
+    id: string
+    user_id: string
+    product_id: string
+    rating: number
+    title: string
+    comment: string
+    display_name: string
+    created_from: string
+    created_at: string
+    updated_at: string
+  }[]
+  const productIds = [...new Set(rows.map((r) => r.product_id))]
+  const userIds = [...new Set(rows.map((r) => r.user_id))]
+  const [products, users] = await Promise.all([
+    productIds.length ? db.from('products').select('id, name, slug').in('id', productIds) : Promise.resolve({ data: [], error: null }),
+    userIds.length ? db.from('users').select('id, email').in('id', userIds) : Promise.resolve({ data: [], error: null }),
+  ])
+  if (products.error) throw products.error
+  if (users.error) throw users.error
+  const productById = new Map(((products.data ?? []) as { id: string; name: string; slug: string }[]).map((p) => [p.id, p]))
+  const emailById = new Map(((users.data ?? []) as { id: string; email: string }[]).map((u) => [u.id, u.email]))
+  return {
+    reviews: rows.map((r) => ({
+      ...r,
+      product_name: productById.get(r.product_id)?.name ?? 'Removed Workspace',
+      product_slug: productById.get(r.product_id)?.slug ?? null,
+      email: emailById.get(r.user_id) ?? null,
+    })),
+  }
+}
+
+async function deleteReview(req: VercelRequest, db: Db) {
+  const id = str(req.query.id ?? req.body?.id)
+  if (!id) throw new HttpError(400, 'id is required.')
+  const { data, error } = await db.from('reviews').delete().eq('id', id).select('id')
+  if (error) throw error
+  if (!data || data.length === 0) throw new HttpError(404, 'That review no longer exists.')
+  return { removed: id }
+}
+
+// ---------------------------------------------------------------------------
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const db = client()
@@ -1178,6 +1227,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ ok: true, ...(await sendCampaign(req, db)) })
       case 'PUT newsletter-address':
         return res.status(200).json({ ok: true, ...(await saveNewsletterAddress(req, db, admin)) })
+      case 'GET reviews':
+        return res.status(200).json({ ok: true, ...(await listReviews(db)) })
+      case 'DELETE reviews':
+        return res.status(200).json({ ok: true, ...(await deleteReview(req, db)) })
       default:
         return res.status(404).json({ ok: false, error: 'Unknown admin action.' })
     }

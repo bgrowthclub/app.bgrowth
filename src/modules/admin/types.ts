@@ -183,3 +183,20 @@ export interface AdminNewsletterDraft {
   bodyHtml: string
   audienceAreas: GrowthCategoryId[]
 }
+
+// A member's review of a Workspace (portal.reviews), with what Admin → Reviews shows.
+export interface AdminReview {
+  id: string
+  user_id: string
+  product_id: string
+  rating: number
+  title: string
+  comment: string
+  display_name: string
+  created_from: 'trial' | 'purchase'
+  created_at: string
+  updated_at: string
+  product_name: string
+  product_slug: string | null
+  email: string | null
+}

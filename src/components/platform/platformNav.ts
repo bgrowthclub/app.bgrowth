@@ -15,6 +15,7 @@ import {
   Headset,
   Tags,
   Mail,
+  Star,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -98,6 +99,7 @@ export const PLATFORM_NAV_GROUPS: PlatformNavGroup[] = [
       { label: 'Support', to: '/platform/admin/support', icon: Headset, badge: 'supportWaiting' },
       { label: 'Categories', to: '/platform/admin/categories', icon: Tags },
       { label: 'Newsletter', to: '/platform/admin/newsletter', icon: Mail },
+      { label: 'Reviews', to: '/platform/admin/reviews', icon: Star },
     ],
   },
 ]

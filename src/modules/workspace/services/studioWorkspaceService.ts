@@ -5,6 +5,9 @@ import type {
   PortalCategoryRow,
   PortalLicenseRow,
   PortalProductRow,
+  PortalReviewRow,
+  PortalReviewSummary,
+  ReviewInput,
   WorkspaceInstanceRow,
   WorkspaceOutlineSection,
 } from '../types/portal'
@@ -206,5 +209,77 @@ export const studioWorkspaceService = {
       .select('id')
     if (error) throw error
     if (!rows || rows.length === 0) throw new Error('Couldn’t save — this record is no longer available.')
+  },
+
+  // --- Reviews (Portal migration 0009: portal.reviews) ---------------------
+  // Public to read. Writing needs a license row for the product (any
+  // status, so a review survives an expired trial) — RLS enforces it.
+
+  async listReviews(productId: string): Promise<PortalReviewRow[]> {
+    const { data, error } = await client()
+      .from('reviews')
+      .select('*')
+      .eq('product_id', productId)
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    return (data ?? []) as PortalReviewRow[]
+  },
+
+  async getReviewSummary(productId: string): Promise<PortalReviewSummary> {
+    const { data, error } = await client()
+      .from('product_review_summary')
+      .select('average_rating, review_count')
+      .eq('product_id', productId)
+      .maybeSingle()
+    if (error) throw error
+    const row = data as { average_rating: number | string | null; review_count: number } | null
+    return { averageRating: Number(row?.average_rating ?? 0), reviewCount: row?.review_count ?? 0 }
+  },
+
+  // The member's license for one product, if any — what makes them able to review it.
+  async getLicense(userId: string, productId: string): Promise<PortalLicenseRow | null> {
+    const { data, error } = await client()
+      .from('licenses')
+      .select('*')
+      .eq('user_id', userId)
+      .eq('product_id', productId)
+      .limit(1)
+    if (error) throw error
+    return ((data ?? [])[0] as PortalLicenseRow | undefined) ?? null
+  },
+
+  async createReview(
+    userId: string,
+    productId: string,
+    displayName: string,
+    createdFrom: PortalReviewRow['created_from'],
+    input: ReviewInput,
+  ): Promise<PortalReviewRow> {
+    const { data, error } = await client()
+      .from('reviews')
+      .insert({
+        user_id: userId,
+        product_id: productId,
+        display_name: displayName,
+        created_from: createdFrom,
+        rating: input.rating,
+        title: input.title,
+        comment: input.comment,
+      })
+      .select()
+      .single()
+    if (error) throw error
+    return data as PortalReviewRow
+  },
+
+  async updateReview(reviewId: string, input: ReviewInput): Promise<PortalReviewRow> {
+    const { data, error } = await client()
+      .from('reviews')
+      .update({ rating: input.rating, title: input.title, comment: input.comment, updated_at: new Date().toISOString() })
+      .eq('id', reviewId)
+      .select()
+      .single()
+    if (error) throw error
+    return data as PortalReviewRow
   },
 }

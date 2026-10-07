@@ -28,6 +28,11 @@ export function isStudioProductId(id: string) {
   return id.startsWith(ID_PREFIX)
 }
 
+// The Portal's own product id behind a Studio product ("studio-<uuid>" → uuid).
+export function studioPortalId(id: string): string | undefined {
+  return isStudioProductId(id) ? id.slice(ID_PREFIX.length) : undefined
+}
+
 function toCurrency(code: string): CurrencyCode {
   const upper = code.toUpperCase() as CurrencyCode
   return KNOWN_CURRENCIES.includes(upper) ? upper : 'USD'

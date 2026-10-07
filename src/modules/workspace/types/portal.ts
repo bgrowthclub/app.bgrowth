@@ -79,6 +79,33 @@ export interface PortalLicenseRow {
   last_opened_at?: string | null
 }
 
+// A member's review of a Workspace (Portal migration 0009) — one per
+// member and product, shared by the Portal and this site. Public to read;
+// written only by a member who holds (or held) a license for it.
+export interface PortalReviewRow {
+  id: string
+  user_id: string
+  product_id: string
+  rating: number
+  title: string
+  comment: string
+  display_name: string
+  created_from: 'trial' | 'purchase'
+  created_at: string
+  updated_at: string
+}
+
+export interface PortalReviewSummary {
+  averageRating: number
+  reviewCount: number
+}
+
+export interface ReviewInput {
+  rating: number
+  title: string
+  comment: string
+}
+
 export interface PortalAccessGrantRow {
   scope: 'specific' | 'all'
   product_id: string | null
