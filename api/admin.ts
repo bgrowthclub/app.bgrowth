@@ -197,7 +197,7 @@ async function getMember(req: VercelRequest, db: Db) {
 async function listProducts(db: Db) {
   const { data, error } = await db
     .from('products')
-    .select('id, name, slug, is_free, price_cents, currency, status')
+    .select('id, name, slug, is_free, price_cents, currency, status, last_published_at')
     .eq('status', 'published')
     .order('name')
   if (error) throw error

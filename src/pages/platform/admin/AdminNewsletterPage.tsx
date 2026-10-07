@@ -36,7 +36,11 @@ export default function AdminNewsletterPage() {
 
   useEffect(() => {
     load()
-    adminService.listProducts().then(setProducts).catch(() => undefined)
+    // Newest published first — usually the one being announced.
+    adminService
+      .listProducts()
+      .then((list) => setProducts([...list].sort((a, b) => (b.last_published_at ?? '').localeCompare(a.last_published_at ?? ''))))
+      .catch(() => undefined)
   }, [load])
 
   const areaLabels = useMemo(() => Object.fromEntries((overview?.areas ?? []).map((a) => [a.id, a.label])), [overview])

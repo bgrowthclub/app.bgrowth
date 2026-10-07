@@ -55,6 +55,7 @@ export interface AdminProduct {
   is_free: boolean
   price_cents: number | null
   currency: string
+  last_published_at?: string | null
 }
 
 export interface NewGrantInput {
