@@ -1,8 +1,8 @@
-import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Instagram, Facebook, Youtube, Linkedin, ArrowRight } from 'lucide-react'
 import logo from '../../assets/logo.png'
 import Button from '../ui/Button'
+import { useNewsletterSignup } from '../../modules/newsletter/useNewsletterSignup'
 
 const LINKS = [
   { label: 'Business Systems', to: '/systems' },
@@ -27,14 +27,7 @@ const SOCIALS = [
 ]
 
 export default function Footer() {
-  const [email, setEmail] = useState('')
-  const [submitted, setSubmitted] = useState(false)
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!email) return
-    setSubmitted(true)
-  }
+  const signup = useNewsletterSignup('footer')
 
   return (
     <footer className="relative border-t border-navy/[0.06] bg-bg-soft print:hidden">
@@ -82,19 +75,25 @@ export default function Footer() {
           <div>
             <p className="text-[13px] font-semibold text-navy">Newsletter</p>
             <p className="mt-4 text-[13px] text-navy/45">Get new resources and systems first.</p>
-            <form onSubmit={handleSubmit} className="mt-4 flex gap-2">
+            <form onSubmit={signup.submit} className="mt-4 flex gap-2">
               <input
                 type="email"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={signup.email}
+                onChange={(e) => signup.setEmail(e.target.value)}
                 placeholder="you@business.com"
+                aria-label="E-mail address"
                 className="w-full rounded-xl border border-navy/10 bg-white px-4 py-2.5 text-[13px] text-navy placeholder:text-navy/30 focus:border-primary/30"
               />
               <Button type="submit" className="!px-4 !py-2.5 !text-[13px] shrink-0" icon={<ArrowRight size={14} />}>
-                {submitted ? 'Sent' : 'Join'}
+                {signup.state === 'sending' ? '…' : signup.done ? 'Sent' : 'Join'}
               </Button>
             </form>
+            {signup.message && (
+              <p role="status" className={`mt-2 text-[12.5px] ${signup.state === 'error' ? 'text-red-500' : 'text-navy/50'}`}>
+                {signup.message}
+              </p>
+            )}
           </div>
         </div>
 

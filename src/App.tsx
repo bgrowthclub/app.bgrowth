@@ -40,6 +40,9 @@ import AdminMemberPage from './pages/platform/admin/AdminMemberPage'
 import AdminSalesPage from './pages/platform/admin/AdminSalesPage'
 import AdminSupportPage from './pages/platform/admin/AdminSupportPage'
 import AdminCategoriesPage from './pages/platform/admin/AdminCategoriesPage'
+import AdminNewsletterPage from './pages/platform/admin/AdminNewsletterPage'
+import NewsletterConfirmPage from './pages/newsletter/NewsletterConfirmPage'
+import NewsletterPreferencesPage from './pages/newsletter/NewsletterPreferencesPage'
 import AdminRoute from './modules/identity/routing/AdminRoute'
 // Lazy: the Workspace viewer carries the full icon set and the PDF engine,
 // so it loads only when a member actually opens a Workspace.
@@ -99,6 +102,8 @@ export default function App() {
         <Route path="/club" element={<Navigate to="/pricing" replace />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/newsletter/confirm" element={<NewsletterConfirmPage />} />
+        <Route path="/newsletter/preferences" element={<NewsletterPreferencesPage />} />
         <Route path="/terms" element={<TermsPage />} />
         <Route path="/refund-policy" element={<RefundPolicyPage />} />
 
@@ -172,6 +177,7 @@ export default function App() {
         <Route path="admin/sales" element={<AdminRoute><AdminSalesPage /></AdminRoute>} />
         <Route path="admin/support" element={<AdminRoute><AdminSupportPage /></AdminRoute>} />
         <Route path="admin/categories" element={<AdminRoute><AdminCategoriesPage /></AdminRoute>} />
+        <Route path="admin/newsletter" element={<AdminRoute><AdminNewsletterPage /></AdminRoute>} />
       </Route>
 
       {/* BGrowth Studio — a deliberate, explicit third layout. This is the

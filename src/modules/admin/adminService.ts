@@ -9,7 +9,8 @@ import type {
   AdminSupportInbox,
   AdminSupportThread,
   CreateGrantResult,
-  NewGrantInput, AdminCatalogCategories, AdminCategory } from './types'
+  NewGrantInput, AdminCatalogCategories, AdminCategory,
+  AdminNewsletterCampaign, AdminNewsletterDraft, AdminNewsletterOverview } from './types'
 import type { SupportHours } from '../support/types'
 
 // The browser side of the Website's Administration — every call goes to
@@ -95,5 +96,38 @@ export const adminService = {
   },
   async updateLicense(id: string, action: 'extend' | 'end' | 'restore', expiresAt?: string) {
     return (await call<{ license: AdminLicense }>('PATCH', 'licenses', undefined, { id, action, expiresAt })).license
+  },
+  getNewsletter() {
+    return call<AdminNewsletterOverview>('GET', 'newsletter')
+  },
+  async getNewsletterCampaign(id: string) {
+    return (await call<{ campaign: AdminNewsletterCampaign }>('GET', 'newsletter-campaign', { id })).campaign
+  },
+  async saveNewsletterCampaign(draft: AdminNewsletterDraft) {
+    return (await call<{ campaign: AdminNewsletterCampaign }>('POST', 'newsletter-campaign', undefined, draft)).campaign
+  },
+  async deleteNewsletterCampaign(id: string) {
+    await call('DELETE', 'newsletter-campaign', undefined, { id })
+  },
+  async createLaunchCampaign(productId: string) {
+    return (await call<{ campaign: AdminNewsletterCampaign }>('POST', 'newsletter-launch', undefined, { productId })).campaign
+  },
+  async uploadNewsletterImage(dataUrl: string) {
+    return (await call<{ url: string }>('POST', 'newsletter-image', undefined, { dataUrl })).url
+  },
+  async previewNewsletter(draft: Pick<AdminNewsletterDraft, 'subject' | 'preheader' | 'bodyHtml'>) {
+    return (await call<{ html: string }>('POST', 'newsletter-preview', undefined, draft)).html
+  },
+  async countNewsletterAudience(areas: string[]) {
+    return (await call<{ count: number }>('GET', 'newsletter-audience', { areas: areas.join(',') })).count
+  },
+  async sendNewsletterTest(id: string) {
+    return (await call<{ sentTo: string }>('POST', 'newsletter-test', undefined, { id })).sentTo
+  },
+  async sendNewsletter(id: string) {
+    return (await call<{ sent: number }>('POST', 'newsletter-send', undefined, { id })).sent
+  },
+  async saveNewsletterAddress(address: string) {
+    return (await call<{ address: string }>('PUT', 'newsletter-address', undefined, { address })).address
   },
 }
