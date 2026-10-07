@@ -8,6 +8,7 @@ import ArticleCard from '../components/ui/ArticleCard'
 import ResourceCard from '../components/systems/ResourceCard'
 import type { SystemResource } from '../types/system'
 import { useNewsletterSignup } from '../modules/newsletter/useNewsletterSignup'
+import SignupInterests from '../components/newsletter/SignupInterests'
 import {
   FREE_DOWNLOADS,
   BUSINESS_GUIDES,
@@ -169,6 +170,7 @@ export default function ResourcesPage() {
                 {signup.message}
               </p>
             )}
+            {signup.token && <SignupInterests token={signup.token} />}
           </MemberBanner>
         </div>
       </section>

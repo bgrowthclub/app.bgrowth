@@ -3,6 +3,7 @@ import { Instagram, Facebook, Youtube, Linkedin, ArrowRight } from 'lucide-react
 import logo from '../../assets/logo.png'
 import Button from '../ui/Button'
 import { useNewsletterSignup } from '../../modules/newsletter/useNewsletterSignup'
+import SignupInterests from '../newsletter/SignupInterests'
 
 const LINKS = [
   { label: 'Business Systems', to: '/systems' },
@@ -86,7 +87,7 @@ export default function Footer() {
                 className="w-full rounded-xl border border-navy/10 bg-white px-4 py-2.5 text-[13px] text-navy placeholder:text-navy/30 focus:border-primary/30"
               />
               <Button type="submit" className="!px-4 !py-2.5 !text-[13px] shrink-0" icon={<ArrowRight size={14} />}>
-                {signup.state === 'sending' ? '…' : signup.done ? 'Sent' : 'Join'}
+                {signup.state === 'sending' ? '…' : signup.done ? 'Joined' : 'Join'}
               </Button>
             </form>
             {signup.message && (
@@ -94,6 +95,7 @@ export default function Footer() {
                 {signup.message}
               </p>
             )}
+            {signup.token && <SignupInterests token={signup.token} />}
           </div>
         </div>
 

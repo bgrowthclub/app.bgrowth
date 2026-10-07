@@ -20,6 +20,7 @@ import type { KnowledgeArticleIndexEntry } from '../../modules/knowledge/types/a
 import type { KnowledgeCategory } from '../../modules/knowledge/types/category'
 import type { LearningPath } from '../../modules/knowledge/types/learningPath'
 import { useNewsletterSignup } from '../../modules/newsletter/useNewsletterSignup'
+import SignupInterests from '../../components/newsletter/SignupInterests'
 
 interface HomeData {
   featuredArticles: KnowledgeArticleIndexEntry[]
@@ -245,6 +246,7 @@ export default function KnowledgeHomePage() {
               {signup.message}
             </p>
           )}
+          {signup.token && <SignupInterests token={signup.token} />}
         </MemberBanner>
       </SectionContainer>
 

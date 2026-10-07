@@ -24,9 +24,11 @@ async function call<T>(method: 'GET' | 'POST' | 'PUT', resource: string, params?
 }
 
 export const newsletterService = {
-  // 'check-email' = a confirmation e-mail is on its way; 'subscribed' = done.
-  async subscribe(email: string, source: string, website = '') {
-    return (await call<{ status: 'check-email' | 'subscribed' }>('POST', 'subscribe', undefined, { email, source, website })).status
+  // Subscribes at once. A new subscription comes back with its token, so
+  // the form can ask for interests right away; an address that was already
+  // subscribed comes back without one.
+  subscribe(email: string, source: string, website = '') {
+    return call<{ status: 'subscribed'; token?: string }>('POST', 'subscribe', undefined, { email, source, website })
   },
   confirm(token: string) {
     return call<NewsletterPreferences>('POST', 'confirm', undefined, { token })

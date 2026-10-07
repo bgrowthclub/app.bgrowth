@@ -24,6 +24,7 @@ import type { KnowledgeCategory } from '../../modules/knowledge/types/category'
 import type { KnowledgeAuthor } from '../../modules/knowledge/types/author'
 import type { KnowledgeArticleIndexEntry } from '../../modules/knowledge/types/article'
 import { useNewsletterSignup } from '../../modules/newsletter/useNewsletterSignup'
+import SignupInterests from '../../components/newsletter/SignupInterests'
 
 function authorInitials(name: string): string {
   return name
@@ -224,6 +225,7 @@ export default function KnowledgeArticlePage() {
               {signup.message}
             </p>
           )}
+          {signup.token && <SignupInterests token={signup.token} />}
         </MemberBanner>
       </SectionContainer>
     </div>
