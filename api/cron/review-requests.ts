@@ -71,38 +71,42 @@ function escapeHtml(value: string) {
   return value.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string)
 }
 
-function buildEmail(moment: Moment, access: Access, firstName: string | null, productName: string, reviewUrl: string) {
+// Copy from the review plan agreed on 25/07 (GPT): at the end of a trial,
+// "How was your experience with {Product}?" with Rate + Buy Now; for
+// someone using it, "You've been using your Workspace for a while… would
+// you mind leaving a review?".
+function buildEmail(moment: Moment, access: Access, firstName: string | null, productName: string, reviewUrl: string, buyUrl: string) {
   const greeting = firstName ? `Hi ${escapeHtml(firstName)},` : 'Hi there,'
   const name = escapeHtml(productName)
+  const button = (href: string, label: string, primary: boolean) =>
+    `<a href="${href}" style="display:inline-block;margin:0 8px 8px 0;${primary ? 'background:#1061EC;color:#ffffff;' : 'background:#ffffff;color:#1061EC;border:1px solid #C9D7F5;'}text-decoration:none;font-weight:600;padding:12px 20px;border-radius:10px">${label}</a>`
+  const stars = `<a href="${reviewUrl}" style="display:block;margin:0 0 20px;font-size:28px;letter-spacing:4px;color:#1061EC;text-decoration:none">★★★★★</a>`
   let subject: string
-  let heading: string
-  let lead: string
-  let extra = ''
+  let body: string
   if (moment === 'week') {
     subject = `How is ${productName} working for you?`
-    heading = 'How is it working for you?'
-    lead = access.trial
-      ? `You’ve been trying <strong>${name}</strong> for a week. How is it going?`
-      : `You’ve had <strong>${name}</strong> for a week. How is it going?`
-  } else if (access.trial) {
-    subject = `How was your ${productName} trial?`
-    heading = 'How was your trial?'
-    lead = `Your free trial of <strong>${name}</strong> has ended. We’d love to know how it went.`
-    extra = 'Want to keep using it? The same page lets you get it — your saved records are still there.'
+    body = `
+      <p style="margin:0 0 16px;line-height:1.6;color:#33406B">You’ve been using <strong>${name}</strong> for a while. Would you mind leaving a review? It only takes a minute and helps other members choose.</p>
+      ${stars}
+      ${button(reviewUrl, 'Rate this Workspace', true)}`
   } else {
-    subject = `How was ${productName}?`
-    heading = 'How was it?'
-    lead = `Your access to <strong>${name}</strong> has ended. We’d love to know how it went.`
+    subject = `How was your experience with ${productName}?`
+    const thanks = access.trial
+      ? `Thank you for trying <strong>${name}</strong>. Your free trial has ended.`
+      : `Thank you for using <strong>${name}</strong>. Your access has ended.`
+    body = `
+      <p style="margin:0 0 16px;line-height:1.6;color:#33406B">${thanks} We’d love to hear your opinion.</p>
+      ${stars}
+      ${button(reviewUrl, 'Rate this Workspace', true)}
+      <p style="margin:16px 0 12px;line-height:1.6;color:#33406B">If you’d like to continue using it, you can purchase it anytime — your saved records are still there.</p>
+      ${button(buyUrl, 'Buy Now', false)}`
   }
   const html = `
   <div style="background:#F4F7FD;padding:32px 16px;font-family:Inter,Arial,sans-serif;color:#0A1B4D">
     <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:16px;padding:32px">
       <p style="margin:0;font-weight:800;font-size:18px">BGrowth</p>
-      <h1 style="margin:20px 0 8px;font-size:22px">${heading}</h1>
-      <p style="margin:0 0 8px;line-height:1.6;color:#33406B">${greeting}</p>
-      <p style="margin:0 0 24px;line-height:1.6;color:#33406B">${lead} A short review — a few stars and a sentence or two — helps other members choose, and tells us what to improve.</p>
-      <a href="${reviewUrl}" style="display:inline-block;background:#1061EC;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:10px">Write a review</a>
-      ${extra ? `<p style="margin:24px 0 0;line-height:1.6;color:#33406B">${extra}</p>` : ''}
+      <p style="margin:20px 0 16px;line-height:1.6;color:#33406B">${greeting}</p>
+      ${body}
       <p style="margin:24px 0 0;font-size:13px;line-height:1.6;color:#6B7896">Something not working? Just reply to this e-mail — it goes to our support team.</p>
     </div>
   </div>`
@@ -232,8 +236,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }
 
     const reviewUrl = `${site}/product/${encodeURIComponent(product.slug)}?review=1#reviews`
+    const buyUrl = `${site}/product/${encodeURIComponent(product.slug)}`
     const firstName = user.full_name?.trim().split(/\s+/)[0] || null
-    const { subject, html } = buildEmail(moment, access, firstName, product.name, reviewUrl)
+    const { subject, html } = buildEmail(moment, access, firstName, product.name, reviewUrl, buyUrl)
     try {
       const response = await fetch('https://api.resend.com/emails', {
         method: 'POST',
