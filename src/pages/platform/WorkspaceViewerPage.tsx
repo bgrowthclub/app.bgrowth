@@ -7,9 +7,11 @@ import DocumentWorkspaceRenderer from '../../components/workspace/DocumentWorksp
 import RecordSwitcher from '../../components/workspace/RecordSwitcher'
 import RecordsPanel from '../../components/workspace/RecordsPanel'
 import NewRecordDialog from '../../components/workspace/NewRecordDialog'
+import ReviewPrompt from '../../components/reviews/ReviewPrompt'
 import { CARD } from '../../components/workspace/styles'
 import { useIdentity } from '../../modules/identity/IdentityContext'
 import { useStudioWorkspace } from '../../modules/workspace/hooks/useStudioWorkspace'
+import { useProductReviews } from '../../modules/workspace/hooks/useProductReviews'
 import { studioWorkspaceService } from '../../modules/workspace/services/studioWorkspaceService'
 import { workspaceViewerPath } from '../../modules/workspace/config'
 import type { WorkspaceData } from '../../modules/workspace/types/content'
@@ -25,6 +27,12 @@ export default function WorkspaceViewerPage() {
   const navigate = useNavigate()
   const { user } = useIdentity()
   const ws = useStudioWorkspace(slug, user?.id)
+  // The member's own review (written here or on the product page / Portal).
+  const reviews = useProductReviews(
+    ws.hasAccess ? ws.product?.id : undefined,
+    user ? { id: user.id, displayName: user.displayName } : null,
+    false,
+  )
 
   const [naming, setNaming] = useState(false)
   const [creating, setCreating] = useState(false)
@@ -146,6 +154,9 @@ export default function WorkspaceViewerPage() {
       {!instance && (
         <div className="mt-6">
           <RecordsPanel records={ws.records} recordPath={recordPath} onNew={() => setNaming(true)} />
+          <div className="mt-4">
+            <ReviewPrompt workspaceName={product.name} reviews={reviews} />
+          </div>
         </div>
       )}
 

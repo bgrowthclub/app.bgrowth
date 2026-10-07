@@ -14,6 +14,10 @@ import FAQPanel from '../components/runtime/FAQPanel'
 import RelatedProductsPanel from '../components/runtime/RelatedProductsPanel'
 import StudioPurchaseCard from '../components/systems/StudioPurchaseCard'
 import StudioWorkspaceOutline from '../components/systems/StudioWorkspaceOutline'
+import ProductReviewsSection from '../components/reviews/ProductReviewsSection'
+import ReviewSummaryLine from '../components/reviews/ReviewSummaryLine'
+import { studioPortalId } from '../modules/commerce/store/studioProductRepository'
+import { useProductReviews } from '../modules/workspace/hooks/useProductReviews'
 import { productCatalogService } from '../modules/commerce/services/ProductCatalogService'
 import { isStudioWorkspaceProduct, loadStudioWorkspaceOutline, resolveProductSystem } from '../lib/publishedCatalog'
 import { useIdentity } from '../modules/identity/IdentityContext'
@@ -24,6 +28,7 @@ import { DEFAULT_WORKSPACE_SLUG } from '../data/workspaceCategories'
 import type { Product } from '../modules/commerce/types/product'
 
 const MODULES_PREVIEW_ID = 'modules-included'
+const REVIEWS_ID = 'reviews'
 
 // The Product Page — the Runtime↔Product Engine connection's dynamic
 // product page (see the milestone that introduced this). Loads its data
@@ -44,6 +49,11 @@ export default function ProductPage() {
   const [searchParams] = useSearchParams()
   // Studio Workspaces: ownership, trial and checkout (no-op for other products).
   const purchase = useStudioPurchase(slug, user?.id, searchParams.get('checkout'))
+  // Members' reviews (Studio Workspaces only — shared with the Portal).
+  const reviews = useProductReviews(
+    product ? studioPortalId(product.id) : undefined,
+    user ? { id: user.id, displayName: user.displayName } : null,
+  )
 
   useEffect(() => {
     let cancelled = false
@@ -134,6 +144,11 @@ export default function ProductPage() {
                 <span>{product.estimatedTime ?? system?.estimatedTime}</span>
               )}
             </div>
+            {studio && (
+              <div className="mt-3">
+                <ReviewSummaryLine summary={reviews.summary} href={`#${REVIEWS_ID}`} />
+              </div>
+            )}
           </div>
 
           <div className="space-y-6">
@@ -284,8 +299,17 @@ export default function ProductPage() {
         </section>
       )}
 
-      {/* Reviews */}
-      {system && system.reviews.length > 0 && (
+      {/* Reviews — a Studio Workspace's real reviews, shared with the Portal */}
+      {studio && (
+        <ProductReviewsSection
+          id={REVIEWS_ID}
+          workspaceName={product.title}
+          reviews={reviews}
+          signedIn={Boolean(user)}
+          requested={searchParams.get('review') === '1'}
+        />
+      )}
+      {!studio && system && system.reviews.length > 0 && (
         <section className="section-py">
           <div className="container-px mx-auto max-w-page">
             <ReviewPanel reviews={system.reviews} />
