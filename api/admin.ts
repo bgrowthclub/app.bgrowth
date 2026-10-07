@@ -1106,6 +1106,120 @@ async function saveNewsletterAddress(req: VercelRequest, db: Db, admin: Admin) {
 }
 
 // ---------------------------------------------------------------------------
+// Dashboard → Members: how many people signed up, confirmed their e-mail,
+// got a Workspace (trial, free, purchase or access from the team), used
+// one (saved a record) and bought — for a period, plus today's snapshot.
+// ---------------------------------------------------------------------------
+const DASH_DAY = 24 * 60 * 60 * 1000
+const DASH_PERIODS: Record<string, number | null> = { '7': 7, '30': 30, '90': 90, '365': 365, all: null }
+
+function bucketKey(date: Date, unit: 'day' | 'week' | 'month') {
+  if (unit === 'month') return `${date.getUTCFullYear()}-${String(date.getUTCMonth() + 1).padStart(2, '0')}`
+  const d = new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()))
+  if (unit === 'week') d.setUTCDate(d.getUTCDate() - ((d.getUTCDay() + 6) % 7)) // Monday
+  return d.toISOString().slice(0, 10)
+}
+
+async function memberDashboard(req: VercelRequest, db: Db) {
+  const periodKey = str(req.query.period) in DASH_PERIODS ? str(req.query.period) : '30'
+  const days = DASH_PERIODS[periodKey]
+  const now = Date.now()
+  const since = days === null ? null : now - days * DASH_DAY
+
+  // Every sign-up (auth.users holds e-mail confirmation and last sign-in).
+  const people: { id: string; createdAt: number; confirmed: boolean; lastSignIn: number | null }[] = []
+  for (let page = 1; page <= 50; page++) {
+    const { data, error } = await db.auth.admin.listUsers({ page, perPage: 1000 })
+    if (error) throw error
+    for (const u of data.users) {
+      people.push({
+        id: u.id,
+        createdAt: new Date(u.created_at).getTime(),
+        confirmed: Boolean(u.email_confirmed_at),
+        lastSignIn: u.last_sign_in_at ? new Date(u.last_sign_in_at).getTime() : null,
+      })
+    }
+    if (data.users.length < 1000) break
+  }
+
+  const [licenses, grants, records, products, admins] = await Promise.all([
+    db.from('licenses').select('user_id, product_id, type, status, access_policy, expires_at'),
+    db.from('access_grants').select('user_id, scope, product_id, expires_at, revoked_at'),
+    db.from('workspace_instances').select('user_id'),
+    db.from('products').select('id, is_free'),
+    db.from('website_admins').select('user_id'),
+  ])
+  for (const r of [licenses, grants, records, products, admins]) if (r.error) throw r.error
+
+  const staff = new Set((admins.data ?? []).map((a) => a.user_id as string))
+  const freeProduct = new Set((products.data ?? []).filter((p) => p.is_free).map((p) => p.id as string))
+  type Lic = { user_id: string; product_id: string; type: string; status: string; access_policy: string; expires_at: string | null }
+  const lic = (licenses.data ?? []) as Lic[]
+  const liveLicense = (l: Lic) =>
+    l.status === 'active' && (l.access_policy === 'lifetime' || l.expires_at === null || new Date(l.expires_at).getTime() > now)
+
+  const trialUsers = new Set(lic.filter((l) => l.type === 'trial').map((l) => l.user_id))
+  const paidUsers = new Set(lic.filter((l) => l.type !== 'trial' && !freeProduct.has(l.product_id)).map((l) => l.user_id))
+  const freeUsers = new Set(lic.filter((l) => l.type !== 'trial' && freeProduct.has(l.product_id)).map((l) => l.user_id))
+  const grantUsers = new Set(((grants.data ?? []) as (GrantRow & { user_id: string })[]).map((g) => g.user_id))
+  const activeGrantUsers = new Set(((grants.data ?? []) as (GrantRow & { user_id: string })[]).filter(isGrantActive).map((g) => g.user_id))
+  const recordUsers = new Set((records.data ?? []).map((r) => r.user_id as string))
+  const anyWorkspace = (id: string) => trialUsers.has(id) || paidUsers.has(id) || freeUsers.has(id) || grantUsers.has(id)
+
+  // The team's own accounts don't count as members.
+  const members = people.filter((p) => !staff.has(p.id))
+  const cohort = since === null ? members : members.filter((p) => p.createdAt >= since)
+  const count = (pred: (p: (typeof members)[number]) => boolean) => cohort.filter(pred).length
+
+  const funnel = {
+    signedUp: cohort.length,
+    confirmed: count((p) => p.confirmed),
+    gotWorkspace: count((p) => anyWorkspace(p.id)),
+    startedTrial: count((p) => trialUsers.has(p.id)),
+    usedWorkspace: count((p) => recordUsers.has(p.id)),
+    bought: count((p) => paidUsers.has(p.id)),
+    trialToPaid: count((p) => trialUsers.has(p.id) && paidUsers.has(p.id)),
+    freeClaimed: count((p) => freeUsers.has(p.id)),
+    granted: count((p) => grantUsers.has(p.id)),
+  }
+
+  const memberIds = new Set(members.map((m) => m.id))
+  const trialLive = new Set(lic.filter((l) => l.type === 'trial' && liveLicense(l) && memberIds.has(l.user_id)).map((l) => l.user_id))
+  const snapshot = {
+    members: members.length,
+    unconfirmed: members.filter((p) => !p.confirmed).length,
+    trialsActive: trialLive.size,
+    trialsEndedNotBought: [...trialUsers].filter((id) => memberIds.has(id) && !trialLive.has(id) && !paidUsers.has(id)).length,
+    activeGrants: [...activeGrantUsers].filter((id) => memberIds.has(id)).length,
+    signedInLast7Days: members.filter((p) => p.lastSignIn !== null && p.lastSignIn >= now - 7 * DASH_DAY).length,
+  }
+
+  // Sign-ups over time: by day up to a month, by week up to ~4 months, else by month.
+  const first = members.reduce((min, p) => Math.min(min, p.createdAt), now)
+  const spanDays = days ?? Math.max(1, Math.ceil((now - first) / DASH_DAY))
+  const unit: 'day' | 'week' | 'month' = spanDays <= 31 ? 'day' : spanDays <= 120 ? 'week' : 'month'
+  const start = new Date(since ?? first)
+  const keys: string[] = []
+  const cursor = new Date(Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), unit === 'month' ? 1 : start.getUTCDate()))
+  if (unit === 'week') cursor.setUTCDate(cursor.getUTCDate() - ((cursor.getUTCDay() + 6) % 7))
+  while (cursor.getTime() <= now && keys.length < 400) {
+    keys.push(bucketKey(cursor, unit))
+    if (unit === 'day') cursor.setUTCDate(cursor.getUTCDate() + 1)
+    else if (unit === 'week') cursor.setUTCDate(cursor.getUTCDate() + 7)
+    else cursor.setUTCMonth(cursor.getUTCMonth() + 1)
+  }
+  const buckets = new Map(keys.map((k) => [k, { key: k, signedUp: 0, confirmed: 0 }]))
+  for (const p of cohort) {
+    const b = buckets.get(bucketKey(new Date(p.createdAt), unit))
+    if (!b) continue
+    b.signedUp += 1
+    if (p.confirmed) b.confirmed += 1
+  }
+
+  return { period: periodKey, unit, funnel, snapshot, series: [...buckets.values()] }
+}
+
+// ---------------------------------------------------------------------------
 // Reviews (portal.reviews, Portal migration 0009) — members' public reviews
 // of Workspaces, shared by the Portal and the site. The team can read them
 // all and remove one that breaks the rules (spam, abuse, personal data).
@@ -1227,6 +1341,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ ok: true, ...(await sendCampaign(req, db)) })
       case 'PUT newsletter-address':
         return res.status(200).json({ ok: true, ...(await saveNewsletterAddress(req, db, admin)) })
+      case 'GET dashboard-members':
+        return res.status(200).json({ ok: true, ...(await memberDashboard(req, db)) })
       case 'GET reviews':
         return res.status(200).json({ ok: true, ...(await listReviews(db)) })
       case 'DELETE reviews':

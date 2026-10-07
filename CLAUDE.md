@@ -135,6 +135,9 @@ This repo is a **static, client-only MVP**:
   manual access grants through `api/admin.ts`, which re-checks the admin
   table with the service role on every request (see ARCHITECTURE.md §8b).
   Since Sprint 47 it also shows Sales, read from Stripe by that endpoint.
+  Since Sprint 63 `/admin` opens on a Dashboard (views switched at the
+  top; Members built: sign-ups, e-mail confirmation, trials, use and
+  purchases by period — resource `dashboard-members`).
   **Since Sprint 50 there is a Support Center** (approved by the user):
   members chat with the team at `/platform/support` (live during support
   hours, a ticket answered by e-mail too outside them) through
