@@ -193,7 +193,7 @@ export interface AdminReview {
   title: string
   comment: string
   display_name: string
-  created_from: 'trial' | 'purchase'
+  created_from: 'trial' | 'purchase' | 'access'
   created_at: string
   updated_at: string
   product_name: string

@@ -8,6 +8,12 @@ interface Props {
   onRemove: () => void
 }
 
+const FROM = {
+  trial: { label: 'After trial', tone: 'amber' },
+  purchase: { label: 'After purchase', tone: 'green' },
+  access: { label: 'Given access', tone: 'blue' },
+} as const
+
 // One review in Admin → Reviews: what it says, who wrote it, about which
 // Workspace — and removing it.
 export default function AdminReviewRow({ review, onRemove }: Props) {
@@ -15,9 +21,7 @@ export default function AdminReviewRow({ review, onRemove }: Props) {
     <div className="px-5 py-4">
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1.5">
         <StarRating rating={review.rating} />
-        <span className={pillClass(review.created_from === 'trial' ? 'amber' : 'green')}>
-          {review.created_from === 'trial' ? 'After trial' : 'After purchase'}
-        </span>
+        <span className={pillClass(FROM[review.created_from].tone)}>{FROM[review.created_from].label}</span>
         <span className="text-[12px] text-navy/40">{formatDate(review.created_at)}</span>
         <button type="button" onClick={onRemove} className={`${LINK_BUTTON} ml-auto text-red-600 hover:bg-red-50`}>
           Remove

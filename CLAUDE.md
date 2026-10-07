@@ -149,10 +149,11 @@ This repo is a **static, client-only MVP**:
   **Since Sprint 62 Workspaces have reviews on the site** (the Portal's
   own `portal.reviews`, migration 0009 — shared, no new table): stars and
   reviews on the product page, writing/editing for a member with a
-  license (product page and inside the Workspace), Admin → Reviews to
-  read and remove, and a once-only "how is it going?" e-mail 7 days after
-  a license starts (`api/cron/review-requests.ts`, the Portal's
-  `licenses.review_requested_at` marker).
+  license or access given by the team (product page and inside the
+  Workspace; Portal migration 0037), Admin → Reviews to read and remove,
+  and review e-mails from `api/cron/review-requests.ts`: once 7 days after
+  access starts, and once more when a trial/timed access ends if still not
+  reviewed (markers `review_requested_at`/`review_end_requested_at`).
 - Business System catalog data is hardcoded TypeScript (`src/data/`),
   standing in for a future export from **BGrowth Studio**. It covers only
   the Business & Entrepreneurship Growth Category today (see §2).

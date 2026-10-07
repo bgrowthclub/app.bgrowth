@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { studioWorkspaceService, isStudioCatalogAvailable } from '../services/studioWorkspaceService'
-import type { PortalLicenseRow, PortalReviewRow, PortalReviewSummary, ReviewInput } from '../types/portal'
+import type { PortalAccessGrantRow, PortalLicenseRow, PortalReviewRow, PortalReviewSummary, ReviewInput } from '../types/portal'
 
 export interface ProductReviews {
   loading: boolean
@@ -8,7 +8,8 @@ export interface ProductReviews {
   reviews: PortalReviewRow[]
   // This member's own review, if they wrote one.
   mine: PortalReviewRow | null
-  // Holds (or held) a license — the Portal's rule for who may review.
+  // Holds (or held) a license or access given by the team — the rule the
+  // Portal's database enforces (migrations 0009 + 0037).
   canReview: boolean
   submit: (input: ReviewInput) => Promise<void>
 }
@@ -29,6 +30,7 @@ export function useProductReviews(
   const [reviews, setReviews] = useState<PortalReviewRow[]>([])
   const [mine, setMine] = useState<PortalReviewRow | null>(null)
   const [license, setLicense] = useState<PortalLicenseRow | null>(null)
+  const [granted, setGranted] = useState(false)
   const memberId = member?.id
 
   const load = useCallback(async () => {
@@ -36,16 +38,19 @@ export function useProductReviews(
       setLoading(false)
       return
     }
-    const [summaryResult, listResult, licenseResult] = await Promise.allSettled([
+    const [summaryResult, listResult, licenseResult, grantsResult] = await Promise.allSettled([
       withList ? studioWorkspaceService.getReviewSummary(productId) : Promise.resolve(EMPTY),
       studioWorkspaceService.listReviews(productId),
       memberId ? studioWorkspaceService.getLicense(memberId, productId) : Promise.resolve(null),
+      memberId ? studioWorkspaceService.listAccessGrants(memberId) : Promise.resolve([] as PortalAccessGrantRow[]),
     ])
     const list = listResult.status === 'fulfilled' ? listResult.value : []
     setSummary(summaryResult.status === 'fulfilled' ? summaryResult.value : EMPTY)
     setReviews(withList ? list : [])
     setMine(memberId ? (list.find((r) => r.user_id === memberId) ?? null) : null)
     setLicense(licenseResult.status === 'fulfilled' ? licenseResult.value : null)
+    const grants = grantsResult.status === 'fulfilled' ? grantsResult.value : []
+    setGranted(grants.some((g) => g.scope === 'all' || g.product_id === productId))
     setLoading(false)
   }, [productId, memberId, withList])
 
@@ -60,7 +65,7 @@ export function useProductReviews(
       if (mine) {
         await studioWorkspaceService.updateReview(mine.id, input)
       } else {
-        const createdFrom = license?.type === 'trial' ? 'trial' : 'purchase'
+        const createdFrom = license ? (license.type === 'trial' ? 'trial' : 'purchase') : 'access'
         await studioWorkspaceService.createReview(member.id, productId, member.displayName || 'BGrowth member', createdFrom, input)
       }
       await load()
@@ -68,5 +73,5 @@ export function useProductReviews(
     [productId, member, mine, license, load],
   )
 
-  return { loading, summary, reviews, mine, canReview: Boolean(license), submit }
+  return { loading, summary, reviews, mine, canReview: Boolean(license) || granted, submit }
 }

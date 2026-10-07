@@ -90,7 +90,8 @@ export interface PortalReviewRow {
   title: string
   comment: string
   display_name: string
-  created_from: 'trial' | 'purchase'
+  // 'access' = reviewed with access given by the team (Portal migration 0037).
+  created_from: 'trial' | 'purchase' | 'access'
   created_at: string
   updated_at: string
 }
