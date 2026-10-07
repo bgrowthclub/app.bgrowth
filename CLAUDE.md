@@ -140,6 +140,12 @@ This repo is a **static, client-only MVP**:
   hours, a ticket answered by e-mail too outside them) through
   `api/support.ts`; the team answers in Admin → Support (see
   ARCHITECTURE.md §8b).
+  **Since Sprint 61 there is a newsletter** (approved by the user):
+  visitors subscribe on the site in one step (welcome e-mail, areas of
+  interest, one-click unsubscribe) through `api/newsletter.ts`, members
+  manage it in Settings, and the team writes and sends e-mails (with
+  images, by area, plus Workspace launch announcements) in Admin →
+  Newsletter (Portal migration 0036).
 - Business System catalog data is hardcoded TypeScript (`src/data/`),
   standing in for a future export from **BGrowth Studio**. It covers only
   the Business & Entrepreneurship Growth Category today (see §2).

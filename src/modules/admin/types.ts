@@ -1,5 +1,6 @@
 import type { PortalAccessGrantRow, PortalLicenseRow } from '../workspace/types/portal'
 import type { SupportConversationSummary, SupportHours, SupportMessage } from '../support/types'
+import type { GrowthCategoryId } from '../../types/growth'
 
 // Shapes returned by the Website's Admin endpoint (api/admin.ts). Licenses
 // and grants are the Portal's own rows (types/portal.ts) with their
@@ -54,6 +55,7 @@ export interface AdminProduct {
   is_free: boolean
   price_cents: number | null
   currency: string
+  last_published_at?: string | null
 }
 
 export interface NewGrantInput {
@@ -137,4 +139,47 @@ export interface AdminCatalogProduct {
 export interface AdminCatalogCategories {
   categories: AdminCategory[]
   products: AdminCatalogProduct[]
+}
+
+// Admin → Newsletter (Portal migration 0036). audience_areas empty = every
+// subscriber.
+export interface AdminNewsletterCampaignSummary {
+  id: string
+  kind: 'newsletter' | 'launch'
+  product_id: string | null
+  subject: string
+  status: 'draft' | 'sending' | 'sent'
+  sent_count: number
+  sent_at: string | null
+  audience_areas: GrowthCategoryId[]
+  created_at: string
+  updated_at: string
+}
+
+export interface AdminNewsletterCampaign extends AdminNewsletterCampaignSummary {
+  preheader: string
+  body_html: string
+  created_by: string | null
+}
+
+export interface AdminNewsletterOverview {
+  stats: {
+    subscribed: number
+    pending: number
+    unsubscribed: number
+    allTopics: number
+    byArea: Record<GrowthCategoryId, number>
+  }
+  areas: { id: GrowthCategoryId; label: string }[]
+  campaigns: AdminNewsletterCampaignSummary[]
+  // Mailing address shown in every e-mail (US law). Empty blocks sending.
+  address: string
+}
+
+export interface AdminNewsletterDraft {
+  id?: string
+  subject: string
+  preheader: string
+  bodyHtml: string
+  audienceAreas: GrowthCategoryId[]
 }

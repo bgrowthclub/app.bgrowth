@@ -23,6 +23,8 @@ import type { KnowledgeArticle } from '../../modules/knowledge/types/article'
 import type { KnowledgeCategory } from '../../modules/knowledge/types/category'
 import type { KnowledgeAuthor } from '../../modules/knowledge/types/author'
 import type { KnowledgeArticleIndexEntry } from '../../modules/knowledge/types/article'
+import { useNewsletterSignup } from '../../modules/newsletter/useNewsletterSignup'
+import SignupInterests from '../../components/newsletter/SignupInterests'
 
 function authorInitials(name: string): string {
   return name
@@ -45,8 +47,7 @@ export default function KnowledgeArticlePage() {
   const [related, setRelated] = useState<KnowledgeArticleIndexEntry[]>([])
   const [prev, setPrev] = useState<KnowledgeArticleIndexEntry | undefined>(undefined)
   const [next, setNext] = useState<KnowledgeArticleIndexEntry | undefined>(undefined)
-  const [email, setEmail] = useState('')
-  const [subscribed, setSubscribed] = useState(false)
+  const signup = useNewsletterSignup('knowledge-article')
 
   useEffect(() => {
     if (!slug) return
@@ -205,26 +206,26 @@ export default function KnowledgeArticlePage() {
           description="One email a month — new articles, guides, and free resources as they publish."
           footnote="No spam, unsubscribe anytime."
         >
-          <form
-            onSubmit={(e) => {
-              e.preventDefault()
-              if (!email) return
-              setSubscribed(true)
-            }}
-            className="flex flex-col gap-3 sm:flex-row"
-          >
+          <form onSubmit={signup.submit} className="flex flex-col gap-3 sm:flex-row">
             <input
               type="email"
               required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
+              value={signup.email}
+              onChange={(e) => signup.setEmail(e.target.value)}
+              aria-label="E-mail address"
               placeholder="you@business.com"
               className="w-full rounded-2xl border border-navy/10 bg-white px-5 py-3.5 text-sm text-navy placeholder:text-navy/30 focus:border-primary/30"
             />
             <Button type="submit" className="shrink-0">
-              {subscribed ? 'Subscribed' : 'Subscribe'}
+              {signup.state === 'sending' ? 'Sending…' : signup.done ? 'Subscribed' : 'Subscribe'}
             </Button>
           </form>
+          {signup.message && (
+            <p role="status" className={`mt-3 text-[13px] ${signup.state === 'error' ? 'text-red-500' : 'text-navy/60'}`}>
+              {signup.message}
+            </p>
+          )}
+          {signup.token && <SignupInterests token={signup.token} />}
         </MemberBanner>
       </SectionContainer>
     </div>

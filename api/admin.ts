@@ -2,6 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
+import { randomUUID } from 'node:crypto'
 
 // BGrowth Website — Administration endpoint (members, licenses, trials,
 // manual access grants). One Serverless Function routed by ?resource=
@@ -16,6 +17,9 @@ import Stripe from 'stripe'
 // Self-contained (no relative imports) for the same reason as
 // api/studio-checkout.ts. Server-only env: SUPABASE_URL,
 // SUPABASE_SERVICE_ROLE_KEY, and STRIPE_SECRET_KEY for ?resource=sales.
+
+// Sending a newsletter can take a while (batches of 100).
+export const maxDuration = 60
 
 type Admin = { id: string; email: string }
 type Db = SupabaseClient<any, 'portal', any>
@@ -193,7 +197,7 @@ async function getMember(req: VercelRequest, db: Db) {
 async function listProducts(db: Db) {
   const { data, error } = await db
     .from('products')
-    .select('id, name, slug, is_free, price_cents, currency, status')
+    .select('id, name, slug, is_free, price_cents, currency, status, last_published_at')
     .eq('status', 'published')
     .order('name')
   if (error) throw error
@@ -733,6 +737,374 @@ async function setProductCategory(req: VercelRequest, db: Db) {
   return { product: data }
 }
 
+
+// ---------------------------------------------------------------------------
+// Newsletter (Portal migration 0036) — the team writes e-mails here and
+// sends them to subscribers by area. Visitors subscribe through
+// api/newsletter.ts.
+// ---------------------------------------------------------------------------
+const NEWSLETTER_AREAS = [
+  'business-entrepreneurship',
+  'careers-professions',
+  'languages',
+  'personal-finance',
+  'productivity',
+  'education',
+  'health-wellness',
+  'family-lifestyle',
+]
+
+const AREA_LABELS: Record<string, string> = {
+  'business-entrepreneurship': 'Business & Entrepreneurship',
+  'careers-professions': 'Careers & Professions',
+  languages: 'Languages',
+  'personal-finance': 'Personal Finance',
+  productivity: 'Productivity',
+  education: 'Education',
+  'health-wellness': 'Health & Wellness',
+  'family-lifestyle': 'Family & Lifestyle',
+}
+
+type CampaignRow = {
+  id: string
+  kind: 'newsletter' | 'launch'
+  product_id: string | null
+  subject: string
+  preheader: string
+  body_html: string
+  audience_areas: string[]
+  status: 'draft' | 'sending' | 'sent'
+  sent_count: number
+  sent_at: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+}
+
+function newsletterSiteUrl(req: VercelRequest) {
+  if (process.env.SITE_URL) return process.env.SITE_URL.replace(/\/$/, '')
+  const host = req.headers['x-forwarded-host'] ?? req.headers.host
+  return `https://${Array.isArray(host) ? host[0] : host}`
+}
+
+function escapeHtmlText(text: string) {
+  return text.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string)
+}
+
+function cleanAreas(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return [...new Set(value.filter((v): v is string => typeof v === 'string' && NEWSLETTER_AREAS.includes(v)))]
+}
+
+async function loadNewsletterAddress(db: Db): Promise<string> {
+  const { data } = await db.from('site_settings').select('value').eq('key', 'newsletter_address').maybeSingle()
+  return typeof data?.value === 'string' ? data.value : ''
+}
+
+// The editor writes plain HTML; e-mail apps want inline styles.
+function inlineEmailStyles(html: string) {
+  const styles: Record<string, string> = {
+    p: 'margin:0 0 16px;font-size:16px;line-height:1.6;color:#33406B',
+    h1: 'margin:24px 0 12px;font-size:26px;line-height:1.25;color:#0A1B4D',
+    h2: 'margin:24px 0 10px;font-size:21px;line-height:1.3;color:#0A1B4D',
+    h3: 'margin:20px 0 8px;font-size:17px;line-height:1.35;color:#0A1B4D',
+    ul: 'margin:0 0 16px;padding-left:22px;color:#33406B',
+    ol: 'margin:0 0 16px;padding-left:22px;color:#33406B',
+    li: 'margin:0 0 6px;font-size:16px;line-height:1.6',
+    a: 'color:#1061EC;font-weight:600',
+    img: 'display:block;max-width:100%;height:auto;border-radius:12px;margin:8px 0 16px',
+    blockquote: 'margin:0 0 16px;padding:4px 14px;border-left:3px solid #1061EC;color:#33406B',
+  }
+  let out = html
+  for (const [tag, style] of Object.entries(styles)) {
+    out = out.replace(new RegExp(`<${tag}(\\s[^>]*)?>`, 'gi'), (match, attrs = '') => {
+      if (/\sstyle=/i.test(attrs)) return match
+      return `<${tag}${attrs} style="${style}">`
+    })
+  }
+  // Images that aren't wrapped in a block element still need a width cap.
+  return out.replace(/<img(?![^>]*\swidth=)/gi, '<img width="560"')
+}
+
+function renderCampaignEmail(
+  campaign: Pick<CampaignRow, 'subject' | 'preheader' | 'body_html'>,
+  site: string,
+  address: string,
+  token: string | null,
+) {
+  const prefs = token ? `${site}/newsletter/preferences?token=${token}` : `${site}/newsletter/preferences`
+  return `<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtmlText(campaign.subject)}</title></head>
+<body style="margin:0;padding:0;background:#F4F7FD">
+<span style="display:none;max-height:0;overflow:hidden;opacity:0">${escapeHtmlText(campaign.preheader)}</span>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F4F7FD"><tr><td align="center" style="padding:28px 12px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#FFFFFF;border-radius:18px">
+<tr><td style="padding:24px 28px 8px;font-family:Inter,Arial,sans-serif">
+<a href="${site}" style="text-decoration:none;color:#0A1B4D;font-weight:800;font-size:20px">BGrowth</a>
+</td></tr>
+<tr><td style="padding:8px 28px 28px;font-family:Inter,Arial,sans-serif">${inlineEmailStyles(campaign.body_html)}</td></tr>
+</table>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px"><tr><td style="padding:18px 28px;font-family:Inter,Arial,sans-serif;font-size:12px;line-height:1.6;color:#6B7896;text-align:center">
+You’re receiving this because you subscribed to BGrowth updates.<br>
+<a href="${prefs}" style="color:#6B7896">Choose your interests</a> · <a href="${prefs}&action=unsubscribe" style="color:#6B7896">Unsubscribe</a><br>
+${escapeHtmlText(address)}
+</td></tr></table>
+</td></tr></table>
+</body></html>`
+}
+
+async function newsletterOverview(db: Db) {
+  const { data: subs, error } = await db.from('newsletter_subscribers').select('status, interests')
+  if (error) throw error
+  const rows = (subs ?? []) as { status: string; interests: string[] }[]
+  const subscribed = rows.filter((r) => r.status === 'subscribed')
+  const byArea = Object.fromEntries(
+    NEWSLETTER_AREAS.map((area) => [area, subscribed.filter((r) => r.interests.length === 0 || r.interests.includes(area)).length]),
+  )
+  const { data: campaigns, error: cError } = await db
+    .from('newsletter_campaigns')
+    .select('id, kind, product_id, subject, status, sent_count, sent_at, audience_areas, created_at, updated_at')
+    .order('created_at', { ascending: false })
+    .limit(100)
+  if (cError) throw cError
+  return {
+    stats: {
+      subscribed: subscribed.length,
+      pending: rows.filter((r) => r.status === 'pending').length,
+      unsubscribed: rows.filter((r) => r.status === 'unsubscribed').length,
+      allTopics: subscribed.filter((r) => r.interests.length === 0).length,
+      byArea,
+    },
+    areas: NEWSLETTER_AREAS.map((id) => ({ id, label: AREA_LABELS[id] })),
+    campaigns: campaigns ?? [],
+    address: await loadNewsletterAddress(db),
+  }
+}
+
+async function loadCampaign(db: Db, id: string): Promise<CampaignRow> {
+  if (!id) throw new HttpError(400, 'Missing e-mail.')
+  const { data, error } = await db.from('newsletter_campaigns').select('*').eq('id', id).maybeSingle()
+  if (error) throw error
+  if (!data) throw new HttpError(404, 'E-mail not found.')
+  return data as CampaignRow
+}
+
+async function getCampaign(req: VercelRequest, db: Db) {
+  return { campaign: await loadCampaign(db, str(req.query.id)) }
+}
+
+async function saveCampaign(req: VercelRequest, db: Db, admin: Admin) {
+  const id = str(req.body?.id)
+  const fields = {
+    subject: str(req.body?.subject).slice(0, 200),
+    preheader: str(req.body?.preheader).slice(0, 200),
+    body_html: typeof req.body?.bodyHtml === 'string' ? req.body.bodyHtml.slice(0, 200_000) : '',
+    audience_areas: cleanAreas(req.body?.audienceAreas),
+    updated_at: new Date().toISOString(),
+  }
+  if (id) {
+    const current = await loadCampaign(db, id)
+    if (current.status !== 'draft') throw new HttpError(409, 'This e-mail was already sent and can’t be changed.')
+    const { data, error } = await db.from('newsletter_campaigns').update(fields).eq('id', id).select('*').single()
+    if (error) throw error
+    return { campaign: data }
+  }
+  const { data, error } = await db
+    .from('newsletter_campaigns')
+    .insert({ ...fields, kind: 'newsletter', created_by: admin.email })
+    .select('*')
+    .single()
+  if (error) throw error
+  return { campaign: data }
+}
+
+async function deleteCampaign(req: VercelRequest, db: Db) {
+  const current = await loadCampaign(db, str(req.body?.id))
+  if (current.status !== 'draft') throw new HttpError(409, 'Sent e-mails stay in the history.')
+  const { error } = await db.from('newsletter_campaigns').delete().eq('id', current.id)
+  if (error) throw error
+  return { deleted: current.id }
+}
+
+// A ready-to-edit announcement for a published Workspace, addressed to the
+// people interested in its area.
+async function createLaunchCampaign(req: VercelRequest, db: Db, admin: Admin) {
+  const productId = str(req.body?.productId)
+  const { data: product, error } = await db
+    .from('products')
+    .select('id, name, slug, short_description, cover_image_url, category_id, status')
+    .eq('id', productId)
+    .maybeSingle()
+  if (error) throw error
+  if (!product || product.status !== 'published') throw new HttpError(404, 'Choose a published Workspace.')
+  const categories = await loadCategories(db)
+  const category = categories.find((c) => c.id === product.category_id)
+  const parent = category?.parent_id ? categories.find((c) => c.id === category.parent_id) : undefined
+  const area = parent?.slug ?? category?.slug
+  const site = newsletterSiteUrl(req)
+  const link = `${site}/product/${product.slug}`
+  const name = escapeHtmlText(product.name)
+  const body = [
+    product.cover_image_url ? `<p><a href="${link}"><img src="${product.cover_image_url}" alt="${name}"></a></p>` : '',
+    `<h1>New on BGrowth: ${name}</h1>`,
+    `<p>${escapeHtmlText(product.short_description ?? '')}</p>`,
+    `<p><a href="${link}">See ${name} →</a></p>`,
+  ].join('')
+  const { data, error: insError } = await db
+    .from('newsletter_campaigns')
+    .insert({
+      kind: 'launch',
+      product_id: product.id,
+      subject: `New on BGrowth: ${product.name}`.slice(0, 200),
+      preheader: (product.short_description ?? '').slice(0, 200),
+      body_html: body,
+      audience_areas: area && NEWSLETTER_AREAS.includes(area) ? [area] : [],
+      created_by: admin.email,
+    })
+    .select('*')
+    .single()
+  if (insError) throw insError
+  return { campaign: data }
+}
+
+async function uploadNewsletterImage(req: VercelRequest, db: Db) {
+  const dataUrl = str(req.body?.dataUrl)
+  const match = /^data:(image\/(png|jpeg|webp|gif));base64,([A-Za-z0-9+/=]+)$/.exec(dataUrl)
+  if (!match) throw new HttpError(400, 'Use a PNG, JPG, WebP or GIF image.')
+  const bytes = Buffer.from(match[3], 'base64')
+  if (bytes.length > 3 * 1024 * 1024) throw new HttpError(413, 'This image is too large (3 MB max).')
+  const ext = match[2] === 'jpeg' ? 'jpg' : match[2]
+  const path = `newsletter/${new Date().toISOString().slice(0, 10)}/${randomUUID()}.${ext}`
+  const { error } = await db.storage.from('portal-product-assets').upload(path, bytes, { contentType: match[1], upsert: false })
+  if (error) throw error
+  const { data } = db.storage.from('portal-product-assets').getPublicUrl(path)
+  return { url: data.publicUrl }
+}
+
+async function previewCampaign(req: VercelRequest, db: Db) {
+  const campaign = {
+    subject: str(req.body?.subject),
+    preheader: str(req.body?.preheader),
+    body_html: typeof req.body?.bodyHtml === 'string' ? req.body.bodyHtml : '',
+  }
+  return { html: renderCampaignEmail(campaign, newsletterSiteUrl(req), (await loadNewsletterAddress(db)) || '[Mailing address — add it in Admin → Newsletter]', null) }
+}
+
+async function audienceFor(db: Db, areas: string[]) {
+  const all: { email: string; token: string }[] = []
+  for (let from = 0; ; from += 1000) {
+    let query = db.from('newsletter_subscribers').select('email, token').eq('status', 'subscribed').order('created_at').range(from, from + 999)
+    if (areas.length > 0) query = query.or(`interests.ov.{${areas.join(',')}},interests.eq.{}`)
+    const { data, error } = await query
+    if (error) throw error
+    all.push(...((data ?? []) as { email: string; token: string }[]))
+    if (!data || data.length < 1000) break
+  }
+  return all
+}
+
+async function countAudience(req: VercelRequest, db: Db) {
+  const areas = cleanAreas(String(req.query.areas ?? '').split(',').filter(Boolean))
+  return { count: (await audienceFor(db, areas)).length }
+}
+
+async function resendBatch(messages: Record<string, unknown>[]) {
+  const key = process.env.RESEND_API_KEY
+  if (!key) throw new HttpError(500, 'E-mail isn’t configured on this site yet (RESEND_API_KEY).')
+  const res = await fetch('https://api.resend.com/emails/batch', {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(messages),
+  })
+  if (!res.ok) {
+    const text = await res.text()
+    console.error('[newsletter] send failed:', res.status, text)
+    throw new HttpError(502, `The e-mail service refused the send (${res.status}).`)
+  }
+}
+
+function newsletterMessage(req: VercelRequest, campaign: CampaignRow, address: string, to: string, token: string | null) {
+  const site = newsletterSiteUrl(req)
+  return {
+    from: process.env.NEWSLETTER_FROM_EMAIL || 'BGrowth <news@bgrowth.app>',
+    to,
+    subject: campaign.subject,
+    html: renderCampaignEmail(campaign, site, address, token),
+    ...(token
+      ? {
+          headers: {
+            'List-Unsubscribe': `<${site}/api/newsletter?resource=unsubscribe&token=${token}>`,
+            'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+          },
+        }
+      : {}),
+  }
+}
+
+function checkReady(campaign: CampaignRow, address: string) {
+  if (!campaign.subject) throw new HttpError(400, 'Add a subject first.')
+  if (!campaign.body_html.replace(/<[^>]*>/g, '').trim() && !/<img/i.test(campaign.body_html)) throw new HttpError(400, 'Write the e-mail first.')
+  if (!address) throw new HttpError(400, 'Add the mailing address (required by US law) in Admin → Newsletter first.')
+}
+
+async function sendCampaignTest(req: VercelRequest, db: Db, admin: Admin) {
+  const campaign = await loadCampaign(db, str(req.body?.id))
+  const address = await loadNewsletterAddress(db)
+  checkReady(campaign, address)
+  await resendBatch([{ ...newsletterMessage(req, campaign, address, admin.email, null), subject: `[Test] ${campaign.subject}` }])
+  return { sentTo: admin.email }
+}
+
+async function sendCampaign(req: VercelRequest, db: Db) {
+  const id = str(req.body?.id)
+  const campaign = await loadCampaign(db, id)
+  const address = await loadNewsletterAddress(db)
+  checkReady(campaign, address)
+  if (campaign.status !== 'draft') throw new HttpError(409, 'This e-mail was already sent.')
+  // Claim it first so a double click can't send twice.
+  const { data: claimed, error: claimError } = await db
+    .from('newsletter_campaigns')
+    .update({ status: 'sending', updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .eq('status', 'draft')
+    .select('id')
+  if (claimError) throw claimError
+  if (!claimed || claimed.length === 0) throw new HttpError(409, 'This e-mail is already being sent.')
+
+  let sent = 0
+  try {
+    const audience = await audienceFor(db, campaign.audience_areas)
+    for (let i = 0; i < audience.length; i += 100) {
+      const chunk = audience.slice(i, i + 100)
+      await resendBatch(chunk.map((s) => newsletterMessage(req, campaign, address, s.email, s.token)))
+      sent += chunk.length
+    }
+  } catch (err) {
+    // Nothing sent yet: back to draft so it can be retried. Partly sent:
+    // keep it out of the draft list so nobody gets it twice.
+    await db
+      .from('newsletter_campaigns')
+      .update(sent === 0 ? { status: 'draft' } : { status: 'sent', sent_count: sent, sent_at: new Date().toISOString() })
+      .eq('id', id)
+    throw err
+  }
+  const { error } = await db
+    .from('newsletter_campaigns')
+    .update({ status: 'sent', sent_count: sent, sent_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+    .eq('id', id)
+  if (error) throw error
+  return { sent }
+}
+
+async function saveNewsletterAddress(req: VercelRequest, db: Db, admin: Admin) {
+  const address = str(req.body?.address).slice(0, 300)
+  const { error } = await db
+    .from('site_settings')
+    .upsert({ key: 'newsletter_address', value: address, updated_at: new Date().toISOString(), updated_by: admin.email })
+  if (error) throw error
+  return { address }
+}
+
 // ---------------------------------------------------------------------------
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
@@ -784,6 +1156,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ ok: true, ...(await giveLicense(req, db)) })
       case 'PATCH licenses':
         return res.status(200).json({ ok: true, ...(await updateLicense(req, db)) })
+      case 'GET newsletter':
+        return res.status(200).json({ ok: true, ...(await newsletterOverview(db)) })
+      case 'GET newsletter-campaign':
+        return res.status(200).json({ ok: true, ...(await getCampaign(req, db)) })
+      case 'POST newsletter-campaign':
+        return res.status(200).json({ ok: true, ...(await saveCampaign(req, db, admin)) })
+      case 'DELETE newsletter-campaign':
+        return res.status(200).json({ ok: true, ...(await deleteCampaign(req, db)) })
+      case 'POST newsletter-launch':
+        return res.status(200).json({ ok: true, ...(await createLaunchCampaign(req, db, admin)) })
+      case 'POST newsletter-image':
+        return res.status(200).json({ ok: true, ...(await uploadNewsletterImage(req, db)) })
+      case 'POST newsletter-preview':
+        return res.status(200).json({ ok: true, ...(await previewCampaign(req, db)) })
+      case 'GET newsletter-audience':
+        return res.status(200).json({ ok: true, ...(await countAudience(req, db)) })
+      case 'POST newsletter-test':
+        return res.status(200).json({ ok: true, ...(await sendCampaignTest(req, db, admin)) })
+      case 'POST newsletter-send':
+        return res.status(200).json({ ok: true, ...(await sendCampaign(req, db)) })
+      case 'PUT newsletter-address':
+        return res.status(200).json({ ok: true, ...(await saveNewsletterAddress(req, db, admin)) })
       default:
         return res.status(404).json({ ok: false, error: 'Unknown admin action.' })
     }
