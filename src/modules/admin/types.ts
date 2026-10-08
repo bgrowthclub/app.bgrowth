@@ -200,3 +200,39 @@ export interface AdminReview {
   product_slug: string | null
   email: string | null
 }
+
+// Admin → Dashboard → Members (api/admin.ts resource dashboard-members).
+export type DashboardPeriod = '7' | '30' | '90' | '365' | 'all'
+
+export interface AdminMemberDashboard {
+  period: DashboardPeriod
+  unit: 'day' | 'week' | 'month'
+  // People who signed up in the period, and how far they got.
+  funnel: {
+    signedUp: number
+    confirmed: number
+    gotWorkspace: number
+    startedTrial: number
+    usedWorkspace: number
+    bought: number
+    trialToPaid: number
+    freeClaimed: number
+    granted: number
+  }
+  // Right now, all members (the team's own accounts not counted).
+  snapshot: {
+    members: number
+    unconfirmed: number
+    trialsActive: number
+    trialsEndedNotBought: number
+    activeGrants: number
+    signedInLast7Days: number
+  }
+  series: { key: string; signedUp: number; confirmed: number }[]
+  // Most used in the period: members who opened it or saved a record in it.
+  topWorkspaces: { id: string; name: string; slug: string | null; members: number; records: number; newRecords: number }[]
+  // Sign-up confirmation reminders sent in the period (day 1 / day 3), and
+  // how many of those people confirmed afterwards. null = not counted yet
+  // (Portal migration 0038 not run).
+  reminders: { day1: number; day3: number; people: number; confirmedAfter: number } | null
+}

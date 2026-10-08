@@ -94,6 +94,7 @@ export const PLATFORM_NAV_GROUPS: PlatformNavGroup[] = [
     label: 'Admin',
     adminOnly: true,
     items: [
+      { label: 'Dashboard', to: '/platform/admin/dashboard', icon: LayoutDashboard },
       { label: 'Members', to: '/platform/admin/members', icon: UserCog },
       { label: 'Sales', to: '/platform/admin/sales', icon: Receipt },
       { label: 'Support', to: '/platform/admin/support', icon: Headset, badge: 'supportWaiting' },

@@ -42,6 +42,7 @@ import AdminSupportPage from './pages/platform/admin/AdminSupportPage'
 import AdminCategoriesPage from './pages/platform/admin/AdminCategoriesPage'
 import AdminNewsletterPage from './pages/platform/admin/AdminNewsletterPage'
 import AdminReviewsPage from './pages/platform/admin/AdminReviewsPage'
+import AdminDashboardPage from './pages/platform/admin/AdminDashboardPage'
 import NewsletterConfirmPage from './pages/newsletter/NewsletterConfirmPage'
 import NewsletterPreferencesPage from './pages/newsletter/NewsletterPreferencesPage'
 import AdminRoute from './modules/identity/routing/AdminRoute'
@@ -172,7 +173,8 @@ export default function App() {
         <Route path="support" element={<SupportPage />} />
         {/* Admin — BGrowth administrators only (portal.website_admins),
             re-checked by api/admin.ts on every request. */}
-        <Route path="admin" element={<AdminRoute><Navigate to="/platform/admin/members" replace /></AdminRoute>} />
+        <Route path="admin" element={<AdminRoute><Navigate to="/platform/admin/dashboard" replace /></AdminRoute>} />
+        <Route path="admin/dashboard" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
         <Route path="admin/members" element={<AdminRoute><AdminMembersPage /></AdminRoute>} />
         <Route path="admin/members/:id" element={<AdminRoute><AdminMemberPage /></AdminRoute>} />
         <Route path="admin/sales" element={<AdminRoute><AdminSalesPage /></AdminRoute>} />
