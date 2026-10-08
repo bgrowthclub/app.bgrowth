@@ -29,7 +29,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   const supabase = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } })
   const now = Date.now()
-  const due: string[] = []
+  const due: { id: string; email: string; day: number }[] = []
 
   for (let page = 1; page <= MAX_PAGES; page++) {
     const { data, error } = await supabase.auth.admin.listUsers({ page, perPage: PER_PAGE })
@@ -40,14 +40,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     for (const user of data.users) {
       if (user.email_confirmed_at || !user.email) continue
       const age = now - new Date(user.created_at).getTime()
-      if (REMINDER_DAYS.some((d) => age >= d * DAY && age < (d + 1) * DAY)) due.push(user.email)
+      const day = REMINDER_DAYS.find((d) => age >= d * DAY && age < (d + 1) * DAY)
+      if (day !== undefined) due.push({ id: user.id, email: user.email, day })
     }
     if (data.users.length < PER_PAGE) break
   }
 
   let sent = 0
   const failed: string[] = []
-  for (const email of due) {
+  for (const { id, email, day } of due) {
     const { error } = await supabase.auth.resend({
       type: 'signup',
       email,
@@ -58,6 +59,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       console.error('[confirmation-reminders] resend failed:', email, error.message)
     } else {
       sent += 1
+      // Counted in Admin → Dashboard (Portal migration 0038). Best effort:
+      // without the table the reminder still goes out.
+      const { error: logError } = await supabase
+        .schema('portal')
+        .from('email_log')
+        .insert({ kind: `confirmation_reminder_day${day}`, user_id: id })
+      if (logError) console.error('[confirmation-reminders] log failed:', logError.message)
     }
   }
 

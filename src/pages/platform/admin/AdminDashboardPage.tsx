@@ -151,6 +151,29 @@ export default function AdminDashboardPage() {
           </section>
 
           <section className={`${CARD} p-5`}>
+            <h2 className="font-display text-lg font-bold text-navy">Confirmation reminders</h2>
+            <p className="mb-4 mt-0.5 text-[13px] text-navy/45">
+              E-mails sent {periodLabel} to people who hadn’t confirmed their e-mail yet — 1 day and 3 days after signing up.
+            </p>
+            {data.reminders ? (
+              <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+                <AdminStatTile label="Sent on day 1" value={String(data.reminders.day1)} />
+                <AdminStatTile label="Sent on day 3" value={String(data.reminders.day3)} />
+                <AdminStatTile label="People reminded" value={String(data.reminders.people)} />
+                <AdminStatTile
+                  label="Confirmed after a reminder"
+                  value={String(data.reminders.confirmedAfter)}
+                  hint={`${pct(data.reminders.confirmedAfter, data.reminders.people)} of people reminded`}
+                />
+              </div>
+            ) : (
+              <p className="rounded-xl bg-bg-soft px-4 py-3 text-[13px] text-navy/55">
+                Not counted yet — the reminders start being counted once the e-mail log is set up (Portal migration 0038).
+              </p>
+            )}
+          </section>
+
+          <section className={`${CARD} p-5`}>
             <h2 className="font-display text-lg font-bold text-navy">Most used Workspaces</h2>
             <p className="mb-5 mt-0.5 text-[13px] text-navy/45">
               Top 5, {periodLabel}: members who opened each one or worked on a record in it.

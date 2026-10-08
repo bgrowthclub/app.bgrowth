@@ -1127,7 +1127,7 @@ async function memberDashboard(req: VercelRequest, db: Db) {
   const since = days === null ? null : now - days * DASH_DAY
 
   // Every sign-up (auth.users holds e-mail confirmation and last sign-in).
-  const people: { id: string; createdAt: number; confirmed: boolean; lastSignIn: number | null }[] = []
+  const people: { id: string; createdAt: number; confirmed: boolean; confirmedAt: number | null; lastSignIn: number | null }[] = []
   for (let page = 1; page <= 50; page++) {
     const { data, error } = await db.auth.admin.listUsers({ page, perPage: 1000 })
     if (error) throw error
@@ -1136,6 +1136,7 @@ async function memberDashboard(req: VercelRequest, db: Db) {
         id: u.id,
         createdAt: new Date(u.created_at).getTime(),
         confirmed: Boolean(u.email_confirmed_at),
+        confirmedAt: u.email_confirmed_at ? new Date(u.email_confirmed_at).getTime() : null,
         lastSignIn: u.last_sign_in_at ? new Date(u.last_sign_in_at).getTime() : null,
       })
     }
@@ -1258,7 +1259,35 @@ async function memberDashboard(req: VercelRequest, db: Db) {
     .sort((a, b) => b.members - a.members || b.records - a.records)
     .slice(0, 5)
 
-  return { period: periodKey, unit, funnel, snapshot, series: [...buckets.values()], topWorkspaces }
+  // Confirmation reminders sent in the period (day 1 / day 3), from the
+  // e-mail log (Portal migration 0038; null until it exists) — and how many
+  // of those people confirmed afterwards.
+  let reminders: { day1: number; day3: number; people: number; confirmedAfter: number } | null = null
+  let logQuery = db.from('email_log').select('kind, user_id, sent_at').like('kind', 'confirmation_reminder_%')
+  if (since !== null) logQuery = logQuery.gte('sent_at', new Date(since).toISOString())
+  const log = await logQuery
+  if (!log.error) {
+    const confirmedAt = new Map(people.map((p) => [p.id, p.confirmedAt]))
+    const firstSent = new Map<string, number>()
+    let day1 = 0
+    let day3 = 0
+    for (const row of (log.data ?? []) as { kind: string; user_id: string | null; sent_at: string }[]) {
+      if (row.kind === 'confirmation_reminder_day1') day1 += 1
+      if (row.kind === 'confirmation_reminder_day3') day3 += 1
+      if (!row.user_id) continue
+      const t = new Date(row.sent_at).getTime()
+      firstSent.set(row.user_id, Math.min(firstSent.get(row.user_id) ?? t, t))
+    }
+    const confirmedAfter = [...firstSent].filter(([id, t]) => {
+      const c = confirmedAt.get(id)
+      return c !== null && c !== undefined && c >= t
+    }).length
+    reminders = { day1, day3, people: firstSent.size, confirmedAfter }
+  } else if (log.error.code !== '42P01' && log.error.code !== 'PGRST205') {
+    throw log.error
+  }
+
+  return { period: periodKey, unit, funnel, snapshot, series: [...buckets.values()], topWorkspaces, reminders }
 }
 
 // ---------------------------------------------------------------------------

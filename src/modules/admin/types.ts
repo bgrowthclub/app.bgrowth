@@ -231,4 +231,8 @@ export interface AdminMemberDashboard {
   series: { key: string; signedUp: number; confirmed: number }[]
   // Most used in the period: members who opened it or saved a record in it.
   topWorkspaces: { id: string; name: string; slug: string | null; members: number; records: number; newRecords: number }[]
+  // Sign-up confirmation reminders sent in the period (day 1 / day 3), and
+  // how many of those people confirmed afterwards. null = not counted yet
+  // (Portal migration 0038 not run).
+  reminders: { day1: number; day3: number; people: number; confirmedAfter: number } | null
 }
