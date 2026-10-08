@@ -7,6 +7,7 @@ import EmptyState from '../../../components/ui/EmptyState'
 import AdminStatTile from '../../../components/admin/AdminStatTile'
 import MemberFunnel from '../../../components/admin/MemberFunnel'
 import SignupsChart from '../../../components/admin/SignupsChart'
+import TopWorkspacesList from '../../../components/admin/TopWorkspacesList'
 import type { SignupPoint } from '../../../components/admin/SignupsChart'
 import { CARD } from '../../../components/admin/styles'
 import { adminService } from '../../../modules/admin/adminService'
@@ -147,6 +148,14 @@ export default function AdminDashboardPage() {
               Per {data.unit}, {periodLabel}. Darker part = confirmed their e-mail. Hover a bar for the numbers.
             </p>
             <SignupsChart points={points} />
+          </section>
+
+          <section className={`${CARD} p-5`}>
+            <h2 className="font-display text-lg font-bold text-navy">Most used Workspaces</h2>
+            <p className="mb-5 mt-0.5 text-[13px] text-navy/45">
+              Top 5, {periodLabel}: members who opened each one or worked on a record in it.
+            </p>
+            <TopWorkspacesList items={data.topWorkspaces ?? []} />
           </section>
 
           <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">

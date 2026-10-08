@@ -1143,17 +1143,26 @@ async function memberDashboard(req: VercelRequest, db: Db) {
   }
 
   const [licenses, grants, records, products, admins] = await Promise.all([
-    db.from('licenses').select('user_id, product_id, type, status, access_policy, expires_at'),
+    // '*': last_opened_at only exists with the Portal's migration 0019.
+    db.from('licenses').select('*'),
     db.from('access_grants').select('user_id, scope, product_id, expires_at, revoked_at'),
-    db.from('workspace_instances').select('user_id'),
-    db.from('products').select('id, is_free'),
+    db.from('workspace_instances').select('user_id, product_id, created_at, updated_at'),
+    db.from('products').select('id, name, slug, is_free'),
     db.from('website_admins').select('user_id'),
   ])
   for (const r of [licenses, grants, records, products, admins]) if (r.error) throw r.error
 
   const staff = new Set((admins.data ?? []).map((a) => a.user_id as string))
   const freeProduct = new Set((products.data ?? []).filter((p) => p.is_free).map((p) => p.id as string))
-  type Lic = { user_id: string; product_id: string; type: string; status: string; access_policy: string; expires_at: string | null }
+  type Lic = {
+    user_id: string
+    product_id: string
+    type: string
+    status: string
+    access_policy: string
+    expires_at: string | null
+    last_opened_at?: string | null
+  }
   const lic = (licenses.data ?? []) as Lic[]
   const liveLicense = (l: Lic) =>
     l.status === 'active' && (l.access_policy === 'lifetime' || l.expires_at === null || new Date(l.expires_at).getTime() > now)
@@ -1216,7 +1225,40 @@ async function memberDashboard(req: VercelRequest, db: Db) {
     if (p.confirmed) b.confirmed += 1
   }
 
-  return { period: periodKey, unit, funnel, snapshot, series: [...buckets.values()] }
+  // The 5 most used Workspaces in the period: members who opened one or
+  // saved a record in it, then records saved.
+  type Rec = { user_id: string; product_id: string; created_at: string; updated_at: string }
+  const inPeriod = (iso: string | null | undefined) => Boolean(iso) && (since === null || new Date(iso as string).getTime() >= since)
+  const usage = new Map<string, { users: Set<string>; records: number; newRecords: number }>()
+  const use = (productId: string) => {
+    let u = usage.get(productId)
+    if (!u) usage.set(productId, (u = { users: new Set(), records: 0, newRecords: 0 }))
+    return u
+  }
+  for (const l of lic) {
+    if (memberIds.has(l.user_id) && inPeriod(l.last_opened_at)) use(l.product_id).users.add(l.user_id)
+  }
+  for (const r of (records.data ?? []) as Rec[]) {
+    if (!memberIds.has(r.user_id) || !inPeriod(r.updated_at)) continue
+    const u = use(r.product_id)
+    u.users.add(r.user_id)
+    u.records += 1
+    if (inPeriod(r.created_at)) u.newRecords += 1
+  }
+  const productInfo = new Map((products.data ?? []).map((p) => [p.id as string, p as { name: string; slug: string }]))
+  const topWorkspaces = [...usage.entries()]
+    .map(([id, u]) => ({
+      id,
+      name: productInfo.get(id)?.name ?? 'Removed Workspace',
+      slug: productInfo.get(id)?.slug ?? null,
+      members: u.users.size,
+      records: u.records,
+      newRecords: u.newRecords,
+    }))
+    .sort((a, b) => b.members - a.members || b.records - a.records)
+    .slice(0, 5)
+
+  return { period: periodKey, unit, funnel, snapshot, series: [...buckets.values()], topWorkspaces }
 }
 
 // ---------------------------------------------------------------------------

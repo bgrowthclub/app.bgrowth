@@ -229,4 +229,6 @@ export interface AdminMemberDashboard {
     signedInLast7Days: number
   }
   series: { key: string; signedUp: number; confirmed: number }[]
+  // Most used in the period: members who opened it or saved a record in it.
+  topWorkspaces: { id: string; name: string; slug: string | null; members: number; records: number; newRecords: number }[]
 }
