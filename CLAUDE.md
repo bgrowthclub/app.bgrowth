@@ -128,6 +128,8 @@ This repo is a **static, client-only MVP**:
   Checkout with the same metadata), the Portal's existing Stripe webhook
   grants the license, and the one free trial starts from the product
   page. The Portal keeps selling in parallel until the site replaces it.
+  Since Sprint 64 a free claim or a trial started here gets an "it's
+  ready" e-mail from that endpoint (logged in `portal.email_log`).
   **Since Sprint 46 the site has an Admin area** (step 7, approved by
   the user): `/platform/admin/*` (short link `/admin`), shown only to
   members listed in `portal.website_admins` (`User.isAdmin`, gated by

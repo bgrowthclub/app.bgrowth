@@ -80,6 +80,24 @@ export async function startStudioCheckout(slug: string): Promise<{ checkoutUrl?:
   return { checkoutUrl: json.checkoutUrl, redirectUrl: json.redirectUrl }
 }
 
+// Asks the server for the "your trial has started" e-mail. Best effort —
+// never blocks opening the Workspace.
+export async function requestTrialEmail(slug: string): Promise<void> {
+  try {
+    const { data } = await client().auth.getSession()
+    const token = data.session?.access_token
+    if (!token) return
+    await fetch('/api/studio-checkout', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ productSlug: slug, notify: 'trial' }),
+      keepalive: true,
+    })
+  } catch {
+    // ignored
+  }
+}
+
 // The member's one free trial — same insert as the Portal's
 // licenseService.activateTrial(); the database still enforces "one trial
 // per member, ever" (unique index + RLS).

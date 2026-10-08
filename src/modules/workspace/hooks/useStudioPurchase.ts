@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { loadStudioPurchaseInfo, startStudioCheckout, startStudioTrial } from '../services/studioPurchase'
+import { loadStudioPurchaseInfo, requestTrialEmail, startStudioCheckout, startStudioTrial } from '../services/studioPurchase'
 import type { StudioPurchaseInfo } from '../services/studioPurchase'
 import { workspaceViewerPath } from '../config'
 
@@ -99,6 +99,7 @@ export function useStudioPurchase(slug: string | undefined, userId: string | und
     setError(undefined)
     try {
       await startStudioTrial(userId, info.productId, info.trialDays)
+      void requestTrialEmail(slug)
       navigate(workspaceViewerPath(slug))
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Couldn’t start your trial.')
