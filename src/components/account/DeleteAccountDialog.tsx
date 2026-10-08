@@ -82,9 +82,9 @@ export default function DeleteAccountDialog({ open, busy, error, onSubmit, onCan
         />
 
         <label htmlFor="delete-confirm" className="mt-4 block text-sm font-medium text-navy/75">
-          Type <strong>{WORD}</strong> to confirm
+          Type the word <strong>{WORD}</strong> to confirm
         </label>
-        <input id="delete-confirm" value={typed} onChange={(e) => setTyped(e.target.value)} autoComplete="off" className={INPUT} />
+        <input id="delete-confirm" value={typed} onChange={(e) => setTyped(e.target.value)} placeholder={WORD} autoComplete="off" className={INPUT} />
 
         {error && <p className="mt-3 text-[13px] text-red-500">{error}</p>}
         <div className="mt-6 flex justify-end gap-2">
