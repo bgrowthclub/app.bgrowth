@@ -159,6 +159,12 @@ This repo is a **static, client-only MVP**:
   and review e-mails from `api/cron/review-requests.ts`: once 7 days after
   access starts, and once more when a trial/timed access ends if still not
   reviewed (markers `review_requested_at`/`review_end_requested_at`).
+  **Since Sprint 65 members can ask to delete their account** (approved
+  by the user): Settings (and the Portal's Profile) → `api/account.ts`
+  creates a pending request; the team completes or declines it in Admin →
+  Deletions (`api/admin.ts`), which deletes the auth user (cascading to
+  the member's data), the newsletter subscription and Stripe customer
+  profiles (Portal migration 0039).
 - Business System catalog data is hardcoded TypeScript (`src/data/`),
   standing in for a future export from **BGrowth Studio**. It covers only
   the Business & Entrepreneurship Growth Category today (see §2).

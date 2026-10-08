@@ -84,7 +84,7 @@ export const PRIVACY_POLICY: LegalDocumentData = {
     {
       heading: 'Your choices and rights',
       paragraphs: [
-        `You can update your name in your account settings. You can ask us to access, correct, export or delete your personal information, or to close your account, by writing to ${LEGAL_EMAIL}. We will answer within 30 days.`,
+        `You can update your name in your account settings. You can ask us to access, correct, export or delete your personal information, or to close your account, by writing to ${LEGAL_EMAIL}. You can also ask to delete your account and its data yourself, in Settings → Delete account. We will answer within 30 days.`,
         'California residents may also ask what personal information we collected about them in the last 12 months and ask us to delete it. We do not sell or share personal information for advertising, and we will not treat you differently for using these rights.',
       ],
     },

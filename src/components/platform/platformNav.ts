@@ -16,6 +16,7 @@ import {
   Tags,
   Mail,
   Star,
+  UserX,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -36,8 +37,9 @@ export interface PlatformNavItem {
 }
 
 // supportUnread: the member's conversations with a reply they haven't
-// read; supportWaiting: open conversations waiting for the team (admins).
-export type NavBadgeKey = 'supportUnread' | 'supportWaiting'
+// read; supportWaiting: open conversations waiting for the team (admins);
+// deletionsPending: account deletion requests waiting for the team.
+export type NavBadgeKey = 'supportUnread' | 'supportWaiting' | 'deletionsPending'
 
 export interface PlatformNavGroup {
   label?: string
@@ -101,6 +103,7 @@ export const PLATFORM_NAV_GROUPS: PlatformNavGroup[] = [
       { label: 'Categories', to: '/platform/admin/categories', icon: Tags },
       { label: 'Newsletter', to: '/platform/admin/newsletter', icon: Mail },
       { label: 'Reviews', to: '/platform/admin/reviews', icon: Star },
+      { label: 'Deletions', to: '/platform/admin/deletions', icon: UserX, badge: 'deletionsPending' },
     ],
   },
 ]

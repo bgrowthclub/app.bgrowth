@@ -1,5 +1,6 @@
 import SEO from '../../components/seo/SEO'
 import EmailUpdatesSettings from '../../components/newsletter/EmailUpdatesSettings'
+import DeleteAccountSettings from '../../components/account/DeleteAccountSettings'
 
 export default function SettingsPage() {
   return (
@@ -10,8 +11,9 @@ export default function SettingsPage() {
       <p className="mt-3 max-w-lg text-[15px] leading-relaxed text-navy/55">
         Manage your account, preferences, and membership details.
       </p>
-      <div className="mt-10 max-w-3xl">
+      <div className="mt-10 max-w-3xl space-y-6">
         <EmailUpdatesSettings />
+        <DeleteAccountSettings />
       </div>
     </>
   )

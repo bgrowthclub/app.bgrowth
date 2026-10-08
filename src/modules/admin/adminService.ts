@@ -10,7 +10,7 @@ import type {
   AdminSupportThread,
   CreateGrantResult,
   NewGrantInput, AdminCatalogCategories, AdminCategory,
-  AdminNewsletterCampaign, AdminNewsletterDraft, AdminNewsletterOverview, AdminReview, AdminMemberDashboard, DashboardPeriod } from './types'
+  AdminNewsletterCampaign, AdminNewsletterDraft, AdminNewsletterOverview, AdminReview, AdminMemberDashboard, DashboardPeriod, AdminDeletionRequest } from './types'
 import type { SupportHours } from '../support/types'
 
 // The browser side of the Website's Administration — every call goes to
@@ -48,6 +48,20 @@ export const adminService = {
   },
   async countSupportWaiting() {
     return (await call<{ waiting: number }>('GET', 'support-waiting')).waiting
+  },
+  // Sidebar badges: support conversations waiting + account deletions pending.
+  async countWaiting() {
+    const r = await call<{ waiting: number; deletionsPending?: number }>('GET', 'support-waiting')
+    return { supportWaiting: r.waiting, deletionsPending: r.deletionsPending ?? 0 }
+  },
+  async listDeletionRequests() {
+    return (await call<{ requests: AdminDeletionRequest[] }>('GET', 'deletion-requests')).requests
+  },
+  completeDeletion(id: string, confirmEmail: string) {
+    return call<{ completed: string; steps: string[] }>('POST', 'deletion-complete', undefined, { id, confirmEmail })
+  },
+  rejectDeletion(id: string, note: string) {
+    return call<{ rejected: string }>('POST', 'deletion-reject', undefined, { id, note })
   },
   listCategories() {
     return call<AdminCatalogCategories>('GET', 'categories')

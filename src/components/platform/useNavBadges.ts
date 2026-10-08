@@ -25,8 +25,8 @@ export function useNavBadges(): NavBadges {
       .catch(() => undefined)
     if (isAdmin)
       adminService
-        .countSupportWaiting()
-        .then((waiting) => setBadges((b) => ({ ...b, supportWaiting: waiting })))
+        .countWaiting()
+        .then((counts) => setBadges((b) => ({ ...b, ...counts })))
         .catch(() => undefined)
   }, [user, isAdmin])
 
