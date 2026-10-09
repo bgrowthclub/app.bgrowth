@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 
 // BGrowth Website — Administration endpoint (members, licenses, trials,
 // manual access grants). One Serverless Function routed by ?resource=
@@ -1391,6 +1391,24 @@ async function completeDeletion(req: VercelRequest, db: Db, admin: Admin) {
     ])
     if ((web.data?.length ?? 0) > 0 || (studio.data?.length ?? 0) > 0) {
       throw new HttpError(409, 'This is a team account. Remove it from the admin lists first.')
+    }
+  }
+
+  // Already used the free trial? Keep only a fingerprint of the e-mail so a
+  // new account with it doesn't get another trial (Portal migration 0040).
+  if (row.user_id) {
+    const [profile, trials] = await Promise.all([
+      db.from('users').select('has_used_trial').eq('id', row.user_id).maybeSingle(),
+      db.from('licenses').select('id', { count: 'exact', head: true }).eq('user_id', row.user_id).eq('type', 'trial'),
+    ])
+    const usedTrial = Boolean((profile.data as { has_used_trial?: boolean } | null)?.has_used_trial) || (trials.count ?? 0) > 0
+    if (usedTrial) {
+      const emailHash = createHash('sha256').update(row.email.toLowerCase(), 'utf8').digest('hex')
+      const { error: hashError } = await db.from('trial_used_emails').upsert({ email_hash: emailHash }, { onConflict: 'email_hash' })
+      if (hashError) {
+        throw new HttpError(500, 'Couldn’t save the trial marker — run the Portal’s migration 0040 first. Nothing was deleted.')
+      }
+      steps.push('trial marker: saved')
     }
   }
 

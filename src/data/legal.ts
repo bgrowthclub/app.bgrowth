@@ -78,7 +78,7 @@ export const PRIVACY_POLICY: LegalDocumentData = {
     {
       heading: 'How long we keep information',
       paragraphs: [
-        'We keep your account and Workspace records while your account is active. Purchase records are kept as long as required for accounting and tax purposes. When you ask us to delete your account, we delete or anonymize your information unless we must keep it by law.',
+        'We keep your account and Workspace records while your account is active. Purchase records are kept as long as required for accounting and tax purposes. When you ask us to delete your account, we delete or anonymize your information unless we must keep it by law. If the account already used its free trial, we keep only a one-way fingerprint of the e-mail address (it can’t be turned back into the address), so a new account with the same e-mail doesn’t get a second free trial.',
       ],
     },
     {

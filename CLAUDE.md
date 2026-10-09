@@ -164,7 +164,9 @@ This repo is a **static, client-only MVP**:
   creates a pending request; the team completes or declines it in Admin →
   Deletions (`api/admin.ts`), which deletes the auth user (cascading to
   the member's data), the newsletter subscription and Stripe customer
-  profiles (Portal migration 0039).
+  profiles (Portal migration 0039); an account that used its trial leaves
+  only a SHA-256 of its e-mail so a new account gets no second trial
+  (migration 0040).
 - Business System catalog data is hardcoded TypeScript (`src/data/`),
   standing in for a future export from **BGrowth Studio**. It covers only
   the Business & Entrepreneurship Growth Category today (see §2).
