@@ -78,13 +78,13 @@ export const PRIVACY_POLICY: LegalDocumentData = {
     {
       heading: 'How long we keep information',
       paragraphs: [
-        'We keep your account and Workspace records while your account is active. Purchase records are kept as long as required for accounting and tax purposes. When you ask us to delete your account, we delete or anonymize your information unless we must keep it by law.',
+        'We keep your account and Workspace records while your account is active. Purchase records are kept as long as required for accounting and tax purposes. When you ask us to delete your account, we delete or anonymize your information unless we must keep it by law. If the account already used its free trial, we keep only a one-way fingerprint of the e-mail address (it can’t be turned back into the address), so a new account with the same e-mail doesn’t get a second free trial.',
       ],
     },
     {
       heading: 'Your choices and rights',
       paragraphs: [
-        `You can update your name in your account settings. You can ask us to access, correct, export or delete your personal information, or to close your account, by writing to ${LEGAL_EMAIL}. We will answer within 30 days.`,
+        `You can update your name in your account settings. You can ask us to access, correct, export or delete your personal information, or to close your account, by writing to ${LEGAL_EMAIL}. You can also ask to delete your account and its data yourself, in Settings → Delete account. We will answer within 30 days.`,
         'California residents may also ask what personal information we collected about them in the last 12 months and ask us to delete it. We do not sell or share personal information for advertising, and we will not treat you differently for using these rights.',
       ],
     },

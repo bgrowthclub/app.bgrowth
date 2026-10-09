@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
 
 // BGrowth Website — Administration endpoint (members, licenses, trials,
 // manual access grants). One Serverless Function routed by ?resource=
@@ -513,7 +513,13 @@ async function countSupportWaiting(db: Db) {
     .eq('status', 'open')
     .eq('last_sender', 'customer')
   if (error) throw error
-  return { waiting: count ?? 0 }
+  // Also the account deletions waiting for the team (sidebar badge). Zero
+  // until Portal migration 0039 exists.
+  const deletions = await db
+    .from('account_deletion_requests')
+    .select('id', { count: 'exact', head: true })
+    .eq('status', 'pending')
+  return { waiting: count ?? 0, deletionsPending: deletions.error ? 0 : (deletions.count ?? 0) }
 }
 
 async function getSupportThread(req: VercelRequest, db: Db) {
@@ -1291,6 +1297,221 @@ async function memberDashboard(req: VercelRequest, db: Db) {
 }
 
 // ---------------------------------------------------------------------------
+// Account deletions (portal.account_deletion_requests, Portal migration
+// 0039). Members ask in Settings (api/account.ts); the team completes or
+// rejects here. Completing deletes the auth user — which cascades to
+// portal.users, licenses, access grants, saved records, reviews, support
+// conversations and the e-mail log — plus the newsletter subscription and
+// any Stripe customer profile with that e-mail. Stripe keeps the payment
+// records themselves (tax law). The request row stays, with the name,
+// e-mail and account link cleared, as a record that it was done.
+// ---------------------------------------------------------------------------
+type DeletionRow = {
+  id: string
+  user_id: string | null
+  email: string | null
+  full_name: string | null
+  reason: string | null
+  source: string
+  status: 'pending' | 'cancelled' | 'completed' | 'rejected'
+  admin_note: string | null
+  decided_by: string | null
+  requested_at: string
+  decided_at: string | null
+}
+
+async function countRows(db: Db, table: string, column: string, value: string) {
+  const { count, error } = await db.from(table).select('*', { count: 'exact', head: true }).eq(column, value)
+  if (error) return null
+  return count ?? 0
+}
+
+async function listDeletionRequests(db: Db) {
+  const { data, error } = await db
+    .from('account_deletion_requests')
+    .select('*')
+    .order('requested_at', { ascending: false })
+    .limit(300)
+  if (error) throw error
+  const rows = (data ?? []) as DeletionRow[]
+  // What would be deleted, for the pending ones.
+  const requests = await Promise.all(
+    rows.map(async (r) => {
+      if (r.status !== 'pending' || !r.user_id) return { ...r, data: null }
+      const [licenses, grants, records, reviews, conversations] = await Promise.all([
+        countRows(db, 'licenses', 'user_id', r.user_id),
+        countRows(db, 'access_grants', 'user_id', r.user_id),
+        countRows(db, 'workspace_instances', 'user_id', r.user_id),
+        countRows(db, 'reviews', 'user_id', r.user_id),
+        countRows(db, 'support_conversations', 'user_id', r.user_id),
+      ])
+      const newsletter = r.email
+        ? ((await db.from('newsletter_subscribers').select('status').eq('email', r.email.toLowerCase()).limit(1)).data?.[0]?.status ?? null)
+        : null
+      return { ...r, data: { licenses, grants, records, reviews, conversations, newsletter } }
+    }),
+  )
+  return { requests: [...requests].sort((a, b) => (a.status === 'pending' ? 0 : 1) - (b.status === 'pending' ? 0 : 1)) }
+}
+
+async function pendingDeletion(db: Db, id: string) {
+  if (!id) throw new HttpError(400, 'id is required.')
+  const { data, error } = await db.from('account_deletion_requests').select('*').eq('id', id).maybeSingle()
+  if (error) throw error
+  if (!data) throw new HttpError(404, 'Request not found.')
+  const row = data as DeletionRow
+  if (row.status !== 'pending') throw new HttpError(409, `This request is already ${row.status}.`)
+  return row
+}
+
+const emailP = (text: string) => `<p style="margin:0 0 14px;line-height:1.6;color:#33406B">${text}</p>`
+function memberEmail(heading: string, body: string) {
+  return `
+  <div style="background:#F4F7FD;padding:32px 16px;font-family:Inter,Arial,sans-serif;color:#0A1B4D">
+    <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:16px;padding:32px">
+      <p style="margin:0;font-weight:800;font-size:18px">BGrowth</p>
+      <h1 style="margin:20px 0 12px;font-size:22px">${heading}</h1>
+      ${body}
+    </div>
+  </div>`
+}
+
+async function completeDeletion(req: VercelRequest, db: Db, admin: Admin) {
+  const row = await pendingDeletion(db, str(req.body?.id))
+  // The admin types the member's e-mail to confirm — this can't be undone.
+  if (!row.email || str(req.body?.confirmEmail).toLowerCase() !== row.email.toLowerCase()) {
+    throw new HttpError(400, 'Type the member’s e-mail exactly to confirm.')
+  }
+  const steps: string[] = []
+
+  if (row.user_id) {
+    const [web, studio] = await Promise.all([
+      db.from('website_admins').select('user_id').eq('user_id', row.user_id).limit(1),
+      db.from('studio_admins').select('user_id').eq('user_id', row.user_id).limit(1),
+    ])
+    if ((web.data?.length ?? 0) > 0 || (studio.data?.length ?? 0) > 0) {
+      throw new HttpError(409, 'This is a team account. Remove it from the admin lists first.')
+    }
+  }
+
+  // Already used the free trial? Keep only a fingerprint of the e-mail so a
+  // new account with it doesn't get another trial (Portal migration 0040).
+  if (row.user_id) {
+    const [profile, trials] = await Promise.all([
+      db.from('users').select('has_used_trial').eq('id', row.user_id).maybeSingle(),
+      db.from('licenses').select('id', { count: 'exact', head: true }).eq('user_id', row.user_id).eq('type', 'trial'),
+    ])
+    const usedTrial = Boolean((profile.data as { has_used_trial?: boolean } | null)?.has_used_trial) || (trials.count ?? 0) > 0
+    if (usedTrial) {
+      const emailHash = createHash('sha256').update(row.email.toLowerCase(), 'utf8').digest('hex')
+      // "Do nothing" on a repeat — needs only the insert grant (0040).
+      const { error: hashError } = await db
+        .from('trial_used_emails')
+        .upsert({ email_hash: emailHash }, { onConflict: 'email_hash', ignoreDuplicates: true })
+      if (hashError) {
+        console.error('[admin] trial marker failed:', hashError)
+        throw new HttpError(500, `Couldn’t save the trial marker (${hashError.message}). Nothing was deleted.`)
+      }
+      steps.push('trial marker: saved')
+    }
+  }
+
+  // Newsletter (not linked by a cascade: user_id there is "set null").
+  let nlCount = 0
+  for (const [column, value] of [['email', row.email.toLowerCase()], ['user_id', row.user_id]] as const) {
+    if (!value) continue
+    const nl = await db.from('newsletter_subscribers').delete().eq(column, value).select('id')
+    if (nl.error) throw nl.error
+    nlCount += nl.data?.length ?? 0
+  }
+  steps.push(`newsletter: ${nlCount}`)
+
+  // Stripe customer profiles with that e-mail (payments themselves stay).
+  const stripeKey = process.env.STRIPE_SECRET_KEY
+  if (stripeKey) {
+    try {
+      const stripe = new Stripe(stripeKey)
+      const customers = await stripe.customers.list({ email: row.email, limit: 100 })
+      for (const c of customers.data) await stripe.customers.del(c.id)
+      steps.push(`stripe customers: ${customers.data.length}`)
+    } catch (err) {
+      console.error('[admin] stripe customer cleanup failed:', err)
+      steps.push('stripe customers: not reachable')
+    }
+  }
+
+  // Earlier requests of the same member (cancelled / not completed) lose
+  // the name and e-mail too.
+  if (row.user_id) {
+    const { error: oldError } = await db
+      .from('account_deletion_requests')
+      .update({ email: null, full_name: null })
+      .eq('user_id', row.user_id)
+      .neq('id', row.id)
+    if (oldError) throw oldError
+  }
+
+  // The account itself — cascades to everything linked to it.
+  if (row.user_id) {
+    const { error } = await db.auth.admin.deleteUser(row.user_id)
+    if (error && !/not.?found/i.test(error.message)) throw error
+    steps.push('account: deleted')
+  }
+
+  const first = row.full_name?.trim().split(/\s+/)[0]
+  await emailMember(
+    row.email,
+    'Your BGrowth account has been deleted',
+    memberEmail(
+      'Your account has been deleted',
+      emailP(first ? `Hi ${escapeHtml(first)},` : 'Hi there,') +
+        emailP('As you asked, we deleted your BGrowth account and its data: your profile, Workspaces and access, saved records, reviews, support conversations and newsletter subscription.') +
+        emailP('We keep only the payment records the law requires (with our payment processor, Stripe). You’re welcome back anytime — you’d just create a new account.') +
+        emailP('Thank you for having been part of BGrowth.'),
+    ),
+  )
+
+  const { error } = await db
+    .from('account_deletion_requests')
+    .update({
+      status: 'completed',
+      decided_at: new Date().toISOString(),
+      decided_by: admin.email,
+      email: null,
+      full_name: null,
+      user_id: null,
+    })
+    .eq('id', row.id)
+  if (error) throw error
+  console.log('[admin] account deleted:', row.id, steps.join(', '))
+  return { completed: row.id, steps }
+}
+
+async function rejectDeletion(req: VercelRequest, db: Db, admin: Admin) {
+  const row = await pendingDeletion(db, str(req.body?.id))
+  const note = str(req.body?.note).slice(0, 1000)
+  if (!note) throw new HttpError(400, 'Write the reason — it goes to the member.')
+  const { error } = await db
+    .from('account_deletion_requests')
+    .update({ status: 'rejected', admin_note: note, decided_at: new Date().toISOString(), decided_by: admin.email })
+    .eq('id', row.id)
+  if (error) throw error
+  if (row.email) {
+    await emailMember(
+      row.email,
+      'About your request to delete your BGrowth account',
+      memberEmail(
+        'About your deletion request',
+        emailP('We couldn’t complete your request to delete your BGrowth account yet:') +
+          `<blockquote style="border-left:3px solid #1061EC;margin:0 0 14px;padding:4px 12px;color:#0A1B4D">${escapeHtml(note).replace(/\n/g, '<br>')}</blockquote>` +
+          emailP('Just reply to this e-mail and we’ll sort it out with you.'),
+      ),
+    )
+  }
+  return { rejected: row.id }
+}
+
+// ---------------------------------------------------------------------------
 // Reviews (portal.reviews, Portal migration 0009) — members' public reviews
 // of Workspaces, shared by the Portal and the site. The team can read them
 // all and remove one that breaks the rules (spam, abuse, personal data).
@@ -1414,6 +1635,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ ok: true, ...(await saveNewsletterAddress(req, db, admin)) })
       case 'GET dashboard-members':
         return res.status(200).json({ ok: true, ...(await memberDashboard(req, db)) })
+      case 'GET deletion-requests':
+        return res.status(200).json({ ok: true, ...(await listDeletionRequests(db)) })
+      case 'POST deletion-complete':
+        return res.status(200).json({ ok: true, ...(await completeDeletion(req, db, admin)) })
+      case 'POST deletion-reject':
+        return res.status(200).json({ ok: true, ...(await rejectDeletion(req, db, admin)) })
       case 'GET reviews':
         return res.status(200).json({ ok: true, ...(await listReviews(db)) })
       case 'DELETE reviews':

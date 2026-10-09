@@ -236,3 +236,27 @@ export interface AdminMemberDashboard {
   // (Portal migration 0038 not run).
   reminders: { day1: number; day3: number; people: number; confirmedAfter: number } | null
 }
+
+// Admin → Deletions (api/admin.ts resource deletion-requests).
+export interface AdminDeletionRequest {
+  id: string
+  user_id: string | null
+  email: string | null // cleared once completed
+  full_name: string | null
+  reason: string | null
+  source: 'website' | 'portal'
+  status: 'pending' | 'cancelled' | 'completed' | 'rejected'
+  admin_note: string | null
+  decided_by: string | null
+  requested_at: string
+  decided_at: string | null
+  // What would be deleted (pending requests only); null counts = unknown.
+  data: {
+    licenses: number | null
+    grants: number | null
+    records: number | null
+    reviews: number | null
+    conversations: number | null
+    newsletter: string | null
+  } | null
+}
