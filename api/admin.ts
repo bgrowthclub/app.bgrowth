@@ -1404,9 +1404,13 @@ async function completeDeletion(req: VercelRequest, db: Db, admin: Admin) {
     const usedTrial = Boolean((profile.data as { has_used_trial?: boolean } | null)?.has_used_trial) || (trials.count ?? 0) > 0
     if (usedTrial) {
       const emailHash = createHash('sha256').update(row.email.toLowerCase(), 'utf8').digest('hex')
-      const { error: hashError } = await db.from('trial_used_emails').upsert({ email_hash: emailHash }, { onConflict: 'email_hash' })
+      // "Do nothing" on a repeat — needs only the insert grant (0040).
+      const { error: hashError } = await db
+        .from('trial_used_emails')
+        .upsert({ email_hash: emailHash }, { onConflict: 'email_hash', ignoreDuplicates: true })
       if (hashError) {
-        throw new HttpError(500, 'Couldn’t save the trial marker — run the Portal’s migration 0040 first. Nothing was deleted.')
+        console.error('[admin] trial marker failed:', hashError)
+        throw new HttpError(500, `Couldn’t save the trial marker (${hashError.message}). Nothing was deleted.`)
       }
       steps.push('trial marker: saved')
     }
