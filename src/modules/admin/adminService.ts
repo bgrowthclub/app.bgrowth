@@ -10,7 +10,7 @@ import type {
   AdminSupportThread,
   CreateGrantResult,
   NewGrantInput, AdminCatalogCategories, AdminCategory,
-  AdminNewsletterCampaign, AdminNewsletterDraft, AdminNewsletterOverview, AdminReview, AdminMemberDashboard, DashboardPeriod, AdminDeletionRequest } from './types'
+  AdminNewsletterCampaign, AdminNewsletterDraft, AdminNewsletterOverview, AdminReview, AdminMemberDashboard, DashboardPeriod, AdminDeletionRequest, AdminCatalogHealth } from './types'
 import type { SupportHours } from '../support/types'
 
 // The browser side of the Website's Administration — every call goes to
@@ -53,6 +53,9 @@ export const adminService = {
   async countWaiting() {
     const r = await call<{ waiting: number; deletionsPending?: number }>('GET', 'support-waiting')
     return { supportWaiting: r.waiting, deletionsPending: r.deletionsPending ?? 0 }
+  },
+  getCatalogHealth() {
+    return call<AdminCatalogHealth>('GET', 'catalog-health')
   },
   async listDeletionRequests() {
     return (await call<{ requests: AdminDeletionRequest[] }>('GET', 'deletion-requests')).requests

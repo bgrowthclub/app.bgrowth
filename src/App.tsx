@@ -44,6 +44,7 @@ import AdminNewsletterPage from './pages/platform/admin/AdminNewsletterPage'
 import AdminReviewsPage from './pages/platform/admin/AdminReviewsPage'
 import AdminDashboardPage from './pages/platform/admin/AdminDashboardPage'
 import AdminDeletionsPage from './pages/platform/admin/AdminDeletionsPage'
+import AdminCatalogPage from './pages/platform/admin/AdminCatalogPage'
 import NewsletterConfirmPage from './pages/newsletter/NewsletterConfirmPage'
 import NewsletterPreferencesPage from './pages/newsletter/NewsletterPreferencesPage'
 import AdminRoute from './modules/identity/routing/AdminRoute'
@@ -184,6 +185,7 @@ export default function App() {
         <Route path="admin/newsletter" element={<AdminRoute><AdminNewsletterPage /></AdminRoute>} />
         <Route path="admin/reviews" element={<AdminRoute><AdminReviewsPage /></AdminRoute>} />
         <Route path="admin/deletions" element={<AdminRoute><AdminDeletionsPage /></AdminRoute>} />
+        <Route path="admin/catalog" element={<AdminRoute><AdminCatalogPage /></AdminRoute>} />
       </Route>
 
       {/* BGrowth Studio — a deliberate, explicit third layout. This is the

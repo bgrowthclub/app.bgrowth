@@ -1297,6 +1297,143 @@ async function memberDashboard(req: VercelRequest, db: Db) {
 }
 
 // ---------------------------------------------------------------------------
+// Catalog health: every published Workspace checked for what stops it from
+// selling or working ("problems") and what makes its page weaker
+// ("warnings"), plus how much it's used. And a short system check: which
+// settings exist (never their values), which database updates have been
+// run, and when the automatic e-mails last went out.
+// ---------------------------------------------------------------------------
+type Issue = { level: 'problem' | 'warning'; text: string }
+
+async function catalogHealth(db: Db) {
+  const [products, listed, categories, licenses, records, reviews] = await Promise.all([
+    db
+      .from('products')
+      .select('id, name, slug, status, cover_image_url, short_description, category_id, is_free, price_cents, is_trial_eligible, trial_duration, metadata, content, last_published_at')
+      .eq('status', 'published')
+      .order('name'),
+    db.from('catalog_index').select('product_id, slug'),
+    db.from('workspace_categories').select('id'),
+    db.from('licenses').select('product_id, type'),
+    db.from('workspace_instances').select('product_id'),
+    db.from('reviews').select('product_id, rating'),
+  ])
+  for (const r of [products, listed, categories, licenses, records, reviews]) if (r.error) throw r.error
+
+  const listedIds = new Set((listed.data ?? []).map((r) => r.product_id as string))
+  const categoryIds = new Set((categories.data ?? []).map((c) => c.id as string))
+  const count = (rows: { product_id: string }[] | null, id: string, pred: (r: any) => boolean = () => true) =>
+    (rows ?? []).filter((r) => r.product_id === id && pred(r)).length
+
+  type Row = {
+    id: string
+    name: string
+    slug: string
+    cover_image_url: string | null
+    short_description: string | null
+    category_id: string | null
+    is_free: boolean
+    price_cents: number | null
+    is_trial_eligible: boolean
+    trial_duration: number | null
+    metadata: Record<string, unknown> | null
+    content: { sections?: unknown[] } | null
+    last_published_at: string | null
+  }
+  const workspaces = ((products.data ?? []) as Row[]).map((p) => {
+    const issues: Issue[] = []
+    const meta = p.metadata ?? {}
+    const sections = Array.isArray(p.content?.sections) ? p.content!.sections!.length : 0
+    const has = (key: string) => Array.isArray(meta[key]) && (meta[key] as unknown[]).length > 0
+    if (!listedIds.has(p.id)) issues.push({ level: 'problem', text: 'Not listed in the catalog — publish it again from the Studio.' })
+    if (!p.is_free && (p.price_cents == null || p.price_cents <= 0)) issues.push({ level: 'problem', text: 'Paid, but has no price — it can’t be bought.' })
+    if (sections === 0) issues.push({ level: 'problem', text: 'No steps in its content — it opens empty.' })
+    if (p.is_trial_eligible && !p.is_free && !p.trial_duration) issues.push({ level: 'problem', text: 'Trial is on but has no length — the trial can’t start.' })
+    if (!p.cover_image_url) issues.push({ level: 'warning', text: 'No cover image.' })
+    if (!p.category_id) issues.push({ level: 'warning', text: 'No category — it won’t show under the category filters.' })
+    else if (!categoryIds.has(p.category_id)) issues.push({ level: 'warning', text: 'Its category was deleted — choose a new one.' })
+    if (!p.short_description?.trim()) issues.push({ level: 'warning', text: 'No short description (shown on the cards).' })
+    if (typeof meta.longDescription !== 'string' || !(meta.longDescription as string).trim()) issues.push({ level: 'warning', text: 'No long description on its page.' })
+    const missing = [!has('features') && 'benefits', !has('faq') && 'FAQ', !has('screenshots') && 'screenshots'].filter(Boolean)
+    if (missing.length) issues.push({ level: 'warning', text: `Product page has no ${missing.join(', ')}.` })
+
+    const own = (reviews.data ?? []).filter((r) => r.product_id === p.id) as { rating: number }[]
+    return {
+      id: p.id,
+      name: p.name,
+      slug: p.slug,
+      lastPublishedAt: p.last_published_at,
+      steps: sections,
+      issues,
+      usage: {
+        purchases: count(licenses.data as { product_id: string }[], p.id, (l) => l.type !== 'trial'),
+        trials: count(licenses.data as { product_id: string }[], p.id, (l) => l.type === 'trial'),
+        records: count(records.data as { product_id: string }[], p.id),
+        reviews: own.length,
+        rating: own.length ? Math.round((own.reduce((n, r) => n + r.rating, 0) / own.length) * 10) / 10 : null,
+      },
+    }
+  })
+  // Problems first, then warnings, then the rest.
+  const weight = (w: (typeof workspaces)[number]) =>
+    w.issues.some((i) => i.level === 'problem') ? 0 : w.issues.length ? 1 : 2
+  workspaces.sort((a, b) => weight(a) - weight(b) || a.name.localeCompare(b.name))
+
+  // In the catalog but no longer published (should never happen).
+  const publishedIds = new Set(workspaces.map((w) => w.id))
+  const orphans = (listed.data ?? []).filter((r) => !publishedIds.has(r.product_id as string)).map((r) => r.slug as string)
+
+  // --- System ---------------------------------------------------------------
+  const settings = [
+    { name: 'Payments (Stripe)', ok: Boolean(process.env.STRIPE_SECRET_KEY) },
+    { name: 'E-mail sending (Resend)', ok: Boolean(process.env.RESEND_API_KEY) },
+    { name: 'Daily tasks (CRON_SECRET)', ok: Boolean(process.env.CRON_SECRET) },
+    { name: 'Team e-mail for new messages (SUPPORT_NOTIFY_EMAIL)', ok: Boolean(process.env.SUPPORT_NOTIFY_EMAIL), optional: true },
+  ]
+  const tableExists = async (table: string) => {
+    const { error } = await db.from(table).select('*', { count: 'exact', head: true }).limit(1)
+    return !error
+  }
+  const updates = await Promise.all(
+    [
+      ['0031 Support', 'support_conversations'],
+      ['0036 Newsletter', 'newsletter_subscribers'],
+      ['0038 E-mail log', 'email_log'],
+      ['0039 Account deletion', 'account_deletion_requests'],
+      ['0040 Trial after deletion', 'trial_used_emails'],
+    ].map(async ([name, table]) => ({ name, ok: await tableExists(table) })),
+  )
+  const { data: address } = await db.from('site_settings').select('value').eq('key', 'newsletter_address').maybeSingle()
+  const lastSent = async (kind: string) => {
+    const { data } = await db.from('email_log').select('sent_at').like('kind', kind).order('sent_at', { ascending: false }).limit(1)
+    return (data?.[0]?.sent_at as string | undefined) ?? null
+  }
+  const { data: lastReview } = await db
+    .from('licenses')
+    .select('review_requested_at')
+    .not('review_requested_at', 'is', null)
+    .order('review_requested_at', { ascending: false })
+    .limit(1)
+  const activity = [
+    { name: 'Confirmation reminder (day 1 / day 3)', at: await lastSent('confirmation_reminder_%') },
+    { name: 'Review request', at: (lastReview?.[0]?.review_requested_at as string | undefined) ?? null },
+    { name: '“Your trial has started”', at: await lastSent('trial_started') },
+    { name: '“Your Workspace is ready” (free)', at: await lastSent('free_claimed') },
+  ]
+
+  return {
+    workspaces,
+    orphans,
+    system: {
+      settings,
+      updates,
+      newsletterAddress: typeof address?.value === 'string' && address.value.trim().length > 0,
+      activity,
+    },
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Account deletions (portal.account_deletion_requests, Portal migration
 // 0039). Members ask in Settings (api/account.ts); the team completes or
 // rejects here. Completing deletes the auth user — which cascades to
@@ -1635,6 +1772,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ ok: true, ...(await saveNewsletterAddress(req, db, admin)) })
       case 'GET dashboard-members':
         return res.status(200).json({ ok: true, ...(await memberDashboard(req, db)) })
+      case 'GET catalog-health':
+        return res.status(200).json({ ok: true, ...(await catalogHealth(db)) })
       case 'GET deletion-requests':
         return res.status(200).json({ ok: true, ...(await listDeletionRequests(db)) })
       case 'POST deletion-complete':
