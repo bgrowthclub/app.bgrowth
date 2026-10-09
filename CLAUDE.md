@@ -140,6 +140,10 @@ This repo is a **static, client-only MVP**:
   Since Sprint 63 `/admin` opens on a Dashboard (views switched at the
   top; Members built: sign-ups, e-mail confirmation, trials, use and
   purchases by period — resource `dashboard-members`).
+  Since Sprint 66 Admin → Catalog checks every published Workspace
+  (problems that stop selling/opening, page warnings, usage) and the
+  system (settings present, database updates, last automatic e-mails) —
+  resource `catalog-health`.
   **Since Sprint 50 there is a Support Center** (approved by the user):
   members chat with the team at `/platform/support` (live during support
   hours, a ticket answered by e-mail too outside them) through

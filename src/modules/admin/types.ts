@@ -260,3 +260,30 @@ export interface AdminDeletionRequest {
     newsletter: string | null
   } | null
 }
+
+// Admin → Catalog (api/admin.ts resource catalog-health).
+export interface AdminCatalogIssue {
+  level: 'problem' | 'warning'
+  text: string
+}
+
+export interface AdminCatalogWorkspace {
+  id: string
+  name: string
+  slug: string
+  lastPublishedAt: string | null
+  steps: number
+  issues: AdminCatalogIssue[]
+  usage: { purchases: number; trials: number; records: number; reviews: number; rating: number | null }
+}
+
+export interface AdminCatalogHealth {
+  workspaces: AdminCatalogWorkspace[]
+  orphans: string[]
+  system: {
+    settings: { name: string; ok: boolean; optional?: boolean }[]
+    updates: { name: string; ok: boolean }[]
+    newsletterAddress: boolean
+    activity: { name: string; at: string | null }[]
+  }
+}
