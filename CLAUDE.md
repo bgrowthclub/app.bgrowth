@@ -173,11 +173,12 @@ This repo is a **static, client-only MVP**:
   pages straight from Supabase (RLS); writes go through `api/admin.ts`.
   `/p/*` renders inside `AppLayout` but bare (`BARE_PREFIXES`, like the
   auth pages: no Navbar/Footer, only a discreet "Made with BGrowth").
-  **Since Sprint 71 `/ingles-de-mudanca/*` is a separate app** (approved
-  by the user): the "Inglês de Mudança" course lives in its own repo and
-  Vercel project (bgrowthclub/ingles-de-mudanca, built under that base
-  path); this site's `vercel.json` forwards the path to it, before the SPA
-  catch-all. It saves e-mails in `portal.ingles_leads` (migration 0043).
+  **Since Sprint 71 `/p/bruno/ingles-de-mudanca/*` is a separate app**
+  (approved by the user; under Bruno's member page since Sprint 72, the
+  old `/ingles-de-mudanca/*` redirects there): the "Inglês de Mudança"
+  course lives in its own repo and Vercel project
+  (bgrowthclub/ingles-de-mudanca, built under that base path); this
+  site's `vercel.json` forwards the path to it, before the SPA catch-all. It saves e-mails in `portal.ingles_leads` (migration 0043).
   **Since Sprint 50 there is a Support Center** (approved by the user):
   members chat with the team at `/platform/support` (live during support
   hours, a ticket answered by e-mail too outside them) through
