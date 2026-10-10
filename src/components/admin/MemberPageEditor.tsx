@@ -5,6 +5,7 @@ import Button from '../ui/Button'
 import MemberPageView from '../find/MemberPageView'
 import { CARD, INPUT, LINK_BUTTON, SMALL_BUTTON } from './styles'
 import { adminService } from '../../modules/admin/adminService'
+import { videoEmbed } from '../../modules/find/memberPageService'
 import { shrinkImage } from '../../lib/shrinkImage'
 import type { AdminMemberPageDraft } from '../../modules/admin/types'
 import type { MemberPage, MemberPageHighlight, MemberPageLink, MemberPageLinkType, MemberPageService } from '../../modules/find/types'
@@ -263,6 +264,8 @@ export default function MemberPageEditor({ page, onSave, onCancel }: Props) {
                   <input value={h.title} onChange={(e) => setHighlight(i, { title: e.target.value })} maxLength={100} className={INPUT} placeholder="Title" aria-label="Title" />
                   <textarea value={h.description ?? ''} onChange={(e) => setHighlight(i, { description: e.target.value })} rows={2} maxLength={400} className={INPUT} placeholder="Short description" aria-label="Description" />
                   <input value={h.url ?? ''} onChange={(e) => setHighlight(i, { url: e.target.value })} className={INPUT} placeholder="Link (https://…, optional)" aria-label="Link" />
+                  <input value={h.video ?? ''} onChange={(e) => setHighlight(i, { video: e.target.value })} className={INPUT} placeholder="Video link — YouTube, TikTok or Instagram (optional, shows instead of the image)" aria-label="Video link" />
+                  {h.video?.trim() && !videoEmbed(h.video) && <p className="text-[12.5px] text-red-500">Use a YouTube, TikTok or Instagram video link.</p>}
                   <div className="flex items-center gap-3">
                     {h.image && <img src={h.image} alt="" className="h-10 w-16 rounded-md object-cover" />}
                     <button
@@ -282,7 +285,7 @@ export default function MemberPageEditor({ page, onSave, onCancel }: Props) {
                 </ListRow>
               ))}
             </div>
-            <AddButton label="Add featured work" disabled={highlights.length >= 8} onClick={() => setHighlights((l) => [...l, { title: '', description: '', url: '', image: '' }])} />
+            <AddButton label="Add featured work" disabled={highlights.length >= 8} onClick={() => setHighlights((l) => [...l, { title: '', description: '', url: '', image: '', video: '' }])} />
           </section>
 
           <section>

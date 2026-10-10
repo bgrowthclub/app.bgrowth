@@ -46,3 +46,39 @@ const DEFAULT_LINK_LABELS: Record<string, { en: string; pt: string }> = {
 export function memberLinkLabel(link: { type: string; label: string }, language: 'en' | 'pt'): string {
   return link.label.trim() || (DEFAULT_LINK_LABELS[link.type] ?? DEFAULT_LINK_LABELS.other)[language]
 }
+
+export interface VideoEmbed {
+  src: string
+  // Vertical videos (TikTok, Reels, Shorts) take a taller frame.
+  vertical: boolean
+}
+
+// Turns a YouTube, TikTok or Instagram link into the address of its player.
+// Anything else returns null (the link is then simply not shown as video).
+export function videoEmbed(link: string): VideoEmbed | null {
+  let url: URL
+  try {
+    url = new URL(link.trim())
+  } catch {
+    return null
+  }
+  const host = url.hostname.replace(/^(www\.|m\.)/, '')
+  if (host === 'youtu.be') {
+    const id = url.pathname.slice(1).split('/')[0]
+    return id ? { src: `https://www.youtube-nocookie.com/embed/${id}`, vertical: false } : null
+  }
+  if (host === 'youtube.com') {
+    const shorts = url.pathname.match(/^\/(shorts|embed|live)\/([\w-]+)/)
+    const id = shorts?.[2] ?? url.searchParams.get('v')
+    return id ? { src: `https://www.youtube-nocookie.com/embed/${id}`, vertical: shorts?.[1] === 'shorts' } : null
+  }
+  if (host === 'tiktok.com') {
+    const id = url.pathname.match(/\/video\/(\d+)/)?.[1]
+    return id ? { src: `https://www.tiktok.com/embed/v2/${id}`, vertical: true } : null
+  }
+  if (host === 'instagram.com') {
+    const m = url.pathname.match(/^\/(p|reel|reels|tv)\/([\w-]+)/)
+    return m ? { src: `https://www.instagram.com/${m[1] === 'reels' ? 'reel' : m[1]}/${m[2]}/embed`, vertical: true } : null
+  }
+  return null
+}

@@ -1948,6 +1948,15 @@ function cleanUrl(value: unknown, field: string) {
   return url
 }
 
+// A video stays on YouTube/TikTok/Instagram; the page only embeds it.
+const VIDEO_HOSTS = /^https:\/\/((www|m)\.)?(youtube\.com|youtu\.be|tiktok\.com|instagram\.com)\//i
+function cleanVideoUrl(value: unknown, title: string) {
+  const url = cleanText(value, 500)
+  if (!url) return ''
+  if (!VIDEO_HOSTS.test(url)) throw new HttpError(400, `The video of “${title}” must be a YouTube, TikTok or Instagram link.`)
+  return url
+}
+
 async function listMemberPages(db: Db) {
   const { data, error } = await db.from('member_pages').select('*').order('updated_at', { ascending: false })
   if (error) {
@@ -1992,6 +2001,7 @@ function readMemberPageInput(req: VercelRequest) {
         description: cleanText(raw?.description, 400),
         url: cleanUrl(raw?.url, `The link of “${title}”`),
         image: cleanUrl(raw?.image, `The image of “${title}”`),
+        video: cleanVideoUrl(raw?.video, title),
       },
     ]
   })
