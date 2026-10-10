@@ -4,6 +4,7 @@ import AppLayout from './components/layout/AppLayout'
 import HomePage from './pages/HomePage'
 import BrowseSystems from './pages/BrowseSystems'
 import ProductPage from './pages/ProductPage'
+import BundlePage from './pages/BundlePage'
 import CheckoutPage from './pages/CheckoutPage'
 import CheckoutSuccessPage from './pages/CheckoutSuccessPage'
 import SystemOverviewPage from './pages/SystemOverviewPage'
@@ -11,7 +12,6 @@ import SystemModulePage from './pages/SystemModulePage'
 import WorkspacesPage from './pages/WorkspacesPage'
 import CategoryPreviewPage from './pages/CategoryPreviewPage'
 import ResourcesPage from './pages/ResourcesPage'
-import PricingPage from './pages/PricingPage'
 import AboutPage from './pages/AboutPage'
 import ContactPage from './pages/ContactPage'
 import PrivacyPage from './pages/PrivacyPage'
@@ -45,6 +45,7 @@ import AdminReviewsPage from './pages/platform/admin/AdminReviewsPage'
 import AdminDashboardPage from './pages/platform/admin/AdminDashboardPage'
 import AdminDeletionsPage from './pages/platform/admin/AdminDeletionsPage'
 import AdminCatalogPage from './pages/platform/admin/AdminCatalogPage'
+import AdminBundlesPage from './pages/platform/admin/AdminBundlesPage'
 import NewsletterConfirmPage from './pages/newsletter/NewsletterConfirmPage'
 import NewsletterPreferencesPage from './pages/newsletter/NewsletterPreferencesPage'
 import AdminRoute from './modules/identity/routing/AdminRoute'
@@ -68,6 +69,7 @@ export default function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/systems" element={<BrowseSystems />} />
         <Route path="/product/:slug" element={<ProductPage />} />
+        <Route path="/bundle/:slug" element={<BundlePage />} />
         {/* Requires a signed-in member (see CommerceEngineClient.ts —
             Checkout needs a memberId to create an Order) — a guest is
             redirected to /login, matching /platform/*'s existing gate. */}
@@ -99,11 +101,13 @@ export default function App() {
         <Route path="/knowledge/article/:slug" element={<KnowledgeArticlePage />} />
         <Route path="/knowledge/search" element={<KnowledgeSearchPage />} />
 
-        <Route path="/pricing" element={<PricingPage />} />
+        {/* No Pricing page until Plans & Subscriptions exist (decided 09/10/2026);
+            PricingPage.tsx is kept for then. Old links land on the catalog. */}
+        <Route path="/pricing" element={<Navigate to="/systems" replace />} />
         <Route path="/about" element={<AboutPage />} />
-        {/* Plans live on /pricing (BGrowth Club was retired as a name,
-            27/09/2026); /club stays reachable for old links. */}
-        <Route path="/club" element={<Navigate to="/pricing" replace />} />
+        {/* BGrowth Club was retired as a name (27/09/2026); /club stays
+            reachable for old links. */}
+        <Route path="/club" element={<Navigate to="/systems" replace />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/newsletter/confirm" element={<NewsletterConfirmPage />} />
@@ -186,6 +190,7 @@ export default function App() {
         <Route path="admin/reviews" element={<AdminRoute><AdminReviewsPage /></AdminRoute>} />
         <Route path="admin/deletions" element={<AdminRoute><AdminDeletionsPage /></AdminRoute>} />
         <Route path="admin/catalog" element={<AdminRoute><AdminCatalogPage /></AdminRoute>} />
+        <Route path="admin/bundles" element={<AdminRoute><AdminBundlesPage /></AdminRoute>} />
       </Route>
 
       {/* BGrowth Studio — a deliberate, explicit third layout. This is the

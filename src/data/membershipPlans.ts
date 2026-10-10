@@ -19,7 +19,7 @@ export const MEMBERSHIP_PLANS: MembershipPlan[] = [
     name: 'Free',
     description: 'Get started before you buy anything.',
     pricing: { price: 0, currency: 'USD', interval: 'month' },
-    features: ['Free Business Systems', 'Free Resources™', 'Newsletter'],
+    features: ['Free account', 'Free Workspaces™', 'A free trial of one paid Workspace™', 'Newsletter'],
     benefits: [{ title: 'No cost to start', description: 'Browse and try free systems immediately.' }],
     discounts: [],
     rewardMultiplier: 1,
@@ -54,7 +54,8 @@ export const MEMBERSHIP_PLANS: MembershipPlan[] = [
       communityAccess: true,
       aiAccess: false,
     },
-    status: 'published',
+    // Not sold yet (09/10/2026) — kept off /pricing until Plans & Subscriptions exist.
+    status: 'coming-soon',
   },
   {
     id: 'plan-pro',
@@ -80,7 +81,8 @@ export const MEMBERSHIP_PLANS: MembershipPlan[] = [
       communityAccess: true,
       aiAccess: false,
     },
-    status: 'published',
+    // Not sold yet (09/10/2026) — kept off /pricing until Plans & Subscriptions exist.
+    status: 'coming-soon',
   },
   {
     id: 'plan-enterprise',
@@ -103,7 +105,8 @@ export const MEMBERSHIP_PLANS: MembershipPlan[] = [
       communityAccess: true,
       aiAccess: true,
     },
-    status: 'published',
+    // Not sold yet (09/10/2026) — kept off /pricing until Plans & Subscriptions exist.
+    status: 'coming-soon',
   },
 ]
 

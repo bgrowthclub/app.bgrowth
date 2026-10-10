@@ -4,24 +4,12 @@ import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
 import { Bold, Heading2, Heading3, ImagePlus, Italic, Link2, List, ListOrdered, Quote, Undo2, Redo2 } from 'lucide-react'
 import { adminService } from '../../modules/admin/adminService'
+import { shrinkImage } from '../../lib/shrinkImage'
 
 interface Props {
   value: string
   onChange: (html: string) => void
   readOnly?: boolean
-}
-
-// Images are shrunk in the browser before upload: e-mails load faster and
-// the request stays well under the server's size limit.
-async function shrinkImage(file: File): Promise<string> {
-  const bitmap = await createImageBitmap(file)
-  const scale = Math.min(1, 1200 / bitmap.width)
-  const canvas = document.createElement('canvas')
-  canvas.width = Math.round(bitmap.width * scale)
-  canvas.height = Math.round(bitmap.height * scale)
-  canvas.getContext('2d')!.drawImage(bitmap, 0, 0, canvas.width, canvas.height)
-  // JPEG, not WebP: some e-mail apps (older Outlook) don't show WebP.
-  return canvas.toDataURL('image/jpeg', 0.85)
 }
 
 const TOOL =

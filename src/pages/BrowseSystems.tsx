@@ -5,10 +5,11 @@ import SearchToolbar from '../components/ui/SearchToolbar'
 import FilterPill from '../components/ui/FilterPill'
 import BusinessSystemCard from '../components/systems/BusinessSystemCard'
 import StudioWorkspaceCard from '../components/systems/StudioWorkspaceCard'
+import BundleCard from '../components/systems/BundleCard'
 import { MODULE_TYPE_CONFIG } from '../components/systems/ModuleBadge'
 import EmptyState from '../components/ui/EmptyState'
 import Grid from '../components/layout/Grid'
-import { loadPublishedSystemProducts, loadStudioWorkspaceProducts, systemForCard } from '../lib/publishedCatalog'
+import { loadBundleProducts, loadPublishedSystemProducts, loadStudioWorkspaceProducts, systemForCard } from '../lib/publishedCatalog'
 import type { Product } from '../modules/commerce/types/product'
 import { GROWTH_CATEGORIES } from '../types/growth'
 import type { ModuleType } from '../types/system'
@@ -59,6 +60,8 @@ export default function BrowseSystems() {
   // Workspaces published from BGrowth Studio — listed before the example
   // systems (see lib/publishedCatalog.ts).
   const [studioProducts, setStudioProducts] = useState<Product[]>([])
+  // Bundles of those Workspaces (Portal migration 0041) — listed first.
+  const [bundles, setBundles] = useState<Product[]>([])
 
   useEffect(() => {
     let cancelled = false
@@ -68,6 +71,11 @@ export default function BrowseSystems() {
     loadStudioWorkspaceProducts().then((products) => {
       if (!cancelled) setStudioProducts(products)
     })
+    loadBundleProducts()
+      .then((products) => {
+        if (!cancelled) setBundles(products)
+      })
+      .catch(() => undefined)
     return () => {
       cancelled = true
     }
@@ -119,6 +127,27 @@ export default function BrowseSystems() {
       return 0
     })
   }, [studioProducts, query, category, area, moduleType, sort])
+
+  // Same filters as the Workspaces; each bundle with the Workspaces it includes.
+  const bundleResults = useMemo(() => {
+    if (moduleType !== 'All') return []
+    const byId = new Map(studioProducts.map((p) => [p.id, p]))
+    return bundles
+      .filter(
+        (b) =>
+          (area === 'All' || b.category === area) &&
+          (category === 'All' || b.industry === category) &&
+          matchesSearch(query, `${b.title} ${b.description}`),
+      )
+      .map((bundle) => ({
+        bundle,
+        items: (bundle.includedProductIds ?? []).flatMap((id) => {
+          const item = byId.get(id)
+          return item ? [item] : []
+        }),
+      }))
+      .filter(({ items }) => items.length > 0)
+  }, [bundles, studioProducts, query, category, area, moduleType])
 
   const results = useMemo(() => {
     let list = publishedList.filter((s) => {
@@ -201,8 +230,18 @@ export default function BrowseSystems() {
           </div>
         </div>
 
-        {studioResults.length + results.length > 0 ? (
+        {bundleResults.length + studioResults.length + results.length > 0 ? (
           <Grid cols={3} className="mt-10">
+            {bundleResults.map(({ bundle, items }, i) => (
+              <motion.div
+                key={bundle.id}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: (i % 6) * 0.06, duration: 0.5 }}
+              >
+                <BundleCard bundle={bundle} items={items} />
+              </motion.div>
+            ))}
             {studioResults.map((product, i) => (
               <motion.div
                 key={product.id}

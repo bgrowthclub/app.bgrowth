@@ -144,6 +144,16 @@ This repo is a **static, client-only MVP**:
   (problems that stop selling/opening, page warnings, usage) and the
   system (settings present, database updates, last automatic e-mails) —
   resource `catalog-health`.
+  **Since Sprint 67 there are Bundles** (approved by the user): several
+  Workspaces sold together, created in Admin → Bundles (resource
+  `bundles`) and shown in the catalog and at `/bundle/:slug`. A bundle is
+  a `portal.products` row with content_type `bundle` plus
+  `portal.bundle_items` (Portal migration 0041), not in `catalog_index`
+  (the Portal never lists it). Checkout uses the bundle's id;
+  `grant_purchased_license()` turns it into a lifetime license for each
+  Workspace. A member who already bought some pays only for the rest
+  (`modules/workspace/lib/bundlePrice.ts`, same rule copied in
+  `api/studio-checkout.ts`).
   **Since Sprint 50 there is a Support Center** (approved by the user):
   members chat with the team at `/platform/support` (live during support
   hours, a ticket answered by e-mail too outside them) through

@@ -55,7 +55,6 @@ const COMMUNITY_LINKS: { title: string; description: string; to?: string }[] = [
   { title: 'Knowledge', description: 'Free guides, articles and practical advice across business, career and more.', to: '/knowledge' },
   { title: 'Academy', description: 'Structured courses and learning paths for going deeper on a skill.' },
   { title: 'Marketplace', description: 'Templates, tools and resources from BGrowth and partner sellers.' },
-  { title: 'Plans', description: 'Free, Starter, Pro and Enterprise — member pricing and exclusive resources.', to: '/pricing' },
   { title: 'Products', description: 'The full BGrowth product catalog in one place.' },
 ]
 
@@ -172,8 +171,8 @@ export default function ContactPage() {
           description="Explore our products, join the community and discover practical solutions designed to help you learn, launch, work, manage and grow."
           primaryLabel="Explore Products"
           primaryTo="/systems"
-          secondaryLabel="See Plans"
-          secondaryTo="/pricing"
+          secondaryLabel="Create Free Account"
+          secondaryTo="/register"
         />
       </SectionContainer>
     </div>

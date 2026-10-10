@@ -107,6 +107,14 @@ export interface ReviewInput {
   comment: string
 }
 
+// One Workspace inside a bundle (Portal migration 0041). A bundle is a
+// portal.products row with content_type 'bundle'.
+export interface PortalBundleItemRow {
+  bundle_id: string
+  product_id: string
+  sort_order: number
+}
+
 export interface PortalAccessGrantRow {
   scope: 'specific' | 'all'
   product_id: string | null

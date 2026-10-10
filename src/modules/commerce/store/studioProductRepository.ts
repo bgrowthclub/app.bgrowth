@@ -7,6 +7,7 @@ import { studioWorkspaceService, isStudioCatalogAvailable } from '../../workspac
 import { categoryResolver } from '../../workspace/categories'
 import type { CategoryPlacement, ResolveCategory } from '../../workspace/categories'
 import type {
+  PortalBundleItemRow,
   PortalCatalogRow,
   PortalCategoryRow,
   PortalProductRow,
@@ -44,20 +45,36 @@ function price(isFree: boolean, cents: number | null) {
 
 interface CatalogSnapshot {
   rows: PortalCatalogRow[]
+  // Published bundles (Portal migration 0041) — not in catalog_index.
+  bundles: PortalProductRow[]
+  bundleItems: PortalBundleItemRow[]
   resolveCategory: ResolveCategory
 }
+
+const NO_BUNDLES = { bundles: [] as PortalProductRow[], items: [] as PortalBundleItemRow[] }
 
 let cache: { at: number; snapshot: Promise<CatalogSnapshot> } | undefined
 
 function loadSnapshot(): Promise<CatalogSnapshot> {
   if (cache && Date.now() - cache.at < CACHE_MS) return cache.snapshot
-  const snapshot = Promise.all([studioWorkspaceService.listCatalog(), studioWorkspaceService.listCategories()]).then(
-    ([rows, categories]: [PortalCatalogRow[], PortalCategoryRow[]]) => ({
-      // Only Workspaces for now — the one content type the viewer opens.
-      rows: rows.filter((r) => r.content_type === 'workspace'),
+  const snapshot = Promise.all([
+    studioWorkspaceService.listCatalog(),
+    studioWorkspaceService.listCategories(),
+    // Bundles are optional: a database without them still lists Workspaces.
+    studioWorkspaceService.listBundles().catch(() => NO_BUNDLES),
+  ]).then(([rows, categories, bundles]: [PortalCatalogRow[], PortalCategoryRow[], typeof NO_BUNDLES]) => {
+    // Only Workspaces for now — the one content type the viewer opens.
+    const workspaces = rows.filter((r) => r.content_type === 'workspace')
+    const listed = new Set(workspaces.map((r) => r.product_id))
+    // A bundle is shown only while it still includes a listed Workspace.
+    const bundleItems = bundles.items.filter((i) => listed.has(i.product_id))
+    return {
+      rows: workspaces,
+      bundles: bundles.bundles.filter((b) => bundleItems.some((i) => i.bundle_id === b.id)),
+      bundleItems,
       resolveCategory: categoryResolver(categories),
-    }),
-  )
+    }
+  })
   // A failed load isn't cached — the next caller retries.
   snapshot.catch(() => {
     cache = undefined
@@ -149,25 +166,45 @@ export function studioProductFromRow(row: PortalProductRow, placement: CategoryP
   }
 }
 
+// A bundle (Portal migration 0041): sold like a Workspace, but it opens
+// nothing itself — buying it gives access to each Workspace it includes.
+export function bundleProductFromRow(row: PortalProductRow, placement: CategoryPlacement, itemPortalIds: string[]): Product {
+  return {
+    ...studioProductFromRow(row, placement),
+    type: 'Bundle',
+    source: { type: 'Bundle', id: row.slug },
+    includedProductIds: itemPortalIds.map((id) => `${ID_PREFIX}${id}`),
+    workspaceEnabled: false,
+  }
+}
+
+function bundleItemIds(snapshot: CatalogSnapshot, bundleId: string): string[] {
+  return snapshot.bundleItems.filter((i) => i.bundle_id === bundleId).map((i) => i.product_id)
+}
+
 export function createStudioProductRepository(): ProductRepository {
   return {
     async loadIndex() {
       if (!isStudioCatalogAvailable) return { generatedAt: new Date().toISOString(), products: [] }
-      const { rows, resolveCategory } = await loadSnapshot()
-      const products: ProductIndexEntry[] = rows.map((row) => {
-        const p = fromCatalogRow(row, resolveCategory)
-        return {
-          id: p.id,
-          slug: p.slug,
-          title: p.title,
-          description: p.description,
-          type: p.type,
-          category: p.category,
-          status: p.status,
-          featured: p.featured,
-          tags: p.tags,
-        }
+      const snapshot = await loadSnapshot()
+      const { rows, resolveCategory } = snapshot
+      const toEntry = (p: Product): ProductIndexEntry => ({
+        id: p.id,
+        slug: p.slug,
+        title: p.title,
+        description: p.description,
+        type: p.type,
+        category: p.category,
+        status: p.status,
+        featured: p.featured,
+        tags: p.tags,
       })
+      const products: ProductIndexEntry[] = [
+        ...snapshot.bundles.map((row) =>
+          toEntry(bundleProductFromRow(row, resolveCategory(row.category_id), bundleItemIds(snapshot, row.id))),
+        ),
+        ...rows.map((row) => toEntry(fromCatalogRow(row, resolveCategory))),
+      ]
       return { generatedAt: new Date().toISOString(), products }
     },
 
@@ -194,5 +231,8 @@ async function loadFullProduct(portalId: string): Promise<Product | undefined> {
   if (!row) return undefined
   const catalogRow = snapshot?.rows.find((r) => r.product_id === portalId)
   const placement = snapshot ? snapshot.resolveCategory(row.category_id) : categoryResolver([])(null)
+  if (row.content_type === 'bundle') {
+    return bundleProductFromRow(row, placement, snapshot ? bundleItemIds(snapshot, row.id) : [])
+  }
   return studioProductFromRow(row, placement, catalogRow?.is_featured ?? false)
 }

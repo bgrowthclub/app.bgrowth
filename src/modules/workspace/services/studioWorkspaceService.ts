@@ -1,6 +1,7 @@
 import { supabase } from '../../identity/supabase/supabaseClient'
 import type {
   PortalAccessGrantRow,
+  PortalBundleItemRow,
   PortalCatalogRow,
   PortalCategoryRow,
   PortalLicenseRow,
@@ -67,6 +68,27 @@ export const studioWorkspaceService = {
       .order('published_at', { ascending: false, nullsFirst: false })
     if (error) throw error
     return (data ?? []) as PortalCatalogRow[]
+  },
+
+  // Published bundles (Portal migration 0041) and what each one includes.
+  // Before that migration runs there are simply no bundles.
+  async listBundles(): Promise<{ bundles: PortalProductRow[]; items: PortalBundleItemRow[] }> {
+    const { data, error } = await client()
+      .from('products')
+      .select(PRODUCT_COLUMNS)
+      .eq('content_type', 'bundle')
+      .eq('status', 'published')
+      .order('last_published_at', { ascending: false, nullsFirst: false })
+    if (error) throw error
+    const bundles = withoutContent(data)
+    if (bundles.length === 0) return { bundles, items: [] }
+    const itemsResult = await client()
+      .from('bundle_items')
+      .select('bundle_id, product_id, sort_order')
+      .in('bundle_id', bundles.map((b) => b.id))
+      .order('sort_order')
+    if (itemsResult.error) throw itemsResult.error
+    return { bundles, items: (itemsResult.data ?? []) as PortalBundleItemRow[] }
   },
 
   async listCategories(): Promise<PortalCategoryRow[]> {
