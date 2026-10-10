@@ -23,6 +23,7 @@ import KnowledgeCategoryPage from './pages/knowledge/KnowledgeCategoryPage'
 import KnowledgeArticlePage from './pages/knowledge/KnowledgeArticlePage'
 import KnowledgeSearchPage from './pages/knowledge/KnowledgeSearchPage'
 import NotFoundPage from './pages/NotFoundPage'
+import CourseAddressRedirect from './pages/CourseAddressRedirect'
 import PlatformLayout from './components/platform/PlatformLayout'
 import DashboardPage from './pages/platform/DashboardPage'
 import MyBusinessSystemsPage from './pages/platform/MyBusinessSystemsPage'
@@ -144,6 +145,7 @@ export default function App() {
             that isn't one of their own registered children), so nothing
             ever renders a blank page. Found during the RC1 review — see
             docs/development/rc1-review-checklist.md. */}
+        <Route path="/ingles-de-mudanca/*" element={<CourseAddressRedirect />} />
         <Route path="*" element={<NotFoundPage />} />
       </Route>
 
