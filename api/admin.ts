@@ -21,7 +21,8 @@ import { createHash, randomUUID } from 'node:crypto'
 // Sending a newsletter can take a while (batches of 100).
 export const maxDuration = 60
 
-type Admin = { id: string; email: string }
+type AdminRole = 'admin' | 'support'
+type Admin = { id: string; email: string; role: AdminRole }
 type Db = SupabaseClient<any, 'portal', any>
 
 const PAGE_SIZE = 25
@@ -48,14 +49,17 @@ async function requireAdmin(req: VercelRequest, db: Db): Promise<Admin> {
   if (!token) throw new HttpError(401, 'Sign in to continue.')
   const { data, error } = await db.auth.getUser(token)
   if (error || !data.user) throw new HttpError(401, 'Sign in to continue.')
+  // '*': the role column only exists with Portal migration 0042 (before
+  // that, every administrator is a full admin).
   const { data: row, error: rowError } = await db
     .from('website_admins')
-    .select('user_id')
+    .select('*')
     .eq('user_id', data.user.id)
     .maybeSingle()
   if (rowError) throw rowError
   if (!row) throw new HttpError(403, 'This area is for BGrowth administrators.')
-  return { id: data.user.id, email: data.user.email ?? '' }
+  const role: AdminRole = (row as { role?: string }).role === 'support' ? 'support' : 'admin'
+  return { id: data.user.id, email: data.user.email ?? '', role }
 }
 
 function str(value: unknown): string {
@@ -1409,6 +1413,7 @@ async function catalogHealth(db: Db) {
       ['0039 Account deletion', 'account_deletion_requests'],
       ['0040 Trial after deletion', 'trial_used_emails'],
       ['0041 Bundles', 'bundle_items'],
+      ['0042 Team roles & activity log', 'admin_activity'],
     ].map(async ([name, table]) => ({ name, ok: await tableExists(table) })),
   )
   const { data: address } = await db.from('site_settings').select('value').eq('key', 'newsletter_address').maybeSingle()
@@ -1909,103 +1914,343 @@ async function archiveBundle(req: VercelRequest, db: Db) {
 }
 
 // ---------------------------------------------------------------------------
+// Team: who can use the Admin area and with which role (Portal migration
+// 0042). Admins only. Nobody changes or removes their own access here, and
+// there is always at least one admin left.
+// ---------------------------------------------------------------------------
+async function listTeam(db: Db) {
+  const { data, error } = await db.from('website_admins').select('*').order('created_at')
+  if (error) throw error
+  const rows = (data ?? []) as { user_id: string; email: string; role?: string; created_at: string }[]
+  return {
+    team: rows.map((r) => ({ user_id: r.user_id, email: r.email, role: r.role === 'support' ? 'support' : 'admin', created_at: r.created_at })),
+  }
+}
+
+function readRole(value: unknown): AdminRole {
+  if (value === 'admin' || value === 'support') return value
+  throw new HttpError(400, 'Choose a role: Admin or Support.')
+}
+
+async function countAdmins(db: Db) {
+  const { data, error } = await db.from('website_admins').select('*')
+  if (error) throw error
+  return ((data ?? []) as { role?: string }[]).filter((r) => r.role !== 'support').length
+}
+
+async function addTeamMember(req: VercelRequest, db: Db) {
+  const email = str(req.body?.email).toLowerCase()
+  const role = readRole(req.body?.role)
+  if (!email) throw new HttpError(400, 'Enter the person’s e-mail.')
+  const { data: users, error } = await db.from('users').select('id, email').ilike('email', email).limit(1)
+  if (error) throw error
+  const user = (users?.[0] ?? null) as { id: string; email: string } | null
+  if (!user) throw new HttpError(404, 'No BGrowth account uses this e-mail. Ask the person to create one first.')
+  const { data: existing } = await db.from('website_admins').select('user_id').eq('user_id', user.id).limit(1)
+  if (existing && existing.length > 0) throw new HttpError(409, 'This person is already on the team.')
+  const { error: insertError } = await db.from('website_admins').insert({ user_id: user.id, email: user.email, role })
+  if (insertError) {
+    if ((insertError as { code?: string }).code === '42703') throw new HttpError(503, 'Run the database update (Portal migration 0042) first.')
+    throw insertError
+  }
+  return { member: { user_id: user.id, email: user.email, role, created_at: new Date().toISOString() } }
+}
+
+async function updateTeamMember(req: VercelRequest, db: Db, admin: Admin) {
+  const userId = str(req.body?.userId)
+  const role = readRole(req.body?.role)
+  if (userId === admin.id) throw new HttpError(400, 'You can’t change your own role.')
+  const { data: current, error } = await db.from('website_admins').select('*').eq('user_id', userId).maybeSingle()
+  if (error) throw error
+  if (!current) throw new HttpError(404, 'This person isn’t on the team.')
+  if (role === 'support' && (current as { role?: string }).role !== 'support' && (await countAdmins(db)) <= 1) {
+    throw new HttpError(409, 'There must always be at least one Admin.')
+  }
+  const { error: updateError } = await db.from('website_admins').update({ role }).eq('user_id', userId)
+  if (updateError) throw updateError
+  return { member: { ...(current as object), role }, email: (current as { email: string }).email }
+}
+
+async function removeTeamMember(req: VercelRequest, db: Db, admin: Admin) {
+  const userId = str(req.body?.userId ?? req.query.userId)
+  if (userId === admin.id) throw new HttpError(400, 'You can’t remove yourself.')
+  const { data: current, error } = await db.from('website_admins').select('*').eq('user_id', userId).maybeSingle()
+  if (error) throw error
+  if (!current) throw new HttpError(404, 'This person isn’t on the team.')
+  if ((current as { role?: string }).role !== 'support' && (await countAdmins(db)) <= 1) {
+    throw new HttpError(409, 'There must always be at least one Admin.')
+  }
+  const { error: deleteError } = await db.from('website_admins').delete().eq('user_id', userId)
+  if (deleteError) throw deleteError
+  return { removed: userId, email: (current as { email: string }).email }
+}
+
+// ---------------------------------------------------------------------------
+// Activity log (portal.admin_activity, Portal migration 0042): every change
+// made in the Admin area — who, what, when, on which member or product.
+// Recorded by the router below after the change succeeds; best effort, so a
+// logging problem never undoes the change itself.
+// ---------------------------------------------------------------------------
+type Body = Record<string, unknown>
+type Described = { area: string; summary: string } | null
+
+const fmtDay = (iso: unknown) =>
+  typeof iso === 'string' && iso ? new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : ''
+
+// What each change means, in words. null = not recorded (drafts of a
+// preview, image uploads, a grant that only returned a warning).
+function describe(key: string, b: Body, r: Record<string, any>): Described {
+  switch (key) {
+    case 'POST confirmation':
+      return { area: 'members', summary: 'Resent the confirmation e-mail' }
+    case 'POST grants':
+      if (r.requiresConfirmation) return null
+      return {
+        area: 'members',
+        summary: `Gave access to ${b.scope === 'all' ? 'all Workspaces' : 'a Workspace'}${b.expiresAt ? ` until ${fmtDay(b.expiresAt)}` : ' with no end date'}${b.note ? ` — “${String(b.note).slice(0, 120)}”` : ''}`,
+      }
+    case 'PATCH grants':
+      return { area: 'members', summary: 'Revoked access given by the team' }
+    case 'POST licenses':
+      return { area: 'members', summary: 'Gave the Workspace for good (license)' }
+    case 'PATCH licenses':
+      return {
+        area: 'members',
+        summary: b.action === 'extend' ? `Extended access until ${fmtDay(b.expiresAt)}` : b.action === 'end' ? 'Ended access now' : 'Restored access',
+      }
+    case 'POST support-reply':
+      return { area: 'support', summary: 'Replied to a support conversation' }
+    case 'PATCH support-status':
+      return { area: 'support', summary: b.status === 'closed' ? 'Closed a support conversation' : 'Reopened a support conversation' }
+    case 'PUT support-hours':
+      return { area: 'support', summary: 'Changed the support hours' }
+    case 'POST categories':
+      return { area: 'catalog', summary: `Created the category “${b.name}”` }
+    case 'PATCH categories':
+      return { area: 'catalog', summary: `Edited the category “${r.category?.name ?? b.name ?? ''}”` }
+    case 'DELETE categories':
+      return { area: 'catalog', summary: 'Deleted a category' }
+    case 'PATCH product-category':
+      return { area: 'catalog', summary: 'Changed a Workspace’s category' }
+    case 'POST bundles':
+      return { area: 'catalog', summary: `Created the bundle “${b.name}”${b.status === 'published' ? ' and published it' : ' as a draft'}` }
+    case 'PATCH bundles':
+      return { area: 'catalog', summary: `Edited the bundle “${b.name}”${b.status === 'published' ? '' : ' (draft)'}` }
+    case 'DELETE bundles':
+      return { area: 'catalog', summary: 'Removed a bundle from the site' }
+    case 'POST newsletter-campaign':
+      return { area: 'newsletter', summary: `Saved the newsletter “${String(b.subject ?? '').slice(0, 120)}”` }
+    case 'DELETE newsletter-campaign':
+      return { area: 'newsletter', summary: 'Deleted a newsletter draft' }
+    case 'POST newsletter-launch':
+      return { area: 'newsletter', summary: 'Started a launch announcement' }
+    case 'POST newsletter-test':
+      return { area: 'newsletter', summary: 'Sent a newsletter test to themselves' }
+    case 'POST newsletter-send':
+      return { area: 'newsletter', summary: `Sent a newsletter to ${r.sent ?? 0} subscribers` }
+    case 'PUT newsletter-address':
+      return { area: 'newsletter', summary: 'Changed the newsletter mailing address' }
+    case 'POST deletion-complete':
+      return { area: 'deletions', summary: 'Deleted a member’s account and data' }
+    case 'POST deletion-reject':
+      return { area: 'deletions', summary: 'Declined an account deletion request' }
+    case 'DELETE reviews':
+      return { area: 'reviews', summary: 'Removed a review' }
+    case 'POST team':
+      return { area: 'team', summary: `Added ${r.member?.email ?? b.email} to the team as ${b.role === 'support' ? 'Support' : 'Admin'}` }
+    case 'PATCH team':
+      return { area: 'team', summary: `Changed ${r.email ?? 'a team member'} to ${b.role === 'support' ? 'Support' : 'Admin'}` }
+    case 'DELETE team':
+      return { area: 'team', summary: `Removed ${r.email ?? 'a team member'} from the team` }
+    default:
+      return null
+  }
+}
+
+// Only short, plain values from the request — never message bodies,
+// e-mail HTML, images or confirmations typed by the admin.
+const SKIP_DETAILS = new Set(['body', 'bodyHtml', 'dataUrl', 'confirmEmail', 'longDescription', 'preheader'])
+function details(b: Body, query: VercelRequest['query']) {
+  const out: Record<string, unknown> = {}
+  for (const [k, v] of Object.entries(b ?? {})) {
+    if (SKIP_DETAILS.has(k)) continue
+    if (typeof v === 'string') out[k] = v.slice(0, 200)
+    else if (typeof v === 'number' || typeof v === 'boolean' || v === null) out[k] = v
+    else if (Array.isArray(v) && v.length <= 20 && v.every((x) => typeof x === 'string')) out[k] = v
+  }
+  if (typeof query.id === 'string' && !out.id) out.id = query.id
+  return out
+}
+
+const isUuid = (v: unknown): v is string => typeof v === 'string' && /^[0-9a-f-]{36}$/i.test(v)
+
+async function recordActivity(db: Db, admin: Admin, key: string, req: VercelRequest, result: Record<string, any>) {
+  const b = (req.body && typeof req.body === 'object' ? req.body : {}) as Body
+  const described = describe(key, b, result)
+  if (!described) return
+  const row = result.grant ?? result.license ?? {}
+  // A deleted account keeps no link back to the person.
+  const userId = key === 'POST deletion-complete' ? null : b.userId ?? row.user_id ?? null
+  const productId = b.productId ?? row.product_id ?? (key.endsWith(' bundles') ? result.bundle?.id ?? b.id ?? req.query.id : null)
+  try {
+    const { error } = await db.from('admin_activity').insert({
+      admin_id: admin.id,
+      admin_email: admin.email,
+      action: key,
+      area: described.area,
+      summary: described.summary,
+      target_user_id: isUuid(userId) ? userId : null,
+      target_product_id: isUuid(productId) ? productId : null,
+      details: details(b, req.query),
+    })
+    if (error) console.error('[admin] activity not recorded:', error.message)
+  } catch (err) {
+    console.error('[admin] activity not recorded:', err)
+  }
+}
+
+async function listActivity(req: VercelRequest, db: Db) {
+  const page = Math.max(1, Number(req.query.page) || 1)
+  const size = 50
+  let query = db
+    .from('admin_activity')
+    .select('id, created_at, admin_id, admin_email, action, area, summary, target_user_id, target_product_id', { count: 'exact' })
+    .order('created_at', { ascending: false })
+    .range((page - 1) * size, page * size - 1)
+  const area = str(req.query.area)
+  const who = str(req.query.admin)
+  const member = str(req.query.member)
+  if (area) query = query.eq('area', area)
+  if (isUuid(who)) query = query.eq('admin_id', who)
+  if (isUuid(member)) query = query.eq('target_user_id', member)
+  const { data, error, count } = await query
+  if (error) {
+    if ((error as { code?: string }).code === '42P01' || (error as { code?: string }).code === 'PGRST205') {
+      return { entries: [], total: 0, page, pageSize: size, admins: [], ready: false }
+    }
+    throw error
+  }
+  type Entry = { id: string; created_at: string; admin_id: string | null; admin_email: string; action: string; area: string; summary: string; target_user_id: string | null; target_product_id: string | null }
+  const rows = (data ?? []) as Entry[]
+  const userIds = [...new Set(rows.flatMap((r) => (r.target_user_id ? [r.target_user_id] : [])))]
+  const productIds = [...new Set(rows.flatMap((r) => (r.target_product_id ? [r.target_product_id] : [])))]
+  const [users, products, team] = await Promise.all([
+    userIds.length ? db.from('users').select('id, email').in('id', userIds) : Promise.resolve({ data: [], error: null }),
+    productIds.length ? db.from('products').select('id, name').in('id', productIds) : Promise.resolve({ data: [], error: null }),
+    db.from('website_admins').select('user_id, email'),
+  ])
+  const emailById = new Map(((users.data ?? []) as { id: string; email: string }[]).map((u) => [u.id, u.email]))
+  const nameById = new Map(((products.data ?? []) as { id: string; name: string }[]).map((p) => [p.id, p.name]))
+  return {
+    entries: rows.map((r) => ({
+      ...r,
+      target_user_email: r.target_user_id ? emailById.get(r.target_user_id) ?? null : null,
+      target_product_name: r.target_product_id ? nameById.get(r.target_product_id) ?? null : null,
+    })),
+    total: count ?? rows.length,
+    page,
+    pageSize: size,
+    admins: ((team.data ?? []) as { user_id: string; email: string }[]).map((t) => ({ id: t.user_id, email: t.email })),
+    ready: true,
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Router. Each `METHOD resource` runs one function; Support (role 'support')
+// may use only SUPPORT_ACTIONS — everything else is for Admins. Changes
+// (anything but GET) are written to the activity log once they succeed.
+// ---------------------------------------------------------------------------
+type Route = (req: VercelRequest, db: Db, admin: Admin) => Promise<Record<string, any>>
+
+const ROUTES: Record<string, Route> = {
+  'GET me': async (_req, _db, admin) => ({ admin }),
+  'GET members': (req, db) => listMembers(req, db),
+  'GET member': (req, db) => getMember(req, db),
+  'POST confirmation': (req, db) => resendConfirmation(req, db),
+  'GET support': (req, db) => listSupport(req, db),
+  'GET support-waiting': async (_req, db, admin) => {
+    const counts = await countSupportWaiting(db)
+    return admin.role === 'admin' ? counts : { ...counts, deletionsPending: 0 }
+  },
+  'GET support-thread': (req, db) => getSupportThread(req, db),
+  'POST support-reply': (req, db, admin) => replySupport(req, db, admin),
+  'PATCH support-status': (req, db) => setSupportStatus(req, db),
+  'PUT support-hours': (req, db, admin) => saveSupportHours(req, db, admin),
+  'GET categories': (_req, db) => listCatalogCategories(db),
+  'POST categories': (req, db) => createCategory(req, db),
+  'PATCH categories': (req, db) => updateCategory(req, db),
+  'DELETE categories': (req, db) => deleteCategory(req, db),
+  'PATCH product-category': (req, db) => setProductCategory(req, db),
+  'GET sales': (_req, db) => listSales(db),
+  'GET products': (_req, db) => listProducts(db),
+  'POST grants': (req, db, admin) => createGrant(req, db, admin),
+  'PATCH grants': (req, db) => revokeGrant(req, db),
+  'POST licenses': (req, db) => giveLicense(req, db),
+  'PATCH licenses': (req, db) => updateLicense(req, db),
+  'GET newsletter': (_req, db) => newsletterOverview(db),
+  'GET newsletter-campaign': (req, db) => getCampaign(req, db),
+  'POST newsletter-campaign': (req, db, admin) => saveCampaign(req, db, admin),
+  'DELETE newsletter-campaign': (req, db) => deleteCampaign(req, db),
+  'POST newsletter-launch': (req, db, admin) => createLaunchCampaign(req, db, admin),
+  'POST newsletter-image': (req, db) => uploadNewsletterImage(req, db),
+  'POST newsletter-preview': (req, db) => previewCampaign(req, db),
+  'GET newsletter-audience': (req, db) => countAudience(req, db),
+  'POST newsletter-test': (req, db, admin) => sendCampaignTest(req, db, admin),
+  'POST newsletter-send': (req, db) => sendCampaign(req, db),
+  'PUT newsletter-address': (req, db, admin) => saveNewsletterAddress(req, db, admin),
+  'GET dashboard-members': (req, db) => memberDashboard(req, db),
+  'GET catalog-health': (_req, db) => catalogHealth(db),
+  'GET deletion-requests': (_req, db) => listDeletionRequests(db),
+  'POST deletion-complete': (req, db, admin) => completeDeletion(req, db, admin),
+  'POST deletion-reject': (req, db, admin) => rejectDeletion(req, db, admin),
+  'GET reviews': (_req, db) => listReviews(db),
+  'DELETE reviews': (req, db) => deleteReview(req, db),
+  'GET bundles': (_req, db) => listBundles(db),
+  'POST bundles': (req, db, admin) => createBundle(req, db, admin),
+  'PATCH bundles': (req, db, admin) => updateBundle(req, db, admin),
+  'DELETE bundles': (req, db) => archiveBundle(req, db),
+  'GET team': (_req, db) => listTeam(db),
+  'POST team': (req, db) => addTeamMember(req, db),
+  'PATCH team': (req, db, admin) => updateTeamMember(req, db, admin),
+  'DELETE team': (req, db, admin) => removeTeamMember(req, db, admin),
+  'GET activity': (req, db) => listActivity(req, db),
+}
+
+// What the Support role may do (decided 10/10/2026): answer support, see
+// members and their documents, resend the confirmation e-mail, give or
+// extend access and trials (to fix a complaint quickly), and read reviews.
+const SUPPORT_ACTIONS = new Set([
+  'GET me',
+  'GET members',
+  'GET member',
+  'POST confirmation',
+  'GET support',
+  'GET support-waiting',
+  'GET support-thread',
+  'POST support-reply',
+  'PATCH support-status',
+  'GET products',
+  'POST grants',
+  'PATCH grants',
+  'POST licenses',
+  'PATCH licenses',
+  'GET reviews',
+])
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const db = client()
     const admin = await requireAdmin(req, db)
     const resource = str(req.query.resource)
     const key = `${req.method} ${resource}`
-
-    switch (key) {
-      case 'GET me':
-        return res.status(200).json({ ok: true, admin })
-      case 'GET members':
-        return res.status(200).json({ ok: true, ...(await listMembers(req, db)) })
-      case 'GET member':
-        return res.status(200).json({ ok: true, ...(await getMember(req, db)) })
-      case 'POST confirmation':
-        return res.status(200).json({ ok: true, ...(await resendConfirmation(req, db)) })
-      case 'GET support':
-        return res.status(200).json({ ok: true, ...(await listSupport(req, db)) })
-      case 'GET support-waiting':
-        return res.status(200).json({ ok: true, ...(await countSupportWaiting(db)) })
-      case 'GET support-thread':
-        return res.status(200).json({ ok: true, ...(await getSupportThread(req, db)) })
-      case 'POST support-reply':
-        return res.status(200).json({ ok: true, ...(await replySupport(req, db, admin)) })
-      case 'PATCH support-status':
-        return res.status(200).json({ ok: true, ...(await setSupportStatus(req, db)) })
-      case 'PUT support-hours':
-        return res.status(200).json({ ok: true, ...(await saveSupportHours(req, db, admin)) })
-      case 'GET categories':
-        return res.status(200).json({ ok: true, ...(await listCatalogCategories(db)) })
-      case 'POST categories':
-        return res.status(200).json({ ok: true, ...(await createCategory(req, db)) })
-      case 'PATCH categories':
-        return res.status(200).json({ ok: true, ...(await updateCategory(req, db)) })
-      case 'DELETE categories':
-        return res.status(200).json({ ok: true, ...(await deleteCategory(req, db)) })
-      case 'PATCH product-category':
-        return res.status(200).json({ ok: true, ...(await setProductCategory(req, db)) })
-      case 'GET sales':
-        return res.status(200).json({ ok: true, ...(await listSales(db)) })
-      case 'GET products':
-        return res.status(200).json({ ok: true, ...(await listProducts(db)) })
-      case 'POST grants':
-        return res.status(200).json({ ok: true, ...(await createGrant(req, db, admin)) })
-      case 'PATCH grants':
-        return res.status(200).json({ ok: true, ...(await revokeGrant(req, db)) })
-      case 'POST licenses':
-        return res.status(200).json({ ok: true, ...(await giveLicense(req, db)) })
-      case 'PATCH licenses':
-        return res.status(200).json({ ok: true, ...(await updateLicense(req, db)) })
-      case 'GET newsletter':
-        return res.status(200).json({ ok: true, ...(await newsletterOverview(db)) })
-      case 'GET newsletter-campaign':
-        return res.status(200).json({ ok: true, ...(await getCampaign(req, db)) })
-      case 'POST newsletter-campaign':
-        return res.status(200).json({ ok: true, ...(await saveCampaign(req, db, admin)) })
-      case 'DELETE newsletter-campaign':
-        return res.status(200).json({ ok: true, ...(await deleteCampaign(req, db)) })
-      case 'POST newsletter-launch':
-        return res.status(200).json({ ok: true, ...(await createLaunchCampaign(req, db, admin)) })
-      case 'POST newsletter-image':
-        return res.status(200).json({ ok: true, ...(await uploadNewsletterImage(req, db)) })
-      case 'POST newsletter-preview':
-        return res.status(200).json({ ok: true, ...(await previewCampaign(req, db)) })
-      case 'GET newsletter-audience':
-        return res.status(200).json({ ok: true, ...(await countAudience(req, db)) })
-      case 'POST newsletter-test':
-        return res.status(200).json({ ok: true, ...(await sendCampaignTest(req, db, admin)) })
-      case 'POST newsletter-send':
-        return res.status(200).json({ ok: true, ...(await sendCampaign(req, db)) })
-      case 'PUT newsletter-address':
-        return res.status(200).json({ ok: true, ...(await saveNewsletterAddress(req, db, admin)) })
-      case 'GET dashboard-members':
-        return res.status(200).json({ ok: true, ...(await memberDashboard(req, db)) })
-      case 'GET catalog-health':
-        return res.status(200).json({ ok: true, ...(await catalogHealth(db)) })
-      case 'GET deletion-requests':
-        return res.status(200).json({ ok: true, ...(await listDeletionRequests(db)) })
-      case 'POST deletion-complete':
-        return res.status(200).json({ ok: true, ...(await completeDeletion(req, db, admin)) })
-      case 'POST deletion-reject':
-        return res.status(200).json({ ok: true, ...(await rejectDeletion(req, db, admin)) })
-      case 'GET reviews':
-        return res.status(200).json({ ok: true, ...(await listReviews(db)) })
-      case 'DELETE reviews':
-        return res.status(200).json({ ok: true, ...(await deleteReview(req, db)) })
-      case 'GET bundles':
-        return res.status(200).json({ ok: true, ...(await listBundles(db)) })
-      case 'POST bundles':
-        return res.status(200).json({ ok: true, ...(await createBundle(req, db, admin)) })
-      case 'PATCH bundles':
-        return res.status(200).json({ ok: true, ...(await updateBundle(req, db, admin)) })
-      case 'DELETE bundles':
-        return res.status(200).json({ ok: true, ...(await archiveBundle(req, db)) })
-      default:
-        return res.status(404).json({ ok: false, error: 'Unknown admin action.' })
+    const route = ROUTES[key]
+    if (!route) return res.status(404).json({ ok: false, error: 'Unknown admin action.' })
+    if (admin.role !== 'admin' && !SUPPORT_ACTIONS.has(key)) {
+      return res.status(403).json({ ok: false, error: 'Only Admins can do this.' })
     }
+    const result = await route(req, db, admin)
+    if (req.method !== 'GET') await recordActivity(db, admin, key, req, result)
+    return res.status(200).json({ ok: true, ...result })
   } catch (err) {
     if (err instanceof HttpError) return res.status(err.status).json({ ok: false, error: err.message, ...err.extra })
     console.error('[admin] error:', err)

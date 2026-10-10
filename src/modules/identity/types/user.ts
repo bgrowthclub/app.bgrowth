@@ -78,6 +78,10 @@ export interface User {
   // portal.website_admins) — unlocks the Admin area. Not an organization
   // role: those are FutureRoles (types/future.ts). Absent = not an admin.
   isAdmin?: boolean
+  // Which part of the Admin area they use (Portal migration 0042): 'admin'
+  // = everything, 'support' = Support, Members and reading Reviews. Set
+  // whenever isAdmin is true.
+  adminRole?: 'admin' | 'support'
   // Escape hatch for a field a future product needs before this interface
   // is formally extended — never read ad hoc without adding the field
   // properly once its shape is known.

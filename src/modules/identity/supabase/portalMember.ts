@@ -61,23 +61,26 @@ async function loadProfile(supabase: PortalClient, userId: string): Promise<Prof
   return data as ProfileRow | null
 }
 
-// True when this member is a Website administrator. The table only lets a
-// member read their own row; any failure (including the table not existing
-// yet) simply means "not an admin" — the server re-checks every admin call.
-async function loadIsAdmin(supabase: PortalClient, userId: string): Promise<boolean> {
-  const { data, error } = await supabase.from('website_admins').select('user_id').eq('user_id', userId).maybeSingle()
+// This member's Website admin role, or null when they aren't one. The table
+// only lets a member read their own row; any failure (including the table
+// not existing yet) simply means "not an admin" — the server re-checks
+// every admin call. '*': the role column arrives with Portal migration
+// 0042; before it, every administrator is a full admin.
+async function loadAdminRole(supabase: PortalClient, userId: string): Promise<'admin' | 'support' | null> {
+  const { data, error } = await supabase.from('website_admins').select('*').eq('user_id', userId).maybeSingle()
   if (error) throw error
-  return Boolean(data)
+  if (!data) return null
+  return (data as { role?: string }).role === 'support' ? 'support' : 'admin'
 }
 
 // Builds BGrowth Identity™'s User from a real Supabase account. Profile and
 // ownership are read best-effort: if either read fails the member is still
 // signed in, just with nothing owned shown yet.
 export async function loadPortalMember(supabase: PortalClient, authUser: AuthUser): Promise<User> {
-  const [profile, ownedProducts, isAdmin] = await Promise.all([
+  const [profile, ownedProducts, adminRole] = await Promise.all([
     loadProfile(supabase, authUser.id).catch(() => null),
     loadOwnedProductSlugs(supabase, authUser.id).catch(() => [] as string[]),
-    loadIsAdmin(supabase, authUser.id).catch(() => false),
+    loadAdminRole(supabase, authUser.id).catch(() => null),
   ])
 
   const email = authUser.email ?? ''
@@ -105,6 +108,7 @@ export async function loadPortalMember(supabase: PortalClient, authUser: AuthUse
     settings: DEFAULT_SETTINGS,
     createdAt: profile?.created_at ?? authUser.created_at,
     updatedAt: authUser.updated_at ?? authUser.created_at,
-    isAdmin,
+    isAdmin: adminRole !== null,
+    adminRole: adminRole ?? undefined,
   }
 }

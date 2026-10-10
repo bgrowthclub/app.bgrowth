@@ -5,7 +5,8 @@ import { LINK_BUTTON, formatDate, pillClass } from './styles'
 
 interface Props {
   review: AdminReview
-  onRemove: () => void
+  // Absent for the Support role, which only reads reviews.
+  onRemove?: () => void
 }
 
 const FROM = {
@@ -23,9 +24,11 @@ export default function AdminReviewRow({ review, onRemove }: Props) {
         <StarRating rating={review.rating} />
         <span className={pillClass(FROM[review.created_from].tone)}>{FROM[review.created_from].label}</span>
         <span className="text-[12px] text-navy/40">{formatDate(review.created_at)}</span>
-        <button type="button" onClick={onRemove} className={`${LINK_BUTTON} ml-auto text-red-600 hover:bg-red-50`}>
-          Remove
-        </button>
+        {onRemove && (
+          <button type="button" onClick={onRemove} className={`${LINK_BUTTON} ml-auto text-red-600 hover:bg-red-50`}>
+            Remove
+          </button>
+        )}
       </div>
       <p className="mt-2 break-words text-[14px] font-semibold text-navy">{review.title}</p>
       <p className="mt-1 whitespace-pre-line break-words text-[13.5px] leading-relaxed text-navy/65">{review.comment}</p>

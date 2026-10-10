@@ -14,6 +14,8 @@ import type { AdminSupportInbox, AdminSupportThread } from '../../../modules/adm
 import type { SupportHours } from '../../../modules/support/types'
 import { describeSupportHours, isSupportOnline } from '../../../modules/support/hours'
 import { usePoll } from '../../../modules/support/usePoll'
+import { useIdentity } from '../../../modules/identity/IdentityContext'
+import { isFullAdmin } from '../../../modules/admin/permissions'
 
 function message(err: unknown) {
   return err instanceof Error ? err.message : String(err)
@@ -26,6 +28,8 @@ export default function AdminSupportPage() {
   const [params, setParams] = useSearchParams()
   const selectedId = params.get('c')
   const tab = params.get('tab') === 'closed' ? 'closed' : 'open'
+  // Support hours are changed by Admins only.
+  const canEditHours = isFullAdmin(useIdentity().user)
   const [inbox, setInbox] = useState<AdminSupportInbox | null>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [loadError, setLoadError] = useState<string>()
@@ -151,7 +155,7 @@ export default function AdminSupportPage() {
                 {online ? 'Online — live chat' : 'Offline — tickets'}
               </span>
               <p className="min-w-0 flex-1 text-[13px] text-navy/55">{describeSupportHours(inbox.hours)}</p>
-              {!editingHours && (
+              {canEditHours && !editingHours && (
                 <button
                   type="button"
                   onClick={() => setEditingHours(true)}

@@ -154,6 +154,16 @@ This repo is a **static, client-only MVP**:
   Workspace. A member who already bought some pays only for the rest
   (`modules/workspace/lib/bundlePrice.ts`, same rule copied in
   `api/studio-checkout.ts`).
+  **Since Sprint 69 the Admin area has roles and an activity log**
+  (approved by the user; Portal migration 0042): `website_admins.role` is
+  `admin` (everything) or `support` (Support, Members incl. giving or
+  extending access/trials, reading Reviews) — enforced by `api/admin.ts`
+  (`SUPPORT_ACTIONS`) and mirrored in the UI (`modules/admin/permissions.ts`,
+  `AdminRoute support`, nav items marked `support`). The team is edited in
+  Admin → Team; every change made in the Admin area is written to
+  `portal.admin_activity` and shown in Admin → Activity. A new admin
+  resource goes in the `ROUTES` table there, and a new change gets a line
+  in `describe()`.
   **Since Sprint 50 there is a Support Center** (approved by the user):
   members chat with the team at `/platform/support` (live during support
   hours, a ticket answered by e-mail too outside them) through

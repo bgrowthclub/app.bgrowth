@@ -10,6 +10,8 @@ import AdminReviewRow from '../../../components/admin/AdminReviewRow'
 import { CARD, INPUT, SMALL_BUTTON } from '../../../components/admin/styles'
 import { adminService } from '../../../modules/admin/adminService'
 import type { AdminReview } from '../../../modules/admin/types'
+import { useIdentity } from '../../../modules/identity/IdentityContext'
+import { isFullAdmin } from '../../../modules/admin/permissions'
 
 const PAGE = 30
 const DAY = 24 * 60 * 60 * 1000
@@ -20,6 +22,8 @@ const average = (list: AdminReview[]) => (list.length ? list.reduce((n, r) => n 
 // the Portal and the product pages show), filtered by Workspace or stars,
 // with removing one that breaks the rules.
 export default function AdminReviewsPage() {
+  // Support reads reviews; removing one is for Admins.
+  const canRemove = isFullAdmin(useIdentity().user)
   const [reviews, setReviews] = useState<AdminReview[] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [product, setProduct] = useState('')
@@ -120,7 +124,7 @@ export default function AdminReviewsPage() {
             <>
               <div className={`${CARD} divide-y divide-navy/[0.06] overflow-hidden`}>
                 {filtered.slice(0, visible).map((r) => (
-                  <AdminReviewRow key={r.id} review={r} onRemove={() => setRemoving(r)} />
+                  <AdminReviewRow key={r.id} review={r} onRemove={canRemove ? () => setRemoving(r) : undefined} />
                 ))}
               </div>
               {filtered.length > visible && (
