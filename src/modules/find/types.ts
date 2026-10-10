@@ -26,6 +26,8 @@ export interface MemberPageHighlight {
   // A YouTube, TikTok or Instagram link — the video plays on the page while
   // staying hosted on that network (no storage on our side).
   video?: string
+  // Text of the button that opens `url` (default: "Saiba mais"/"Learn more").
+  cta?: string
 }
 
 export interface MemberPage {

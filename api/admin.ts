@@ -2002,6 +2002,7 @@ function readMemberPageInput(req: VercelRequest) {
         url: cleanUrl(raw?.url, `The link of “${title}”`),
         image: cleanUrl(raw?.image, `The image of “${title}”`),
         video: cleanVideoUrl(raw?.video, title),
+        cta: cleanText(raw?.cta, 40),
       },
     ]
   })
