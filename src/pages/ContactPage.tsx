@@ -55,7 +55,7 @@ const COMMUNITY_LINKS: { title: string; description: string; to?: string }[] = [
   { title: 'Knowledge', description: 'Free guides, articles and practical advice across business, career and more.', to: '/knowledge' },
   { title: 'Academy', description: 'Structured courses and learning paths for going deeper on a skill.' },
   { title: 'Marketplace', description: 'Templates, tools and resources from BGrowth and partner sellers.' },
-  { title: 'Plans', description: 'Free, Starter, Pro and Enterprise — member pricing and exclusive resources.', to: '/pricing' },
+  { title: 'Pricing', description: 'A free account, Workspaces you buy once and keep, and bundles that save more.', to: '/pricing' },
   { title: 'Products', description: 'The full BGrowth product catalog in one place.' },
 ]
 
