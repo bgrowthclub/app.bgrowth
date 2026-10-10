@@ -7,6 +7,7 @@ export const ACTIVITY_AREAS: { id: AdminActivityArea; label: string; tone: Tone 
   { id: 'members', label: 'Members', tone: 'blue' },
   { id: 'support', label: 'Support', tone: 'green' },
   { id: 'catalog', label: 'Catalog', tone: 'amber' },
+  { id: 'pages', label: 'Pages', tone: 'blue' },
   { id: 'newsletter', label: 'Newsletter', tone: 'gray' },
   { id: 'reviews', label: 'Reviews', tone: 'gray' },
   { id: 'deletions', label: 'Deletions', tone: 'red' },
