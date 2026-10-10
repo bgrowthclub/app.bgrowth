@@ -85,6 +85,38 @@ export async function loadStudioWorkspaceProducts(): Promise<Product[]> {
   return (await productCatalogService.getAll()).filter(isStudioWorkspaceProduct)
 }
 
+// Bundles (Portal migration 0041): one product that sells several Studio
+// Workspaces together. Shown at /bundle/:slug.
+export function isBundleProduct(product: Product): boolean {
+  return product.type === 'Bundle'
+}
+
+export function bundlePath(slug: string) {
+  return `/bundle/${encodeURIComponent(slug)}`
+}
+
+export async function loadBundleProducts(): Promise<Product[]> {
+  return (await productCatalogService.getAll()).filter(isBundleProduct)
+}
+
+async function loadIncluded(bundle: Product): Promise<Product[]> {
+  const items = await Promise.all((bundle.includedProductIds ?? []).map((id) => productCatalogService.getById(id)))
+  return items.filter((p): p is Product => Boolean(p))
+}
+
+// A bundle and the Workspaces it includes, in order (null: no such bundle).
+export async function loadBundleWithItems(slug: string): Promise<{ bundle: Product; items: Product[] } | null> {
+  const bundle = await productCatalogService.getBySlug(slug)
+  if (!bundle || !isBundleProduct(bundle)) return null
+  return { bundle, items: await loadIncluded(bundle) }
+}
+
+// Every bundle that includes this product, each with its Workspaces.
+export async function loadBundlesIncluding(productId: string): Promise<{ bundle: Product; items: Product[] }[]> {
+  const bundles = (await loadBundleProducts()).filter((b) => b.includedProductIds?.includes(productId))
+  return Promise.all(bundles.map(async (bundle) => ({ bundle, items: await loadIncluded(bundle) })))
+}
+
 // The Homepage's featured row — see ProductCatalogService.getFeatured().
 export async function loadFeaturedSystemProducts(): Promise<PublishedSystemProduct[]> {
   return pairProductsWithSystems(await productCatalogService.getFeatured())

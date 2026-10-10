@@ -4,6 +4,7 @@ import AppLayout from './components/layout/AppLayout'
 import HomePage from './pages/HomePage'
 import BrowseSystems from './pages/BrowseSystems'
 import ProductPage from './pages/ProductPage'
+import BundlePage from './pages/BundlePage'
 import CheckoutPage from './pages/CheckoutPage'
 import CheckoutSuccessPage from './pages/CheckoutSuccessPage'
 import SystemOverviewPage from './pages/SystemOverviewPage'
@@ -45,6 +46,7 @@ import AdminReviewsPage from './pages/platform/admin/AdminReviewsPage'
 import AdminDashboardPage from './pages/platform/admin/AdminDashboardPage'
 import AdminDeletionsPage from './pages/platform/admin/AdminDeletionsPage'
 import AdminCatalogPage from './pages/platform/admin/AdminCatalogPage'
+import AdminBundlesPage from './pages/platform/admin/AdminBundlesPage'
 import NewsletterConfirmPage from './pages/newsletter/NewsletterConfirmPage'
 import NewsletterPreferencesPage from './pages/newsletter/NewsletterPreferencesPage'
 import AdminRoute from './modules/identity/routing/AdminRoute'
@@ -68,6 +70,7 @@ export default function App() {
         <Route path="/" element={<HomePage />} />
         <Route path="/systems" element={<BrowseSystems />} />
         <Route path="/product/:slug" element={<ProductPage />} />
+        <Route path="/bundle/:slug" element={<BundlePage />} />
         {/* Requires a signed-in member (see CommerceEngineClient.ts —
             Checkout needs a memberId to create an Order) — a guest is
             redirected to /login, matching /platform/*'s existing gate. */}
@@ -186,6 +189,7 @@ export default function App() {
         <Route path="admin/reviews" element={<AdminRoute><AdminReviewsPage /></AdminRoute>} />
         <Route path="admin/deletions" element={<AdminRoute><AdminDeletionsPage /></AdminRoute>} />
         <Route path="admin/catalog" element={<AdminRoute><AdminCatalogPage /></AdminRoute>} />
+        <Route path="admin/bundles" element={<AdminRoute><AdminBundlesPage /></AdminRoute>} />
       </Route>
 
       {/* BGrowth Studio — a deliberate, explicit third layout. This is the

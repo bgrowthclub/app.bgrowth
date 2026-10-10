@@ -108,6 +108,9 @@ export interface Product {
   whatsIncluded?: string[]
   faq?: ProductFaqItem[]
   relatedProductIds?: string[]
+  // A `Bundle`'s contents — the ids of the products it includes, in the
+  // order they're shown. Buying the bundle gives access to each of them.
+  includedProductIds?: string[]
   // Slugs into modules/knowledge's KnowledgeArticle catalog (see
   // modules/knowledge/types/article.ts) — lets a Product Page eventually
   // surface a "Related Knowledge" section without duplicating any article

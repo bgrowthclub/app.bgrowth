@@ -188,6 +188,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const productById = new Map(((products.data ?? []) as { id: string; name: string; slug: string; status: string }[]).map((p) => [p.id, p]))
   const reviewed = new Set(((reviews.data ?? []) as { user_id: string; product_id: string }[]).map((r) => `${r.user_id}:${r.product_id}`))
   const handledToday = new Set<string>()
+  // One review e-mail per member per day: a bundle (Portal migration 0041)
+  // starts several Workspaces at once, and their requests then go out on
+  // following days instead of all together (the window is two weeks).
+  const emailedToday = new Set<string>()
 
   let sent = 0
   let skipped = 0
@@ -222,6 +226,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       continue
     }
 
+    // Already wrote to this member today — left unstamped for tomorrow.
+    if (emailedToday.has(access.userId) && !reviewed.has(pair) && !handledToday.has(pair)) {
+      skipped += 1
+      continue
+    }
+
     if (
       !user?.email ||
       !product ||
@@ -248,6 +258,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (!response.ok) throw new Error(`${response.status} ${await response.text()}`)
       sent += 1
       handledToday.add(pair)
+      emailedToday.add(access.userId)
       const { error } = await stamp()
       if (error) console.error('[review-requests] stamp failed:', table, access.id, error.message)
     } catch (err) {

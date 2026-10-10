@@ -287,3 +287,51 @@ export interface AdminCatalogHealth {
     activity: { name: string; at: string | null }[]
   }
 }
+
+// Admin → Bundles (Portal migration 0041).
+export interface AdminBundle {
+  id: string
+  slug: string
+  name: string
+  short_description: string
+  long_description: string
+  cover_image_url: string | null
+  category_id: string | null
+  is_free: boolean
+  price_cents: number | null
+  currency: string
+  status: 'draft' | 'published'
+  last_published_at: string | null
+  created_at: string
+  // The included Workspaces' product ids, in order.
+  item_ids: string[]
+}
+
+export interface AdminBundleWorkspace {
+  id: string
+  slug: string
+  name: string
+  cover_image_url: string | null
+  is_free: boolean
+  price_cents: number | null
+  status: string
+}
+
+export interface AdminBundlesOverview {
+  bundles: AdminBundle[]
+  workspaces: AdminBundleWorkspace[]
+  categories: AdminCategory[]
+}
+
+export interface AdminBundleDraft {
+  id?: string
+  name: string
+  shortDescription: string
+  longDescription: string
+  isFree: boolean
+  priceCents: number | null
+  categoryId: string | null
+  coverImageUrl: string | null
+  status: 'draft' | 'published'
+  itemIds: string[]
+}

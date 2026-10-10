@@ -60,7 +60,13 @@ export async function loadStudioPurchaseInfo(slug: string, userId: string | unde
 }
 
 // Buy (paid → Stripe Checkout URL) or claim (free → the Workspace's path).
-export async function startStudioCheckout(slug: string): Promise<{ checkoutUrl?: string; redirectUrl?: string }> {
+export function startStudioCheckout(slug: string): Promise<{ checkoutUrl?: string; redirectUrl?: string }> {
+  return postStudioCheckout({ productSlug: slug })
+}
+
+// The one call to /api/studio-checkout — a Workspace ({ productSlug }) or a
+// bundle ({ bundleSlug }, see bundlePurchase.ts).
+export async function postStudioCheckout(body: Record<string, string>): Promise<{ checkoutUrl?: string; redirectUrl?: string }> {
   const { data } = await client().auth.getSession()
   const token = data.session?.access_token
   if (!token) throw new Error('Sign in to continue.')
@@ -68,7 +74,7 @@ export async function startStudioCheckout(slug: string): Promise<{ checkoutUrl?:
   const response = await fetch('/api/studio-checkout', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify({ productSlug: slug }),
+    body: JSON.stringify(body),
   })
   const json = (await response.json().catch(() => ({}))) as {
     ok?: boolean

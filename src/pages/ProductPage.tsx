@@ -14,12 +14,20 @@ import FAQPanel from '../components/runtime/FAQPanel'
 import RelatedProductsPanel from '../components/runtime/RelatedProductsPanel'
 import StudioPurchaseCard from '../components/systems/StudioPurchaseCard'
 import StudioWorkspaceOutline from '../components/systems/StudioWorkspaceOutline'
+import BundleOfferNote from '../components/systems/BundleOfferNote'
 import ProductReviewsSection from '../components/reviews/ProductReviewsSection'
 import ReviewSummaryLine from '../components/reviews/ReviewSummaryLine'
 import { studioPortalId } from '../modules/commerce/store/studioProductRepository'
 import { useProductReviews } from '../modules/workspace/hooks/useProductReviews'
 import { productCatalogService } from '../modules/commerce/services/ProductCatalogService'
-import { isStudioWorkspaceProduct, loadStudioWorkspaceOutline, resolveProductSystem } from '../lib/publishedCatalog'
+import {
+  bundlePath,
+  isBundleProduct,
+  isStudioWorkspaceProduct,
+  loadBundlesIncluding,
+  loadStudioWorkspaceOutline,
+  resolveProductSystem,
+} from '../lib/publishedCatalog'
 import { useIdentity } from '../modules/identity/IdentityContext'
 import { workspaceViewerPath } from '../modules/workspace/config'
 import { useStudioPurchase } from '../modules/workspace/hooks/useStudioPurchase'
@@ -45,6 +53,8 @@ export default function ProductPage() {
   const { slug } = useParams<{ slug: string }>()
   const [product, setProduct] = useState<Product | null | undefined>(undefined)
   const [outline, setOutline] = useState<WorkspaceOutlineSection[]>([])
+  // Bundles that include this Workspace (Portal migration 0041).
+  const [bundles, setBundles] = useState<Awaited<ReturnType<typeof loadBundlesIncluding>>>([])
   const { user } = useIdentity()
   const [searchParams] = useSearchParams()
   // Studio Workspaces: ownership, trial and checkout (no-op for other products).
@@ -60,6 +70,7 @@ export default function ProductPage() {
     setProduct(undefined)
     if (!slug) return
     setOutline([])
+    setBundles([])
     productCatalogService.getBySlug(slug).then((result) => {
       if (cancelled) return
       setProduct(result ?? null)
@@ -68,6 +79,11 @@ export default function ProductPage() {
         loadStudioWorkspaceOutline(result.slug).then((sections) => {
           if (!cancelled) setOutline(sections)
         })
+        loadBundlesIncluding(result.id)
+          .then((found) => {
+            if (!cancelled) setBundles(found)
+          })
+          .catch(() => undefined)
       }
     })
     return () => {
@@ -77,6 +93,8 @@ export default function ProductPage() {
 
   if (product === null) return <Navigate to="/systems" replace />
   if (product === undefined) return null
+  // A bundle has its own page.
+  if (isBundleProduct(product)) return <Navigate to={bundlePath(product.slug)} replace />
 
   const system = resolveProductSystem(product)
   const previewModule = system?.modules[0]
@@ -147,6 +165,13 @@ export default function ProductPage() {
             {studio && (
               <div className="mt-3">
                 <ReviewSummaryLine summary={reviews.summary} href={`#${REVIEWS_ID}`} />
+              </div>
+            )}
+            {bundles.length > 0 && (
+              <div className="mt-6 max-w-lg space-y-2">
+                {bundles.map(({ bundle, items }) => (
+                  <BundleOfferNote key={bundle.id} bundle={bundle} items={items} />
+                ))}
               </div>
             )}
           </div>

@@ -199,6 +199,8 @@ async function listProducts(db: Db) {
     .from('products')
     .select('id, name, slug, is_free, price_cents, currency, status, last_published_at')
     .eq('status', 'published')
+    // Workspaces only — a bundle (0041) isn't something to give access to.
+    .eq('content_type', 'workspace')
     .order('name')
   if (error) throw error
   return { products: data ?? [] }
@@ -648,6 +650,8 @@ async function listCatalogCategories(db: Db) {
     .from('products')
     .select('id, name, slug, status, category_id, cover_image_url')
     .neq('status', 'archived')
+    // A bundle's category is set in Admin → Bundles.
+    .neq('content_type', 'bundle')
     .order('name')
   if (error) throw error
   return { categories, products: data ?? [] }
@@ -938,11 +942,11 @@ async function createLaunchCampaign(req: VercelRequest, db: Db, admin: Admin) {
   const productId = str(req.body?.productId)
   const { data: product, error } = await db
     .from('products')
-    .select('id, name, slug, short_description, cover_image_url, category_id, status')
+    .select('id, name, slug, short_description, cover_image_url, category_id, status, content_type')
     .eq('id', productId)
     .maybeSingle()
   if (error) throw error
-  if (!product || product.status !== 'published') throw new HttpError(404, 'Choose a published Workspace.')
+  if (!product || product.status !== 'published' || product.content_type !== 'workspace') throw new HttpError(404, 'Choose a published Workspace.')
   const categories = await loadCategories(db)
   const category = categories.find((c) => c.id === product.category_id)
   const parent = category?.parent_id ? categories.find((c) => c.id === category.parent_id) : undefined
@@ -980,7 +984,9 @@ async function uploadNewsletterImage(req: VercelRequest, db: Db) {
   const bytes = Buffer.from(match[3], 'base64')
   if (bytes.length > 3 * 1024 * 1024) throw new HttpError(413, 'This image is too large (3 MB max).')
   const ext = match[2] === 'jpeg' ? 'jpg' : match[2]
-  const path = `newsletter/${new Date().toISOString().slice(0, 10)}/${randomUUID()}.${ext}`
+  // Also used for bundle covers (Admin → Bundles).
+  const folder = str(req.body?.folder) === 'bundles' ? 'bundles' : 'newsletter'
+  const path = `${folder}/${new Date().toISOString().slice(0, 10)}/${randomUUID()}.${ext}`
   const { error } = await db.storage.from('portal-product-assets').upload(path, bytes, { contentType: match[1], upsert: false })
   if (error) throw error
   const { data } = db.storage.from('portal-product-assets').getPublicUrl(path)
@@ -1311,6 +1317,7 @@ async function catalogHealth(db: Db) {
       .from('products')
       .select('id, name, slug, status, cover_image_url, short_description, category_id, is_free, price_cents, is_trial_eligible, trial_duration, metadata, content, last_published_at')
       .eq('status', 'published')
+      .eq('content_type', 'workspace')
       .order('name'),
     db.from('catalog_index').select('product_id, slug'),
     db.from('workspace_categories').select('id'),
@@ -1401,6 +1408,7 @@ async function catalogHealth(db: Db) {
       ['0038 E-mail log', 'email_log'],
       ['0039 Account deletion', 'account_deletion_requests'],
       ['0040 Trial after deletion', 'trial_used_emails'],
+      ['0041 Bundles', 'bundle_items'],
     ].map(async ([name, table]) => ({ name, ok: await tableExists(table) })),
   )
   const { data: address } = await db.from('site_settings').select('value').eq('key', 'newsletter_address').maybeSingle()
@@ -1698,6 +1706,209 @@ async function deleteReview(req: VercelRequest, db: Db) {
 }
 
 // ---------------------------------------------------------------------------
+// Bundles (Portal migration 0041): a portal.products row with content_type
+// 'bundle' (no content, never trialled, not in catalog_index) plus its
+// Workspaces in portal.bundle_items. Sold on the Website only; buying one
+// gives a license for each Workspace (grant_purchased_license). Removing a
+// bundle archives it, so past sales keep its name.
+// ---------------------------------------------------------------------------
+const BUNDLE_COLUMNS =
+  'id, slug, name, short_description, cover_image_url, category_id, metadata, is_free, price_cents, currency, status, last_published_at, created_at'
+const MIN_BUNDLE_CENTS = 50
+
+type BundleProductRow = {
+  id: string
+  slug: string
+  name: string
+  short_description: string
+  cover_image_url: string | null
+  category_id: string | null
+  metadata: Record<string, unknown> | null
+  is_free: boolean
+  price_cents: number | null
+  currency: string
+  status: string
+  last_published_at: string | null
+  created_at: string
+}
+
+async function listBundles(db: Db) {
+  const [bundles, workspaces, categories] = await Promise.all([
+    db.from('products').select(BUNDLE_COLUMNS).eq('content_type', 'bundle').neq('status', 'archived').order('created_at', { ascending: false }),
+    db
+      .from('products')
+      .select('id, slug, name, cover_image_url, is_free, price_cents, status')
+      .eq('content_type', 'workspace')
+      .neq('status', 'archived')
+      .order('name'),
+    loadCategories(db),
+  ])
+  if (bundles.error) throw bundles.error
+  if (workspaces.error) throw workspaces.error
+  const rows = (bundles.data ?? []) as BundleProductRow[]
+  const items = rows.length
+    ? await db.from('bundle_items').select('bundle_id, product_id, sort_order').in('bundle_id', rows.map((b) => b.id)).order('sort_order')
+    : { data: [], error: null }
+  if (items.error) throw items.error
+  const itemRows = (items.data ?? []) as { bundle_id: string; product_id: string }[]
+  return {
+    bundles: rows.map((b) => ({
+      ...b,
+      long_description: typeof b.metadata?.longDescription === 'string' ? (b.metadata.longDescription as string) : '',
+      item_ids: itemRows.filter((i) => i.bundle_id === b.id).map((i) => i.product_id),
+    })),
+    workspaces: workspaces.data ?? [],
+    categories,
+  }
+}
+
+async function uniqueSlug(db: Db, base: string, exceptId?: string) {
+  const root = slugify(base) || 'bundle'
+  for (let n = 1; n < 50; n += 1) {
+    const candidate = n === 1 ? root : `${root}-${n}`
+    let query = db.from('products').select('id').eq('slug', candidate).limit(1)
+    if (exceptId) query = query.neq('id', exceptId)
+    const { data, error } = await query
+    if (error) throw error
+    if (!data || data.length === 0) return candidate
+  }
+  throw new HttpError(409, 'Choose a different name — this one is taken.')
+}
+
+// Reads and checks the editor's form. Publishing needs every Workspace
+// published; a draft may still include drafts.
+async function readBundleInput(req: VercelRequest, db: Db) {
+  const name = str(req.body?.name).slice(0, 120)
+  const shortDescription = str(req.body?.shortDescription).slice(0, 300)
+  const longDescription = typeof req.body?.longDescription === 'string' ? req.body.longDescription.trim().slice(0, 5000) : ''
+  const isFree = req.body?.isFree === true
+  const priceCents = isFree ? null : Math.round(Number(req.body?.priceCents))
+  const categoryId = str(req.body?.categoryId) || null
+  const coverImageUrl = str(req.body?.coverImageUrl) || null
+  const status = req.body?.status === 'published' ? 'published' : 'draft'
+  const itemIds: string[] = Array.isArray(req.body?.itemIds)
+    ? [...new Set((req.body.itemIds as unknown[]).map((v) => str(v)).filter(Boolean))]
+    : []
+
+  if (!name) throw new HttpError(400, 'Give the bundle a name.')
+  if (!shortDescription) throw new HttpError(400, 'Write a short description (shown on the cards).')
+  if (!isFree && (!Number.isFinite(priceCents) || (priceCents as number) < MIN_BUNDLE_CENTS)) {
+    throw new HttpError(400, 'Set a price of at least $0.50, or make it free.')
+  }
+  if (itemIds.length < 2) throw new HttpError(400, 'Choose at least 2 Workspaces.')
+  if (coverImageUrl && !/^https:\/\//.test(coverImageUrl)) throw new HttpError(400, 'The cover must be an uploaded image.')
+  if (categoryId && !(await loadCategories(db)).some((c) => c.id === categoryId)) throw new HttpError(400, 'Category not found.')
+
+  const { data: products, error } = await db.from('products').select('id, name, status, content_type').in('id', itemIds)
+  if (error) throw error
+  const found = (products ?? []) as { id: string; name: string; status: string; content_type: string }[]
+  if (found.length !== itemIds.length || found.some((p) => p.content_type !== 'workspace' || p.status === 'archived')) {
+    throw new HttpError(400, 'One of the chosen Workspaces is no longer available — reload and try again.')
+  }
+  const unpublished = found.filter((p) => p.status !== 'published')
+  if (status === 'published' && unpublished.length > 0) {
+    throw new HttpError(400, `Publish these Workspaces first, or save the bundle as a draft: ${unpublished.map((p) => p.name).join(', ')}.`)
+  }
+  return { name, shortDescription, longDescription, isFree, priceCents, categoryId, coverImageUrl, status, itemIds }
+}
+
+async function writeBundleItems(db: Db, bundleId: string, itemIds: string[]) {
+  const { error: delError } = await db.from('bundle_items').delete().eq('bundle_id', bundleId)
+  if (delError) throw delError
+  const { error } = await db
+    .from('bundle_items')
+    .insert(itemIds.map((productId, i) => ({ bundle_id: bundleId, product_id: productId, sort_order: i })))
+  if (error) throw error
+}
+
+async function createBundle(req: VercelRequest, db: Db, admin: Admin) {
+  const input = await readBundleInput(req, db)
+  const slug = await uniqueSlug(db, input.name)
+  const { data, error } = await db
+    .from('products')
+    .insert({
+      slug,
+      name: input.name,
+      short_description: input.shortDescription,
+      cover_image_url: input.coverImageUrl,
+      category_id: input.categoryId,
+      content_type: 'bundle',
+      content: null,
+      metadata: input.longDescription ? { longDescription: input.longDescription } : {},
+      is_trial_eligible: false,
+      is_free: input.isFree,
+      price_cents: input.priceCents,
+      currency: 'usd',
+      status: input.status,
+      last_published_at: input.status === 'published' ? new Date().toISOString() : null,
+      last_published_by: admin.email || 'website-admin',
+    })
+    .select(BUNDLE_COLUMNS)
+    .single()
+  if (error) throw error
+  try {
+    await writeBundleItems(db, (data as BundleProductRow).id, input.itemIds)
+  } catch (err) {
+    await db.from('products').delete().eq('id', (data as BundleProductRow).id)
+    throw err
+  }
+  return { bundle: { ...(data as BundleProductRow), long_description: input.longDescription, item_ids: input.itemIds } }
+}
+
+async function updateBundle(req: VercelRequest, db: Db, admin: Admin) {
+  const id = str(req.body?.id)
+  const { data: current, error: currentError } = await db
+    .from('products')
+    .select('id, name, slug, status, metadata, content_type')
+    .eq('id', id)
+    .maybeSingle()
+  if (currentError) throw currentError
+  if (!current || current.content_type !== 'bundle' || current.status === 'archived') throw new HttpError(404, 'Bundle not found.')
+  const input = await readBundleInput(req, db)
+  // The address stays the same once it was published (shared links).
+  const slug = current.status === 'published' || current.name === input.name ? current.slug : await uniqueSlug(db, input.name, id)
+  const metadata = { ...((current.metadata as Record<string, unknown> | null) ?? {}) }
+  if (input.longDescription) metadata.longDescription = input.longDescription
+  else delete metadata.longDescription
+  const { data, error } = await db
+    .from('products')
+    .update({
+      slug,
+      name: input.name,
+      short_description: input.shortDescription,
+      cover_image_url: input.coverImageUrl,
+      category_id: input.categoryId,
+      metadata,
+      is_free: input.isFree,
+      price_cents: input.priceCents,
+      status: input.status,
+      ...(input.status === 'published' && current.status !== 'published'
+        ? { last_published_at: new Date().toISOString(), last_published_by: admin.email || 'website-admin' }
+        : {}),
+    })
+    .eq('id', id)
+    .select(BUNDLE_COLUMNS)
+    .single()
+  if (error) throw error
+  await writeBundleItems(db, id, input.itemIds)
+  return { bundle: { ...(data as BundleProductRow), long_description: input.longDescription, item_ids: input.itemIds } }
+}
+
+async function archiveBundle(req: VercelRequest, db: Db) {
+  const id = str(req.query.id ?? req.body?.id)
+  if (!id) throw new HttpError(400, 'id is required.')
+  const { data, error } = await db
+    .from('products')
+    .update({ status: 'archived' })
+    .eq('id', id)
+    .eq('content_type', 'bundle')
+    .select('id')
+  if (error) throw error
+  if (!data || data.length === 0) throw new HttpError(404, 'Bundle not found.')
+  return { removed: id }
+}
+
+// ---------------------------------------------------------------------------
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const db = client()
@@ -1784,6 +1995,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         return res.status(200).json({ ok: true, ...(await listReviews(db)) })
       case 'DELETE reviews':
         return res.status(200).json({ ok: true, ...(await deleteReview(req, db)) })
+      case 'GET bundles':
+        return res.status(200).json({ ok: true, ...(await listBundles(db)) })
+      case 'POST bundles':
+        return res.status(200).json({ ok: true, ...(await createBundle(req, db, admin)) })
+      case 'PATCH bundles':
+        return res.status(200).json({ ok: true, ...(await updateBundle(req, db, admin)) })
+      case 'DELETE bundles':
+        return res.status(200).json({ ok: true, ...(await archiveBundle(req, db)) })
       default:
         return res.status(404).json({ ok: false, error: 'Unknown admin action.' })
     }

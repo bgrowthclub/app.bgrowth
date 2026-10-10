@@ -127,6 +127,179 @@ async function sendAccessEmail(
   }
 }
 
+// ---------------------------------------------------------------------------
+// Bundles (Portal migration 0041): one product (content_type 'bundle') that
+// includes several Workspaces (portal.bundle_items). Checkout uses the
+// bundle's own product id, so the Portal's webhook grants it the usual way —
+// grant_purchased_license() expands a bundle into a lifetime license for
+// every Workspace in it.
+//
+// Someone who already bought some of its Workspaces pays only for the rest
+// — the same rule as src/modules/workspace/lib/bundlePrice.ts (keep both
+// in step): the bundle price × the share of the separate prices of the
+// Workspaces still missing (by count when all are free), never below
+// Stripe's 50-cent minimum. Trials and access given by the team don't
+// count as owned.
+// ---------------------------------------------------------------------------
+const MIN_CHARGE_CENTS = 50
+
+function bundleAmountDueCents(bundleCents: number, items: { priceCents: number; owned: boolean }[]): number {
+  const missing = items.filter((i) => !i.owned)
+  if (items.length === 0 || missing.length === 0) return 0
+  if (missing.length === items.length) return bundleCents
+  const total = items.reduce((sum, i) => sum + Math.max(0, i.priceCents), 0)
+  const share =
+    total > 0 ? missing.reduce((sum, i) => sum + Math.max(0, i.priceCents), 0) / total : missing.length / items.length
+  const due = Math.round(bundleCents * share)
+  return due > 0 ? Math.max(due, MIN_CHARGE_CENTS) : 0
+}
+
+const MY_WORKSPACES_PATH = '/platform/my-systems'
+
+function bundleEmail(firstName: string | null, bundleName: string, names: string[], openUrl: string) {
+  const greeting = firstName ? `Hi ${escapeHtml(firstName)},` : 'Hi there,'
+  const list = names.map((n) => `<li>${escapeHtml(n)}</li>`).join('')
+  const html = `
+  <div style="background:#F4F7FD;padding:32px 16px;font-family:Inter,Arial,sans-serif;color:#0A1B4D">
+    <div style="max-width:520px;margin:0 auto;background:#ffffff;border-radius:16px;padding:32px">
+      <p style="margin:0;font-weight:800;font-size:18px">BGrowth</p>
+      <h1 style="margin:20px 0 8px;font-size:22px">Your Workspaces are ready</h1>
+      <p style="margin:0 0 8px;line-height:1.6;color:#33406B">${greeting}</p>
+      <p style="margin:0 0 12px;line-height:1.6;color:#33406B"><strong>${escapeHtml(bundleName)}</strong> is in your account. These Workspaces are yours, for as long as you want:</p>
+      <ul style="margin:0 0 24px;padding-left:20px;line-height:1.8;color:#33406B">${list}</ul>
+      <a href="${openUrl}" style="display:inline-block;background:#1061EC;color:#ffffff;text-decoration:none;font-weight:600;padding:12px 20px;border-radius:10px">Open My Workspaces</a>
+      <p style="margin:24px 0 0;font-size:13px;line-height:1.6;color:#6B7896">Questions? Just reply to this e-mail — it goes to our support team.</p>
+    </div>
+  </div>`
+  return { subject: `${bundleName} is ready in your Workspaces`, html }
+}
+
+async function bundleCheckout(
+  req: VercelRequest,
+  res: VercelResponse,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: SupabaseClient<any, any, any>,
+  user: { id: string; email?: string },
+  bundleSlug: string,
+) {
+  const { data: bundleRows, error: bundleError } = await supabase
+    .from('products')
+    .select('id, slug, name, short_description, cover_image_url, is_free, price_cents, currency, stripe_price_id')
+    .eq('slug', bundleSlug)
+    .eq('content_type', 'bundle')
+    .eq('status', 'published')
+    .limit(1)
+  if (bundleError) throw bundleError
+  const bundle = (bundleRows?.[0] ?? null) as ProductRow | null
+  if (!bundle) return res.status(404).json({ ok: false, error: 'This bundle isn’t available.' })
+
+  const { data: itemRows, error: itemsError } = await supabase
+    .from('bundle_items')
+    .select('product_id, sort_order')
+    .eq('bundle_id', bundle.id)
+    .order('sort_order')
+  if (itemsError) throw itemsError
+  const itemIds = ((itemRows ?? []) as { product_id: string }[]).map((r) => r.product_id)
+  const { data: productRows, error: productsError } = itemIds.length
+    ? await supabase.from('products').select('id, name, is_free, price_cents, status').in('id', itemIds).eq('status', 'published')
+    : { data: [], error: null }
+  if (productsError) throw productsError
+  type Item = { id: string; name: string; is_free: boolean; price_cents: number | null }
+  const byId = new Map(((productRows ?? []) as Item[]).map((p) => [p.id, p]))
+  const items = itemIds.flatMap((id) => (byId.has(id) ? [byId.get(id) as Item] : []))
+  if (items.length === 0) return res.status(409).json({ ok: false, error: 'This bundle has no Workspaces right now.' })
+
+  const { data: licenseRows, error: licenseError } = await supabase
+    .from('licenses')
+    .select('*')
+    .eq('user_id', user.id)
+    .in('product_id', items.map((i) => i.id))
+  if (licenseError) throw licenseError
+  const licenses = (licenseRows ?? []) as (LicenseRow & { product_id: string })[]
+  const owned = (id: string) => {
+    const license = licenses.find((l) => l.product_id === id) ?? null
+    return license !== null && license.type !== 'trial' && ownsActively(license)
+  }
+  const priced = items.map((i) => ({ priceCents: i.is_free ? 0 : i.price_cents ?? 0, owned: owned(i.id) }))
+  if (priced.every((i) => i.owned)) return res.status(200).json({ ok: true, redirectUrl: MY_WORKSPACES_PATH })
+
+  const bundleCents = bundle.is_free ? 0 : bundle.price_cents
+  if (bundleCents == null) {
+    return res.status(500).json({ ok: false, error: `“${bundle.name}” has no price configured yet.` })
+  }
+  const amount = bundleAmountDueCents(bundleCents, priced)
+
+  // Free bundle, or only free Workspaces left: unlock right away.
+  if (amount === 0) {
+    const { error: grantError } = await supabase.rpc('grant_purchased_license', {
+      p_user_id: user.id,
+      p_product_id: bundle.id,
+    })
+    if (grantError) throw grantError
+    const key = process.env.RESEND_API_KEY
+    if (key && user.email) {
+      try {
+        const { data: profile } = await supabase.from('users').select('full_name').eq('id', user.id).limit(1)
+        const fullName = ((profile?.[0] ?? null) as { full_name?: string | null } | null)?.full_name ?? null
+        const site = (process.env.SITE_URL || siteOrigin(req)).replace(/\/$/, '')
+        const { subject, html } = bundleEmail(fullName?.trim().split(/\s+/)[0] || null, bundle.name, items.map((i) => i.name), `${site}${MY_WORKSPACES_PATH}`)
+        const response = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+          body: JSON.stringify({ from: process.env.SUPPORT_FROM_EMAIL || 'BGrowth Support <support@bgrowth.app>', to: user.email, subject, html }),
+        })
+        if (!response.ok) throw new Error(`${response.status} ${await response.text()}`)
+        await supabase.from('email_log').insert({ kind: 'bundle_claimed', user_id: user.id })
+      } catch (err) {
+        console.error('[studio-checkout] bundle e-mail failed:', err)
+      }
+    }
+    return res.status(200).json({ ok: true, redirectUrl: MY_WORKSPACES_PATH })
+  }
+
+  const secretKey = process.env.STRIPE_SECRET_KEY
+  if (!secretKey) return res.status(500).json({ ok: false, error: 'Checkout isn’t configured on this site yet.' })
+
+  const partial = priced.some((i) => i.owned)
+  const missingNames = items.filter((_, idx) => !priced[idx].owned).map((i) => i.name)
+  const description = (partial ? `Completes your bundle: ${missingNames.join(', ')}` : `Includes: ${items.map((i) => i.name).join(', ')}`).slice(0, 500)
+  const origin = siteOrigin(req)
+  const pageUrl = `${origin}/bundle/${encodeURIComponent(bundle.slug)}`
+  const stripe = new Stripe(secretKey)
+  const session = await stripe.checkout.sessions.create({
+    mode: 'payment',
+    customer_email: user.email,
+    client_reference_id: user.id,
+    line_items: [
+      {
+        price_data: {
+          currency: bundle.currency,
+          unit_amount: amount,
+          product_data: {
+            name: bundle.name,
+            description,
+            ...(bundle.cover_image_url ? { images: [bundle.cover_image_url] } : {}),
+          },
+        },
+        quantity: 1,
+      },
+    ],
+    success_url: `${pageUrl}?checkout=success`,
+    cancel_url: `${pageUrl}?checkout=cancelled`,
+    // Same keys the Portal's webhook reads — productId is the bundle.
+    metadata: {
+      userId: user.id,
+      productId: bundle.id,
+      productSlug: bundle.slug,
+      source: 'website',
+      kind: 'bundle',
+      ...(partial ? { ownedBefore: String(priced.filter((i) => i.owned).length) } : {}),
+    },
+  })
+  if (!session.url) throw new Error('Stripe did not return a checkout URL.')
+  return res.status(200).json({ ok: true, checkoutUrl: session.url })
+}
+
 function siteOrigin(req: VercelRequest): string {
   const host = req.headers['x-forwarded-host'] ?? req.headers.host
   const proto = req.headers['x-forwarded-proto'] ?? 'https'
@@ -141,7 +314,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!token) return res.status(401).json({ ok: false, error: 'Sign in to continue.' })
 
     const productSlug = typeof req.body?.productSlug === 'string' ? req.body.productSlug.trim() : ''
-    if (!productSlug) return res.status(422).json({ ok: false, error: 'Missing product.' })
+    const bundleSlug = typeof req.body?.bundleSlug === 'string' ? req.body.bundleSlug.trim() : ''
+    if (!productSlug && !bundleSlug) return res.status(422).json({ ok: false, error: 'Missing product.' })
 
     const url = process.env.SUPABASE_URL
     const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -156,6 +330,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const { data: userResult, error: userError } = await supabase.auth.getUser(token)
     if (userError || !userResult.user) return res.status(401).json({ ok: false, error: 'Sign in to continue.' })
     const user = userResult.user
+
+    if (bundleSlug) return await bundleCheckout(req, res, supabase, user, bundleSlug)
 
     const { data: productRows, error: productError } = await supabase
       .from('products')

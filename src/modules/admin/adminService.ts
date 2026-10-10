@@ -10,7 +10,8 @@ import type {
   AdminSupportThread,
   CreateGrantResult,
   NewGrantInput, AdminCatalogCategories, AdminCategory,
-  AdminNewsletterCampaign, AdminNewsletterDraft, AdminNewsletterOverview, AdminReview, AdminMemberDashboard, DashboardPeriod, AdminDeletionRequest, AdminCatalogHealth } from './types'
+  AdminNewsletterCampaign, AdminNewsletterDraft, AdminNewsletterOverview, AdminReview, AdminMemberDashboard, DashboardPeriod, AdminDeletionRequest, AdminCatalogHealth,
+  AdminBundle, AdminBundleDraft, AdminBundlesOverview } from './types'
 import type { SupportHours } from '../support/types'
 
 // The browser side of the Website's Administration — every call goes to
@@ -152,6 +153,18 @@ export const adminService = {
   },
   async sendNewsletter(id: string) {
     return (await call<{ sent: number }>('POST', 'newsletter-send', undefined, { id })).sent
+  },
+  listBundles() {
+    return call<AdminBundlesOverview>('GET', 'bundles')
+  },
+  async saveBundle(draft: AdminBundleDraft) {
+    return (await call<{ bundle: AdminBundle }>(draft.id ? 'PATCH' : 'POST', 'bundles', undefined, draft)).bundle
+  },
+  async removeBundle(id: string) {
+    await call('DELETE', 'bundles', undefined, { id })
+  },
+  async uploadBundleCover(dataUrl: string) {
+    return (await call<{ url: string }>('POST', 'newsletter-image', undefined, { dataUrl, folder: 'bundles' })).url
   },
   async saveNewsletterAddress(address: string) {
     return (await call<{ address: string }>('PUT', 'newsletter-address', undefined, { address })).address
