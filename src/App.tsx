@@ -46,6 +46,8 @@ import AdminDashboardPage from './pages/platform/admin/AdminDashboardPage'
 import AdminDeletionsPage from './pages/platform/admin/AdminDeletionsPage'
 import AdminCatalogPage from './pages/platform/admin/AdminCatalogPage'
 import AdminBundlesPage from './pages/platform/admin/AdminBundlesPage'
+import AdminTeamPage from './pages/platform/admin/AdminTeamPage'
+import AdminActivityPage from './pages/platform/admin/AdminActivityPage'
 import NewsletterConfirmPage from './pages/newsletter/NewsletterConfirmPage'
 import NewsletterPreferencesPage from './pages/newsletter/NewsletterPreferencesPage'
 import AdminRoute from './modules/identity/routing/AdminRoute'
@@ -178,19 +180,23 @@ export default function App() {
         <Route path="settings" element={<SettingsPage />} />
         <Route path="support" element={<SupportPage />} />
         {/* Admin — BGrowth administrators only (portal.website_admins),
-            re-checked by api/admin.ts on every request. */}
+            re-checked by api/admin.ts on every request. Pages marked
+            `support` are open to the Support role too; the rest are for
+            Admins (Support is sent to its inbox). */}
         <Route path="admin" element={<AdminRoute><Navigate to="/platform/admin/dashboard" replace /></AdminRoute>} />
         <Route path="admin/dashboard" element={<AdminRoute><AdminDashboardPage /></AdminRoute>} />
-        <Route path="admin/members" element={<AdminRoute><AdminMembersPage /></AdminRoute>} />
-        <Route path="admin/members/:id" element={<AdminRoute><AdminMemberPage /></AdminRoute>} />
+        <Route path="admin/members" element={<AdminRoute support><AdminMembersPage /></AdminRoute>} />
+        <Route path="admin/members/:id" element={<AdminRoute support><AdminMemberPage /></AdminRoute>} />
         <Route path="admin/sales" element={<AdminRoute><AdminSalesPage /></AdminRoute>} />
-        <Route path="admin/support" element={<AdminRoute><AdminSupportPage /></AdminRoute>} />
+        <Route path="admin/support" element={<AdminRoute support><AdminSupportPage /></AdminRoute>} />
         <Route path="admin/categories" element={<AdminRoute><AdminCategoriesPage /></AdminRoute>} />
         <Route path="admin/newsletter" element={<AdminRoute><AdminNewsletterPage /></AdminRoute>} />
-        <Route path="admin/reviews" element={<AdminRoute><AdminReviewsPage /></AdminRoute>} />
+        <Route path="admin/reviews" element={<AdminRoute support><AdminReviewsPage /></AdminRoute>} />
         <Route path="admin/deletions" element={<AdminRoute><AdminDeletionsPage /></AdminRoute>} />
         <Route path="admin/catalog" element={<AdminRoute><AdminCatalogPage /></AdminRoute>} />
         <Route path="admin/bundles" element={<AdminRoute><AdminBundlesPage /></AdminRoute>} />
+        <Route path="admin/team" element={<AdminRoute><AdminTeamPage /></AdminRoute>} />
+        <Route path="admin/activity" element={<AdminRoute><AdminActivityPage /></AdminRoute>} />
       </Route>
 
       {/* BGrowth Studio — a deliberate, explicit third layout. This is the

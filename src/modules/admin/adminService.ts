@@ -11,7 +11,8 @@ import type {
   CreateGrantResult,
   NewGrantInput, AdminCatalogCategories, AdminCategory,
   AdminNewsletterCampaign, AdminNewsletterDraft, AdminNewsletterOverview, AdminReview, AdminMemberDashboard, DashboardPeriod, AdminDeletionRequest, AdminCatalogHealth,
-  AdminBundle, AdminBundleDraft, AdminBundlesOverview } from './types'
+  AdminBundle, AdminBundleDraft, AdminBundlesOverview,
+  AdminTeamMember, AdminActivityPage } from './types'
 import type { SupportHours } from '../support/types'
 
 // The browser side of the Website's Administration — every call goes to
@@ -165,6 +166,25 @@ export const adminService = {
   },
   async uploadBundleCover(dataUrl: string) {
     return (await call<{ url: string }>('POST', 'newsletter-image', undefined, { dataUrl, folder: 'bundles' })).url
+  },
+  async listTeam() {
+    return (await call<{ team: AdminTeamMember[] }>('GET', 'team')).team
+  },
+  async addTeamMember(email: string, role: AdminTeamMember['role']) {
+    return (await call<{ member: AdminTeamMember }>('POST', 'team', undefined, { email, role })).member
+  },
+  async setTeamRole(userId: string, role: AdminTeamMember['role']) {
+    await call('PATCH', 'team', undefined, { userId, role })
+  },
+  async removeTeamMember(userId: string) {
+    await call('DELETE', 'team', undefined, { userId })
+  },
+  listActivity(filters: { page?: number; area?: string; admin?: string; member?: string }) {
+    const params: Record<string, string> = { page: String(filters.page ?? 1) }
+    if (filters.area) params.area = filters.area
+    if (filters.admin) params.admin = filters.admin
+    if (filters.member) params.member = filters.member
+    return call<AdminActivityPage>('GET', 'activity', params)
   },
   async saveNewsletterAddress(address: string) {
     return (await call<{ address: string }>('PUT', 'newsletter-address', undefined, { address })).address

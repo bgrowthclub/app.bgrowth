@@ -335,3 +335,38 @@ export interface AdminBundleDraft {
   status: 'draft' | 'published'
   itemIds: string[]
 }
+
+// Admin → Team (Portal migration 0042).
+export interface AdminTeamMember {
+  user_id: string
+  email: string
+  role: 'admin' | 'support'
+  created_at: string
+}
+
+// Admin → Activity: one change made in the Admin area.
+export type AdminActivityArea = 'members' | 'support' | 'catalog' | 'newsletter' | 'deletions' | 'reviews' | 'team'
+
+export interface AdminActivityEntry {
+  id: string
+  created_at: string
+  admin_id: string | null
+  admin_email: string
+  action: string
+  area: AdminActivityArea
+  summary: string
+  target_user_id: string | null
+  target_user_email: string | null
+  target_product_id: string | null
+  target_product_name: string | null
+}
+
+export interface AdminActivityPage {
+  entries: AdminActivityEntry[]
+  total: number
+  page: number
+  pageSize: number
+  admins: { id: string; email: string }[]
+  // false until the database update (migration 0042) runs.
+  ready: boolean
+}

@@ -4,6 +4,7 @@ import logo from '../../assets/logo.png'
 import SidebarGroup from './SidebarGroup'
 import { PLATFORM_NAV_GROUPS } from './platformNav'
 import { useIdentity } from '../../modules/identity/IdentityContext'
+import { adminRoleOf } from '../../modules/admin/permissions'
 import type { NavBadges } from './useNavBadges'
 
 interface Props {
@@ -16,7 +17,12 @@ interface Props {
 
 function SidebarBody({ collapsed, badges, onNavigate }: { collapsed: boolean; badges: NavBadges; onNavigate?: () => void }) {
   const { user } = useIdentity()
-  const groups = PLATFORM_NAV_GROUPS.filter((group) => !group.adminOnly || user?.isAdmin)
+  const role = adminRoleOf(user)
+  // Admin groups: everything for Admins, only the items marked `support`
+  // for the Support role.
+  const groups = PLATFORM_NAV_GROUPS.filter((group) => !group.adminOnly || role).map((group) =>
+    group.adminOnly && role === 'support' ? { ...group, items: group.items.filter((item) => item.support) } : group,
+  )
   return (
     <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
       {groups.map((group, i) => (

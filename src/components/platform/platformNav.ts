@@ -19,6 +19,8 @@ import {
   UserX,
   ClipboardCheck,
   Package,
+  ShieldCheck,
+  History,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -36,6 +38,9 @@ export interface PlatformNavItem {
   locked?: boolean
   // A live count shown next to the label (see useNavBadges.ts).
   badge?: NavBadgeKey
+  // In an adminOnly group: also shown to the Support role (see
+  // modules/admin/permissions.ts). Without it, Admins only.
+  support?: boolean
 }
 
 // supportUnread: the member's conversations with a reply they haven't
@@ -99,15 +104,17 @@ export const PLATFORM_NAV_GROUPS: PlatformNavGroup[] = [
     adminOnly: true,
     items: [
       { label: 'Dashboard', to: '/platform/admin/dashboard', icon: LayoutDashboard },
-      { label: 'Members', to: '/platform/admin/members', icon: UserCog },
+      { label: 'Members', to: '/platform/admin/members', icon: UserCog, support: true },
       { label: 'Sales', to: '/platform/admin/sales', icon: Receipt },
-      { label: 'Support', to: '/platform/admin/support', icon: Headset, badge: 'supportWaiting' },
+      { label: 'Support', to: '/platform/admin/support', icon: Headset, badge: 'supportWaiting', support: true },
       { label: 'Catalog', to: '/platform/admin/catalog', icon: ClipboardCheck },
       { label: 'Bundles', to: '/platform/admin/bundles', icon: Package },
       { label: 'Categories', to: '/platform/admin/categories', icon: Tags },
       { label: 'Newsletter', to: '/platform/admin/newsletter', icon: Mail },
-      { label: 'Reviews', to: '/platform/admin/reviews', icon: Star },
+      { label: 'Reviews', to: '/platform/admin/reviews', icon: Star, support: true },
       { label: 'Deletions', to: '/platform/admin/deletions', icon: UserX, badge: 'deletionsPending' },
+      { label: 'Team', to: '/platform/admin/team', icon: ShieldCheck },
+      { label: 'Activity', to: '/platform/admin/activity', icon: History },
     ],
   },
 ]
