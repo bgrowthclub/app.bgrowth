@@ -166,8 +166,9 @@ This repo is a **static, client-only MVP**:
   in `describe()`.
   **Since Sprint 70 there are member pages** (approved by the user; Portal
   migration 0044, BGrowth Find™): a member's own page to promote their
-  work at `/p/:slug` (photo, what they do, contact buttons, featured work,
-  services, about; labels in English or Portuguese). Subscribers only once
+  work at `/p/:slug` (photo, what they do, contact buttons, featured work
+  with an image or — since Sprint 73 — a YouTube/TikTok/Instagram video
+  embedded by link, never uploaded, services, about; labels in English or Portuguese). Subscribers only once
   Plans & Subscriptions exist; until then the team builds them in Admin →
   Pages (resource `member-pages`, admin-only). Visitors read published
   pages straight from Supabase (RLS); writes go through `api/admin.ts`.

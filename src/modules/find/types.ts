@@ -23,6 +23,9 @@ export interface MemberPageHighlight {
   description?: string
   url?: string
   image?: string
+  // A YouTube, TikTok or Instagram link — the video plays on the page while
+  // staying hosted on that network (no storage on our side).
+  video?: string
 }
 
 export interface MemberPage {

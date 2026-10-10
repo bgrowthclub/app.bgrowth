@@ -1,6 +1,6 @@
 import { Globe, Instagram, Link2, Mail, MapPin, MessageCircle, Music2, Youtube } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
-import { MEMBER_PAGE_LABELS, memberLinkHref, memberLinkLabel } from '../../modules/find/memberPageService'
+import { MEMBER_PAGE_LABELS, memberLinkHref, memberLinkLabel, videoEmbed } from '../../modules/find/memberPageService'
 import type { MemberPage, MemberPageLinkType } from '../../modules/find/types'
 
 const ICONS: Record<MemberPageLinkType, LucideIcon> = {
@@ -93,6 +93,33 @@ export default function MemberPageView({ page, preview = false }: Props) {
           <h2 className="font-display text-lg font-bold text-navy">{t.highlights}</h2>
           <div className="mt-3 space-y-3">
             {page.highlights.map((h) => {
+              const video = h.video ? videoEmbed(h.video) : null
+              if (video) {
+                // A video plays in place, so the card isn't a link itself.
+                return (
+                  <div key={h.title} className="overflow-hidden rounded-2xl border border-navy/[0.08] bg-white shadow-softer">
+                    <div className={`mx-auto bg-navy ${video.vertical ? 'aspect-[9/16] max-h-[560px] max-w-[315px]' : 'aspect-video w-full'}`}>
+                      <iframe
+                        src={video.src}
+                        title={h.title}
+                        className="h-full w-full"
+                        allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                        allowFullScreen
+                        loading="lazy"
+                      />
+                    </div>
+                    <div className="p-4">
+                      <p className="font-semibold text-navy">{h.title}</p>
+                      {h.description && <p className="mt-1 text-[14px] leading-relaxed text-navy/60">{h.description}</p>}
+                      {h.url && (
+                        <a {...linkProps('website', h.url)} className="mt-2 inline-block text-[14px] font-semibold text-primary hover:underline">
+                          {h.url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )
+              }
               const body = (
                 <>
                   {h.image && <img src={h.image} alt="" className="h-40 w-full object-cover" />}
