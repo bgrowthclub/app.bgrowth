@@ -82,6 +82,10 @@ export interface User {
   // = everything, 'support' = Support, Members and reading Reviews. Set
   // whenever isAdmin is true.
   adminRole?: 'admin' | 'support'
+  // The member's own public page (BGrowth Find™, bgrowth.app/p/<slug>),
+  // when the team has linked one to this account — unlocks "My Page" with
+  // its numbers (Portal migration 0045). Absent = no page.
+  memberPage?: { id: string; slug: string; displayName: string; language: 'en' | 'pt' }
   // Escape hatch for a field a future product needs before this interface
   // is formally extended — never read ad hoc without adding the field
   // properly once its shape is known.

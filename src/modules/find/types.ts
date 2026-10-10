@@ -46,4 +46,26 @@ export interface MemberPage {
   status: 'draft' | 'published'
   created_at: string
   updated_at: string
+  // Admin → Pages only: the e-mail of the account linked as owner.
+  owner_email?: string | null
+}
+
+// Member page numbers (Portal migration 0045): one total per day, kind and
+// target. Nothing about the visitors themselves is kept.
+export type MemberPageStatKind = 'view' | 'click' | 'course_view' | 'course_lead'
+
+export interface MemberPageStatRow {
+  day: string
+  kind: MemberPageStatKind
+  // 'link:<type>' for a contact button, 'featured:<title>' for a featured
+  // item; '' otherwise.
+  target: string
+  count: number
+}
+
+export interface MemberPageStats {
+  rows: MemberPageStatRow[]
+  days: number
+  // false until the database update (migration 0045) runs.
+  ready: boolean
 }

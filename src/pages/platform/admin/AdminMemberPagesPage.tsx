@@ -7,6 +7,7 @@ import Button from '../../../components/ui/Button'
 import ConfirmDialog from '../../../components/ui/ConfirmDialog'
 import AdminMemberPageRow from '../../../components/admin/AdminMemberPageRow'
 import MemberPageEditor from '../../../components/admin/MemberPageEditor'
+import AdminMemberPageStats from '../../../components/admin/AdminMemberPageStats'
 import { CARD, SMALL_BUTTON } from '../../../components/admin/styles'
 import { adminService } from '../../../modules/admin/adminService'
 import type { AdminMemberPageDraft, AdminMemberPagesOverview } from '../../../modules/admin/types'
@@ -20,6 +21,7 @@ export default function AdminMemberPagesPage() {
   const [error, setError] = useState<string | null>(null)
   const [editing, setEditing] = useState<MemberPage | 'new' | null>(null)
   const [removing, setRemoving] = useState<MemberPage | null>(null)
+  const [numbers, setNumbers] = useState<MemberPage | null>(null)
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
 
@@ -76,6 +78,8 @@ export default function AdminMemberPagesPage() {
           {notice && <p className="rounded-xl bg-emerald-50 px-4 py-3 text-[13.5px] text-emerald-700">{notice}</p>}
           {error && <p className="text-[14px] text-red-500">{error}</p>}
 
+          {numbers && !editing && <AdminMemberPageStats key={numbers.id} page={numbers} onClose={() => setNumbers(null)} />}
+
           {editing ? (
             <MemberPageEditor key={editing === 'new' ? 'new' : editing.id} page={editing === 'new' ? null : editing} onSave={save} onCancel={() => setEditing(null)} />
           ) : (
@@ -105,6 +109,11 @@ export default function AdminMemberPagesPage() {
                   onEdit={() => {
                     setNotice(null)
                     setEditing(p)
+                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                  }}
+                  onNumbers={() => {
+                    setEditing(null)
+                    setNumbers(p)
                     window.scrollTo({ top: 0, behavior: 'smooth' })
                   }}
                   onRemove={() => setRemoving(p)}

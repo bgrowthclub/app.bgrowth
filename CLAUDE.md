@@ -174,6 +174,15 @@ This repo is a **static, client-only MVP**:
   pages straight from Supabase (RLS); writes go through `api/admin.ts`.
   `/p/*` renders inside `AppLayout` but bare (`BARE_PREFIXES`, like the
   auth pages: no Navbar/Footer, only a discreet "Made with BGrowth").
+  **Since Sprint 76 member pages have numbers** (approved by the user;
+  Portal migration 0045): daily totals of visits, clicks per contact
+  button/featured item, course visits and course e-mails
+  (`portal.member_page_stats`, nothing about visitors), counted through
+  `api/ingles.ts?action=track` (the one public function for pages and the
+  course — the Vercel plan caps the number of functions). A page linked to
+  a member's account (owner e-mail in Admin → Pages) shows "My Page"
+  (`/platform/my-page`, nav item `pageOwnerOnly`) with its numbers; the
+  team sees them in Admin → Pages → Numbers (resource `member-page-stats`).
   **Since Sprint 71 `/p/bruno/ingles-de-mudanca/*` is a separate app**
   (approved by the user; under Bruno's member page since Sprint 72, the
   old `/ingles-de-mudanca/*` redirects there): the "Inglês de Mudança"

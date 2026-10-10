@@ -1417,6 +1417,7 @@ async function catalogHealth(db: Db) {
       ['0042 Team roles & activity log', 'admin_activity'],
       ['0043 Inglês de Mudança e-mails', 'ingles_leads'],
       ['0044 Member pages', 'member_pages'],
+      ['0045 Member page numbers', 'member_page_stats'],
     ].map(async ([name, table]) => ({ name, ok: await tableExists(table) })),
   )
   const { data: address } = await db.from('site_settings').select('value').eq('key', 'newsletter_address').maybeSingle()
@@ -1957,13 +1958,54 @@ function cleanVideoUrl(value: unknown, title: string) {
   return url
 }
 
+// Each page with its owner's e-mail (the member who sees its numbers in
+// the member area — Portal migration 0045).
+async function withOwnerEmails(db: Db, rows: Record<string, any>[]) {
+  const ids = [...new Set(rows.flatMap((r) => (r.user_id ? [r.user_id as string] : [])))]
+  if (ids.length === 0) return rows.map((r) => ({ ...r, owner_email: null }))
+  const { data } = await db.from('users').select('id, email').in('id', ids)
+  const emailById = new Map(((data ?? []) as { id: string; email: string }[]).map((u) => [u.id, u.email]))
+  return rows.map((r) => ({ ...r, owner_email: r.user_id ? emailById.get(r.user_id) ?? null : null }))
+}
+
 async function listMemberPages(db: Db) {
   const { data, error } = await db.from('member_pages').select('*').order('updated_at', { ascending: false })
   if (error) {
     if (isMissingTable(error)) return { pages: [], ready: false }
     throw error
   }
-  return { pages: data ?? [], ready: true }
+  return { pages: await withOwnerEmails(db, data ?? []), ready: true }
+}
+
+// The owner is a BGrowth account, found by its e-mail; empty = no owner.
+async function resolvePageOwner(db: Db, value: unknown): Promise<string | null> {
+  const email = cleanText(value, 254).toLowerCase()
+  if (!email) return null
+  const { data, error } = await db.from('users').select('id').ilike('email', email).limit(1)
+  if (error) throw error
+  const id = (data?.[0] as { id?: string } | undefined)?.id
+  if (!id) throw new HttpError(400, `No BGrowth account uses ${email} — the owner must sign up first.`)
+  return id
+}
+
+const STATS_DAYS = [7, 30, 90, 365]
+
+async function memberPageStats(req: VercelRequest, db: Db) {
+  const id = str(req.query.id)
+  if (!isUuid(id)) throw new HttpError(400, 'Missing page.')
+  const days = STATS_DAYS.includes(Number(req.query.days)) ? Number(req.query.days) : 30
+  const since = new Date(Date.now() - (days - 1) * 86_400_000).toISOString().slice(0, 10)
+  const { data, error } = await db
+    .from('member_page_stats')
+    .select('day, kind, target, count')
+    .eq('page_id', id)
+    .gte('day', since)
+    .order('day')
+  if (error) {
+    if (isMissingTable(error)) return { rows: [], days, ready: false }
+    throw error
+  }
+  return { rows: data ?? [], days, ready: true }
 }
 
 function readMemberPageInput(req: VercelRequest) {
@@ -2036,9 +2078,10 @@ async function ensurePageSlugFree(db: Db, slug: string, exceptId?: string) {
 async function createMemberPage(req: VercelRequest, db: Db) {
   const input = readMemberPageInput(req)
   await ensurePageSlugFree(db, input.slug)
-  const { data, error } = await db.from('member_pages').insert(input).select('*').single()
+  const userId = await resolvePageOwner(db, req.body?.ownerEmail)
+  const { data, error } = await db.from('member_pages').insert({ ...input, user_id: userId }).select('*').single()
   if (error) throw error
-  return { page: data }
+  return { page: (await withOwnerEmails(db, [data]))[0] }
 }
 
 async function updateMemberPage(req: VercelRequest, db: Db) {
@@ -2046,15 +2089,16 @@ async function updateMemberPage(req: VercelRequest, db: Db) {
   if (!id) throw new HttpError(400, 'Missing page.')
   const input = readMemberPageInput(req)
   await ensurePageSlugFree(db, input.slug, id)
+  const userId = await resolvePageOwner(db, req.body?.ownerEmail)
   const { data, error } = await db
     .from('member_pages')
-    .update({ ...input, updated_at: new Date().toISOString() })
+    .update({ ...input, user_id: userId, updated_at: new Date().toISOString() })
     .eq('id', id)
     .select('*')
     .maybeSingle()
   if (error) throw error
   if (!data) throw new HttpError(404, 'This page no longer exists — reload the list.')
-  return { page: data }
+  return { page: (await withOwnerEmails(db, [data]))[0] }
 }
 
 async function deleteMemberPage(req: VercelRequest, db: Db) {
@@ -2364,6 +2408,7 @@ const ROUTES: Record<string, Route> = {
   'PATCH bundles': (req, db, admin) => updateBundle(req, db, admin),
   'DELETE bundles': (req, db) => archiveBundle(req, db),
   'GET member-pages': (_req, db) => listMemberPages(db),
+  'GET member-page-stats': (req, db) => memberPageStats(req, db),
   'POST member-pages': (req, db) => createMemberPage(req, db),
   'PATCH member-pages': (req, db) => updateMemberPage(req, db),
   'DELETE member-pages': (req, db) => deleteMemberPage(req, db),

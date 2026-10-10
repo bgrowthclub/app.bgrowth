@@ -42,6 +42,8 @@ export interface PlatformNavItem {
   // In an adminOnly group: also shown to the Support role (see
   // modules/admin/permissions.ts). Without it, Admins only.
   support?: boolean
+  // Shown only to a member who has their own public page (User.memberPage).
+  pageOwnerOnly?: boolean
 }
 
 // supportUnread: the member's conversations with a reply they haven't
@@ -96,6 +98,7 @@ export const PLATFORM_NAV_GROUPS: PlatformNavGroup[] = [
   {
     label: 'Account',
     items: [
+      { label: 'My Page', to: '/platform/my-page', icon: SquareUser, pageOwnerOnly: true },
       { label: 'Settings', to: '/platform/settings', icon: Settings },
       { label: 'Support', to: '/platform/support', icon: LifeBuoy, badge: 'supportUnread' },
     ],
