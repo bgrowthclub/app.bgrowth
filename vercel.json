@@ -1,6 +1,11 @@
 {
   "redirects": [
     {
+      "source": "/ingles-de-mudanca",
+      "destination": "/p/bruno/ingles-de-mudanca",
+      "permanent": false
+    },
+    {
       "source": "/ingles-de-mudanca/:path*",
       "destination": "/p/bruno/ingles-de-mudanca/:path*",
       "permanent": false
