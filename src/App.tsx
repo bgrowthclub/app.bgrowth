@@ -12,7 +12,6 @@ import SystemModulePage from './pages/SystemModulePage'
 import WorkspacesPage from './pages/WorkspacesPage'
 import CategoryPreviewPage from './pages/CategoryPreviewPage'
 import ResourcesPage from './pages/ResourcesPage'
-import PricingPage from './pages/PricingPage'
 import AboutPage from './pages/AboutPage'
 import ContactPage from './pages/ContactPage'
 import PrivacyPage from './pages/PrivacyPage'
@@ -102,11 +101,13 @@ export default function App() {
         <Route path="/knowledge/article/:slug" element={<KnowledgeArticlePage />} />
         <Route path="/knowledge/search" element={<KnowledgeSearchPage />} />
 
-        <Route path="/pricing" element={<PricingPage />} />
+        {/* No Pricing page until Plans & Subscriptions exist (decided 09/10/2026);
+            PricingPage.tsx is kept for then. Old links land on the catalog. */}
+        <Route path="/pricing" element={<Navigate to="/systems" replace />} />
         <Route path="/about" element={<AboutPage />} />
-        {/* Plans live on /pricing (BGrowth Club was retired as a name,
-            27/09/2026); /club stays reachable for old links. */}
-        <Route path="/club" element={<Navigate to="/pricing" replace />} />
+        {/* BGrowth Club was retired as a name (27/09/2026); /club stays
+            reachable for old links. */}
+        <Route path="/club" element={<Navigate to="/systems" replace />} />
         <Route path="/contact" element={<ContactPage />} />
         <Route path="/privacy" element={<PrivacyPage />} />
         <Route path="/newsletter/confirm" element={<NewsletterConfirmPage />} />

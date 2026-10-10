@@ -9,7 +9,6 @@ const LINKS = [
   { label: 'Business Systems', to: '/systems' },
   { label: 'Workspace', to: '/workspaces' },
   { label: 'Resources', to: '/resources' },
-  { label: 'Pricing', to: '/pricing' },
   { label: 'About', to: '/about' },
 ]
 
