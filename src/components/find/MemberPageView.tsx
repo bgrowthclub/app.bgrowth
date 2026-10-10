@@ -1,4 +1,4 @@
-import { Globe, Instagram, Link2, Mail, MapPin, MessageCircle, Music2, Youtube } from 'lucide-react'
+import { ArrowRight, Globe, Instagram, Link2, Mail, MapPin, MessageCircle, Music2, Youtube } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { MEMBER_PAGE_LABELS, memberLinkHref, memberLinkLabel, videoEmbed } from '../../modules/find/memberPageService'
 import type { MemberPage, MemberPageLinkType } from '../../modules/find/types'
@@ -112,8 +112,11 @@ export default function MemberPageView({ page, preview = false }: Props) {
                       <p className="font-semibold text-navy">{h.title}</p>
                       {h.description && <p className="mt-1 text-[14px] leading-relaxed text-navy/60">{h.description}</p>}
                       {h.url && (
-                        <a {...linkProps('website', h.url)} className="mt-2 inline-block text-[14px] font-semibold text-primary hover:underline">
-                          {h.url.replace(/^https?:\/\/(www\.)?/, '').replace(/\/$/, '')}
+                        <a
+                          {...linkProps('website', h.url)}
+                          className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-[14.5px] font-semibold text-white transition-colors hover:bg-primary/90"
+                        >
+                          {h.cta?.trim() || t.learnMore} <ArrowRight size={16} aria-hidden />
                         </a>
                       )}
                     </div>
@@ -126,6 +129,11 @@ export default function MemberPageView({ page, preview = false }: Props) {
                   <div className="p-4">
                     <p className="font-semibold text-navy">{h.title}</p>
                     {h.description && <p className="mt-1 text-[14px] leading-relaxed text-navy/60">{h.description}</p>}
+                    {h.url && (
+                      <span className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-[14.5px] font-semibold text-white">
+                        {h.cta?.trim() || t.learnMore} <ArrowRight size={16} aria-hidden />
+                      </span>
+                    )}
                   </div>
                 </>
               )

@@ -16,8 +16,8 @@ export async function getPublishedMemberPage(slug: string): Promise<MemberPage |
 
 // Labels a page shows in its own language.
 export const MEMBER_PAGE_LABELS = {
-  en: { services: 'Services', highlights: 'Featured', about: 'About', contact: 'Get in touch', madeWith: 'Made with BGrowth', notFound: 'This page isn’t available.' },
-  pt: { services: 'Serviços', highlights: 'Destaques', about: 'Sobre', contact: 'Fale comigo', madeWith: 'Feito com BGrowth', notFound: 'Esta página não está disponível.' },
+  en: { services: 'Services', highlights: 'Featured', about: 'About', contact: 'Get in touch', learnMore: 'Learn more', madeWith: 'Made with BGrowth', notFound: 'This page isn’t available.' },
+  pt: { services: 'Serviços', highlights: 'Destaques', about: 'Sobre', contact: 'Fale comigo', learnMore: 'Saiba mais', madeWith: 'Feito com BGrowth', notFound: 'Esta página não está disponível.' },
 } as const
 
 // A link as something a phone can open: e-mail → mailto:, WhatsApp → wa.me.

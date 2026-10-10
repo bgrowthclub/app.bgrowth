@@ -264,6 +264,9 @@ export default function MemberPageEditor({ page, onSave, onCancel }: Props) {
                   <input value={h.title} onChange={(e) => setHighlight(i, { title: e.target.value })} maxLength={100} className={INPUT} placeholder="Title" aria-label="Title" />
                   <textarea value={h.description ?? ''} onChange={(e) => setHighlight(i, { description: e.target.value })} rows={2} maxLength={400} className={INPUT} placeholder="Short description" aria-label="Description" />
                   <input value={h.url ?? ''} onChange={(e) => setHighlight(i, { url: e.target.value })} className={INPUT} placeholder="Link (https://…, optional)" aria-label="Link" />
+                  {h.url?.trim() && (
+                    <input value={h.cta ?? ''} onChange={(e) => setHighlight(i, { cta: e.target.value })} maxLength={40} className={INPUT} placeholder={language === 'pt' ? 'Texto do botão (ex.: Começar grátis) — padrão: Saiba mais' : 'Button text (e.g. Start free) — default: Learn more'} aria-label="Button text" />
+                  )}
                   <input value={h.video ?? ''} onChange={(e) => setHighlight(i, { video: e.target.value })} className={INPUT} placeholder="Video link — YouTube, TikTok or Instagram (optional, shows instead of the image)" aria-label="Video link" />
                   {h.video?.trim() && !videoEmbed(h.video) && <p className="text-[12.5px] text-red-500">Use a YouTube, TikTok or Instagram video link.</p>}
                   <div className="flex items-center gap-3">
