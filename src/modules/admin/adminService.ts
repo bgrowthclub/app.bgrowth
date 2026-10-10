@@ -12,7 +12,8 @@ import type {
   NewGrantInput, AdminCatalogCategories, AdminCategory,
   AdminNewsletterCampaign, AdminNewsletterDraft, AdminNewsletterOverview, AdminReview, AdminMemberDashboard, DashboardPeriod, AdminDeletionRequest, AdminCatalogHealth,
   AdminBundle, AdminBundleDraft, AdminBundlesOverview,
-  AdminTeamMember, AdminActivityPage } from './types'
+  AdminTeamMember, AdminActivityPage, AdminMemberPageDraft, AdminMemberPagesOverview } from './types'
+import type { MemberPage } from '../find/types'
 import type { SupportHours } from '../support/types'
 
 // The browser side of the Website's Administration — every call goes to
@@ -166,6 +167,18 @@ export const adminService = {
   },
   async uploadBundleCover(dataUrl: string) {
     return (await call<{ url: string }>('POST', 'newsletter-image', undefined, { dataUrl, folder: 'bundles' })).url
+  },
+  listMemberPages() {
+    return call<AdminMemberPagesOverview>('GET', 'member-pages')
+  },
+  async saveMemberPage(draft: AdminMemberPageDraft) {
+    return (await call<{ page: MemberPage }>(draft.id ? 'PATCH' : 'POST', 'member-pages', undefined, draft)).page
+  },
+  async removeMemberPage(id: string) {
+    await call('DELETE', 'member-pages', undefined, { id })
+  },
+  async uploadMemberPageImage(dataUrl: string) {
+    return (await call<{ url: string }>('POST', 'newsletter-image', undefined, { dataUrl, folder: 'pages' })).url
   },
   async listTeam() {
     return (await call<{ team: AdminTeamMember[] }>('GET', 'team')).team

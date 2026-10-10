@@ -5,6 +5,7 @@ import HomePage from './pages/HomePage'
 import BrowseSystems from './pages/BrowseSystems'
 import ProductPage from './pages/ProductPage'
 import BundlePage from './pages/BundlePage'
+import MemberPublicPage from './pages/MemberPublicPage'
 import CheckoutPage from './pages/CheckoutPage'
 import CheckoutSuccessPage from './pages/CheckoutSuccessPage'
 import SystemOverviewPage from './pages/SystemOverviewPage'
@@ -48,6 +49,7 @@ import AdminCatalogPage from './pages/platform/admin/AdminCatalogPage'
 import AdminBundlesPage from './pages/platform/admin/AdminBundlesPage'
 import AdminTeamPage from './pages/platform/admin/AdminTeamPage'
 import AdminActivityPage from './pages/platform/admin/AdminActivityPage'
+import AdminMemberPagesPage from './pages/platform/admin/AdminMemberPagesPage'
 import NewsletterConfirmPage from './pages/newsletter/NewsletterConfirmPage'
 import NewsletterPreferencesPage from './pages/newsletter/NewsletterPreferencesPage'
 import AdminRoute from './modules/identity/routing/AdminRoute'
@@ -72,6 +74,7 @@ export default function App() {
         <Route path="/systems" element={<BrowseSystems />} />
         <Route path="/product/:slug" element={<ProductPage />} />
         <Route path="/bundle/:slug" element={<BundlePage />} />
+        <Route path="/p/:slug" element={<MemberPublicPage />} />
         {/* Requires a signed-in member (see CommerceEngineClient.ts —
             Checkout needs a memberId to create an Order) — a guest is
             redirected to /login, matching /platform/*'s existing gate. */}
@@ -195,6 +198,7 @@ export default function App() {
         <Route path="admin/deletions" element={<AdminRoute><AdminDeletionsPage /></AdminRoute>} />
         <Route path="admin/catalog" element={<AdminRoute><AdminCatalogPage /></AdminRoute>} />
         <Route path="admin/bundles" element={<AdminRoute><AdminBundlesPage /></AdminRoute>} />
+        <Route path="admin/pages" element={<AdminRoute><AdminMemberPagesPage /></AdminRoute>} />
         <Route path="admin/team" element={<AdminRoute><AdminTeamPage /></AdminRoute>} />
         <Route path="admin/activity" element={<AdminRoute><AdminActivityPage /></AdminRoute>} />
       </Route>

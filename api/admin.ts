@@ -988,8 +988,9 @@ async function uploadNewsletterImage(req: VercelRequest, db: Db) {
   const bytes = Buffer.from(match[3], 'base64')
   if (bytes.length > 3 * 1024 * 1024) throw new HttpError(413, 'This image is too large (3 MB max).')
   const ext = match[2] === 'jpeg' ? 'jpg' : match[2]
-  // Also used for bundle covers (Admin → Bundles).
-  const folder = str(req.body?.folder) === 'bundles' ? 'bundles' : 'newsletter'
+  // Also used for bundle covers (Admin → Bundles) and member page photos
+  // (Admin → Pages).
+  const folder = ['bundles', 'pages'].includes(str(req.body?.folder)) ? str(req.body?.folder) : 'newsletter'
   const path = `${folder}/${new Date().toISOString().slice(0, 10)}/${randomUUID()}.${ext}`
   const { error } = await db.storage.from('portal-product-assets').upload(path, bytes, { contentType: match[1], upsert: false })
   if (error) throw error
@@ -1414,6 +1415,8 @@ async function catalogHealth(db: Db) {
       ['0040 Trial after deletion', 'trial_used_emails'],
       ['0041 Bundles', 'bundle_items'],
       ['0042 Team roles & activity log', 'admin_activity'],
+      ['0043 Inglês de Mudança e-mails', 'ingles_leads'],
+      ['0044 Member pages', 'member_pages'],
     ].map(async ([name, table]) => ({ name, ok: await tableExists(table) })),
   )
   const { data: address } = await db.from('site_settings').select('value').eq('key', 'newsletter_address').maybeSingle()
@@ -1918,6 +1921,140 @@ async function archiveBundle(req: VercelRequest, db: Db) {
 // 0042). Admins only. Nobody changes or removes their own access here, and
 // there is always at least one admin left.
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Admin → Pages: members' public pages at /p/<slug> (Portal migration 0044).
+// Subscribers only once Plans & Subscriptions exist; until then the team
+// builds them here. Visitors read published pages straight from Supabase
+// (row-level security); every write comes through here.
+// ---------------------------------------------------------------------------
+const MEMBER_LINK_TYPES = ['whatsapp', 'email', 'instagram', 'tiktok', 'youtube', 'website', 'other']
+const PAGE_SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/
+// Addresses the site itself uses at the top level of /p/ — kept free.
+const RESERVED_PAGE_SLUGS = new Set(['admin', 'bgrowth', 'support', 'help', 'api', 'new', 'edit', 'settings'])
+
+const isMissingTable = (error: unknown) => {
+  const code = (error as { code?: string } | null)?.code
+  return code === '42P01' || code === 'PGRST205'
+}
+
+function cleanText(value: unknown, max: number) {
+  return typeof value === 'string' ? value.trim().slice(0, max) : ''
+}
+
+function cleanUrl(value: unknown, field: string) {
+  const url = cleanText(value, 500)
+  if (!url) return ''
+  if (!/^https:\/\/[^\s]+$/i.test(url)) throw new HttpError(400, `${field} must be a full https:// address.`)
+  return url
+}
+
+async function listMemberPages(db: Db) {
+  const { data, error } = await db.from('member_pages').select('*').order('updated_at', { ascending: false })
+  if (error) {
+    if (isMissingTable(error)) return { pages: [], ready: false }
+    throw error
+  }
+  return { pages: data ?? [], ready: true }
+}
+
+function readMemberPageInput(req: VercelRequest) {
+  const b = req.body ?? {}
+  const slug = cleanText(b.slug, 40).toLowerCase()
+  const displayName = cleanText(b.displayName, 80)
+  if (!displayName) throw new HttpError(400, 'Write the name shown on the page.')
+  if (!PAGE_SLUG.test(slug) || slug.length < 3) {
+    throw new HttpError(400, 'The address needs 3 to 40 lowercase letters, numbers or dashes (for example “bruno”).')
+  }
+  if (RESERVED_PAGE_SLUGS.has(slug)) throw new HttpError(400, 'This address is reserved — choose another one.')
+  const photoUrl = cleanUrl(b.photoUrl, 'The photo') || null
+
+  const links = (Array.isArray(b.links) ? b.links : []).slice(0, 12).flatMap((raw: any) => {
+    const type = MEMBER_LINK_TYPES.includes(raw?.type) ? raw.type : 'other'
+    const url = cleanText(raw?.url, 300)
+    if (!url) return []
+    if (type === 'email' && !/^(mailto:)?[^\s@]+@[^\s@]+\.[^\s@]+$/.test(url)) throw new HttpError(400, `“${url}” isn’t an e-mail address.`)
+    if (type === 'whatsapp' && !/^https?:\/\//.test(url) && url.replace(/\D/g, '').length < 8) {
+      throw new HttpError(400, 'Write the WhatsApp number with country code (for example +1 555 123 4567).')
+    }
+    return [{ type, label: cleanText(raw?.label, 40), url }]
+  })
+  const services = (Array.isArray(b.services) ? b.services : []).slice(0, 12).flatMap((raw: any) => {
+    const title = cleanText(raw?.title, 100)
+    if (!title) return []
+    return [{ title, description: cleanText(raw?.description, 400), price: cleanText(raw?.price, 40) }]
+  })
+  const highlights = (Array.isArray(b.highlights) ? b.highlights : []).slice(0, 8).flatMap((raw: any) => {
+    const title = cleanText(raw?.title, 100)
+    if (!title) return []
+    return [
+      {
+        title,
+        description: cleanText(raw?.description, 400),
+        url: cleanUrl(raw?.url, `The link of “${title}”`),
+        image: cleanUrl(raw?.image, `The image of “${title}”`),
+      },
+    ]
+  })
+
+  return {
+    slug,
+    display_name: displayName,
+    headline: cleanText(b.headline, 140) || null,
+    bio: cleanText(b.bio, 3000) || null,
+    photo_url: photoUrl,
+    location: cleanText(b.location, 100) || null,
+    links,
+    services,
+    highlights,
+    language: b.language === 'pt' ? 'pt' : 'en',
+    status: b.status === 'published' ? 'published' : 'draft',
+  }
+}
+
+async function ensurePageSlugFree(db: Db, slug: string, exceptId?: string) {
+  let query = db.from('member_pages').select('id').eq('slug', slug).limit(1)
+  if (exceptId) query = query.neq('id', exceptId)
+  const { data, error } = await query
+  if (error) {
+    if (isMissingTable(error)) throw new HttpError(409, 'Run the database update (Portal migration 0044) first.')
+    throw error
+  }
+  if (data && data.length > 0) throw new HttpError(409, `bgrowth.app/p/${slug} is already taken — choose another address.`)
+}
+
+async function createMemberPage(req: VercelRequest, db: Db) {
+  const input = readMemberPageInput(req)
+  await ensurePageSlugFree(db, input.slug)
+  const { data, error } = await db.from('member_pages').insert(input).select('*').single()
+  if (error) throw error
+  return { page: data }
+}
+
+async function updateMemberPage(req: VercelRequest, db: Db) {
+  const id = str(req.body?.id)
+  if (!id) throw new HttpError(400, 'Missing page.')
+  const input = readMemberPageInput(req)
+  await ensurePageSlugFree(db, input.slug, id)
+  const { data, error } = await db
+    .from('member_pages')
+    .update({ ...input, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select('*')
+    .maybeSingle()
+  if (error) throw error
+  if (!data) throw new HttpError(404, 'This page no longer exists — reload the list.')
+  return { page: data }
+}
+
+async function deleteMemberPage(req: VercelRequest, db: Db) {
+  const id = str(req.body?.id)
+  if (!id) throw new HttpError(400, 'Missing page.')
+  const { data, error } = await db.from('member_pages').delete().eq('id', id).select('slug, display_name').maybeSingle()
+  if (error) throw error
+  if (!data) throw new HttpError(404, 'This page no longer exists — reload the list.')
+  return { deleted: data }
+}
+
 async function listTeam(db: Db) {
   const { data, error } = await db.from('website_admins').select('*').order('created_at')
   if (error) throw error
@@ -2038,6 +2175,12 @@ function describe(key: string, b: Body, r: Record<string, any>): Described {
       return { area: 'catalog', summary: `Edited the bundle “${b.name}”${b.status === 'published' ? '' : ' (draft)'}` }
     case 'DELETE bundles':
       return { area: 'catalog', summary: 'Removed a bundle from the site' }
+    case 'POST member-pages':
+      return { area: 'pages', summary: `Created the page bgrowth.app/p/${b.slug}${b.status === 'published' ? ' and published it' : ' as a draft'}` }
+    case 'PATCH member-pages':
+      return { area: 'pages', summary: `Edited the page bgrowth.app/p/${r.page?.slug ?? b.slug}${b.status === 'published' ? '' : ' (draft)'}` }
+    case 'DELETE member-pages':
+      return { area: 'pages', summary: `Deleted the page of ${r.deleted?.display_name ?? 'a member'} (bgrowth.app/p/${r.deleted?.slug ?? ''})` }
     case 'POST newsletter-campaign':
       return { area: 'newsletter', summary: `Saved the newsletter “${String(b.subject ?? '').slice(0, 120)}”` }
     case 'DELETE newsletter-campaign':
@@ -2069,7 +2212,7 @@ function describe(key: string, b: Body, r: Record<string, any>): Described {
 
 // Only short, plain values from the request — never message bodies,
 // e-mail HTML, images or confirmations typed by the admin.
-const SKIP_DETAILS = new Set(['body', 'bodyHtml', 'dataUrl', 'confirmEmail', 'longDescription', 'preheader'])
+const SKIP_DETAILS = new Set(['body', 'bodyHtml', 'dataUrl', 'confirmEmail', 'longDescription', 'preheader', 'bio'])
 function details(b: Body, query: VercelRequest['query']) {
   const out: Record<string, unknown> = {}
   for (const [k, v] of Object.entries(b ?? {})) {
@@ -2209,6 +2352,10 @@ const ROUTES: Record<string, Route> = {
   'POST bundles': (req, db, admin) => createBundle(req, db, admin),
   'PATCH bundles': (req, db, admin) => updateBundle(req, db, admin),
   'DELETE bundles': (req, db) => archiveBundle(req, db),
+  'GET member-pages': (_req, db) => listMemberPages(db),
+  'POST member-pages': (req, db) => createMemberPage(req, db),
+  'PATCH member-pages': (req, db) => updateMemberPage(req, db),
+  'DELETE member-pages': (req, db) => deleteMemberPage(req, db),
   'GET team': (_req, db) => listTeam(db),
   'POST team': (req, db) => addTeamMember(req, db),
   'PATCH team': (req, db, admin) => updateTeamMember(req, db, admin),

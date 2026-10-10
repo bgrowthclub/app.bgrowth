@@ -17,11 +17,16 @@ function isMemberRoute(pathname: string) {
 // exactly two top-level layouts (CLAUDE.md §7). AuthCard's logo links home.
 const AUTH_ROUTES = ['/login', '/register', '/forgot-password', '/reset-password', '/verify-email']
 
+// Members' public pages (/p/:slug, BGrowth Find™) render the same bare way:
+// the page belongs to the member, so no BGrowth menu or footer (decided by
+// the user on 10/10/2026). Still inside this layout — no third layout.
+const BARE_PREFIXES = ['/p/']
+
 export default function AppLayout() {
   const { pathname } = useLocation()
   const mode = isMemberRoute(pathname) ? 'member' : 'public'
 
-  if (AUTH_ROUTES.includes(pathname)) {
+  if (AUTH_ROUTES.includes(pathname) || BARE_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
     return (
       <div className="relative min-h-screen overflow-x-clip bg-bg">
         <ScrollToTop />

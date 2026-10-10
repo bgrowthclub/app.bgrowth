@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/ingles-de-mudanca/:path*",
+      "destination": "https://ingles-de-mudanca-bg-rowrh-club.vercel.app/ingles-de-mudanca/:path*"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }

@@ -19,6 +19,7 @@ import {
   UserX,
   ClipboardCheck,
   Package,
+  SquareUser,
   ShieldCheck,
   History,
 } from 'lucide-react'
@@ -109,6 +110,7 @@ export const PLATFORM_NAV_GROUPS: PlatformNavGroup[] = [
       { label: 'Support', to: '/platform/admin/support', icon: Headset, badge: 'supportWaiting', support: true },
       { label: 'Catalog', to: '/platform/admin/catalog', icon: ClipboardCheck },
       { label: 'Bundles', to: '/platform/admin/bundles', icon: Package },
+      { label: 'Pages', to: '/platform/admin/pages', icon: SquareUser },
       { label: 'Categories', to: '/platform/admin/categories', icon: Tags },
       { label: 'Newsletter', to: '/platform/admin/newsletter', icon: Mail },
       { label: 'Reviews', to: '/platform/admin/reviews', icon: Star, support: true },

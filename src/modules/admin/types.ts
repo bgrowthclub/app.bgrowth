@@ -1,3 +1,4 @@
+import type { MemberPage, MemberPageHighlight, MemberPageLink, MemberPageService } from '../find/types'
 import type { PortalAccessGrantRow, PortalLicenseRow } from '../workspace/types/portal'
 import type { SupportConversationSummary, SupportHours, SupportMessage } from '../support/types'
 import type { GrowthCategoryId } from '../../types/growth'
@@ -345,7 +346,7 @@ export interface AdminTeamMember {
 }
 
 // Admin → Activity: one change made in the Admin area.
-export type AdminActivityArea = 'members' | 'support' | 'catalog' | 'newsletter' | 'deletions' | 'reviews' | 'team'
+export type AdminActivityArea = 'members' | 'support' | 'catalog' | 'pages' | 'newsletter' | 'deletions' | 'reviews' | 'team'
 
 export interface AdminActivityEntry {
   id: string
@@ -369,4 +370,26 @@ export interface AdminActivityPage {
   admins: { id: string; email: string }[]
   // false until the database update (migration 0042) runs.
   ready: boolean
+}
+
+// Admin → Pages: members' public pages (Portal migration 0044).
+export interface AdminMemberPagesOverview {
+  pages: MemberPage[]
+  // false until the database update (migration 0044) runs.
+  ready: boolean
+}
+
+export interface AdminMemberPageDraft {
+  id?: string
+  slug: string
+  displayName: string
+  headline: string
+  bio: string
+  photoUrl: string
+  location: string
+  links: MemberPageLink[]
+  services: MemberPageService[]
+  highlights: MemberPageHighlight[]
+  language: MemberPage['language']
+  status: MemberPage['status']
 }
