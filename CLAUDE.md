@@ -179,7 +179,9 @@ This repo is a **static, client-only MVP**:
   old `/ingles-de-mudanca/*` redirects there): the "Inglês de Mudança"
   course lives in its own repo and Vercel project
   (bgrowthclub/ingles-de-mudanca, built under that base path); this
-  site's `vercel.json` forwards the path to it, before the SPA catch-all. It saves e-mails in `portal.ingles_leads` (migration 0043).
+  site's `vercel.json` forwards the path to it, before the SPA catch-all. It saves e-mails in `portal.ingles_leads` (migration 0043) and reads
+  "Quem criou" from Bruno's member page through `api/ingles.ts` (since
+  Sprint 75 — the course project holds no Supabase keys).
   **Since Sprint 50 there is a Support Center** (approved by the user):
   members chat with the team at `/platform/support` (live during support
   hours, a ticket answered by e-mail too outside them) through
