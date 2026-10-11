@@ -26,6 +26,9 @@ type Admin = { id: string; email: string; role: AdminRole }
 type Db = SupabaseClient<any, 'portal', any>
 
 const PAGE_SIZE = 25
+// What the site sells one by one (and in bundles): Studio Workspaces and,
+// since Sprint 78, Studio calculators.
+const SELLABLE_TYPES = ['workspace', 'calculator']
 
 class HttpError extends Error {
   constructor(public status: number, message: string, public extra?: Record<string, unknown>) {
@@ -203,8 +206,9 @@ async function listProducts(db: Db) {
     .from('products')
     .select('id, name, slug, is_free, price_cents, currency, status, last_published_at')
     .eq('status', 'published')
-    // Workspaces only — a bundle (0041) isn't something to give access to.
-    .eq('content_type', 'workspace')
+    // Workspaces and calculators — a bundle (0041) isn't something to give
+    // access to.
+    .in('content_type', SELLABLE_TYPES)
     .order('name')
   if (error) throw error
   return { products: data ?? [] }
@@ -950,7 +954,7 @@ async function createLaunchCampaign(req: VercelRequest, db: Db, admin: Admin) {
     .eq('id', productId)
     .maybeSingle()
   if (error) throw error
-  if (!product || product.status !== 'published' || product.content_type !== 'workspace') throw new HttpError(404, 'Choose a published Workspace.')
+  if (!product || product.status !== 'published' || !SELLABLE_TYPES.includes(product.content_type)) throw new HttpError(404, 'Choose a published Workspace.')
   const categories = await loadCategories(db)
   const category = categories.find((c) => c.id === product.category_id)
   const parent = category?.parent_id ? categories.find((c) => c.id === category.parent_id) : undefined
@@ -1322,7 +1326,7 @@ async function catalogHealth(db: Db) {
       .from('products')
       .select('id, name, slug, status, cover_image_url, short_description, category_id, is_free, price_cents, is_trial_eligible, trial_duration, metadata, content, last_published_at')
       .eq('status', 'published')
-      .eq('content_type', 'workspace')
+      .in('content_type', SELLABLE_TYPES)
       .order('name'),
     db.from('catalog_index').select('product_id, slug'),
     db.from('workspace_categories').select('id'),
@@ -1747,7 +1751,7 @@ async function listBundles(db: Db) {
     db
       .from('products')
       .select('id, slug, name, cover_image_url, is_free, price_cents, status')
-      .eq('content_type', 'workspace')
+      .in('content_type', SELLABLE_TYPES)
       .neq('status', 'archived')
       .order('name'),
     loadCategories(db),
@@ -1811,7 +1815,7 @@ async function readBundleInput(req: VercelRequest, db: Db) {
   const { data: products, error } = await db.from('products').select('id, name, status, content_type').in('id', itemIds)
   if (error) throw error
   const found = (products ?? []) as { id: string; name: string; status: string; content_type: string }[]
-  if (found.length !== itemIds.length || found.some((p) => p.content_type !== 'workspace' || p.status === 'archived')) {
+  if (found.length !== itemIds.length || found.some((p) => !SELLABLE_TYPES.includes(p.content_type) || p.status === 'archived')) {
     throw new HttpError(400, 'One of the chosen Workspaces is no longer available — reload and try again.')
   }
   const unpublished = found.filter((p) => p.status !== 'published')

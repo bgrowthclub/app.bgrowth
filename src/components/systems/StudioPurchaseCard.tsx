@@ -29,6 +29,14 @@ const QUICK_SUMMARY = [
   'Works on desktop, tablet and mobile',
 ]
 
+// A Studio calculator (Sprint 78) is sold the same way.
+const CALCULATOR_SUMMARY = [
+  'Interactive Calculator™ — results update as you type',
+  'Save as many calculations as you need',
+  'Print or download as PDF',
+  'Works on desktop, tablet and mobile',
+]
+
 function priceLabel(product: Product) {
   const amount = Number.isInteger(product.basePrice) ? product.basePrice : product.basePrice.toFixed(2)
   return `$${amount}`
@@ -56,6 +64,8 @@ export default function StudioPurchaseCard({
   className = '',
 }: Props) {
   const free = product.basePrice === 0
+  const noun = product.type === 'Calculator' ? 'Calculator' : 'Workspace'
+  const summary = product.type === 'Calculator' ? CALCULATOR_SUMMARY : QUICK_SUMMARY
 
   return (
     <div className={`rounded-xl3 border border-navy/[0.06] bg-white p-6 shadow-glow ${className}`}>
@@ -63,16 +73,16 @@ export default function StudioPurchaseCard({
         <div className="flex items-start gap-3 rounded-xl bg-bg-soft p-4">
           <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-primary" />
           <p className="text-[13px] leading-relaxed text-navy/70">
-            Payment received — unlocking your Workspace. This usually takes a few seconds.
+            Payment received — unlocking your {noun}. This usually takes a few seconds.
           </p>
         </div>
       ) : status === 'owned' ? (
         <>
           <p className="text-[13px] font-semibold text-primary">
-            {trialActive ? 'Your free trial is active' : 'You own this Workspace'}
+            {trialActive ? 'Your free trial is active' : `You own this ${noun}`}
           </p>
           <Button to={openTo} icon={<ArrowRight size={16} />} className="mt-4 w-full">
-            Open Workspace
+            Open {noun}
           </Button>
           {trialActive && !free && (
             <Button type="button" variant="secondary" onClick={onBuy} disabled={busy !== null} className="mt-3 w-full">
@@ -105,7 +115,7 @@ export default function StudioPurchaseCard({
                 icon={<ArrowRight size={16} />}
                 className="mt-5 w-full"
               >
-                {busy === 'buy' ? (free ? 'Adding…' : 'Opening checkout…') : free ? 'Get It Free' : 'Buy Workspace'}
+                {busy === 'buy' ? (free ? 'Adding…' : 'Opening checkout…') : free ? 'Get It Free' : `Buy ${noun}`}
               </Button>
               {canStartTrial && trialDays && (
                 <Button
@@ -134,7 +144,7 @@ export default function StudioPurchaseCard({
       {error && <p className="mt-3 text-center text-[13px] text-red-500">{error}</p>}
 
       <ul className="mt-6 space-y-2.5">
-        {QUICK_SUMMARY.map((item) => (
+        {summary.map((item) => (
           <li key={item} className="flex items-center gap-2.5 text-[13px] text-navy/60">
             <Check size={14} className="shrink-0 text-primary" />
             {item}
