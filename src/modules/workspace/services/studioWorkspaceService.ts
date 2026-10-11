@@ -91,6 +91,21 @@ export const studioWorkspaceService = {
     return { bundles, items: (itemsResult.data ?? []) as PortalBundleItemRow[] }
   },
 
+  // Every product's tags (Portal migration 0048, public read): one row
+  // per product with the tag names. Empty when the table isn't there yet.
+  async listProductTags(): Promise<{ productId: string; tags: string[] }[]> {
+    const { data, error } = await client().from('product_tags').select('product_id, tags(name)')
+    if (error) return []
+    const byProduct = new Map<string, string[]>()
+    for (const row of (data ?? []) as unknown as { product_id: string; tags: { name: string } | { name: string }[] | null }[]) {
+      const list = Array.isArray(row.tags) ? row.tags : row.tags ? [row.tags] : []
+      const names = byProduct.get(row.product_id) ?? []
+      names.push(...list.map((t) => t.name))
+      byProduct.set(row.product_id, names)
+    }
+    return Array.from(byProduct, ([productId, tags]) => ({ productId, tags }))
+  },
+
   async listCategories(): Promise<PortalCategoryRow[]> {
     const { data, error } = await client().from('workspace_categories').select('*')
     if (error) throw error

@@ -23,6 +23,7 @@ import {
   ShieldCheck,
   History,
   Megaphone,
+  Tag,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -139,6 +140,7 @@ export const PLATFORM_NAV_GROUPS: PlatformNavGroup[] = [
       { label: 'Health Check', to: '/platform/admin/catalog', icon: ClipboardCheck },
       { label: 'Bundles', to: '/platform/admin/bundles', icon: Package },
       { label: 'Categories', to: '/platform/admin/categories', icon: Tags },
+      { label: 'Tags', to: '/platform/admin/tags', icon: Tag },
       { label: 'Reviews', to: '/platform/admin/reviews', icon: Star, support: true },
     ],
   },

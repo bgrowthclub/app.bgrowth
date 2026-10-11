@@ -1456,6 +1456,7 @@ async function catalogHealth(db: Db) {
       ['0045 Member page numbers', 'member_page_stats'],
       ['0046 Site announcements & Home highlights', 'site_announcements'],
       ['0047 Category icons & colors', 'workspace_categories.icon'],
+      ['0048 Tags', 'tags'],
     ].map(async ([name, table]) => ({ name, ok: await tableExists(table) })),
   )
   const { data: address } = await db.from('site_settings').select('value').eq('key', 'newsletter_address').maybeSingle()
@@ -2343,6 +2344,130 @@ async function saveHomeFeatured(req: VercelRequest, db: Db) {
 }
 
 // ---------------------------------------------------------------------------
+// Tags (Portal migration 0048): one list for products — and later articles —
+// shared with BGrowth Studio's publish screens. A tag's key (tagSlug — the
+// same rule as portal.tag_slug() and the Portal's publish endpoint) keeps
+// "Notary" and "notary " one tag. A product's tags are portal.product_tags.
+// ---------------------------------------------------------------------------
+function tagSlug(name: string) {
+  return name
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+function readTagName(value: unknown) {
+  const name = cleanText(value, 60).replace(/\s+/g, ' ')
+  if (!name || !tagSlug(name)) throw new HttpError(400, 'Give the tag a name with letters or numbers.')
+  return name
+}
+
+async function listTags(db: Db) {
+  const [tags, links, products] = await Promise.all([
+    db.from('tags').select('id, name, slug, source, created_at').order('name'),
+    db.from('product_tags').select('product_id, tag_id'),
+    db
+      .from('products')
+      .select('id, name, slug, content_type, status')
+      .neq('status', 'archived')
+      .in('content_type', [...SELLABLE_TYPES, 'bundle'])
+      .order('name'),
+  ])
+  if (tags.error) {
+    if (isMissingTable(tags.error)) return { tags: [], links: [], products: [], ready: false }
+    throw tags.error
+  }
+  if (links.error) throw links.error
+  if (products.error) throw products.error
+  return { tags: tags.data ?? [], links: links.data ?? [], products: products.data ?? [], ready: true }
+}
+
+async function createTag(req: VercelRequest, db: Db) {
+  const name = readTagName(req.body?.name)
+  const slug = tagSlug(name)
+  const { data: existing } = await db.from('tags').select('id, name').eq('slug', slug).maybeSingle()
+  if (existing) throw new HttpError(409, `“${(existing as { name: string }).name}” is already in the list.`)
+  const { data, error } = await db.from('tags').insert({ name, slug, source: 'admin' }).select('*').single()
+  if (error) throw error
+  return { tag: data }
+}
+
+async function renameTag(req: VercelRequest, db: Db) {
+  const id = str(req.body?.id)
+  const name = readTagName(req.body?.name)
+  const slug = tagSlug(name)
+  const { data: other } = await db.from('tags').select('id, name').eq('slug', slug).neq('id', id).maybeSingle()
+  if (other) throw new HttpError(409, `“${(other as { name: string }).name}” already exists — use Merge to join them.`)
+  const { data, error } = await db.from('tags').update({ name, slug }).eq('id', id).select('*').maybeSingle()
+  if (error) throw error
+  if (!data) throw new HttpError(404, 'Tag not found.')
+  return { tag: data }
+}
+
+async function deleteTag(req: VercelRequest, db: Db) {
+  const id = str(req.body?.id ?? req.query.id)
+  const { data, error } = await db.from('tags').delete().eq('id', id).select('name').maybeSingle()
+  if (error) throw error
+  return { deleted: data ?? null }
+}
+
+// Join `fromId` into `intoId`: its products get the other tag, then it goes.
+async function mergeTags(req: VercelRequest, db: Db) {
+  const fromId = str(req.body?.fromId)
+  const intoId = str(req.body?.intoId)
+  if (!fromId || !intoId || fromId === intoId) throw new HttpError(400, 'Choose two different tags.')
+  const { data: pair, error } = await db.from('tags').select('id, name').in('id', [fromId, intoId])
+  if (error) throw error
+  const from = (pair ?? []).find((t) => (t as { id: string }).id === fromId) as { name: string } | undefined
+  const into = (pair ?? []).find((t) => (t as { id: string }).id === intoId) as { name: string } | undefined
+  if (!from || !into) throw new HttpError(404, 'Tag not found.')
+  const { data: links, error: linksError } = await db.from('product_tags').select('product_id').eq('tag_id', fromId)
+  if (linksError) throw linksError
+  const rows = ((links ?? []) as { product_id: string }[]).map((l) => ({ product_id: l.product_id, tag_id: intoId }))
+  if (rows.length) {
+    const { error: upsertError } = await db.from('product_tags').upsert(rows, { onConflict: 'product_id,tag_id', ignoreDuplicates: true })
+    if (upsertError) throw upsertError
+  }
+  const { error: deleteError } = await db.from('tags').delete().eq('id', fromId)
+  if (deleteError) throw deleteError
+  return { merged: { from: from.name, into: into.name, products: rows.length } }
+}
+
+// A product's tags, by name — existing tags are reused, new ones join the
+// list.
+async function setProductTags(req: VercelRequest, db: Db) {
+  const productId = str(req.body?.productId)
+  if (!isUuid(productId)) throw new HttpError(400, 'Missing product.')
+  const raw = Array.isArray(req.body?.names) ? (req.body.names as unknown[]) : []
+  const wanted = new Map<string, string>()
+  for (const value of raw) {
+    const name = cleanText(value, 60).replace(/\s+/g, ' ')
+    const slug = tagSlug(name)
+    if (slug && !wanted.has(slug)) wanted.set(slug, name)
+  }
+  if (wanted.size > 20) throw new HttpError(400, 'Up to 20 tags per product.')
+  const slugs = [...wanted.keys()]
+  if (slugs.length) {
+    const { error } = await db
+      .from('tags')
+      .upsert(slugs.map((slug) => ({ slug, name: wanted.get(slug), source: 'admin' })), { onConflict: 'slug', ignoreDuplicates: true })
+    if (error) throw error
+  }
+  const { data: tags, error: readError } = slugs.length ? await db.from('tags').select('id, name, slug, source, created_at').in('slug', slugs) : { data: [], error: null }
+  if (readError) throw readError
+  const { error: clearError } = await db.from('product_tags').delete().eq('product_id', productId)
+  if (clearError) throw clearError
+  if (tags?.length) {
+    const { error } = await db.from('product_tags').insert((tags as { id: string }[]).map((t) => ({ product_id: productId, tag_id: t.id })))
+    if (error) throw error
+  }
+  const { data: product } = await db.from('products').select('name').eq('id', productId).maybeSingle()
+  return { productId, tags: tags ?? [], productName: (product as { name?: string } | null)?.name ?? '' }
+}
+
+// ---------------------------------------------------------------------------
 // Activity log (portal.admin_activity, Portal migration 0042): every change
 // made in the Admin area — who, what, when, on which member or product.
 // Recorded by the router below after the change succeeds; best effort, so a
@@ -2401,6 +2526,16 @@ function describe(key: string, b: Body, r: Record<string, any>): Described {
       return { area: 'pages', summary: `Edited the page bgrowth.app/p/${r.page?.slug ?? b.slug}${b.status === 'published' ? '' : ' (draft)'}` }
     case 'DELETE member-pages':
       return { area: 'pages', summary: `Deleted the page of ${r.deleted?.display_name ?? 'a member'} (bgrowth.app/p/${r.deleted?.slug ?? ''})` }
+    case 'POST tags':
+      return { area: 'catalog', summary: `Created the tag “${r.tag?.name ?? b.name}”` }
+    case 'PATCH tags':
+      return { area: 'catalog', summary: `Renamed a tag to “${r.tag?.name ?? b.name}”` }
+    case 'DELETE tags':
+      return { area: 'catalog', summary: `Deleted the tag “${r.deleted?.name ?? ''}”` }
+    case 'POST tags-merge':
+      return { area: 'catalog', summary: `Merged the tag “${r.merged?.from}” into “${r.merged?.into}”` }
+    case 'PUT product-tags':
+      return { area: 'catalog', summary: `Set the tags of “${r.productName || 'a product'}”` }
     case 'POST announcements':
       return { area: 'site', summary: `Created the announcement “${b.title}”` }
     case 'PATCH announcements':
@@ -2585,6 +2720,12 @@ const ROUTES: Record<string, Route> = {
   'POST member-pages': (req, db) => createMemberPage(req, db),
   'PATCH member-pages': (req, db) => updateMemberPage(req, db),
   'DELETE member-pages': (req, db) => deleteMemberPage(req, db),
+  'GET tags': (_req, db) => listTags(db),
+  'POST tags': (req, db) => createTag(req, db),
+  'PATCH tags': (req, db) => renameTag(req, db),
+  'DELETE tags': (req, db) => deleteTag(req, db),
+  'POST tags-merge': (req, db) => mergeTags(req, db),
+  'PUT product-tags': (req, db) => setProductTags(req, db),
   'GET site': (_req, db) => siteOverview(db),
   'POST announcements': (req, db, admin) => createAnnouncement(req, db, admin),
   'PATCH announcements': (req, db) => updateAnnouncement(req, db),
