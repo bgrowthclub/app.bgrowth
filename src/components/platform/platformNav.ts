@@ -58,6 +58,9 @@ export interface PlatformNavGroup {
   // Shown only to BGrowth administrators (User.isAdmin) — see Sidebar.tsx.
   // The routes themselves are gated by AdminRoute and the server.
   adminOnly?: boolean
+  // Opens and closes from its title; starts open only when it holds the
+  // current page (see SidebarGroup.tsx).
+  collapsible?: boolean
 }
 
 export const PLATFORM_NAV_GROUPS: PlatformNavGroup[] = [
@@ -104,24 +107,49 @@ export const PLATFORM_NAV_GROUPS: PlatformNavGroup[] = [
       { label: 'Support', to: '/platform/support', icon: LifeBuoy, badge: 'supportUnread' },
     ],
   },
+  // The Admin area in four groups that open and close (decided 11/10/2026
+  // so the menu doesn't grow endless); the group of the page you're on
+  // opens by itself.
   {
-    label: 'Admin',
+    label: 'Admin · Overview',
     adminOnly: true,
+    collapsible: true,
     items: [
       { label: 'Dashboard', to: '/platform/admin/dashboard', icon: LayoutDashboard },
-      { label: 'Members', to: '/platform/admin/members', icon: UserCog, support: true },
       { label: 'Sales', to: '/platform/admin/sales', icon: Receipt },
+      { label: 'Activity', to: '/platform/admin/activity', icon: History },
+    ],
+  },
+  {
+    label: 'Admin · People',
+    adminOnly: true,
+    collapsible: true,
+    items: [
+      { label: 'Members', to: '/platform/admin/members', icon: UserCog, support: true },
       { label: 'Support', to: '/platform/admin/support', icon: Headset, badge: 'supportWaiting', support: true },
+      { label: 'Team', to: '/platform/admin/team', icon: ShieldCheck },
+      { label: 'Deletions', to: '/platform/admin/deletions', icon: UserX, badge: 'deletionsPending' },
+    ],
+  },
+  {
+    label: 'Admin · Catalog',
+    adminOnly: true,
+    collapsible: true,
+    items: [
       { label: 'Catalog', to: '/platform/admin/catalog', icon: ClipboardCheck },
       { label: 'Bundles', to: '/platform/admin/bundles', icon: Package },
-      { label: 'Pages', to: '/platform/admin/pages', icon: SquareUser },
-      { label: 'Site', to: '/platform/admin/site', icon: Megaphone },
       { label: 'Categories', to: '/platform/admin/categories', icon: Tags },
-      { label: 'Newsletter', to: '/platform/admin/newsletter', icon: Mail },
       { label: 'Reviews', to: '/platform/admin/reviews', icon: Star, support: true },
-      { label: 'Deletions', to: '/platform/admin/deletions', icon: UserX, badge: 'deletionsPending' },
-      { label: 'Team', to: '/platform/admin/team', icon: ShieldCheck },
-      { label: 'Activity', to: '/platform/admin/activity', icon: History },
+    ],
+  },
+  {
+    label: 'Admin · Site & content',
+    adminOnly: true,
+    collapsible: true,
+    items: [
+      { label: 'Site', to: '/platform/admin/site', icon: Megaphone },
+      { label: 'Pages', to: '/platform/admin/pages', icon: SquareUser },
+      { label: 'Newsletter', to: '/platform/admin/newsletter', icon: Mail },
     ],
   },
 ]

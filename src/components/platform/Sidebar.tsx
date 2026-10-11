@@ -24,10 +24,19 @@ function SidebarBody({ collapsed, badges, onNavigate }: { collapsed: boolean; ba
   const groups = PLATFORM_NAV_GROUPS.filter((group) => !group.adminOnly || role)
     .map((group) => (group.adminOnly && role === 'support' ? { ...group, items: group.items.filter((item) => item.support) } : group))
     .map((group) => ({ ...group, items: group.items.filter((item) => !item.pageOwnerOnly || user?.memberPage) }))
+    .filter((group) => group.items.length > 0)
   return (
     <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
       {groups.map((group, i) => (
-        <SidebarGroup key={group.label ?? i} group={group} collapsed={collapsed} badges={badges} onNavigate={onNavigate} />
+        <SidebarGroup
+          key={group.label ?? i}
+          group={group}
+          collapsed={collapsed}
+          badges={badges}
+          onNavigate={onNavigate}
+          // Admin groups that open and close sit close together.
+          tight={Boolean(group.collapsible && groups[i - 1]?.collapsible)}
+        />
       ))}
     </nav>
   )
