@@ -15,6 +15,8 @@ export interface CategoryLookPatch {
 
 interface Props {
   category: AdminCategory
+  // Which other areas/categories already use each color (by key).
+  colorUse: Map<string, string[]>
   busy: boolean
   onSave: (patch: CategoryLookPatch) => Promise<boolean>
   onClose: () => void
@@ -23,7 +25,7 @@ interface Props {
 // The look of one area or category: icon, color and an optional cover
 // image (Portal migration 0047). Opens under the category in Admin →
 // Catalog → Categories.
-export default function CategoryLookEditor({ category, busy, onSave, onClose }: Props) {
+export default function CategoryLookEditor({ category, colorUse, busy, onSave, onClose }: Props) {
   const [icon, setIcon] = useState(category.icon ?? DEFAULT_CATEGORY_LOOK.icon)
   const [color, setColor] = useState(category.color ?? DEFAULT_CATEGORY_LOOK.color)
   const [cover, setCover] = useState(category.cover_image_url ?? '')
@@ -82,19 +84,30 @@ export default function CategoryLookEditor({ category, busy, onSave, onClose }: 
       </div>
 
       <div>
-        <p className="mb-1.5 text-[12px] font-semibold uppercase tracking-wide text-navy/40">Color</p>
+        <p className="mb-1.5 text-[12px] font-semibold uppercase tracking-wide text-navy/40">
+          Color <span className="font-normal normal-case text-navy/35">(the number = how many already use it; hover to see which)</span>
+        </p>
         <div className="flex flex-wrap gap-2">
-          {Object.entries(CATEGORY_COLOR_CHOICES).map(([key, choice]) => (
-            <button
-              key={key}
-              type="button"
-              title={choice.label}
-              aria-label={choice.label}
-              aria-pressed={color === key}
-              onClick={() => setColor(key)}
-              className={`h-7 w-7 rounded-full ${choice.dot} ring-offset-2 transition ${color === key ? 'ring-2 ring-navy/60' : ''}`}
-            />
-          ))}
+          {Object.entries(CATEGORY_COLOR_CHOICES).map(([key, choice]) => {
+            const users = (colorUse.get(key) ?? []).filter((name) => name !== category.name)
+            return (
+              <button
+                key={key}
+                type="button"
+                title={users.length ? `${choice.label} — already used by ${users.join(', ')}` : `${choice.label} — not used yet`}
+                aria-label={users.length ? `${choice.label}, used by ${users.length}` : choice.label}
+                aria-pressed={color === key}
+                onClick={() => setColor(key)}
+                className={`relative h-7 w-7 rounded-full ${choice.dot} ring-offset-2 transition ${color === key ? 'ring-2 ring-navy/60' : ''}`}
+              >
+                {users.length > 0 && (
+                  <span className="absolute -right-1.5 -top-1.5 grid h-4 min-w-4 place-items-center rounded-full bg-white px-1 text-[10px] font-bold text-navy shadow-softer">
+                    {users.length}
+                  </span>
+                )}
+              </button>
+            )
+          })}
         </div>
       </div>
 
