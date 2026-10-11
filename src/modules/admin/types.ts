@@ -430,3 +430,19 @@ export interface AdminAnnouncementDraft {
   startsAt: string | null
   endsAt: string | null
 }
+
+// Admin → Catalog → Tags (Portal migration 0048).
+export interface AdminTag {
+  id: string
+  name: string
+  slug: string
+  source: 'admin' | 'studio' | 'wix' | string
+  created_at: string
+}
+
+export interface AdminTagsOverview {
+  tags: AdminTag[]
+  links: { product_id: string; tag_id: string }[]
+  products: { id: string; name: string; slug: string; content_type: string; status: string }[]
+  ready: boolean
+}

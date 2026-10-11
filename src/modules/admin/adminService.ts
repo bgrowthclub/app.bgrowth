@@ -7,6 +7,8 @@ import type {
   AdminMemberPage,
   AdminProduct,
   AdminSiteOverview,
+  AdminTag,
+  AdminTagsOverview,
   AdminAnnouncementDraft,
   AdminSalesReport,
   AdminSupportInbox,
@@ -188,6 +190,24 @@ export const adminService = {
   },
   async uploadMemberPageImage(dataUrl: string) {
     return (await call<{ url: string }>('POST', 'newsletter-image', undefined, { dataUrl, folder: 'pages' })).url
+  },
+  listTags() {
+    return call<AdminTagsOverview>('GET', 'tags')
+  },
+  async createTag(name: string) {
+    return (await call<{ tag: AdminTag }>('POST', 'tags', undefined, { name })).tag
+  },
+  async renameTag(id: string, name: string) {
+    return (await call<{ tag: AdminTag }>('PATCH', 'tags', undefined, { id, name })).tag
+  },
+  async deleteTag(id: string) {
+    await call('DELETE', 'tags', undefined, { id })
+  },
+  mergeTags(fromId: string, intoId: string) {
+    return call<{ merged: { from: string; into: string; products: number } }>('POST', 'tags-merge', undefined, { fromId, intoId })
+  },
+  async setProductTags(productId: string, names: string[]) {
+    return (await call<{ tags: AdminTag[] }>('PUT', 'product-tags', undefined, { productId, names })).tags
   },
   getSite() {
     return call<AdminSiteOverview>('GET', 'site')

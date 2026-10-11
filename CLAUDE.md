@@ -212,8 +212,16 @@ This repo is a **static, client-only MVP**:
   old "Catalog" check. Each area/category gets an icon, a color and an
   optional cover (Portal migration 0047, keys in
   `components/systems/categoryIcons.ts` mirrored in `api/admin.ts`), shown
-  on the catalog's filters. Next in Catalog: managed Tags (Admin →
-  Catalog → Tags).
+  on the catalog's filters.
+  **Since Sprint 83 there are Tags** (approved by the user; Portal migration
+  0048): one shared list, `portal.tags` (unique `slug` = normalized name,
+  so "Notary"/"notary " are one tag; the old Wix tags imported, source
+  `wix`) plus `portal.product_tags`. Set in the Studio's publish screens
+  (sent as `tags` to the Portal's publish endpoint, which syncs them —
+  `products.metadata` is rewritten by `publish_product`, so tags never live
+  there) or in Admin → Catalog → Tags (rename, merge, delete, per-product;
+  resources `tags`, `tags-merge`, `product-tags`). The catalog shows a Tags
+  filter (`?tag=`) and its search matches tags (`lib/useProductTags.ts`).
   **Since Sprint 71 `/p/bruno/ingles-de-mudanca/*` is a separate app**
   (approved by the user; under Bruno's member page since Sprint 72, the
   old `/ingles-de-mudanca/*` redirects there): the "Inglês de Mudança"

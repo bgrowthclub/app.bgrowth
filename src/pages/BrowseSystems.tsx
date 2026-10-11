@@ -13,6 +13,8 @@ import { loadBundleProducts, loadPublishedSystemProducts, loadStudioWorkspacePro
 import type { Product } from '../modules/commerce/types/product'
 import { GROWTH_CATEGORIES } from '../types/growth'
 import { useCategoryLooks } from '../lib/useCategoryLooks'
+import { useProductTags } from '../lib/useProductTags'
+import { studioPortalId } from '../modules/commerce/store/studioProductRepository'
 import type { CategoryLookKeys } from '../lib/useCategoryLooks'
 import { categoryLook } from '../components/systems/categoryIcons'
 import type { ModuleType } from '../types/system'
@@ -49,6 +51,8 @@ export default function BrowseSystems() {
   const [category, setCategory] = useState(initialCategory)
   const [area, setArea] = useState(searchParams.get('area') ?? 'All')
   const [moduleType, setModuleType] = useState<ModuleType | 'All'>('All')
+  const [tag, setTag] = useState(searchParams.get('tag') ?? 'All')
+  const [allTags, setAllTags] = useState(false)
   const [sort, setSort] = useState('featured')
 
   // The Workspace Catalog — reads the Runtime↔Product Engine connection's
@@ -119,6 +123,21 @@ export default function BrowseSystems() {
     )
   }
 
+  // Tags (Admin → Catalog → Tags): a Workspace or bundle matches a tag
+  // pill, and a search also matches its tags. Only tags in use show, most
+  // used first.
+  const productTags = useProductTags()
+  const tagsOf = (id: string) => productTags.get(studioPortalId(id) ?? '') ?? []
+  const hasTag = (id: string) => tag === 'All' || tagsOf(id).includes(tag)
+  const tagChoices = useMemo(() => {
+    const count = new Map<string, number>()
+    for (const p of [...studioProducts, ...bundles]) {
+      for (const t of productTags.get(studioPortalId(p.id) ?? '') ?? []) count.set(t, (count.get(t) ?? 0) + 1)
+    }
+    return Array.from(count).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([name]) => name)
+  }, [studioProducts, bundles, productTags])
+  const shownTags = allTags ? tagChoices : tagChoices.slice(0, 12)
+
   const areas = useMemo(() => {
     const present = new Set<string>(studioProducts.map((p) => p.category))
     if (publishedList.length) present.add('business-entrepreneurship')
@@ -133,7 +152,8 @@ export default function BrowseSystems() {
       (p) =>
         (area === 'All' || p.category === area) &&
         (category === 'All' || p.industry === category) &&
-        matchesSearch(query, `${p.title} ${p.description}`),
+        hasTag(p.id) &&
+        matchesSearch(query, `${p.title} ${p.description} ${tagsOf(p.id).join(' ')}`),
     )
     return [...list].sort((a, b) => {
       if (sort === 'price-asc') return a.basePrice - b.basePrice
@@ -141,7 +161,7 @@ export default function BrowseSystems() {
       if (sort === 'name-asc') return a.title.localeCompare(b.title)
       return 0
     })
-  }, [studioProducts, query, category, area, moduleType, sort])
+  }, [studioProducts, query, category, area, moduleType, sort, tag, productTags])
 
   // Same filters as the Workspaces; each bundle with the Workspaces it includes.
   const bundleResults = useMemo(() => {
@@ -152,7 +172,8 @@ export default function BrowseSystems() {
         (b) =>
           (area === 'All' || b.category === area) &&
           (category === 'All' || b.industry === category) &&
-          matchesSearch(query, `${b.title} ${b.description}`),
+          hasTag(b.id) &&
+          matchesSearch(query, `${b.title} ${b.description} ${tagsOf(b.id).join(' ')}`),
       )
       .map((bundle) => ({
         bundle,
@@ -162,10 +183,11 @@ export default function BrowseSystems() {
         }),
       }))
       .filter(({ items }) => items.length > 0)
-  }, [bundles, studioProducts, query, category, area, moduleType])
+  }, [bundles, studioProducts, query, category, area, moduleType, tag, productTags])
 
   const results = useMemo(() => {
     let list = publishedList.filter((s) => {
+      if (tag !== 'All') return false
       if (area !== 'All' && area !== 'business-entrepreneurship') return false
       const matchesCategory = category === 'All' || s.category === category
       const matchesModule = moduleType === 'All' || s.modules.some((m) => m.type === moduleType)
@@ -181,12 +203,13 @@ export default function BrowseSystems() {
     })
 
     return list
-  }, [publishedList, query, category, area, moduleType, sort])
+  }, [publishedList, query, category, area, moduleType, sort, tag])
 
-  const updateParams = (nextArea: string, nextCategory: string) => {
+  const updateParams = (nextArea: string, nextCategory: string, nextTag = tag) => {
     const params: Record<string, string> = {}
     if (nextArea !== 'All') params.area = nextArea
     if (nextCategory !== 'All') params.category = nextCategory
+    if (nextTag !== 'All') params.tag = nextTag
     setSearchParams(params)
   }
 
@@ -198,6 +221,11 @@ export default function BrowseSystems() {
   const handleArea = (a: string) => {
     setArea(a)
     updateParams(a, category)
+  }
+
+  const handleTag = (t: string) => {
+    setTag(t)
+    updateParams(area, category, t)
   }
 
   return (
@@ -236,6 +264,20 @@ export default function BrowseSystems() {
               <FilterPill key={c} label={c} active={category === c} onClick={() => handleCategory(c)} icon={lookIcon(looks.byName.get(c), category === c)} />
             ))}
           </div>
+          {tagChoices.length > 0 && (
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="mr-1 text-[12px] font-semibold uppercase tracking-wide text-navy/30">Tags</span>
+              <FilterPill label="All" active={tag === 'All'} onClick={() => handleTag('All')} />
+              {(tag !== 'All' && !shownTags.includes(tag) ? [tag, ...shownTags] : shownTags).map((t) => (
+                <FilterPill key={t} label={t} active={tag === t} onClick={() => handleTag(t)} />
+              ))}
+              {tagChoices.length > 12 && (
+                <button type="button" onClick={() => setAllTags((v) => !v)} className="text-[13px] font-semibold text-primary hover:underline">
+                  {allTags ? 'Fewer' : `+${tagChoices.length - 12} more`}
+                </button>
+              )}
+            </div>
+          )}
           <div className="flex flex-wrap items-center gap-2">
             <span className="mr-1 text-[12px] font-semibold uppercase tracking-wide text-navy/30">Module Type</span>
             <FilterPill label="All" active={moduleType === 'All'} onClick={() => setModuleType('All')} />
