@@ -126,6 +126,11 @@ export interface AdminCategory {
   slug: string
   parent_id: string | null
   sort_order: number
+  // Its look (Portal migration 0047) — keys of components/systems/
+  // categoryIcons.ts; absent before it runs.
+  icon?: string | null
+  color?: string | null
+  cover_image_url?: string | null
 }
 
 export interface AdminCatalogProduct {

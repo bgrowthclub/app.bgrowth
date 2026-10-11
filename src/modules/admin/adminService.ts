@@ -78,8 +78,11 @@ export const adminService = {
   async createCategory(name: string, parentId: string) {
     return (await call<{ category: AdminCategory }>('POST', 'categories', undefined, { name, parentId })).category
   },
-  async updateCategory(id: string, patch: { name?: string; parentId?: string }) {
+  async updateCategory(id: string, patch: { name?: string; parentId?: string; icon?: string; color?: string; coverImageUrl?: string }) {
     return (await call<{ category: AdminCategory }>('PATCH', 'categories', undefined, { id, ...patch })).category
+  },
+  async uploadCategoryCover(dataUrl: string) {
+    return (await call<{ url: string }>('POST', 'newsletter-image', undefined, { dataUrl, folder: 'categories' })).url
   },
   async deleteCategory(id: string) {
     await call('DELETE', 'categories', undefined, { id })

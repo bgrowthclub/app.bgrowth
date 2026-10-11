@@ -12,6 +12,9 @@ import Grid from '../components/layout/Grid'
 import { loadBundleProducts, loadPublishedSystemProducts, loadStudioWorkspaceProducts, systemForCard } from '../lib/publishedCatalog'
 import type { Product } from '../modules/commerce/types/product'
 import { GROWTH_CATEGORIES } from '../types/growth'
+import { useCategoryLooks } from '../lib/useCategoryLooks'
+import type { CategoryLookKeys } from '../lib/useCategoryLooks'
+import { categoryLook } from '../components/systems/categoryIcons'
 import type { ModuleType } from '../types/system'
 
 const SORT_OPTIONS = [
@@ -104,6 +107,18 @@ export default function BrowseSystems() {
 
   // Area pills (Growth Categories) appear once Workspaces exist in more than
   // one Area; the static examples are all Business & Entrepreneurship.
+  // Icons and colors chosen in Admin → Catalog → Categories.
+  const looks = useCategoryLooks()
+  const lookIcon = (look: CategoryLookKeys | undefined, active: boolean) => {
+    if (!look) return undefined
+    const { Icon, color } = categoryLook(look)
+    return (
+      <span className={`grid h-5 w-5 place-items-center rounded-full ${active ? 'bg-white/20 text-white' : color.soft}`}>
+        <Icon size={12} />
+      </span>
+    )
+  }
+
   const areas = useMemo(() => {
     const present = new Set<string>(studioProducts.map((p) => p.category))
     if (publishedList.length) present.add('business-entrepreneurship')
@@ -211,14 +226,14 @@ export default function BrowseSystems() {
               <span className="mr-1 text-[12px] font-semibold uppercase tracking-wide text-navy/30">Area</span>
               <FilterPill label="All" active={area === 'All'} onClick={() => handleArea('All')} />
               {areas.map((g) => (
-                <FilterPill key={g.id} label={g.label} active={area === g.id} onClick={() => handleArea(g.id)} />
+                <FilterPill key={g.id} label={g.label} active={area === g.id} onClick={() => handleArea(g.id)} icon={lookIcon(looks.bySlug.get(g.id), area === g.id)} />
               ))}
             </div>
           )}
           <div className="flex flex-wrap items-center gap-2">
             <span className="mr-1 text-[12px] font-semibold uppercase tracking-wide text-navy/30">Industry</span>
             {industries.map((c) => (
-              <FilterPill key={c} label={c} active={category === c} onClick={() => handleCategory(c)} />
+              <FilterPill key={c} label={c} active={category === c} onClick={() => handleCategory(c)} icon={lookIcon(looks.byName.get(c), category === c)} />
             ))}
           </div>
           <div className="flex flex-wrap items-center gap-2">
