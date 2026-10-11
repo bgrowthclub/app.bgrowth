@@ -4,9 +4,10 @@ import { motion } from 'framer-motion'
 import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react'
 import WorkspaceCoverCard from '../systems/WorkspaceCoverCard'
 import StudioWorkspaceCard from '../systems/StudioWorkspaceCard'
+import BundleCard from '../systems/BundleCard'
 import SectionHeader from '../ui/SectionHeader'
 import Button from '../ui/Button'
-import { loadFeaturedSystemProducts, loadStudioWorkspaceProducts, systemForCard } from '../../lib/publishedCatalog'
+import { isBundleProduct, loadFeaturedSystemProducts, loadHomeFeatured, loadStudioWorkspaceProducts, systemForCard } from '../../lib/publishedCatalog'
 import type { Product } from '../../modules/commerce/types/product'
 import { fadeUp, viewportOnce } from '../../lib/motion'
 
@@ -87,6 +88,9 @@ export default function StartHere() {
   // Every Workspace published from BGrowth Studio leads the row, before
   // the featured examples.
   const [studioProducts, setStudioProducts] = useState<Product[]>([])
+  // The highlights chosen in Admin → Site (Sprint 80); when there are any,
+  // they replace the row above, in the chosen order.
+  const [highlights, setHighlights] = useState<Awaited<ReturnType<typeof loadHomeFeatured>>>([])
 
   useEffect(() => {
     let cancelled = false
@@ -96,6 +100,11 @@ export default function StartHere() {
     loadStudioWorkspaceProducts().then((products) => {
       if (!cancelled) setStudioProducts(products)
     })
+    loadHomeFeatured()
+      .then((list) => {
+        if (!cancelled) setHighlights(list)
+      })
+      .catch(() => undefined)
     return () => {
       cancelled = true
     }
@@ -125,7 +134,20 @@ export default function StartHere() {
           ref={trackRef}
           className="container-px flex cursor-grab snap-x snap-mandatory gap-5 overflow-x-auto pb-2 pt-1 active:cursor-grabbing [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
         >
-          {studioProducts.map((product, i) => (
+          {highlights.map(({ product, items }, i) => (
+            <motion.div
+              key={product.id}
+              variants={fadeUp}
+              custom={i}
+              initial="hidden"
+              whileInView="show"
+              viewport={viewportOnce}
+              className="w-[260px] shrink-0 sm:w-[300px] lg:w-[320px]"
+            >
+              {isBundleProduct(product) ? <BundleCard bundle={product} items={items} /> : <StudioWorkspaceCard product={product} />}
+            </motion.div>
+          ))}
+          {!highlights.length && studioProducts.map((product, i) => (
             <motion.div
               key={product.id}
               variants={fadeUp}
@@ -138,7 +160,7 @@ export default function StartHere() {
               <StudioWorkspaceCard product={product} />
             </motion.div>
           ))}
-          {workspaces.map((pair, i) => (
+          {!highlights.length && workspaces.map((pair, i) => (
             <motion.div
               key={pair.product.id}
               variants={fadeUp}

@@ -22,6 +22,7 @@ import {
   SquareUser,
   ShieldCheck,
   History,
+  Megaphone,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -114,6 +115,7 @@ export const PLATFORM_NAV_GROUPS: PlatformNavGroup[] = [
       { label: 'Catalog', to: '/platform/admin/catalog', icon: ClipboardCheck },
       { label: 'Bundles', to: '/platform/admin/bundles', icon: Package },
       { label: 'Pages', to: '/platform/admin/pages', icon: SquareUser },
+      { label: 'Site', to: '/platform/admin/site', icon: Megaphone },
       { label: 'Categories', to: '/platform/admin/categories', icon: Tags },
       { label: 'Newsletter', to: '/platform/admin/newsletter', icon: Mail },
       { label: 'Reviews', to: '/platform/admin/reviews', icon: Star, support: true },

@@ -1422,6 +1422,7 @@ async function catalogHealth(db: Db) {
       ['0043 Inglês de Mudança e-mails', 'ingles_leads'],
       ['0044 Member pages', 'member_pages'],
       ['0045 Member page numbers', 'member_page_stats'],
+      ['0046 Site announcements & Home highlights', 'site_announcements'],
     ].map(async ([name, table]) => ({ name, ok: await tableExists(table) })),
   )
   const { data: address } = await db.from('site_settings').select('value').eq('key', 'newsletter_address').maybeSingle()
@@ -2182,6 +2183,133 @@ async function removeTeamMember(req: VercelRequest, db: Db, admin: Admin) {
 }
 
 // ---------------------------------------------------------------------------
+// Site (Portal migration 0046): announcements — the bar at the top of the
+// public site and/or the bell in the member area — and the Home highlights
+// (which products the Home shows, in order). Visitors read what is live
+// straight from Supabase (RLS); every change goes through here.
+// ---------------------------------------------------------------------------
+const ANNOUNCEMENT_TONES = new Set(['news', 'promo', 'notice'])
+
+// A link is a full https:// address or a page of this site ("/product/…").
+function cleanLink(value: unknown) {
+  const url = cleanText(value, 500)
+  if (!url) return null
+  if (/^\/[^\s]*$/.test(url) || /^https:\/\/[^\s]+$/i.test(url)) return url
+  throw new HttpError(400, 'The link must start with https:// or be a page of this site (starting with /).')
+}
+
+function cleanDate(value: unknown, field: string) {
+  const text = cleanText(value, 40)
+  if (!text) return null
+  const date = new Date(text)
+  if (Number.isNaN(date.getTime())) throw new HttpError(400, `${field} isn’t a valid date.`)
+  return date.toISOString()
+}
+
+function readAnnouncement(raw: Record<string, unknown> | undefined) {
+  const title = cleanText(raw?.title, 140)
+  if (!title) throw new HttpError(400, 'Give the announcement a title.')
+  const tone = cleanText(raw?.tone, 20) || 'news'
+  if (!ANNOUNCEMENT_TONES.has(tone)) throw new HttpError(400, 'Unknown color.')
+  const showBanner = raw?.showBanner !== false
+  const showBell = raw?.showBell !== false
+  if (!showBanner && !showBell) throw new HttpError(400, 'Choose where it shows: the top bar, the bell, or both.')
+  const startsAt = cleanDate(raw?.startsAt, 'The start date')
+  const endsAt = cleanDate(raw?.endsAt, 'The end date')
+  if (startsAt && endsAt && endsAt <= startsAt) throw new HttpError(400, 'The end date must be after the start date.')
+  const linkUrl = cleanLink(raw?.linkUrl)
+  return {
+    title,
+    body: cleanText(raw?.body, 500),
+    link_url: linkUrl,
+    link_label: linkUrl ? cleanText(raw?.linkLabel, 40) || null : null,
+    tone,
+    show_banner: showBanner,
+    show_bell: showBell,
+    active: raw?.active !== false,
+    starts_at: startsAt,
+    ends_at: endsAt,
+  }
+}
+
+async function siteOverview(db: Db) {
+  const [announcements, featured, products] = await Promise.all([
+    db.from('site_announcements').select('*').order('created_at', { ascending: false }),
+    db.from('home_featured').select('product_id, sort_order').order('sort_order'),
+    db
+      .from('products')
+      .select('id, name, slug, content_type')
+      .eq('status', 'published')
+      .in('content_type', [...SELLABLE_TYPES, 'bundle'])
+      .order('name'),
+  ])
+  if (announcements.error) {
+    if (isMissingTable(announcements.error)) return { announcements: [], featured: [], products: [], ready: false }
+    throw announcements.error
+  }
+  if (featured.error) throw featured.error
+  if (products.error) throw products.error
+  return {
+    products: products.data ?? [],
+    announcements: announcements.data ?? [],
+    featured: ((featured.data ?? []) as { product_id: string }[]).map((f) => f.product_id),
+    ready: true,
+  }
+}
+
+async function createAnnouncement(req: VercelRequest, db: Db, admin: Admin) {
+  const row = readAnnouncement(req.body)
+  const { data, error } = await db.from('site_announcements').insert({ ...row, created_by: admin.id }).select('*').single()
+  if (error) throw error
+  return { announcement: data }
+}
+
+async function updateAnnouncement(req: VercelRequest, db: Db) {
+  const id = str(req.body?.id ?? req.query.id)
+  if (!isUuid(id)) throw new HttpError(400, 'Missing announcement.')
+  const row = readAnnouncement(req.body)
+  const { data, error } = await db
+    .from('site_announcements')
+    .update({ ...row, updated_at: new Date().toISOString() })
+    .eq('id', id)
+    .select('*')
+    .maybeSingle()
+  if (error) throw error
+  if (!data) throw new HttpError(404, 'This announcement no longer exists.')
+  return { announcement: data }
+}
+
+async function deleteAnnouncement(req: VercelRequest, db: Db) {
+  const id = str(req.body?.id ?? req.query.id)
+  if (!isUuid(id)) throw new HttpError(400, 'Missing announcement.')
+  const { data, error } = await db.from('site_announcements').delete().eq('id', id).select('title').maybeSingle()
+  if (error) throw error
+  return { deleted: data ?? null }
+}
+
+// The whole list at once, in order (an empty list = the Home shows the
+// latest products). Only published, sellable products may be highlighted.
+async function saveHomeFeatured(req: VercelRequest, db: Db) {
+  const raw = Array.isArray(req.body?.productIds) ? (req.body.productIds as unknown[]) : []
+  const ids = [...new Set(raw.filter(isUuid))].slice(0, 12)
+  if (ids.length) {
+    const { data, error } = await db.from('products').select('id').in('id', ids).eq('status', 'published')
+    if (error) throw error
+    const found = new Set(((data ?? []) as { id: string }[]).map((p) => p.id))
+    const missing = ids.filter((id) => !found.has(id))
+    if (missing.length) throw new HttpError(400, 'Only published products can be highlighted on the Home.')
+  }
+  const { error: clearError } = await db.from('home_featured').delete().not('product_id', 'is', null)
+  if (clearError) throw clearError
+  if (ids.length) {
+    const now = new Date().toISOString()
+    const { error } = await db.from('home_featured').insert(ids.map((id, i) => ({ product_id: id, sort_order: i, updated_at: now })))
+    if (error) throw error
+  }
+  return { featured: ids }
+}
+
+// ---------------------------------------------------------------------------
 // Activity log (portal.admin_activity, Portal migration 0042): every change
 // made in the Admin area — who, what, when, on which member or product.
 // Recorded by the router below after the change succeeds; best effort, so a
@@ -2240,6 +2368,14 @@ function describe(key: string, b: Body, r: Record<string, any>): Described {
       return { area: 'pages', summary: `Edited the page bgrowth.app/p/${r.page?.slug ?? b.slug}${b.status === 'published' ? '' : ' (draft)'}` }
     case 'DELETE member-pages':
       return { area: 'pages', summary: `Deleted the page of ${r.deleted?.display_name ?? 'a member'} (bgrowth.app/p/${r.deleted?.slug ?? ''})` }
+    case 'POST announcements':
+      return { area: 'site', summary: `Created the announcement “${b.title}”` }
+    case 'PATCH announcements':
+      return { area: 'site', summary: `Edited the announcement “${r.announcement?.title ?? b.title}”` }
+    case 'DELETE announcements':
+      return { area: 'site', summary: `Deleted the announcement “${r.deleted?.title ?? ''}”` }
+    case 'PUT home-featured':
+      return { area: 'site', summary: r.featured?.length ? `Set the Home highlights (${r.featured.length} products)` : 'Cleared the Home highlights' }
     case 'POST newsletter-campaign':
       return { area: 'newsletter', summary: `Saved the newsletter “${String(b.subject ?? '').slice(0, 120)}”` }
     case 'DELETE newsletter-campaign':
@@ -2416,6 +2552,11 @@ const ROUTES: Record<string, Route> = {
   'POST member-pages': (req, db) => createMemberPage(req, db),
   'PATCH member-pages': (req, db) => updateMemberPage(req, db),
   'DELETE member-pages': (req, db) => deleteMemberPage(req, db),
+  'GET site': (_req, db) => siteOverview(db),
+  'POST announcements': (req, db, admin) => createAnnouncement(req, db, admin),
+  'PATCH announcements': (req, db) => updateAnnouncement(req, db),
+  'DELETE announcements': (req, db) => deleteAnnouncement(req, db),
+  'PUT home-featured': (req, db) => saveHomeFeatured(req, db),
   'GET team': (_req, db) => listTeam(db),
   'POST team': (req, db) => addTeamMember(req, db),
   'PATCH team': (req, db, admin) => updateTeamMember(req, db, admin),

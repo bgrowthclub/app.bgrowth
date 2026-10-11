@@ -1,4 +1,8 @@
+import { useEffect, useState } from 'react'
 import { Outlet, useLocation } from 'react-router-dom'
+import AnnouncementBar from './AnnouncementBar'
+import { getBannerAnnouncement } from '../../modules/site/siteService'
+import type { SiteAnnouncement } from '../../modules/site/types'
 import Navbar from './Navbar'
 import Footer from './Footer'
 import ScrollToTop from './ScrollToTop'
@@ -22,9 +26,47 @@ const AUTH_ROUTES = ['/login', '/register', '/forgot-password', '/reset-password
 // the user on 10/10/2026). Still inside this layout — no third layout.
 const BARE_PREFIXES = ['/p/']
 
+// The visitor closed this version of the notice (id + last edit).
+const DISMISSED_KEY = 'bgrowth.banner.dismissed'
+const bannerKey = (a: SiteAnnouncement) => `${a.id}:${a.updated_at}`
+
+function useBanner() {
+  const [banner, setBanner] = useState<SiteAnnouncement | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    getBannerAnnouncement()
+      .then((a) => {
+        if (cancelled || !a) return
+        let dismissed: string | null = null
+        try {
+          dismissed = localStorage.getItem(DISMISSED_KEY)
+        } catch {
+          /* private mode: show it */
+        }
+        if (dismissed !== bannerKey(a)) setBanner(a)
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [])
+  const close = () => {
+    if (banner) {
+      try {
+        localStorage.setItem(DISMISSED_KEY, bannerKey(banner))
+      } catch {
+        /* ignore */
+      }
+    }
+    setBanner(null)
+  }
+  return { banner, close }
+}
+
 export default function AppLayout() {
   const { pathname } = useLocation()
   const mode = isMemberRoute(pathname) ? 'member' : 'public'
+  const { banner, close } = useBanner()
 
   if (AUTH_ROUTES.includes(pathname) || BARE_PREFIXES.some((prefix) => pathname.startsWith(prefix))) {
     return (
@@ -45,7 +87,9 @@ export default function AppLayout() {
     // sticky PurchaseCard) anywhere under this root.
     <div className="relative min-h-screen overflow-x-clip bg-bg">
       <ScrollToTop />
-      <Navbar mode={mode} />
+      <Navbar mode={mode} banner={banner ? <AnnouncementBar announcement={banner} onClose={close} /> : undefined} />
+      {/* Same height as the announcement bar, so it never covers the page. */}
+      {banner && <div aria-hidden className="h-10 print:hidden" />}
       <main>
         <Outlet />
       </main>
