@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
 import { ChevronRight } from 'lucide-react'
 import SidebarItem from './SidebarItem'
@@ -24,32 +24,13 @@ export default function SidebarGroup({ group, collapsed = false, badges = {}, on
     if (holdsCurrentPage) setOpen(true)
   }, [holdsCurrentPage])
 
-  // Resting the mouse on a closed group shows what's inside (a short delay
-  // so it doesn't open while the mouse just passes by); clicking the title
-  // keeps it open. Touch screens use the click.
-  const [peek, setPeek] = useState(false)
-  const timer = useRef<number | undefined>(undefined)
-  useEffect(() => () => window.clearTimeout(timer.current), [])
-  const startPeek = () => {
-    window.clearTimeout(timer.current)
-    timer.current = window.setTimeout(() => setPeek(true), 250)
-  }
-  const endPeek = () => {
-    window.clearTimeout(timer.current)
-    setPeek(false)
-  }
-
   const canCollapse = Boolean(group.collapsible) && !collapsed
-  const showItems = !canCollapse || open || peek
+  const showItems = !canCollapse || open
   // While closed, the group's title still shows what is waiting inside.
   const waiting = group.items.reduce((sum, item) => sum + (item.badge ? badges[item.badge] ?? 0 : 0), 0)
 
   return (
-    <div
-      className={tight ? '!mt-1' : undefined}
-      onMouseEnter={canCollapse && !open ? startPeek : undefined}
-      onMouseLeave={canCollapse ? endPeek : undefined}
-    >
+    <div className={tight ? '!mt-1' : undefined}>
       {group.label && !collapsed && !canCollapse && (
         <p className="mb-1.5 px-3 text-[11px] font-semibold uppercase tracking-wide text-navy/30">
           {group.label}
@@ -58,16 +39,13 @@ export default function SidebarGroup({ group, collapsed = false, badges = {}, on
       {canCollapse && (
         <button
           type="button"
-          onClick={() => {
-            endPeek()
-            setOpen((o) => !o)
-          }}
+          onClick={() => setOpen((o) => !o)}
           aria-expanded={open}
           className="mb-0.5 flex w-full items-center gap-1.5 rounded-lg px-3 py-1.5 text-left text-[11px] font-semibold uppercase tracking-wide text-navy/40 transition-colors hover:bg-bg-soft hover:text-navy/70"
         >
-          <ChevronRight size={13} className={`shrink-0 transition-transform ${open || peek ? 'rotate-90' : ''}`} />
+          <ChevronRight size={13} className={`shrink-0 transition-transform ${open ? 'rotate-90' : ''}`} />
           <span className="flex-1 truncate">{group.label}</span>
-          {!open && !peek && waiting > 0 && (
+          {!open && waiting > 0 && (
             <span className="rounded-full bg-primary px-1.5 py-0.5 text-[10px] font-bold leading-none text-white">{waiting}</span>
           )}
         </button>
