@@ -150,7 +150,8 @@ export default function AnnouncementEditor({ announcement, onSave, onCancel }: P
         </div>
         <label className="flex items-center gap-2 text-[13.5px] font-semibold text-navy sm:col-span-2">
           <input type="checkbox" checked={draft.active} onChange={(e) => set('active', e.target.checked)} className="h-4 w-4 accent-primary" />
-          On
+          Active — show this announcement on the site
+          <span className="font-normal text-navy/40">(uncheck to hide it without deleting)</span>
         </label>
       </div>
 

@@ -15,7 +15,7 @@ import type { SiteAnnouncement } from '../../../modules/site/types'
 // Live now: on, inside its dates.
 function state(a: SiteAnnouncement): { label: string; tone: 'green' | 'amber' | 'gray' } {
   const now = new Date().toISOString()
-  if (!a.active) return { label: 'Off', tone: 'gray' }
+  if (!a.active) return { label: 'Hidden (not active)', tone: 'gray' }
   if (a.starts_at && a.starts_at > now) return { label: `Starts ${formatDate(a.starts_at)}`, tone: 'amber' }
   if (a.ends_at && a.ends_at <= now) return { label: 'Ended', tone: 'gray' }
   return { label: 'Live', tone: 'green' }
