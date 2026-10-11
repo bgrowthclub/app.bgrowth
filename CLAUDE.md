@@ -184,7 +184,7 @@ This repo is a **static, client-only MVP**:
   (`/platform/my-page`, nav item `pageOwnerOnly`) with its numbers; the
   team sees them in Admin → Pages → Numbers (resource `member-page-stats`).
   **Since Sprint 78 Studio calculators are sold and run here** (approved
-  by the user; site only — the Portal hides them): a `portal.products`
+  by the user; the Portal sells and runs them too, same screen): a `portal.products`
   row with content_type `calculator` whose `content` is the Studio's
   `CalculatorConfig` (`modules/calculator/`, formula engine copied from
   the Studio). It lists in the catalog, sells like a Workspace (alone or
