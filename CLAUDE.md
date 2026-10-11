@@ -183,6 +183,16 @@ This repo is a **static, client-only MVP**:
   a member's account (owner e-mail in Admin → Pages) shows "My Page"
   (`/platform/my-page`, nav item `pageOwnerOnly`) with its numbers; the
   team sees them in Admin → Pages → Numbers (resource `member-page-stats`).
+  **Since Sprint 78 Studio calculators are sold and run here** (approved
+  by the user; the Portal sells and runs them too, same screen): a `portal.products`
+  row with content_type `calculator` whose `content` is the Studio's
+  `CalculatorConfig` (`modules/calculator/`, formula engine copied from
+  the Studio). It lists in the catalog, sells like a Workspace (alone or
+  in a Bundle — `SELLABLE_TYPES` in `api/admin.ts`) and opens at
+  `/platform/workspace/:slug` in `components/calculator/CalculatorRunner`;
+  a saved calculation is a `workspace_instances` record
+  (`{kind:'calculator', values, notes}`). Published from the Studio's
+  Calculators screen through the Portal's publish endpoint.
   **Since Sprint 71 `/p/bruno/ingles-de-mudanca/*` is a separate app**
   (approved by the user; under Bruno's member page since Sprint 72, the
   old `/ingles-de-mudanca/*` redirects there): the "Inglês de Mudança"

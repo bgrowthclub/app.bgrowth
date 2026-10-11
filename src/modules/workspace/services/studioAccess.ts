@@ -49,7 +49,7 @@ export async function listStudioLibrary(memberId: string): Promise<StudioLibrary
   const resolveCategory = categoryResolver(categories)
   const items: StudioLibraryItem[] = []
   for (const row of rows) {
-    if (row.content_type !== 'workspace') continue
+    if (row.content_type !== 'workspace' && row.content_type !== 'calculator') continue
     const license = licenses.find((l) => l.product_id === row.id) ?? null
     const grant = activeGrants.find((g) => g.scope === 'all' || g.product_id === row.id)
     const accessState = deriveAccessState(license, Boolean(grant))

@@ -63,8 +63,8 @@ function loadSnapshot(): Promise<CatalogSnapshot> {
     // Bundles are optional: a database without them still lists Workspaces.
     studioWorkspaceService.listBundles().catch(() => NO_BUNDLES),
   ]).then(([rows, categories, bundles]: [PortalCatalogRow[], PortalCategoryRow[], typeof NO_BUNDLES]) => {
-    // Only Workspaces for now — the one content type the viewer opens.
-    const workspaces = rows.filter((r) => r.content_type === 'workspace')
+    // Workspaces and (since Sprint 78) calculators — what the viewer opens.
+    const workspaces = rows.filter((r) => r.content_type === 'workspace' || r.content_type === 'calculator')
     const listed = new Set(workspaces.map((r) => r.product_id))
     // A bundle is shown only while it still includes a listed Workspace.
     const bundleItems = bundles.items.filter((i) => listed.has(i.product_id))
@@ -155,6 +155,8 @@ export function studioProductFromRow(row: PortalProductRow, placement: CategoryP
   const faq = arrayOf(meta.faq, isFaq)
   return {
     ...product,
+    // A Studio calculator (Sprint 78) is sold and opened like a Workspace.
+    ...(row.content_type === 'calculator' ? { type: 'Calculator' as const } : {}),
     featured,
     longDescription: isString(meta.longDescription) ? meta.longDescription : undefined,
     benefits: arrayOf(meta.features, isTitled).map(({ title, description }) => ({ title, description: description ?? '' })),
