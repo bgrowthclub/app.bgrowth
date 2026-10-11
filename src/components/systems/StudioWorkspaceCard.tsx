@@ -2,6 +2,9 @@ import { Link } from 'react-router-dom'
 import { ArrowUpRight } from 'lucide-react'
 import { ICONS_BY_CATEGORY } from './categoryIcons'
 import type { Product } from '../../modules/commerce/types/product'
+import StarRating from '../ui/StarRating'
+import { useReviewSummaries } from '../../modules/workspace/hooks/useReviewSummaries'
+import { studioPortalId } from '../../modules/commerce/store/studioProductRepository'
 
 interface Props {
   product: Product
@@ -21,6 +24,8 @@ function formatPrice(product: Product) {
 export default function StudioWorkspaceCard({ product }: Props) {
   const Icon = ICONS_BY_CATEGORY[product.industry ?? ''] ?? ICONS_BY_CATEGORY.Default
   const cover = product.assets.thumbnail
+  const portalId = studioPortalId(product.id)
+  const rating = useReviewSummaries()[portalId ?? '']
 
   return (
     <Link
@@ -47,6 +52,13 @@ export default function StudioWorkspaceCard({ product }: Props) {
           <p className="text-[11px] font-semibold uppercase tracking-wide text-primary/70">{product.industry}</p>
         )}
         <h3 className="mt-2 font-display text-[17px] font-bold leading-snug text-navy line-clamp-2">{product.title}</h3>
+        {rating && rating.reviewCount > 0 && (
+          <p className="mt-1.5 inline-flex items-center gap-1.5 text-[12.5px]">
+            <StarRating rating={rating.averageRating} size={12} />
+            <span className="font-semibold text-navy">{rating.averageRating.toFixed(1)}</span>
+            <span className="text-navy/45">({rating.reviewCount})</span>
+          </p>
+        )}
         <p className="mt-2 flex-1 text-[13.5px] leading-relaxed text-navy/50 line-clamp-3">{product.description}</p>
 
         <div className="mt-5 flex items-center justify-between border-t border-navy/[0.06] pt-4">

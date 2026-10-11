@@ -247,6 +247,18 @@ export const studioWorkspaceService = {
     return (data ?? []) as PortalReviewRow[]
   },
 
+  // Every product's star average in one query — for the catalog cards.
+  async listReviewSummaries(): Promise<Record<string, PortalReviewSummary>> {
+    const { data, error } = await client()
+      .from('product_review_summary')
+      .select('product_id, average_rating, review_count')
+    if (error) throw error
+    const rows = (data ?? []) as { product_id: string; average_rating: number | string | null; review_count: number }[]
+    return Object.fromEntries(
+      rows.map((r) => [r.product_id, { averageRating: Number(r.average_rating ?? 0), reviewCount: r.review_count ?? 0 }]),
+    )
+  },
+
   async getReviewSummary(productId: string): Promise<PortalReviewSummary> {
     const { data, error } = await client()
       .from('product_review_summary')
