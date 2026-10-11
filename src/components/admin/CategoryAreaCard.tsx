@@ -18,7 +18,14 @@ interface Props {
   onMove: (category: AdminCategory, areaId: string) => void
   onDelete: (category: AdminCategory) => void
   // Icon, color and cover (Portal migration 0047).
+  colorUse: Map<string, string[]>
   onLook: (category: AdminCategory, patch: CategoryLookPatch) => Promise<boolean>
+}
+
+// The chosen color, next to the palette button (nothing when none chosen).
+function ColorDot({ category }: { category: AdminCategory }) {
+  if (!category.color) return null
+  return <span className={`ml-1 inline-block h-2.5 w-2.5 rounded-full ${categoryLook(category).color.dot}`} />
 }
 
 function CategoryChipIcon({ category }: { category: AdminCategory }) {
@@ -31,7 +38,7 @@ function CategoryChipIcon({ category }: { category: AdminCategory }) {
 }
 
 // One Area (a Growth Category) and the categories inside it.
-export default function CategoryAreaCard({ area, areas, items, counts, busy, onCreate, onRename, onMove, onDelete, onLook }: Props) {
+export default function CategoryAreaCard({ area, areas, items, counts, busy, onCreate, onRename, onMove, onDelete, onLook, colorUse }: Props) {
   const [adding, setAdding] = useState(false)
   const [newName, setNewName] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
@@ -40,7 +47,7 @@ export default function CategoryAreaCard({ area, areas, items, counts, busy, onC
   const [lookId, setLookId] = useState<string | null>(null)
   const lookEditor = (category: AdminCategory) =>
     lookId === category.id ? (
-      <CategoryLookEditor category={category} busy={busy} onSave={(patch) => onLook(category, patch)} onClose={() => setLookId(null)} />
+      <CategoryLookEditor category={category} colorUse={colorUse} busy={busy} onSave={(patch) => onLook(category, patch)} onClose={() => setLookId(null)} />
     ) : null
   const { Icon: AreaIcon, color: areaTone } = categoryLook(area)
   const total = (counts.get(area.id) ?? 0) + items.reduce((n, c) => n + (counts.get(c.id) ?? 0), 0)
@@ -73,6 +80,7 @@ export default function CategoryAreaCard({ area, areas, items, counts, busy, onC
           className={`${LINK_BUTTON} text-navy/50 hover:bg-bg-soft`}
         >
           <Palette size={15} />
+          <ColorDot category={area} />
         </button>
         <span className={pillClass(total ? 'blue' : 'gray')}>
           {total} {total === 1 ? 'Workspace' : 'Workspaces'}
@@ -121,6 +129,7 @@ export default function CategoryAreaCard({ area, areas, items, counts, busy, onC
                   className={`${LINK_BUTTON} text-navy/50 hover:bg-bg-soft`}
                 >
                   <Palette size={14} />
+                  <ColorDot category={c} />
                 </button>
                 <button
                   type="button"

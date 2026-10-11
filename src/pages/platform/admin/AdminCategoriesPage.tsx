@@ -92,6 +92,12 @@ export default function AdminCategoriesPage() {
     if (updated) replaceCategory(updated)
   }
 
+  // Which areas/categories use each color (Admin can see repeats).
+  const colorUse = new Map<string, string[]>()
+  for (const c of data?.categories ?? []) {
+    if (c.color) colorUse.set(c.color, [...(colorUse.get(c.color) ?? []), c.name])
+  }
+
   async function saveLook(category: AdminCategory, patch: { icon: string; color: string; coverImageUrl: string }) {
     const updated = await run(() => adminService.updateCategory(category.id, patch))
     if (updated) replaceCategory(updated)
@@ -156,6 +162,7 @@ export default function AdminCategoriesPage() {
                   onMove={move}
                   onDelete={setToDelete}
                   onLook={saveLook}
+                  colorUse={colorUse}
                 />
               ))}
             </div>
