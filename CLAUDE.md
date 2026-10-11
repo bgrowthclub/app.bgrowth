@@ -205,6 +205,15 @@ This repo is a **static, client-only MVP**:
   Reads go straight to Supabase (RLS: only live notices); writes go through
   `api/admin.ts`. Next for this area (decided 11/10/2026): page texts and
   images, menu and footer, SEO, and the legal pages (Terms).
+  **Since Sprint 81–82 the Admin menu is grouped and categories have a
+  look** (approved by the user): the Admin part of the side menu is four
+  collapsible groups (Overview, People, Catalog, Site & content —
+  `collapsible` in `platformNav.ts`); Admin → Catalog → Health Check is the
+  old "Catalog" check. Each area/category gets an icon, a color and an
+  optional cover (Portal migration 0047, keys in
+  `components/systems/categoryIcons.ts` mirrored in `api/admin.ts`), shown
+  on the catalog's filters. Next in Catalog: managed Tags (Admin →
+  Catalog → Tags).
   **Since Sprint 71 `/p/bruno/ingles-de-mudanca/*` is a separate app**
   (approved by the user; under Bruno's member page since Sprint 72, the
   old `/ingles-de-mudanca/*` redirects there): the "Inglês de Mudança"

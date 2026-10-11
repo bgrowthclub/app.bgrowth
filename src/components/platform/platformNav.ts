@@ -136,7 +136,7 @@ export const PLATFORM_NAV_GROUPS: PlatformNavGroup[] = [
     adminOnly: true,
     collapsible: true,
     items: [
-      { label: 'Catalog', to: '/platform/admin/catalog', icon: ClipboardCheck },
+      { label: 'Health Check', to: '/platform/admin/catalog', icon: ClipboardCheck },
       { label: 'Bundles', to: '/platform/admin/bundles', icon: Package },
       { label: 'Categories', to: '/platform/admin/categories', icon: Tags },
       { label: 'Reviews', to: '/platform/admin/reviews', icon: Star, support: true },

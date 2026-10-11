@@ -47,10 +47,10 @@ export default function AdminCatalogPage() {
 
   return (
     <div className="mx-auto max-w-5xl">
-      <SEO title="Catalog · Admin" description="Catalog and system health." path="/platform/admin/catalog" />
+      <SEO title="Health Check · Admin" description="Catalog and system health." path="/platform/admin/catalog" />
       <SectionHeader
         eyebrow="Admin"
-        title="Catalog"
+        title="Health Check"
         description="Every published Workspace checked: what stops it from selling or working, and what would make its page better. Fix them in the Studio."
         className="mb-8"
       />

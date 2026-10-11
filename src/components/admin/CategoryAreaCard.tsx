@@ -1,6 +1,9 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { Check, Pencil, Plus, Trash2, X } from 'lucide-react'
+import { Check, Palette, Pencil, Plus, Trash2, X } from 'lucide-react'
+import CategoryLookEditor from './CategoryLookEditor'
+import type { CategoryLookPatch } from './CategoryLookEditor'
+import { categoryLook } from '../systems/categoryIcons'
 import type { AdminCategory } from '../../modules/admin/types'
 import { CARD, INPUT, LINK_BUTTON, pillClass } from './styles'
 
@@ -14,14 +17,32 @@ interface Props {
   onRename: (category: AdminCategory, name: string) => Promise<boolean>
   onMove: (category: AdminCategory, areaId: string) => void
   onDelete: (category: AdminCategory) => void
+  // Icon, color and cover (Portal migration 0047).
+  onLook: (category: AdminCategory, patch: CategoryLookPatch) => Promise<boolean>
+}
+
+function CategoryChipIcon({ category }: { category: AdminCategory }) {
+  const { Icon, color } = categoryLook(category)
+  return (
+    <span className={`grid h-6 w-6 shrink-0 place-items-center rounded-md ${color.soft}`}>
+      <Icon size={13} />
+    </span>
+  )
 }
 
 // One Area (a Growth Category) and the categories inside it.
-export default function CategoryAreaCard({ area, areas, items, counts, busy, onCreate, onRename, onMove, onDelete }: Props) {
+export default function CategoryAreaCard({ area, areas, items, counts, busy, onCreate, onRename, onMove, onDelete, onLook }: Props) {
   const [adding, setAdding] = useState(false)
   const [newName, setNewName] = useState('')
   const [editingId, setEditingId] = useState<string | null>(null)
   const [editName, setEditName] = useState('')
+  // The area or category whose look is being edited.
+  const [lookId, setLookId] = useState<string | null>(null)
+  const lookEditor = (category: AdminCategory) =>
+    lookId === category.id ? (
+      <CategoryLookEditor category={category} busy={busy} onSave={(patch) => onLook(category, patch)} onClose={() => setLookId(null)} />
+    ) : null
+  const { Icon: AreaIcon, color: areaTone } = categoryLook(area)
   const total = (counts.get(area.id) ?? 0) + items.reduce((n, c) => n + (counts.get(c.id) ?? 0), 0)
 
   async function add(e: FormEvent) {
@@ -40,11 +61,24 @@ export default function CategoryAreaCard({ area, areas, items, counts, busy, onC
   return (
     <div className={`${CARD} p-5`}>
       <div className="mb-3 flex items-center gap-3">
+        <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-lg ${areaTone.soft}`}>
+          <AreaIcon size={16} />
+        </span>
         <h3 className="min-w-0 flex-1 truncate font-display text-[15px] font-bold text-navy">{area.name}</h3>
+        <button
+          type="button"
+          onClick={() => setLookId(lookId === area.id ? null : area.id)}
+          aria-label={`Icon and color of ${area.name}`}
+          title="Icon, color and cover"
+          className={`${LINK_BUTTON} text-navy/50 hover:bg-bg-soft`}
+        >
+          <Palette size={15} />
+        </button>
         <span className={pillClass(total ? 'blue' : 'gray')}>
           {total} {total === 1 ? 'Workspace' : 'Workspaces'}
         </span>
       </div>
+      {lookEditor(area)}
 
       {items.length === 0 && !adding && <p className="mb-2 text-[13px] text-navy/40">No categories yet.</p>}
 
@@ -63,6 +97,7 @@ export default function CategoryAreaCard({ area, areas, items, counts, busy, onC
               </form>
             ) : (
               <>
+                <CategoryChipIcon category={c} />
                 <span className="min-w-0 flex-1 truncate text-[14px] text-navy">{c.name}</span>
                 <span className="text-[12px] text-navy/40">{counts.get(c.id) ?? 0}</span>
                 <select
@@ -80,6 +115,15 @@ export default function CategoryAreaCard({ area, areas, items, counts, busy, onC
                 </select>
                 <button
                   type="button"
+                  onClick={() => setLookId(lookId === c.id ? null : c.id)}
+                  aria-label={`Icon and color of ${c.name}`}
+                  title="Icon, color and cover"
+                  className={`${LINK_BUTTON} text-navy/50 hover:bg-bg-soft`}
+                >
+                  <Palette size={14} />
+                </button>
+                <button
+                  type="button"
                   onClick={() => {
                     setEditingId(c.id)
                     setEditName(c.name)
@@ -94,6 +138,7 @@ export default function CategoryAreaCard({ area, areas, items, counts, busy, onC
                 </button>
               </>
             )}
+            {lookId === c.id && <div className="w-full">{lookEditor(c)}</div>}
           </li>
         ))}
       </ul>

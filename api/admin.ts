@@ -629,7 +629,22 @@ async function saveSupportHours(req: VercelRequest, db: Db, admin: Admin) {
 // keeps one category_id (a Ramo, or an Area for a general Workspace). Studio
 // and the Website's catalog filters read this same list.
 // ---------------------------------------------------------------------------
-type CategoryRow = { id: string; name: string; slug: string; parent_id: string | null; sort_order: number }
+type CategoryRow = {
+  id: string
+  name: string
+  slug: string
+  parent_id: string | null
+  sort_order: number
+  // How it looks (Portal migration 0047); absent before it runs.
+  icon?: string | null
+  color?: string | null
+  cover_image_url?: string | null
+}
+
+// Keys of the Website's icon/color lists (src/components/systems/
+// categoryIcons.ts — keep in step).
+const CATEGORY_ICONS = new Set(['layers', 'briefcase', 'stamp', 'sparkles', 'calculator', 'truck', 'car', 'home', 'heart', 'graduation', 'languages', 'piggy', 'scale', 'file', 'megaphone', 'shop', 'camera', 'scissors', 'food', 'wrench', 'paw', 'baby', 'fitness', 'building', 'globe'])
+const CATEGORY_COLORS = new Set(['blue', 'green', 'teal', 'amber', 'orange', 'red', 'pink', 'purple', 'gray'])
 
 function slugify(text: string) {
   return text
@@ -645,7 +660,7 @@ function slugify(text: string) {
 async function loadCategories(db: Db): Promise<CategoryRow[]> {
   const { data, error } = await db
     .from('workspace_categories')
-    .select('id, name, slug, parent_id, sort_order')
+    .select('*')
     .order('sort_order')
     .order('name')
   if (error) throw error
@@ -705,12 +720,27 @@ async function updateCategory(req: VercelRequest, db: Db) {
     if (!parent || parent.parent_id) throw new HttpError(400, 'Categories can only go inside an area.')
     patch.parent_id = parent.id
   }
+  // Its look (Admin → Catalog → Categories; areas too). '' = back to the
+  // default.
+  if (req.body?.icon !== undefined) {
+    const icon = str(req.body.icon)
+    if (icon && !CATEGORY_ICONS.has(icon)) throw new HttpError(400, 'Unknown icon.')
+    patch.icon = icon || null
+  }
+  if (req.body?.color !== undefined) {
+    const color = str(req.body.color)
+    if (color && !CATEGORY_COLORS.has(color)) throw new HttpError(400, 'Unknown color.')
+    patch.color = color || null
+  }
+  if (req.body?.coverImageUrl !== undefined) {
+    patch.cover_image_url = cleanUrl(req.body.coverImageUrl, 'The cover image') || null
+  }
   if (Object.keys(patch).length === 0) throw new HttpError(400, 'Nothing to change.')
   const { data, error } = await db
     .from('workspace_categories')
     .update(patch)
     .eq('id', id)
-    .select('id, name, slug, parent_id, sort_order')
+    .select('*')
     .single()
   if (error) throw error
   return { category: data }
@@ -994,7 +1024,7 @@ async function uploadNewsletterImage(req: VercelRequest, db: Db) {
   const ext = match[2] === 'jpeg' ? 'jpg' : match[2]
   // Also used for bundle covers (Admin → Bundles) and member page photos
   // (Admin → Pages).
-  const folder = ['bundles', 'pages'].includes(str(req.body?.folder)) ? str(req.body?.folder) : 'newsletter'
+  const folder = ['bundles', 'pages', 'categories'].includes(str(req.body?.folder)) ? str(req.body?.folder) : 'newsletter'
   const path = `${folder}/${new Date().toISOString().slice(0, 10)}/${randomUUID()}.${ext}`
   const { error } = await db.storage.from('portal-product-assets').upload(path, bytes, { contentType: match[1], upsert: false })
   if (error) throw error
@@ -1406,8 +1436,10 @@ async function catalogHealth(db: Db) {
     { name: 'Daily tasks (CRON_SECRET)', ok: Boolean(process.env.CRON_SECRET) },
     { name: 'Team e-mail for new messages (SUPPORT_NOTIFY_EMAIL)', ok: Boolean(process.env.SUPPORT_NOTIFY_EMAIL), optional: true },
   ]
-  const tableExists = async (table: string) => {
-    const { error } = await db.from(table).select('*', { count: 'exact', head: true }).limit(1)
+  // 'table' or 'table.column' (an update that only added a column).
+  const tableExists = async (target: string) => {
+    const [table, column] = target.split('.')
+    const { error } = await db.from(table).select(column ?? '*', { count: 'exact', head: true }).limit(1)
     return !error
   }
   const updates = await Promise.all(
@@ -1423,6 +1455,7 @@ async function catalogHealth(db: Db) {
       ['0044 Member pages', 'member_pages'],
       ['0045 Member page numbers', 'member_page_stats'],
       ['0046 Site announcements & Home highlights', 'site_announcements'],
+      ['0047 Category icons & colors', 'workspace_categories.icon'],
     ].map(async ([name, table]) => ({ name, ok: await tableExists(table) })),
   )
   const { data: address } = await db.from('site_settings').select('value').eq('key', 'newsletter_address').maybeSingle()

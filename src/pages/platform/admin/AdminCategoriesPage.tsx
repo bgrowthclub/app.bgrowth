@@ -92,6 +92,12 @@ export default function AdminCategoriesPage() {
     if (updated) replaceCategory(updated)
   }
 
+  async function saveLook(category: AdminCategory, patch: { icon: string; color: string; coverImageUrl: string }) {
+    const updated = await run(() => adminService.updateCategory(category.id, patch))
+    if (updated) replaceCategory(updated)
+    return Boolean(updated)
+  }
+
   async function confirmDelete() {
     if (!toDelete) return
     const id = toDelete.id
@@ -119,7 +125,7 @@ export default function AdminCategoriesPage() {
       <SectionHeader
         eyebrow="Admin"
         title="Categories"
-        description="The areas and categories used by Studio and by the site’s catalog filters."
+        description="The areas and categories used by Studio and by the site’s catalog filters. Use the palette button to give each one an icon and a color."
         className="mb-8"
       />
 
@@ -149,6 +155,7 @@ export default function AdminCategoriesPage() {
                   onRename={rename}
                   onMove={move}
                   onDelete={setToDelete}
+                  onLook={saveLook}
                 />
               ))}
             </div>

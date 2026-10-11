@@ -65,6 +65,10 @@ export interface PortalCategoryRow {
   slug: string
   // Area → category (Portal migration 0032); absent on older databases.
   parent_id?: string | null
+  // Its look (Portal migration 0047): icon/color keys and a cover image.
+  icon?: string | null
+  color?: string | null
+  cover_image_url?: string | null
 }
 
 export interface PortalLicenseRow {
