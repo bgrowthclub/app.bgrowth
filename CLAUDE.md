@@ -193,6 +193,18 @@ This repo is a **static, client-only MVP**:
   a saved calculation is a `workspace_instances` record
   (`{kind:'calculator', values, notes}`). Published from the Studio's
   Calculators screen through the Portal's publish endpoint.
+  **Since Sprint 80 the site is partly managed in Admin → Site** (approved
+  by the user; Portal migration 0046, resources `site`, `announcements`,
+  `home-featured`): announcements (`portal.site_announcements`) show as the
+  bar at the top of the public site (`layout/AnnouncementBar`, inside the
+  fixed Navbar plus a spacer in AppLayout; a visitor can close it) and/or
+  in the member area's bell (`platform/NotificationButton`; a dot for
+  notices newer than `portal.users.announcements_seen_at`, set through
+  `api/account.ts?resource=announcements-seen`). The Home highlights
+  (`portal.home_featured`, in order) replace the "Start Here" row when set.
+  Reads go straight to Supabase (RLS: only live notices); writes go through
+  `api/admin.ts`. Next for this area (decided 11/10/2026): page texts and
+  images, menu and footer, SEO, and the legal pages (Terms).
   **Since Sprint 71 `/p/bruno/ingles-de-mudanca/*` is a separate app**
   (approved by the user; under Bruno's member page since Sprint 72, the
   old `/ingles-de-mudanca/*` redirects there): the "Inglês de Mudança"

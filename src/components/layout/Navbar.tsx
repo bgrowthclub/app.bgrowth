@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import type { ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Link, NavLink } from 'react-router-dom'
 import { Menu, X, LogOut } from 'lucide-react'
@@ -39,7 +40,8 @@ const MEMBER_LINKS: NavItem[] = [
   { label: 'Account', to: '/account' },
 ]
 
-export default function Navbar({ mode = 'public' }: { mode?: NavMode }) {
+// `banner`: the announcement bar (AnnouncementBar), shown above the menu.
+export default function Navbar({ mode = 'public', banner }: { mode?: NavMode; banner?: ReactNode }) {
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
   const links = mode === 'member' ? MEMBER_LINKS : PUBLIC_LINKS
@@ -64,10 +66,10 @@ export default function Navbar({ mode = 'public' }: { mode?: NavMode }) {
       initial={{ y: -24, opacity: 0 }}
       animate={{ y: 0, opacity: 1 }}
       transition={{ duration: 0.6, ease: 'easeOut' }}
-      className={`fixed inset-x-0 top-0 z-50 transition-all duration-300 print:hidden ${
-        scrolled ? 'py-3' : 'py-5'
-      }`}
+      className="fixed inset-x-0 top-0 z-50 print:hidden"
     >
+      {banner}
+      <div className={`transition-all duration-300 ${scrolled ? 'py-3' : 'py-5'}`}>
       <div className="container-px mx-auto max-w-page">
         <div
           className={`relative flex items-center justify-between rounded-2xl px-4 py-2.5 transition-all duration-300 ${
@@ -150,6 +152,7 @@ export default function Navbar({ mode = 'public' }: { mode?: NavMode }) {
           </button>
         </div>
 
+      </div>
       </div>
 
       {/* Mobile navigation — a bottom sheet (iOS-style) rather than a

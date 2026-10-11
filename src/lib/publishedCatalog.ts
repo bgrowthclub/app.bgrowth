@@ -5,6 +5,7 @@ import type { Product } from '../modules/commerce/types/product'
 import type { BusinessSystem } from '../types/system'
 import type { WorkspaceOutlineSection } from '../modules/workspace/types/portal'
 import { studioWorkspaceService } from '../modules/workspace/services/studioWorkspaceService'
+import { getHomeFeaturedIds } from '../modules/site/siteService'
 
 // Resolves a product's underlying BusinessSystem when it's GrowthSystem-
 // sourced — the one place every marketing-site page bridges Commerce's
@@ -102,6 +103,21 @@ export async function loadBundleProducts(): Promise<Product[]> {
 async function loadIncluded(bundle: Product): Promise<Product[]> {
   const items = await Promise.all((bundle.includedProductIds ?? []).map((id) => productCatalogService.getById(id)))
   return items.filter((p): p is Product => Boolean(p))
+}
+
+// The Home highlights chosen in Admin → Site (Portal migration 0046), in
+// order; a bundle comes with what it includes. Empty = none chosen (the
+// Home then shows the latest products, as before).
+export async function loadHomeFeatured(): Promise<{ product: Product; items: Product[] }[]> {
+  const ids = await getHomeFeaturedIds()
+  if (!ids.length) return []
+  const all = await productCatalogService.getAll()
+  const byId = new Map(all.map((p) => [p.id, p]))
+  const picked = ids.flatMap((id) => {
+    const product = byId.get(id)
+    return product && (isStudioWorkspaceProduct(product) || isBundleProduct(product)) ? [product] : []
+  })
+  return Promise.all(picked.map(async (product) => ({ product, items: isBundleProduct(product) ? await loadIncluded(product) : [] })))
 }
 
 // A bundle and the Workspaces it includes, in order (null: no such bundle).

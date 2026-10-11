@@ -10,6 +10,8 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 //   GET    ?resource=deletion  → the member's latest request (or null)
 //   POST   ?resource=deletion  { reason?, source? } → new pending request
 //   DELETE ?resource=deletion  → cancel the pending request
+//   POST   ?resource=announcements-seen → the member opened the bell
+//          (portal.users.announcements_seen_at, Portal migration 0046)
 //
 // Called from the Website's Settings and the Portal's Profile (CORS below).
 // Table: portal.account_deletion_requests (Portal migration 0039).
@@ -100,7 +102,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   allowPortal(req, res)
   if (req.method === 'OPTIONS') return res.status(204).end()
   try {
-    if (str(req.query.resource) !== 'deletion') throw new HttpError(404, 'Unknown action.')
+    const resource = str(req.query.resource)
+    if (resource !== 'deletion' && resource !== 'announcements-seen') throw new HttpError(404, 'Unknown action.')
     const url = process.env.SUPABASE_URL
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY
     if (!url || !key) throw new HttpError(500, 'This isn’t configured on this site yet.')
@@ -109,6 +112,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       auth: { persistSession: false, autoRefreshToken: false },
     }) as Db
     const user = await signedInUser(req, db)
+
+    // The member opened the bell (Sprint 80): notices up to now are seen.
+    if (resource === 'announcements-seen') {
+      if (req.method !== 'POST') throw new HttpError(405, 'Use POST.')
+      const seenAt = new Date().toISOString()
+      const { error } = await db.from('users').update({ announcements_seen_at: seenAt }).eq('id', user.id)
+      if (error) throw error
+      return res.status(200).json({ ok: true, seenAt })
+    }
 
     const latest = async () => {
       const { data, error } = await db

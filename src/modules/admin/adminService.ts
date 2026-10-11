@@ -1,10 +1,13 @@
 import { supabase } from '../identity/supabase/supabaseClient'
+import type { SiteAnnouncement } from '../site/types'
 import type {
   AdminGrant,
   AdminLicense,
   AdminMemberDetail,
   AdminMemberPage,
   AdminProduct,
+  AdminSiteOverview,
+  AdminAnnouncementDraft,
   AdminSalesReport,
   AdminSupportInbox,
   AdminSupportThread,
@@ -182,6 +185,18 @@ export const adminService = {
   },
   async uploadMemberPageImage(dataUrl: string) {
     return (await call<{ url: string }>('POST', 'newsletter-image', undefined, { dataUrl, folder: 'pages' })).url
+  },
+  getSite() {
+    return call<AdminSiteOverview>('GET', 'site')
+  },
+  async saveAnnouncement(draft: AdminAnnouncementDraft) {
+    return (await call<{ announcement: SiteAnnouncement }>(draft.id ? 'PATCH' : 'POST', 'announcements', undefined, draft)).announcement
+  },
+  async removeAnnouncement(id: string) {
+    await call('DELETE', 'announcements', undefined, { id })
+  },
+  async saveHomeFeatured(productIds: string[]) {
+    return (await call<{ featured: string[] }>('PUT', 'home-featured', undefined, { productIds })).featured
   },
   async listTeam() {
     return (await call<{ team: AdminTeamMember[] }>('GET', 'team')).team

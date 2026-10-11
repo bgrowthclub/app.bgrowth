@@ -346,7 +346,7 @@ export interface AdminTeamMember {
 }
 
 // Admin → Activity: one change made in the Admin area.
-export type AdminActivityArea = 'members' | 'support' | 'catalog' | 'pages' | 'newsletter' | 'deletions' | 'reviews' | 'team'
+export type AdminActivityArea = 'members' | 'support' | 'catalog' | 'pages' | 'site' | 'newsletter' | 'deletions' | 'reviews' | 'team'
 
 export interface AdminActivityEntry {
   id: string
@@ -395,4 +395,33 @@ export interface AdminMemberPageDraft {
   // The BGrowth account that owns the page (sees its numbers in My Page);
   // empty = no owner.
   ownerEmail: string
+}
+
+// Admin → Site (Portal migration 0046).
+export interface AdminSiteProduct {
+  id: string
+  name: string
+  slug: string
+  content_type: string
+}
+
+export interface AdminSiteOverview {
+  announcements: import('../site/types').SiteAnnouncement[]
+  featured: string[]
+  products: AdminSiteProduct[]
+  ready: boolean
+}
+
+export interface AdminAnnouncementDraft {
+  id?: string
+  title: string
+  body: string
+  linkUrl: string
+  linkLabel: string
+  tone: import('../site/types').AnnouncementTone
+  showBanner: boolean
+  showBell: boolean
+  active: boolean
+  startsAt: string | null
+  endsAt: string | null
 }
