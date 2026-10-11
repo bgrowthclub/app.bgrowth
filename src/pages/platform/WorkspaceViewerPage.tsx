@@ -4,6 +4,7 @@ import { ArrowLeft, Lock } from 'lucide-react'
 import SEO from '../../components/seo/SEO'
 import Button from '../../components/ui/Button'
 import DocumentWorkspaceRenderer from '../../components/workspace/DocumentWorkspaceRenderer'
+import CalculatorRunner from '../../components/calculator/CalculatorRunner'
 import RecordSwitcher from '../../components/workspace/RecordSwitcher'
 import RecordsPanel from '../../components/workspace/RecordsPanel'
 import NewRecordDialog from '../../components/workspace/NewRecordDialog'
@@ -15,8 +16,12 @@ import { useProductReviews } from '../../modules/workspace/hooks/useProductRevie
 import { studioWorkspaceService } from '../../modules/workspace/services/studioWorkspaceService'
 import { workspaceViewerPath } from '../../modules/workspace/config'
 import type { WorkspaceData } from '../../modules/workspace/types/content'
+import { isCalculatorConfig } from '../../modules/calculator/types'
+import type { CalculatorSavedData } from '../../modules/calculator/types'
 
-// Opens a Studio-published Workspace inside the customer area — the same
+// Opens a Studio-published Workspace — or, since Sprint 78, a Studio
+// calculator (content_type 'calculator', same records and access rules) —
+// inside the customer area — the same
 // Workspace a member works through on the Portal (same account, same saved
 // records). Without ?instance= it's a blank, unsaved copy; "New record"
 // creates a named, saved one.
@@ -83,6 +88,7 @@ export default function WorkspaceViewerPage() {
   )
 
   if (!ws.hasAccess) {
+    const noun = product.content_type === 'calculator' ? 'Calculator' : 'Workspace'
     return (
       <div className="mx-auto max-w-2xl">
         <SEO title={product.name} description={product.short_description} path={`/platform/workspace/${slug}`} />
@@ -92,11 +98,11 @@ export default function WorkspaceViewerPage() {
           <h1 className="mt-4 font-display text-2xl font-bold text-navy">{product.name}</h1>
           <p className="mt-2 text-[14px] text-navy/55">
             {ws.accessState === 'expired'
-              ? 'Your access to this Workspace has ended.'
-              : 'You don’t have access to this Workspace yet.'}
+              ? `Your access to this ${noun} has ended.`
+              : `You don’t have access to this ${noun} yet.`}
           </p>
           <Button to={`/product/${product.slug}`} className="mt-6">
-            See Workspace
+            See {noun}
           </Button>
         </div>
       </div>
@@ -161,7 +167,14 @@ export default function WorkspaceViewerPage() {
       )}
 
       <div className="mt-8">
-        {product.content ? (
+        {product.content_type === 'calculator' && isCalculatorConfig(product.content) ? (
+          <CalculatorRunner
+            key={instance?.id ?? 'blank'}
+            config={product.content}
+            initialData={instance?.data as Partial<CalculatorSavedData> | undefined}
+            onSave={instance ? (data) => handleSave(data as unknown as WorkspaceData) : undefined}
+          />
+        ) : product.content ? (
           <DocumentWorkspaceRenderer
             key={instance?.id ?? 'blank'}
             content={product.content}

@@ -18,7 +18,8 @@ export default function StudioWorkspaceOutline({ sections }: Props) {
   return (
     <ol className="grid gap-3 md:grid-cols-2">
       {sections.map((section, i) => {
-        const { label, Icon } = KIND[section.type] ?? KIND.form
+        // Calculator steps (Sprint 78) have no section type — no kind label.
+        const kind = KIND[section.type]
         return (
           <li
             key={section.id}
@@ -33,10 +34,12 @@ export default function StudioWorkspaceOutline({ sections }: Props) {
                 {section.optional && <span className="ml-2 text-[11px] font-medium text-navy/40">Optional</span>}
               </p>
               {section.description && <p className="mt-1 text-[13px] leading-relaxed text-navy/50">{section.description}</p>}
-              <span className="mt-2 inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-primary/70">
-                <Icon size={13} />
-                {label}
-              </span>
+              {kind && (
+                <span className="mt-2 inline-flex items-center gap-1.5 text-[11.5px] font-semibold text-primary/70">
+                  <kind.Icon size={13} />
+                  {kind.label}
+                </span>
+              )}
             </div>
           </li>
         )

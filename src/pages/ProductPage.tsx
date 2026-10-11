@@ -140,7 +140,7 @@ export default function ProductPage() {
               ) : (
                 <Badge>{system?.category ?? product.industry ?? product.category}</Badge>
               )}
-              <Badge variant="outline">{studio ? 'Workspace™' : system?.type ?? product.type}</Badge>
+              <Badge variant="outline">{studio ? (product.type === 'Calculator' ? 'Calculator™' : 'Workspace™') : system?.type ?? product.type}</Badge>
               {(product.difficulty ?? system?.difficulty) && (
                 <Badge variant="outline">{product.difficulty ?? system?.difficulty}</Badge>
               )}

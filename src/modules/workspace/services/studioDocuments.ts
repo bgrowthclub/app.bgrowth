@@ -1,6 +1,9 @@
 import { studioWorkspaceService, isStudioCatalogAvailable } from './studioWorkspaceService'
 import { computeWorkspaceProgress } from '../hooks/useWorkspaceProgress'
 import type { WorkspaceData } from '../types/content'
+import { calcCompletion, buildDefaultValues } from '../../calculator/formulaEngine'
+import { isCalculatorConfig } from '../../calculator/types'
+import type { CalculatorSavedData } from '../../calculator/types'
 
 export interface StudioDocument {
   id: string
@@ -32,9 +35,14 @@ export async function listStudioDocuments(userId: string): Promise<StudioDocumen
     const product = byId.get(instance.product_id)
     // RLS hides a product the member can no longer see — skip its records.
     if (!product) continue
-    const percent = product.content
-      ? computeWorkspaceProgress(product.content, (instance.data ?? {}) as WorkspaceData).percent
-      : 0
+    // A saved calculation (Sprint 78) counts its required fields filled in.
+    const content = product.content as unknown
+    const percent =
+      product.content_type === 'calculator' && isCalculatorConfig(content)
+        ? calcCompletion(content, { ...buildDefaultValues(content), ...((instance.data as Partial<CalculatorSavedData> | null)?.values ?? {}) })
+        : product.content
+          ? computeWorkspaceProgress(product.content, (instance.data ?? {}) as WorkspaceData).percent
+          : 0
     const group = groups.get(product.id) ?? { productSlug: product.slug, productName: product.name, documents: [] }
     group.documents.push({
       id: instance.id,
