@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
 import SEO from '../components/seo/SEO'
 import MemberPageView from '../components/find/MemberPageView'
-import { getPublishedMemberPage } from '../modules/find/memberPageService'
+import { getPublishedMemberPage, trackMemberPageClick, trackMemberPageView } from '../modules/find/memberPageService'
 import type { MemberPage } from '../modules/find/types'
 
 // /p/:slug — a member's public page (BGrowth Find™, Portal migration 0044).
@@ -17,7 +17,9 @@ export default function MemberPublicPage() {
     setPage(undefined)
     getPublishedMemberPage(slug.toLowerCase())
       .then((p) => {
-        if (!cancelled) setPage(p)
+        if (cancelled) return
+        setPage(p)
+        if (p) trackMemberPageView(p.slug)
       })
       .catch(() => {
         if (!cancelled) setPage(null)
@@ -38,7 +40,7 @@ export default function MemberPublicPage() {
         path={`/p/${page.slug}`}
         ogImage={page.photo_url ?? undefined}
       />
-      <MemberPageView page={page} />
+      <MemberPageView page={page} onLinkClick={(target) => trackMemberPageClick(page.slug, target)} />
     </div>
   )
 }

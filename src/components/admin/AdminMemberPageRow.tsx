@@ -5,11 +5,12 @@ import type { MemberPage } from '../../modules/find/types'
 interface Props {
   page: MemberPage
   onEdit: () => void
+  onNumbers: () => void
   onRemove: () => void
 }
 
 // One public page in Admin → Pages.
-export default function AdminMemberPageRow({ page, onEdit, onRemove }: Props) {
+export default function AdminMemberPageRow({ page, onEdit, onNumbers, onRemove }: Props) {
   const published = page.status === 'published'
   return (
     <div className="flex flex-wrap items-center gap-4 px-5 py-4">
@@ -24,6 +25,7 @@ export default function AdminMemberPageRow({ page, onEdit, onRemove }: Props) {
         <p className="truncate text-[14.5px] font-semibold text-navy">{page.display_name}</p>
         <p className="mt-0.5 truncate text-[12.5px] text-navy/45">
           bgrowth.app/p/{page.slug} · updated {formatDate(page.updated_at)}
+          {page.owner_email && <> · owner {page.owner_email}</>}
         </p>
       </div>
       <span className={pillClass(published ? 'green' : 'gray')}>{published ? 'Published' : 'Draft'}</span>
@@ -33,6 +35,9 @@ export default function AdminMemberPageRow({ page, onEdit, onRemove }: Props) {
             View <ExternalLink size={13} />
           </a>
         )}
+        <button type="button" onClick={onNumbers} className={`${LINK_BUTTON} text-navy/60 hover:bg-bg-soft`}>
+          Numbers
+        </button>
         <button type="button" onClick={onEdit} className={`${LINK_BUTTON} text-primary hover:bg-bg-soft`}>
           Edit
         </button>

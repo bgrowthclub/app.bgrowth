@@ -86,6 +86,7 @@ export default function MemberPageEditor({ page, onSave, onCancel }: Props) {
   const [bio, setBio] = useState(page?.bio ?? '')
   const [photoUrl, setPhotoUrl] = useState(page?.photo_url ?? '')
   const [language, setLanguage] = useState<MemberPage['language']>(page?.language ?? 'en')
+  const [ownerEmail, setOwnerEmail] = useState(page?.owner_email ?? '')
   const [links, setLinks] = useState<MemberPageLink[]>(page?.links ?? [])
   const [services, setServices] = useState<MemberPageService[]>(page?.services ?? [])
   const [highlights, setHighlights] = useState<MemberPageHighlight[]>(page?.highlights ?? [])
@@ -122,7 +123,7 @@ export default function MemberPageEditor({ page, onSave, onCancel }: Props) {
     setSaving(status)
     setError(null)
     try {
-      await onSave({ id: page?.id, slug, displayName, headline, bio, photoUrl, location, links, services, highlights, language, status })
+      await onSave({ id: page?.id, slug, displayName, headline, bio, photoUrl, location, links, services, highlights, language, status, ownerEmail })
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Couldn’t save the page.')
     } finally {
@@ -227,6 +228,17 @@ export default function MemberPageEditor({ page, onSave, onCancel }: Props) {
               </select>
             </label>
           </div>
+
+          <label className="block">
+            <span className={LABEL}>Owner — BGrowth account e-mail (optional)</span>
+            <input
+              type="email"
+              value={ownerEmail}
+              onChange={(e) => setOwnerEmail(e.target.value)}
+              className={INPUT}
+              placeholder="The member sees this page’s numbers in My Page"
+            />
+          </label>
 
           <section>
             <span className={LABEL}>Contact buttons (the first one is the big one)</span>

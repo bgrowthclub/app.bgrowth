@@ -17,6 +17,9 @@ interface Props {
   page: Pick<MemberPage, 'display_name' | 'headline' | 'bio' | 'photo_url' | 'location' | 'services' | 'highlights' | 'links' | 'language'>
   // Admin preview: links don't navigate.
   preview?: boolean
+  // Called when a visitor opens a contact button or featured item, with
+  // 'link:<type>' or 'featured:<title>' — the page's click numbers.
+  onLinkClick?: (target: string) => void
 }
 
 function initials(name: string) {
@@ -30,11 +33,13 @@ function initials(name: string) {
 
 // A member's own page (BGrowth Find™): the person first, then what they
 // offer and how to reach them. Shared by /p/:slug and the Admin preview.
-export default function MemberPageView({ page, preview = false }: Props) {
+export default function MemberPageView({ page, preview = false, onLinkClick }: Props) {
   const t = MEMBER_PAGE_LABELS[page.language] ?? MEMBER_PAGE_LABELS.en
   const [primary, ...others] = page.links
-  const linkProps = (type: string, url: string) =>
-    preview ? { href: '#', onClick: (e: React.MouseEvent) => e.preventDefault() } : { href: memberLinkHref(type, url), target: '_blank', rel: 'noreferrer' }
+  const linkProps = (type: string, url: string, target: string) =>
+    preview
+      ? { href: '#', onClick: (e: React.MouseEvent) => e.preventDefault() }
+      : { href: memberLinkHref(type, url), target: '_blank', rel: 'noreferrer', onClick: () => onLinkClick?.(target) }
 
   return (
     <div className="mx-auto w-full max-w-xl px-5 py-12">
@@ -59,7 +64,7 @@ export default function MemberPageView({ page, preview = false }: Props) {
         <section aria-label={t.contact} className="mt-8 space-y-3">
           {primary && (
             <a
-              {...linkProps(primary.type, primary.url)}
+              {...linkProps(primary.type, primary.url, `link:${primary.type}`)}
               className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-4 text-[16px] font-semibold text-white shadow-softer transition-colors hover:bg-primary/90"
             >
               {(() => {
@@ -76,7 +81,7 @@ export default function MemberPageView({ page, preview = false }: Props) {
                 return (
                   <a
                     key={link.label + link.url}
-                    {...linkProps(link.type, link.url)}
+                    {...linkProps(link.type, link.url, `link:${link.type}`)}
                     className="flex items-center justify-center gap-2 rounded-2xl border border-navy/10 bg-white px-4 py-3.5 text-[14.5px] font-semibold text-navy transition-colors hover:border-primary/30"
                   >
                     <Icon size={17} aria-hidden /> {memberLinkLabel(link, page.language)}
@@ -113,7 +118,7 @@ export default function MemberPageView({ page, preview = false }: Props) {
                       {h.description && <p className="mt-1 text-[14px] leading-relaxed text-navy/60">{h.description}</p>}
                       {h.url && (
                         <a
-                          {...linkProps('website', h.url)}
+                          {...linkProps('website', h.url, `featured:${h.title}`)}
                           className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-[14.5px] font-semibold text-white transition-colors hover:bg-primary/90"
                         >
                           {h.cta?.trim() || t.learnMore} <ArrowRight size={16} aria-hidden />
@@ -139,7 +144,7 @@ export default function MemberPageView({ page, preview = false }: Props) {
               )
               const cls = 'block overflow-hidden rounded-2xl border border-navy/[0.08] bg-white shadow-softer'
               return h.url ? (
-                <a key={h.title} {...linkProps('website', h.url)} className={`${cls} transition-colors hover:border-primary/30`}>
+                <a key={h.title} {...linkProps('website', h.url, `featured:${h.title}`)} className={`${cls} transition-colors hover:border-primary/30`}>
                   {body}
                 </a>
               ) : (

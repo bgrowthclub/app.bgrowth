@@ -1,5 +1,5 @@
 import { supabase } from '../identity/supabase/supabaseClient'
-import type { MemberPage } from './types'
+import type { MemberPage, MemberPageStats } from './types'
 
 // Reads a published member page (row-level security only returns
 // published ones). Writes go through api/admin.ts.
@@ -81,4 +81,69 @@ export function videoEmbed(link: string): VideoEmbed | null {
     return m ? { src: `https://www.instagram.com/${m[1] === 'reels' ? 'reel' : m[1]}/${m[2]}/embed`, vertical: true } : null
   }
   return null
+}
+
+// ---------------------------------------------------------------------------
+// Numbers (Portal migration 0045). Counting goes through the site's server
+// (api/ingles.ts — the one public function for pages and the course); the
+// page's owner reads their own numbers here, under row-level security.
+// ---------------------------------------------------------------------------
+
+const TRACK_URL = '/api/ingles?action=track'
+
+function send(body: Record<string, string>) {
+  try {
+    const payload = JSON.stringify(body)
+    if (navigator.sendBeacon?.(TRACK_URL, new Blob([payload], { type: 'text/plain' }))) return
+    void fetch(TRACK_URL, { method: 'POST', body: payload, keepalive: true, headers: { 'Content-Type': 'application/json' } })
+  } catch {
+    /* counting never breaks the page */
+  }
+}
+
+const isAutomated = () => typeof navigator !== 'undefined' && navigator.webdriver === true
+
+// One visit per page per browser session (a reload isn't a new visit).
+export function trackMemberPageView(slug: string) {
+  if (isAutomated()) return
+  const key = `bgrowth.pageview.${slug}`
+  try {
+    if (sessionStorage.getItem(key)) return
+    sessionStorage.setItem(key, '1')
+  } catch {
+    /* private mode: count anyway */
+  }
+  send({ slug, kind: 'view' })
+}
+
+export function trackMemberPageClick(slug: string, target: string) {
+  if (isAutomated()) return
+  send({ slug, kind: 'click', target: target.slice(0, 120) })
+}
+
+// The signed-in member's own page, if the team linked one to their account.
+export async function getMyMemberPage(userId: string): Promise<MemberPage | null> {
+  if (!supabase) return null
+  const { data, error } = await supabase.from('member_pages').select('*').eq('user_id', userId).order('created_at').limit(1)
+  if (error) {
+    if (error.code === '42P01' || error.code === 'PGRST205') return null
+    throw error
+  }
+  return ((data ?? [])[0] as MemberPage | undefined) ?? null
+}
+
+export async function getMyMemberPageStats(pageId: string, days: number): Promise<MemberPageStats> {
+  if (!supabase) return { rows: [], days, ready: false }
+  const since = new Date(Date.now() - (days - 1) * 86_400_000).toISOString().slice(0, 10)
+  const { data, error } = await supabase
+    .from('member_page_stats')
+    .select('day, kind, target, count')
+    .eq('page_id', pageId)
+    .gte('day', since)
+    .order('day')
+  if (error) {
+    if (error.code === '42P01' || error.code === 'PGRST205') return { rows: [], days, ready: false }
+    throw error
+  }
+  return { rows: (data ?? []) as MemberPageStats['rows'], days, ready: true }
 }

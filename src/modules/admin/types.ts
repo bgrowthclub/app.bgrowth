@@ -392,4 +392,7 @@ export interface AdminMemberPageDraft {
   highlights: MemberPageHighlight[]
   language: MemberPage['language']
   status: MemberPage['status']
+  // The BGrowth account that owns the page (sees its numbers in My Page);
+  // empty = no owner.
+  ownerEmail: string
 }

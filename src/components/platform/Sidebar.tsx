@@ -20,9 +20,10 @@ function SidebarBody({ collapsed, badges, onNavigate }: { collapsed: boolean; ba
   const role = adminRoleOf(user)
   // Admin groups: everything for Admins, only the items marked `support`
   // for the Support role.
-  const groups = PLATFORM_NAV_GROUPS.filter((group) => !group.adminOnly || role).map((group) =>
-    group.adminOnly && role === 'support' ? { ...group, items: group.items.filter((item) => item.support) } : group,
-  )
+  // "My Page" only for members who have one.
+  const groups = PLATFORM_NAV_GROUPS.filter((group) => !group.adminOnly || role)
+    .map((group) => (group.adminOnly && role === 'support' ? { ...group, items: group.items.filter((item) => item.support) } : group))
+    .map((group) => ({ ...group, items: group.items.filter((item) => !item.pageOwnerOnly || user?.memberPage) }))
   return (
     <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5">
       {groups.map((group, i) => (

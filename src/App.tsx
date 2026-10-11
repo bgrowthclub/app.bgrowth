@@ -51,6 +51,7 @@ import AdminBundlesPage from './pages/platform/admin/AdminBundlesPage'
 import AdminTeamPage from './pages/platform/admin/AdminTeamPage'
 import AdminActivityPage from './pages/platform/admin/AdminActivityPage'
 import AdminMemberPagesPage from './pages/platform/admin/AdminMemberPagesPage'
+import MyPagePage from './pages/platform/MyPagePage'
 import NewsletterConfirmPage from './pages/newsletter/NewsletterConfirmPage'
 import NewsletterPreferencesPage from './pages/newsletter/NewsletterPreferencesPage'
 import AdminRoute from './modules/identity/routing/AdminRoute'
@@ -183,6 +184,7 @@ export default function App() {
         <Route path="profile" element={<ProfilePage />} />
         <Route path="membership" element={<MembershipPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="my-page" element={<MyPagePage />} />
         <Route path="support" element={<SupportPage />} />
         {/* Admin — BGrowth administrators only (portal.website_admins),
             re-checked by api/admin.ts on every request. Pages marked

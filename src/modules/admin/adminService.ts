@@ -13,7 +13,7 @@ import type {
   AdminNewsletterCampaign, AdminNewsletterDraft, AdminNewsletterOverview, AdminReview, AdminMemberDashboard, DashboardPeriod, AdminDeletionRequest, AdminCatalogHealth,
   AdminBundle, AdminBundleDraft, AdminBundlesOverview,
   AdminTeamMember, AdminActivityPage, AdminMemberPageDraft, AdminMemberPagesOverview } from './types'
-import type { MemberPage } from '../find/types'
+import type { MemberPage, MemberPageStats } from '../find/types'
 import type { SupportHours } from '../support/types'
 
 // The browser side of the Website's Administration — every call goes to
@@ -173,6 +173,9 @@ export const adminService = {
   },
   async saveMemberPage(draft: AdminMemberPageDraft) {
     return (await call<{ page: MemberPage }>(draft.id ? 'PATCH' : 'POST', 'member-pages', undefined, draft)).page
+  },
+  getMemberPageStats(id: string, days: number) {
+    return call<MemberPageStats>('GET', 'member-page-stats', { id, days: String(days) })
   },
   async removeMemberPage(id: string) {
     await call('DELETE', 'member-pages', undefined, { id })
