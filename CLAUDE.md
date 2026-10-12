@@ -254,6 +254,11 @@ This repo is a **static, client-only MVP**:
   `VITE_TURNSTILE_SITE_KEY` is set; the Portal and the Studio's admin
   sign-in carry the same helper, since Supabase's captcha setting covers
   every app on the project.
+  Admin → Members → "Clean up unconfirmed" (admin-only; resources
+  `unconfirmed`, `unconfirmed-cleanup`) deletes accounts never confirmed
+  14+ days after sign-up — never one with a license, an access grant or a
+  team role — plus a newsletter subscription with the same e-mail, 200 at
+  a time.
   **Since Sprint 71 `/p/bruno/ingles-de-mudanca/*` is a separate app**
   (approved by the user; under Bruno's member page since Sprint 72, the
   old `/ingles-de-mudanca/*` redirects there): the "Inglês de Mudança"
