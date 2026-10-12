@@ -110,6 +110,25 @@ async function sendWelcome(req: VercelRequest, db: Db, email: string, token: str
   }
 }
 
+// Bot protection (Sprint 87): with TURNSTILE_SECRET_KEY set, a sign-up
+// must carry a valid Cloudflare Turnstile token (src/lib/captcha.ts).
+async function captchaOk(req: VercelRequest): Promise<boolean> {
+  const secret = process.env.TURNSTILE_SECRET_KEY
+  if (!secret) return true
+  const token = str(req.body?.captchaToken)
+  if (!token) return false
+  try {
+    const ip = String(req.headers['x-forwarded-for'] ?? '').split(',')[0].trim()
+    const body = new URLSearchParams({ secret, response: token, ...(ip ? { remoteip: ip } : {}) })
+    const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', { method: 'POST', body })
+    const json = (await res.json()) as { success?: boolean }
+    return Boolean(json.success)
+  } catch (err) {
+    console.error('[newsletter] captcha check failed:', err)
+    return false
+  }
+}
+
 async function signedInUser(req: VercelRequest, db: Db) {
   const header = req.headers.authorization
   const token = header?.startsWith('Bearer ') ? header.slice(7) : null
@@ -165,6 +184,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (action === 'POST subscribe') {
       // Hidden field real people leave empty.
       if (str(req.body?.website)) return res.status(200).json({ ok: true, status: 'subscribed' })
+      if (!(await captchaOk(req))) throw new HttpError(400, 'The security check failed. Please try again.')
       const email = cleanEmail(req.body?.email)
       const interests = cleanInterests(req.body?.interests)
       const source = str(req.body?.source).slice(0, 40) || null

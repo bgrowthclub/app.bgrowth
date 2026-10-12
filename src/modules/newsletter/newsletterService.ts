@@ -1,6 +1,7 @@
 import { supabase } from '../identity/supabase/supabaseClient'
 import type { GrowthCategoryId } from '../../types/growth'
 import type { NewsletterPreferences } from './types'
+import { getCaptchaToken } from '../../lib/captcha'
 
 // Every newsletter call goes to api/newsletter.ts. The signed-in member's
 // token rides along when there is one, so a member subscribing their own
@@ -27,8 +28,10 @@ export const newsletterService = {
   // Subscribes at once. A new subscription comes back with its token, so
   // the form can ask for interests right away; an address that was already
   // subscribed comes back without one.
-  subscribe(email: string, source: string, website = '') {
-    return call<{ status: 'subscribed'; token?: string }>('POST', 'subscribe', undefined, { email, source, website })
+  async subscribe(email: string, source: string, website = '') {
+    // Bot protection (Sprint 87) — checked by api/newsletter.ts.
+    const captchaToken = await getCaptchaToken('newsletter')
+    return call<{ status: 'subscribed'; token?: string }>('POST', 'subscribe', undefined, { email, source, website, captchaToken })
   },
   confirm(token: string) {
     return call<NewsletterPreferences>('POST', 'confirm', undefined, { token })
