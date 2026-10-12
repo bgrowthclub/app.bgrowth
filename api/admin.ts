@@ -1575,6 +1575,68 @@ function memberEmail(heading: string, body: string) {
   </div>`
 }
 
+// Members → "Clean up unconfirmed" (Sprint 87): accounts that never
+// confirmed their e-mail more than 14 days after signing up — almost all
+// bot sign-ups. Never a team account or one with any license or access
+// given by the team. Deleting also removes a newsletter subscription with
+// the same e-mail; no e-mail is sent to them.
+const UNCONFIRMED_DAYS = 14
+const CLEANUP_BATCH = 200
+
+async function unconfirmedAccounts(db: Db) {
+  const cutoff = Date.now() - UNCONFIRMED_DAYS * 24 * 60 * 60 * 1000
+  const found: { id: string; email: string; createdAt: string }[] = []
+  for (let page = 1; page <= 20; page++) {
+    const { data, error } = await db.auth.admin.listUsers({ page, perPage: 1000 })
+    if (error) throw error
+    for (const u of data.users) {
+      if (u.email_confirmed_at || !u.email) continue
+      if (new Date(u.created_at).getTime() > cutoff) continue
+      found.push({ id: u.id, email: u.email, createdAt: u.created_at })
+    }
+    if (data.users.length < 1000) break
+  }
+  if (!found.length) return found
+  // Anything that ties an account to BGrowth keeps it.
+  const keep = new Set<string>()
+  for (let i = 0; i < found.length; i += 300) {
+    const ids = found.slice(i, i + 300).map((a) => a.id)
+    const lookups = await Promise.all([
+      db.from('licenses').select('user_id').in('user_id', ids),
+      db.from('access_grants').select('user_id').in('user_id', ids),
+      db.from('website_admins').select('user_id').in('user_id', ids),
+      db.from('studio_admins').select('user_id').in('user_id', ids),
+    ])
+    for (const r of lookups) {
+      if (r.error) throw r.error
+      for (const row of r.data ?? []) keep.add(row.user_id as string)
+    }
+  }
+  return found.filter((a) => !keep.has(a.id)).sort((a, b) => a.createdAt.localeCompare(b.createdAt))
+}
+
+async function listUnconfirmed(db: Db) {
+  const accounts = await unconfirmedAccounts(db)
+  return { days: UNCONFIRMED_DAYS, total: accounts.length, accounts: accounts.slice(0, 500) }
+}
+
+async function deleteUnconfirmed(db: Db) {
+  const accounts = (await unconfirmedAccounts(db)).slice(0, CLEANUP_BATCH)
+  let deleted = 0
+  for (const a of accounts) {
+    const { error } = await db.auth.admin.deleteUser(a.id)
+    if (error && !/not.?found/i.test(error.message)) {
+      console.error('[admin] unconfirmed cleanup failed:', a.email, error.message)
+      continue
+    }
+    deleted++
+    const nl = await db.from('newsletter_subscribers').delete().eq('email', a.email.toLowerCase())
+    if (nl.error) console.error('[admin] unconfirmed cleanup newsletter:', nl.error.message)
+  }
+  const remaining = Math.max(0, (await unconfirmedAccounts(db)).length)
+  return { deleted, remaining }
+}
+
 async function completeDeletion(req: VercelRequest, db: Db, admin: Admin) {
   const row = await pendingDeletion(db, str(req.body?.id))
   // The admin types the member's e-mail to confirm — this can't be undone.
@@ -2491,6 +2553,8 @@ function describe(key: string, b: Body, r: Record<string, any>): Described {
   switch (key) {
     case 'POST confirmation':
       return { area: 'members', summary: 'Resent the confirmation e-mail' }
+    case 'POST unconfirmed-cleanup':
+      return { area: 'members', summary: `Deleted ${r.deleted ?? 0} account(s) never confirmed after ${UNCONFIRMED_DAYS} days` }
     case 'POST grants':
       if (r.requiresConfirmation) return null
       return {
@@ -2679,6 +2743,8 @@ const ROUTES: Record<string, Route> = {
   'GET members': (req, db) => listMembers(req, db),
   'GET member': (req, db) => getMember(req, db),
   'POST confirmation': (req, db) => resendConfirmation(req, db),
+  'GET unconfirmed': (_req, db) => listUnconfirmed(db),
+  'POST unconfirmed-cleanup': (_req, db) => deleteUnconfirmed(db),
   'GET support': (req, db) => listSupport(req, db),
   'GET support-waiting': async (_req, db, admin) => {
     const counts = await countSupportWaiting(db)

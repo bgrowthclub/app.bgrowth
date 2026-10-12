@@ -51,6 +51,13 @@ export const adminService = {
   getMember(id: string) {
     return call<AdminMemberDetail>('GET', 'member', { id })
   },
+  // Accounts never confirmed after 14 days (Sprint 87) — preview, then delete.
+  listUnconfirmed() {
+    return call<{ days: number; total: number; accounts: { id: string; email: string; createdAt: string }[] }>('GET', 'unconfirmed')
+  },
+  cleanupUnconfirmed() {
+    return call<{ deleted: number; remaining: number }>('POST', 'unconfirmed-cleanup')
+  },
   async resendConfirmation(userId: string) {
     return (await call<{ sentTo: string }>('POST', 'confirmation', undefined, { userId })).sentTo
   },

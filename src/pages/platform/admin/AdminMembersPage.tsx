@@ -1,12 +1,16 @@
 import { useEffect, useState } from 'react'
-import { Users } from 'lucide-react'
+import { Trash2, Users } from 'lucide-react'
 import SEO from '../../../components/seo/SEO'
 import SectionHeader from '../../../components/ui/SectionHeader'
 import SearchBar from '../../../components/ui/SearchBar'
 import EmptyState from '../../../components/ui/EmptyState'
 import Pagination from '../../../components/ui/Pagination'
 import AdminMemberRow from '../../../components/admin/AdminMemberRow'
-import { CARD } from '../../../components/admin/styles'
+import UnconfirmedCleanup from '../../../components/admin/UnconfirmedCleanup'
+import { useIdentity } from '../../../modules/identity/IdentityContext'
+import { isFullAdmin } from '../../../modules/admin/permissions'
+import { CARD, SMALL_BUTTON } from '../../../components/admin/styles'
+import Button from '../../../components/ui/Button'
 import { adminService } from '../../../modules/admin/adminService'
 import type { AdminMemberPage } from '../../../modules/admin/types'
 
@@ -19,6 +23,8 @@ export default function AdminMembersPage() {
   const [result, setResult] = useState<AdminMemberPage | null>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [error, setError] = useState<string>()
+  const { user } = useIdentity()
+  const [cleanupOpen, setCleanupOpen] = useState(false)
 
   // Search after the admin stops typing, from page 1.
   useEffect(() => {
@@ -70,7 +76,13 @@ export default function AdminMembersPage() {
             {result.total} {result.total === 1 ? 'member' : 'members'}
           </p>
         )}
+        {isFullAdmin(user) && !cleanupOpen && (
+          <Button type="button" variant="secondary" onClick={() => setCleanupOpen(true)} className={SMALL_BUTTON} icon={<Trash2 size={15} />}>
+            Clean up unconfirmed
+          </Button>
+        )}
       </div>
+      {cleanupOpen && <UnconfirmedCleanup onClose={() => setCleanupOpen(false)} />}
 
       {status === 'error' ? (
         <EmptyState icon={Users} title="We couldn’t load the members." description={error} />
