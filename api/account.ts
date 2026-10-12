@@ -12,6 +12,10 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 //   DELETE ?resource=deletion  → cancel the pending request
 //   POST   ?resource=announcements-seen → the member opened the bell
 //          (portal.users.announcements_seen_at, Portal migration 0046)
+//   GET    ?resource=download&product=<id>&file=<id> → a 2-minute link to
+//          one file of a Download (content_type 'pdf') the member has
+//          access to — the files sit in the private library-files bucket
+//          (Portal migration 0049)
 //
 // Called from the Website's Settings and the Portal's Profile (CORS below).
 // Table: portal.account_deletion_requests (Portal migration 0039).
@@ -103,7 +107,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') return res.status(204).end()
   try {
     const resource = str(req.query.resource)
-    if (resource !== 'deletion' && resource !== 'announcements-seen') throw new HttpError(404, 'Unknown action.')
+    if (resource !== 'deletion' && resource !== 'announcements-seen' && resource !== 'download') throw new HttpError(404, 'Unknown action.')
     const url = process.env.SUPABASE_URL
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY
     if (!url || !key) throw new HttpError(500, 'This isn’t configured on this site yet.')
@@ -112,6 +116,53 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       auth: { persistSession: false, autoRefreshToken: false },
     }) as Db
     const user = await signedInUser(req, db)
+
+    // One file of a Download the member owns (Sprint 86).
+    if (resource === 'download') {
+      if (req.method !== 'GET') throw new HttpError(405, 'Use GET.')
+      const productId = str(req.query.product)
+      const fileId = str(req.query.file)
+      if (!productId || !fileId) throw new HttpError(400, 'Choose a file.')
+      const { data: product, error: productError } = await db
+        .from('products')
+        .select('id, content_type, content')
+        .eq('id', productId)
+        .maybeSingle()
+      if (productError) throw productError
+      const files = ((product?.content as { files?: { id?: string }[] } | null)?.files ?? []) as { id?: string }[]
+      if (!product || product.content_type !== 'pdf' || !files.some((f) => f.id === fileId)) throw new HttpError(404, 'File not found.')
+      // Same rule as portal.has_workspace_access(): an active license
+      // (lifetime or not expired) or an active access grant.
+      const now = new Date().toISOString()
+      const [{ data: licenses, error: licenseError }, { data: grants, error: grantError }] = await Promise.all([
+        db
+          .from('licenses')
+          .select('id, access_policy, expires_at')
+          .eq('user_id', user.id)
+          .eq('product_id', productId)
+          .eq('status', 'active'),
+        db
+          .from('access_grants')
+          .select('id, scope, product_id, expires_at')
+          .eq('user_id', user.id)
+          .is('revoked_at', null),
+      ])
+      if (licenseError) throw licenseError
+      if (grantError) throw grantError
+      const licensed = (licenses ?? []).some((l) => l.access_policy === 'lifetime' || !l.expires_at || l.expires_at > now)
+      const granted = (grants ?? []).some(
+        (g) => (!g.expires_at || g.expires_at > now) && (g.scope === 'all' || (g.scope === 'specific' && g.product_id === productId)),
+      )
+      if (!licensed && !granted) throw new HttpError(403, 'You don’t have access to this file.')
+      const { data: file, error: fileError } = await db.from('library_files').select('name, storage_path').eq('id', fileId).maybeSingle()
+      if (fileError) throw fileError
+      if (!file) throw new HttpError(404, 'This file is no longer available. Please contact support.')
+      const { data: signed, error: signError } = await db.storage
+        .from('library-files')
+        .createSignedUrl(file.storage_path, 120, { download: file.name })
+      if (signError) throw signError
+      return res.status(200).json({ ok: true, url: signed.signedUrl })
+    }
 
     // The member opened the bell (Sprint 80): notices up to now are seen.
     if (resource === 'announcements-seen') {

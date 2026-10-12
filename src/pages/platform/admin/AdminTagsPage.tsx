@@ -16,7 +16,7 @@ const SOURCE: Record<string, { label: string; tone: 'blue' | 'gray' | 'amber' }>
   studio: { label: 'Studio', tone: 'blue' },
   admin: { label: 'Admin', tone: 'gray' },
 }
-const KIND: Record<string, string> = { workspace: 'Workspace', calculator: 'Calculator', bundle: 'Bundle' }
+const KIND: Record<string, string> = { workspace: 'Workspace', calculator: 'Calculator', pdf: 'PDF/Kit', bundle: 'Bundle' }
 
 const message = (err: unknown) => (err instanceof Error ? err.message : 'Something went wrong.')
 

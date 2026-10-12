@@ -5,6 +5,8 @@ import SEO from '../../components/seo/SEO'
 import Button from '../../components/ui/Button'
 import DocumentWorkspaceRenderer from '../../components/workspace/DocumentWorkspaceRenderer'
 import CalculatorRunner from '../../components/calculator/CalculatorRunner'
+import DownloadRunner from '../../components/workspace/DownloadRunner'
+import { isDownloadContent } from '../../modules/workspace/types/portal'
 import RecordSwitcher from '../../components/workspace/RecordSwitcher'
 import RecordsPanel from '../../components/workspace/RecordsPanel'
 import NewRecordDialog from '../../components/workspace/NewRecordDialog'
@@ -88,7 +90,7 @@ export default function WorkspaceViewerPage() {
   )
 
   if (!ws.hasAccess) {
-    const noun = product.content_type === 'calculator' ? 'Calculator' : 'Workspace'
+    const noun = product.content_type === 'calculator' ? 'Calculator' : product.content_type === 'pdf' ? 'download' : 'Workspace'
     return (
       <div className="mx-auto max-w-2xl">
         <SEO title={product.name} description={product.short_description} path={`/platform/workspace/${slug}`} />
@@ -104,6 +106,30 @@ export default function WorkspaceViewerPage() {
           <Button to={`/product/${product.slug}`} className="mt-6">
             See {noun}
           </Button>
+        </div>
+      </div>
+    )
+  }
+
+  // A Download (Sprint 86): files to download, no records.
+  if (product.content_type === 'pdf') {
+    return (
+      <div className="mx-auto max-w-3xl">
+        <SEO title={product.name} description={product.short_description} path={`/platform/workspace/${slug}`} />
+        <Link to="/platform/my-systems" className="no-print inline-flex items-center gap-1.5 text-[13px] font-semibold text-primary">
+          <ArrowLeft className="h-4 w-4" />
+          My Workspaces
+        </Link>
+        <h1 className="mt-2 break-words font-display text-2xl font-bold text-navy md:text-3xl">{product.name}</h1>
+        <div className="mt-6">
+          {isDownloadContent(product.content) ? (
+            <DownloadRunner productId={product.id} content={product.content} />
+          ) : (
+            <p className={`${CARD} p-8 text-center text-[14px] text-navy/50`}>The files for this product aren&rsquo;t ready yet.</p>
+          )}
+        </div>
+        <div className="mt-6">
+          <ReviewPrompt workspaceName={product.name} reviews={reviews} />
         </div>
       </div>
     )
