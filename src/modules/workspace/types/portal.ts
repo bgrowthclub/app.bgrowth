@@ -4,6 +4,13 @@ import type { WorkspaceContent } from './content'
 // site uses. The Portal repository (src/types/database.ts,
 // supabase/migrations/) stays the source of truth for the full schema.
 
+// Product page gallery (Portal migration 0050), set in the Studio's
+// publish screens: up to 6 images and one short video.
+export interface ProductGallery {
+  images: string[]
+  video: { kind: 'link' | 'file'; url: string } | null
+}
+
 export interface PortalProductRow {
   id: string
   slug: string

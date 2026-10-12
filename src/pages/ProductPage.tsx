@@ -14,6 +14,9 @@ import FAQPanel from '../components/runtime/FAQPanel'
 import RelatedProductsPanel from '../components/runtime/RelatedProductsPanel'
 import StudioPurchaseCard from '../components/systems/StudioPurchaseCard'
 import StudioWorkspaceOutline from '../components/systems/StudioWorkspaceOutline'
+import ProductGalleryCarousel from '../components/systems/ProductGalleryCarousel'
+import { studioWorkspaceService } from '../modules/workspace/services/studioWorkspaceService'
+import type { ProductGallery } from '../modules/workspace/types/portal'
 import BundleOfferNote from '../components/systems/BundleOfferNote'
 import ProductReviewsSection from '../components/reviews/ProductReviewsSection'
 import ReviewSummaryLine from '../components/reviews/ReviewSummaryLine'
@@ -55,6 +58,7 @@ export default function ProductPage() {
   const [outline, setOutline] = useState<WorkspaceOutlineSection[]>([])
   // Bundles that include this Workspace (Portal migration 0041).
   const [bundles, setBundles] = useState<Awaited<ReturnType<typeof loadBundlesIncluding>>>([])
+  const [gallery, setGallery] = useState<ProductGallery | null>(null)
   const { user } = useIdentity()
   const [searchParams] = useSearchParams()
   // Studio Workspaces: ownership, trial and checkout (no-op for other products).
@@ -71,6 +75,7 @@ export default function ProductPage() {
     if (!slug) return
     setOutline([])
     setBundles([])
+    setGallery(null)
     productCatalogService.getBySlug(slug).then((result) => {
       if (cancelled) return
       setProduct(result ?? null)
@@ -79,6 +84,15 @@ export default function ProductPage() {
         loadStudioWorkspaceOutline(result.slug).then((sections) => {
           if (!cancelled) setOutline(sections)
         })
+        const portalId = studioPortalId(result.id)
+        if (portalId) {
+          studioWorkspaceService
+            .getProductGallery(portalId)
+            .then((found) => {
+              if (!cancelled) setGallery(found)
+            })
+            .catch(() => undefined)
+        }
         loadBundlesIncluding(result.id)
           .then((found) => {
             if (!cancelled) setBundles(found)
@@ -178,7 +192,9 @@ export default function ProductPage() {
 
           <div className="space-y-6">
             {/* Interactive preview image (not a static PDF preview — a working software preview) */}
-            {previewModule && previewSection ? (
+            {studio && gallery ? (
+              <ProductGalleryCarousel gallery={gallery} title={product.title} />
+            ) : previewModule && previewSection ? (
               <motion.div
                 initial={{ opacity: 0, y: 24 }}
                 animate={{ opacity: 1, y: 0 }}

@@ -8,6 +8,7 @@ import type {
   PortalProductRow,
   PortalReviewRow,
   PortalReviewSummary,
+  ProductGallery,
   ReviewInput,
   WorkspaceInstanceRow,
   WorkspaceOutlineSection,
@@ -104,6 +105,17 @@ export const studioWorkspaceService = {
       byProduct.set(row.product_id, names)
     }
     return Array.from(byProduct, ([productId, tags]) => ({ productId, tags }))
+  },
+
+  // A product's gallery (Portal migration 0050) by its Portal id; null when
+  // it has none (or the column isn't there yet).
+  async getProductGallery(productId: string): Promise<ProductGallery | null> {
+    const { data, error } = await client().from('products').select('gallery').eq('id', productId).maybeSingle()
+    if (error || !data) return null
+    const g = ((data as { gallery?: Partial<ProductGallery> | null }).gallery ?? {}) as Partial<ProductGallery>
+    const images = Array.isArray(g.images) ? g.images.filter((u): u is string => typeof u === 'string' && u.startsWith('https://')).slice(0, 6) : []
+    const video = g.video && typeof g.video.url === 'string' && g.video.url.startsWith('https://') ? g.video : null
+    return images.length || video ? { images, video } : null
   },
 
   async listCategories(): Promise<PortalCategoryRow[]> {
