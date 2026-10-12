@@ -245,6 +245,15 @@ This repo is a **static, client-only MVP**:
   rule as `portal.has_workspace_access`). The Portal hides them from its
   catalog and points owners here. The Studio can turn a PDF's first page
   into a cropped, watermarked gallery preview.
+  **Since Sprint 87 sign-up, sign-in and newsletter forms have bot
+  protection** (approved by the user, after bot sign-ups were found):
+  Cloudflare Turnstile through `lib/captcha.ts` (`getCaptchaToken()`, run
+  on submit, invisible unless a click is needed). The identity provider
+  passes the token to Supabase (sign-up, sign-in, password reset, resend);
+  `api/newsletter.ts` checks it with `TURNSTILE_SECRET_KEY`. Off until
+  `VITE_TURNSTILE_SITE_KEY` is set; the Portal and the Studio's admin
+  sign-in carry the same helper, since Supabase's captcha setting covers
+  every app on the project.
   **Since Sprint 71 `/p/bruno/ingles-de-mudanca/*` is a separate app**
   (approved by the user; under Bruno's member page since Sprint 72, the
   old `/ingles-de-mudanca/*` redirects there): the "Inglês de Mudança"

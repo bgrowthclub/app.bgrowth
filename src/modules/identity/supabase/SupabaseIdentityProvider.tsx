@@ -9,6 +9,7 @@ import { IdentityContext } from '../IdentityContext'
 import type { IdentityStatus } from '../IdentityContext'
 import { supabase } from './supabaseClient'
 import { loadPortalMember } from './portalMember'
+import { getCaptchaToken } from '../../../lib/captcha'
 
 const NOT_CONFIGURED = 'Sign-in isn’t available right now. Please try again later.'
 
@@ -29,6 +30,8 @@ function friendlyError(error: unknown): string {
       case 'over_email_send_rate_limit':
       case 'over_request_rate_limit':
         return 'Too many attempts. Wait a minute and try again.'
+      case 'captcha_failed':
+        return 'The security check failed. Please try again.'
       case 'same_password':
         return 'Choose a password different from your current one.'
     }
@@ -93,7 +96,8 @@ export function SupabaseIdentityProvider({ children }: { children: ReactNode }) 
     if (!supabase) return setError(NOT_CONFIGURED)
     setBusy(true)
     try {
-      const { error: signInError } = await supabase.auth.signInWithPassword({ email: email.trim(), password })
+      const captchaToken = await getCaptchaToken('login')
+      const { error: signInError } = await supabase.auth.signInWithPassword({ email: email.trim(), password, options: { captchaToken } })
       if (signInError) throw signInError
       // onAuthStateChange applies the session; GuestRoute then redirects.
     } catch (e) {
@@ -115,10 +119,11 @@ export function SupabaseIdentityProvider({ children }: { children: ReactNode }) 
     }
     setBusy(true)
     try {
+      const captchaToken = await getCaptchaToken('signup')
       const { data, error: signUpError } = await supabase.auth.signUp({
         email: email.trim(),
         password,
-        options: { data: { full_name: displayName.trim() }, emailRedirectTo: verifyRedirect() },
+        options: { data: { full_name: displayName.trim() }, emailRedirectTo: verifyRedirect(), captchaToken },
       })
       if (signUpError) {
         // The account is created before the email is sent — a failed send
@@ -147,11 +152,17 @@ export function SupabaseIdentityProvider({ children }: { children: ReactNode }) 
       setError(NOT_CONFIGURED)
       return false
     }
-    const { error: resendError } = await supabase.auth.resend({
-      type: 'signup',
-      email: email.trim(),
-      options: { emailRedirectTo: verifyRedirect() },
-    })
+    let resendError: unknown
+    try {
+      const captchaToken = await getCaptchaToken('resend')
+      ;({ error: resendError } = await supabase.auth.resend({
+        type: 'signup',
+        email: email.trim(),
+        options: { emailRedirectTo: verifyRedirect(), captchaToken },
+      }))
+    } catch (e) {
+      resendError = e
+    }
     if (resendError) {
       setError(friendlyError(resendError))
       return false
@@ -174,9 +185,16 @@ export function SupabaseIdentityProvider({ children }: { children: ReactNode }) 
       setError(NOT_CONFIGURED)
       return false
     }
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-      redirectTo: resetRedirect(),
-    })
+    let resetError: unknown
+    try {
+      const captchaToken = await getCaptchaToken('reset')
+      ;({ error: resetError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
+        redirectTo: resetRedirect(),
+        captchaToken,
+      }))
+    } catch (e) {
+      resetError = e
+    }
     if (resetError) {
       setError(friendlyError(resetError))
       return false
