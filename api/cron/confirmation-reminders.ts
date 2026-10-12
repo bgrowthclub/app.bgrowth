@@ -11,6 +11,10 @@ import { createClient } from '@supabase/supabase-js'
 // secret configured nothing runs. Self-contained like the other functions.
 // Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, CRON_SECRET, SITE_URL
 // (optional, defaults to https://bgrowth.app).
+//
+// The same daily run (11:00 Brazil time) also puts on sale every approved
+// product whose release date has come — portal.publish_scheduled(), Portal
+// migration 0051 — since the Vercel plan caps the number of functions.
 
 const DAY = 24 * 60 * 60 * 1000
 const REMINDER_DAYS = [1, 3]
@@ -28,6 +32,16 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   const site = (process.env.SITE_URL || 'https://bgrowth.app').replace(/\/$/, '')
 
   const supabase = createClient(url, key, { auth: { persistSession: false, autoRefreshToken: false } })
+
+  // Release flow: best-effort, never stops the reminders.
+  let released: number | null = null
+  try {
+    const { data, error } = await supabase.schema('portal').rpc('publish_scheduled')
+    if (error) console.error('[cron] publish_scheduled failed:', error.message)
+    else released = Number(data ?? 0)
+  } catch (err) {
+    console.error('[cron] publish_scheduled failed:', err)
+  }
   const now = Date.now()
   const due: { id: string; email: string; day: number }[] = []
 
@@ -70,5 +84,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   console.log(`[confirmation-reminders] due=${due.length} sent=${sent} failed=${failed.length}`)
-  return res.status(200).json({ ok: true, due: due.length, sent, failed: failed.length })
+  return res.status(200).json({ ok: true, due: due.length, sent, failed: failed.length, released })
 }

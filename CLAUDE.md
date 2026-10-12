@@ -245,6 +245,16 @@ This repo is a **static, client-only MVP**:
   rule as `portal.has_workspace_access`). The Portal hides them from its
   catalog and points owners here. The Studio can turn a PDF's first page
   into a cropped, watermarked gallery preview.
+  **Since Sprints 88–89 products have a release flow** (approved by the
+  user; Portal migration 0051): the 66 Wix store products are imported as
+  Download drafts in Studio → Downloads ("Import from Wix", full price,
+  images copied, `metadata.wix` = Wix id and the file Wix delivers). A
+  product goes draft → ready_for_review ("reviewed") → approved (Bruno
+  approves) → published, either by hand ("Publish now") or on its date
+  (`products.scheduled_publish_at`): the daily `api/cron/confirmation-
+  reminders.ts` run also calls `portal.publish_scheduled()`. Workspaces and
+  calculators can be scheduled from their publish screens too. Imported Wix
+  products can't be published before approval; others still can.
   **Since Sprint 87 sign-up, sign-in and newsletter forms have bot
   protection** (approved by the user, after bot sign-ups were found):
   Cloudflare Turnstile through `lib/captcha.ts` (`getCaptchaToken()`, run
