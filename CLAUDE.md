@@ -222,6 +222,16 @@ This repo is a **static, client-only MVP**:
   there) or in Admin → Catalog → Tags (rename, merge, delete, per-product;
   resources `tags`, `tags-merge`, `product-tags`). The catalog shows a Tags
   filter (`?tag=`) and its search matches tags (`lib/useProductTags.ts`).
+  **Since Sprint 84 the Studio has a File Library and products a gallery**
+  (approved by the user): Studio → Files keeps every PDF/image once in the
+  private `library-files` bucket (`portal.library_files`, Portal migration
+  0049; the Wix PDFs imported there) for single-PDF products, kits, bundles
+  and apps (Downloads come next). The Studio's publish screens also set a
+  product page gallery — up to 6 images and one short video, by link or
+  uploaded to the public `portal-product-assets` bucket — kept in
+  `portal.products.gallery` (migration 0050, set by the Portal's publish
+  endpoint after `publish_product`) and shown as a carousel on the product
+  page (`components/systems/ProductGalleryCarousel`).
   **Since Sprint 71 `/p/bruno/ingles-de-mudanca/*` is a separate app**
   (approved by the user; under Bruno's member page since Sprint 72, the
   old `/ingles-de-mudanca/*` redirects there): the "Inglês de Mudança"

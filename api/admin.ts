@@ -1458,6 +1458,7 @@ async function catalogHealth(db: Db) {
       ['0047 Category icons & colors', 'workspace_categories.icon'],
       ['0048 Tags', 'tags'],
       ['0049 File Library (Studio → Files)', 'library_files'],
+      ['0050 Product gallery', 'products.gallery'],
     ].map(async ([name, table]) => ({ name, ok: await tableExists(table) })),
   )
   const { data: address } = await db.from('site_settings').select('value').eq('key', 'newsletter_address').maybeSingle()
