@@ -1583,8 +1583,14 @@ function memberEmail(heading: string, body: string) {
 const UNCONFIRMED_DAYS = 14
 const CLEANUP_BATCH = 200
 
-async function unconfirmedAccounts(db: Db) {
-  const cutoff = Date.now() - UNCONFIRMED_DAYS * 24 * 60 * 60 * 1000
+// The admin picks the age (1–365 days, 14 by default).
+function cleanupDays(value: unknown) {
+  const n = Math.round(Number(value))
+  return Number.isFinite(n) && n >= 1 && n <= 365 ? n : UNCONFIRMED_DAYS
+}
+
+async function unconfirmedAccounts(db: Db, days = UNCONFIRMED_DAYS) {
+  const cutoff = Date.now() - days * 24 * 60 * 60 * 1000
   const found: { id: string; email: string; createdAt: string }[] = []
   for (let page = 1; page <= 20; page++) {
     const { data, error } = await db.auth.admin.listUsers({ page, perPage: 1000 })
@@ -1615,13 +1621,19 @@ async function unconfirmedAccounts(db: Db) {
   return found.filter((a) => !keep.has(a.id)).sort((a, b) => a.createdAt.localeCompare(b.createdAt))
 }
 
-async function listUnconfirmed(db: Db) {
-  const accounts = await unconfirmedAccounts(db)
-  return { days: UNCONFIRMED_DAYS, total: accounts.length, accounts: accounts.slice(0, 500) }
+async function listUnconfirmed(req: VercelRequest, db: Db) {
+  const days = cleanupDays(req.query.days)
+  const accounts = await unconfirmedAccounts(db, days)
+  return { days, total: accounts.length, accounts: accounts.slice(0, 500) }
 }
 
-async function deleteUnconfirmed(db: Db) {
-  const accounts = (await unconfirmedAccounts(db)).slice(0, CLEANUP_BATCH)
+// Deletes the chosen accounts (ids), or the first 200 when none are chosen —
+// always only ones that still match the rule.
+async function deleteUnconfirmed(req: VercelRequest, db: Db) {
+  const days = cleanupDays(req.body?.days)
+  const chosen = Array.isArray(req.body?.ids) ? new Set((req.body.ids as unknown[]).map(String)) : null
+  const eligible = await unconfirmedAccounts(db, days)
+  const accounts = (chosen ? eligible.filter((a) => chosen.has(a.id)) : eligible).slice(0, CLEANUP_BATCH)
   let deleted = 0
   for (const a of accounts) {
     const { error } = await db.auth.admin.deleteUser(a.id)
@@ -1633,8 +1645,8 @@ async function deleteUnconfirmed(db: Db) {
     const nl = await db.from('newsletter_subscribers').delete().eq('email', a.email.toLowerCase())
     if (nl.error) console.error('[admin] unconfirmed cleanup newsletter:', nl.error.message)
   }
-  const remaining = Math.max(0, (await unconfirmedAccounts(db)).length)
-  return { deleted, remaining }
+  const remaining = (await unconfirmedAccounts(db, days)).length
+  return { deleted, remaining, days }
 }
 
 async function completeDeletion(req: VercelRequest, db: Db, admin: Admin) {
@@ -2554,7 +2566,7 @@ function describe(key: string, b: Body, r: Record<string, any>): Described {
     case 'POST confirmation':
       return { area: 'members', summary: 'Resent the confirmation e-mail' }
     case 'POST unconfirmed-cleanup':
-      return { area: 'members', summary: `Deleted ${r.deleted ?? 0} account(s) never confirmed after ${UNCONFIRMED_DAYS} days` }
+      return { area: 'members', summary: `Deleted ${r.deleted ?? 0} account(s) never confirmed after ${r.days ?? UNCONFIRMED_DAYS} days` }
     case 'POST grants':
       if (r.requiresConfirmation) return null
       return {
@@ -2743,8 +2755,8 @@ const ROUTES: Record<string, Route> = {
   'GET members': (req, db) => listMembers(req, db),
   'GET member': (req, db) => getMember(req, db),
   'POST confirmation': (req, db) => resendConfirmation(req, db),
-  'GET unconfirmed': (_req, db) => listUnconfirmed(db),
-  'POST unconfirmed-cleanup': (_req, db) => deleteUnconfirmed(db),
+  'GET unconfirmed': (req, db) => listUnconfirmed(req, db),
+  'POST unconfirmed-cleanup': (req, db) => deleteUnconfirmed(req, db),
   'GET support': (req, db) => listSupport(req, db),
   'GET support-waiting': async (_req, db, admin) => {
     const counts = await countSupportWaiting(db)
