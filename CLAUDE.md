@@ -222,16 +222,29 @@ This repo is a **static, client-only MVP**:
   there) or in Admin → Catalog → Tags (rename, merge, delete, per-product;
   resources `tags`, `tags-merge`, `product-tags`). The catalog shows a Tags
   filter (`?tag=`) and its search matches tags (`lib/useProductTags.ts`).
-  **Since Sprint 84 the Studio has a File Library and products a gallery**
-  (approved by the user): Studio → Files keeps every PDF/image once in the
+  **Since Sprints 84–85 the Studio has a File Library and products a
+  gallery** (approved by the user): Studio → Files keeps every PDF/image once in the
   private `library-files` bucket (`portal.library_files`, Portal migration
   0049; the Wix PDFs imported there) for single-PDF products, kits, bundles
-  and apps (Downloads come next). The Studio's publish screens also set a
+  and apps. The Studio's publish screens also set a
   product page gallery — up to 6 images and one short video, by link or
   uploaded to the public `portal-product-assets` bucket — kept in
   `portal.products.gallery` (migration 0050, set by the Portal's publish
   endpoint after `publish_product`) and shown as a carousel on the product
   page (`components/systems/ProductGalleryCarousel`).
+  **Since Sprint 86 there are Downloads** (approved by the user; sold on
+  this site only): a `portal.products` row with content_type `pdf` built in
+  Studio → Downloads — files from the File Library, optional Canva links and
+  instructions (`DownloadContent`), shown as PDF™ (one file) or Kit™
+  (`Product.downloadKind`, from `metadata.downloadKind`; `metadata.included`
+  lists the files on the product page). No trials. Bought like a Workspace
+  (alone or in a Bundle — `SELLABLE_TYPES`), listed in My Workspaces and
+  opened at `/platform/workspace/:slug` in `components/workspace/
+  DownloadRunner`; each file is a 2-minute signed link from
+  `api/account.ts?resource=download`, which checks the license/grant (same
+  rule as `portal.has_workspace_access`). The Portal hides them from its
+  catalog and points owners here. The Studio can turn a PDF's first page
+  into a cropped, watermarked gallery preview.
   **Since Sprint 71 `/p/bruno/ingles-de-mudanca/*` is a separate app**
   (approved by the user; under Bruno's member page since Sprint 72, the
   old `/ingles-de-mudanca/*` redirects there): the "Inglês de Mudança"

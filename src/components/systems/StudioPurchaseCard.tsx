@@ -3,6 +3,7 @@ import { ArrowRight, Check, Loader2 } from 'lucide-react'
 import Button from '../ui/Button'
 import type { Product } from '../../modules/commerce/types/product'
 import { REFUND_WINDOW_DAYS } from '../../data/legal'
+import { studioProductNoun } from '../../modules/workspace/lib/productNoun'
 
 interface Props {
   product: Product
@@ -37,6 +38,14 @@ const CALCULATOR_SUMMARY = [
   'Works on desktop, tablet and mobile',
 ]
 
+// A Download (Sprint 86): files the member keeps.
+const DOWNLOAD_SUMMARY = [
+  'Download your files right after purchase',
+  'Yours to keep — download again any time from My Workspaces',
+  'Print-ready PDF',
+  'Instructions included when there are Canva links',
+]
+
 function priceLabel(product: Product) {
   const amount = Number.isInteger(product.basePrice) ? product.basePrice : product.basePrice.toFixed(2)
   return `$${amount}`
@@ -64,8 +73,8 @@ export default function StudioPurchaseCard({
   className = '',
 }: Props) {
   const free = product.basePrice === 0
-  const noun = product.type === 'Calculator' ? 'Calculator' : 'Workspace'
-  const summary = product.type === 'Calculator' ? CALCULATOR_SUMMARY : QUICK_SUMMARY
+  const noun = studioProductNoun(product)
+  const summary = product.type === 'Calculator' ? CALCULATOR_SUMMARY : product.type === 'Download' ? DOWNLOAD_SUMMARY : QUICK_SUMMARY
 
   return (
     <div className={`rounded-xl3 border border-navy/[0.06] bg-white p-6 shadow-glow ${className}`}>

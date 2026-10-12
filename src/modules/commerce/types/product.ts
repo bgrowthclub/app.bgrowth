@@ -98,6 +98,9 @@ export interface Product {
   paymentProfileId: PaymentProfileId
   visibility?: ProductVisibility
   type: ProductType
+  // A Download (Studio → Downloads, content_type 'pdf'): one PDF or a kit
+  // (several files and/or Canva links). Shown as PDF™ / Kit™.
+  downloadKind?: 'PDF' | 'Kit'
   // All media — Thumbnail, Hero Image, Gallery, Preview Images, Videos,
   // Downloads — lives on this one model instead of scattered top-level
   // fields. See types/assets.ts.

@@ -15,6 +15,7 @@ import RelatedProductsPanel from '../components/runtime/RelatedProductsPanel'
 import StudioPurchaseCard from '../components/systems/StudioPurchaseCard'
 import StudioWorkspaceOutline from '../components/systems/StudioWorkspaceOutline'
 import ProductGalleryCarousel from '../components/systems/ProductGalleryCarousel'
+import { studioProductNoun } from '../modules/workspace/lib/productNoun'
 import { studioWorkspaceService } from '../modules/workspace/services/studioWorkspaceService'
 import type { ProductGallery } from '../modules/workspace/types/portal'
 import BundleOfferNote from '../components/systems/BundleOfferNote'
@@ -154,7 +155,7 @@ export default function ProductPage() {
               ) : (
                 <Badge>{system?.category ?? product.industry ?? product.category}</Badge>
               )}
-              <Badge variant="outline">{studio ? (product.type === 'Calculator' ? 'Calculator™' : 'Workspace™') : system?.type ?? product.type}</Badge>
+              <Badge variant="outline">{studio ? `${studioProductNoun(product)}™` : system?.type ?? product.type}</Badge>
               {(product.difficulty ?? system?.difficulty) && (
                 <Badge variant="outline">{product.difficulty ?? system?.difficulty}</Badge>
               )}

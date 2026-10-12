@@ -28,7 +28,7 @@ type Db = SupabaseClient<any, 'portal', any>
 const PAGE_SIZE = 25
 // What the site sells one by one (and in bundles): Studio Workspaces and,
 // since Sprint 78, Studio calculators.
-const SELLABLE_TYPES = ['workspace', 'calculator']
+const SELLABLE_TYPES = ['workspace', 'calculator', 'pdf']
 
 class HttpError extends Error {
   constructor(public status: number, message: string, public extra?: Record<string, unknown>) {
@@ -1354,7 +1354,7 @@ async function catalogHealth(db: Db) {
   const [products, listed, categories, licenses, records, reviews] = await Promise.all([
     db
       .from('products')
-      .select('id, name, slug, status, cover_image_url, short_description, category_id, is_free, price_cents, is_trial_eligible, trial_duration, metadata, content, last_published_at')
+      .select('id, name, slug, status, content_type, cover_image_url, short_description, category_id, is_free, price_cents, is_trial_eligible, trial_duration, metadata, content, last_published_at')
       .eq('status', 'published')
       .in('content_type', SELLABLE_TYPES)
       .order('name'),
@@ -1383,17 +1383,21 @@ async function catalogHealth(db: Db) {
     is_trial_eligible: boolean
     trial_duration: number | null
     metadata: Record<string, unknown> | null
-    content: { sections?: unknown[] } | null
+    content_type: string
+    content: { sections?: unknown[]; files?: unknown[] } | null
     last_published_at: string | null
   }
   const workspaces = ((products.data ?? []) as Row[]).map((p) => {
     const issues: Issue[] = []
     const meta = p.metadata ?? {}
-    const sections = Array.isArray(p.content?.sections) ? p.content!.sections!.length : 0
+    // A Download (content_type 'pdf', Sprint 86) counts its files instead of steps.
+    const sections = p.content_type === 'pdf'
+      ? (Array.isArray(p.content?.files) ? p.content!.files!.length : 0)
+      : Array.isArray(p.content?.sections) ? p.content!.sections!.length : 0
     const has = (key: string) => Array.isArray(meta[key]) && (meta[key] as unknown[]).length > 0
     if (!listedIds.has(p.id)) issues.push({ level: 'problem', text: 'Not listed in the catalog — publish it again from the Studio.' })
     if (!p.is_free && (p.price_cents == null || p.price_cents <= 0)) issues.push({ level: 'problem', text: 'Paid, but has no price — it can’t be bought.' })
-    if (sections === 0) issues.push({ level: 'problem', text: 'No steps in its content — it opens empty.' })
+    if (sections === 0) issues.push({ level: 'problem', text: p.content_type === 'pdf' ? 'No files — there is nothing to download.' : 'No steps in its content — it opens empty.' })
     if (p.is_trial_eligible && !p.is_free && !p.trial_duration) issues.push({ level: 'problem', text: 'Trial is on but has no length — the trial can’t start.' })
     if (!p.cover_image_url) issues.push({ level: 'warning', text: 'No cover image.' })
     if (!p.category_id) issues.push({ level: 'warning', text: 'No category — it won’t show under the category filters.' })

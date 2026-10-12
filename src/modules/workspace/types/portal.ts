@@ -4,6 +4,21 @@ import type { WorkspaceContent } from './content'
 // site uses. The Portal repository (src/types/database.ts,
 // supabase/migrations/) stays the source of truth for the full schema.
 
+// products.content of a Download (content_type 'pdf', Studio → Downloads,
+// Sprint 86): files from the Studio's File Library (private bucket — each
+// download goes through api/account.ts), optional Canva links, instructions.
+export interface DownloadContent {
+  kind: 'download'
+  files: { id: string; name: string; sizeBytes: number; mimeType: string }[]
+  links: { label: string; url: string }[]
+  instructions: string
+}
+
+export function isDownloadContent(value: unknown): value is DownloadContent {
+  const v = value as Partial<DownloadContent> | null
+  return Boolean(v && v.kind === 'download' && Array.isArray(v.files))
+}
+
 // Product page gallery (Portal migration 0050), set in the Studio's
 // publish screens: up to 6 images and one short video.
 export interface ProductGallery {

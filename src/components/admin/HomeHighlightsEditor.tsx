@@ -4,7 +4,7 @@ import Button from '../ui/Button'
 import { CARD, INPUT, LINK_BUTTON, SMALL_BUTTON } from './styles'
 import type { AdminSiteProduct } from '../../modules/admin/types'
 
-const KIND: Record<string, string> = { workspace: 'Workspace', calculator: 'Calculator', bundle: 'Bundle' }
+const KIND: Record<string, string> = { workspace: 'Workspace', calculator: 'Calculator', pdf: 'PDF/Kit', bundle: 'Bundle' }
 const MAX = 12
 
 interface Props {

@@ -64,7 +64,8 @@ function loadSnapshot(): Promise<CatalogSnapshot> {
     studioWorkspaceService.listBundles().catch(() => NO_BUNDLES),
   ]).then(([rows, categories, bundles]: [PortalCatalogRow[], PortalCategoryRow[], typeof NO_BUNDLES]) => {
     // Workspaces and (since Sprint 78) calculators — what the viewer opens.
-    const workspaces = rows.filter((r) => r.content_type === 'workspace' || r.content_type === 'calculator')
+    // Since Sprint 86 also Downloads (content_type 'pdf': single PDFs and kits).
+    const workspaces = rows.filter((r) => r.content_type === 'workspace' || r.content_type === 'calculator' || r.content_type === 'pdf')
     const listed = new Set(workspaces.map((r) => r.product_id))
     // A bundle is shown only while it still includes a listed Workspace.
     const bundleItems = bundles.items.filter((i) => listed.has(i.product_id))
@@ -124,6 +125,7 @@ function baseProduct(
 function fromCatalogRow(row: PortalCatalogRow, resolveCategory: ResolveCategory): Product {
   return {
     ...baseProduct(row, row.product_id, resolveCategory(row.category_id)),
+    ...(row.content_type === 'calculator' ? { type: 'Calculator' as const } : row.content_type === 'pdf' ? { type: 'Download' as const } : {}),
     featured: row.is_featured,
     tags: row.tags ?? [],
     createdAt: row.published_at ?? undefined,
@@ -157,6 +159,8 @@ export function studioProductFromRow(row: PortalProductRow, placement: CategoryP
     ...product,
     // A Studio calculator (Sprint 78) is sold and opened like a Workspace.
     ...(row.content_type === 'calculator' ? { type: 'Calculator' as const } : {}),
+    // A Download (Sprint 86): its files are listed as "what's included".
+    ...(row.content_type === 'pdf' ? { type: 'Download' as const, downloadKind: meta.downloadKind === 'kit' ? ('Kit' as const) : ('PDF' as const) } : {}),
     featured,
     longDescription: isString(meta.longDescription) ? meta.longDescription : undefined,
     benefits: arrayOf(meta.features, isTitled).map(({ title, description }) => ({ title, description: description ?? '' })),
