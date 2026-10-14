@@ -62,3 +62,17 @@ export async function getHomeFeaturedIds(): Promise<string[]> {
 export function announcementDate(a: SiteAnnouncement) {
   return a.starts_at ?? a.created_at
 }
+
+// Is the site open to everyone, or "Coming soon" for all but the team?
+// (Admin → Site; read through api/ingles.ts, the public function.) If the
+// check fails, the site stays open rather than hiding everything.
+export async function getSiteOpen(): Promise<boolean> {
+  try {
+    const res = await fetch('/api/ingles?action=site')
+    if (!res.ok) return true
+    const data = (await res.json()) as { open?: boolean }
+    return data.open === true
+  } catch {
+    return true
+  }
+}

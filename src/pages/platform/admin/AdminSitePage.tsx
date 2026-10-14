@@ -63,6 +63,26 @@ export default function AdminSitePage() {
     }
   }
 
+  async function toggleOpen() {
+    if (!data) return
+    const next = !data.open
+    const question = next
+      ? 'Open the site to everyone? Visitors will see the whole site, not “Coming soon”.'
+      : 'Close the site? Visitors will see “Coming soon”; only the team sees the site.'
+    if (!window.confirm(question)) return
+    setBusy(true)
+    setError(null)
+    try {
+      const open = await adminService.setSiteOpen(next)
+      setData((d) => (d ? { ...d, open } : d))
+      setNotice(open ? 'The site is open to everyone.' : 'The site is closed — visitors see “Coming soon”.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Couldn’t change it.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function saveHighlights(ids: string[]) {
     const featured = await adminService.saveHomeFeatured(ids)
     setData((d) => (d ? { ...d, featured } : d))
@@ -90,6 +110,23 @@ export default function AdminSitePage() {
         <div className="space-y-8">
           {notice && <p className="rounded-xl bg-emerald-50 px-4 py-3 text-[13.5px] text-emerald-700">{notice}</p>}
           {error && <p className="text-[14px] text-red-500">{error}</p>}
+
+          <section className={`${CARD} flex flex-wrap items-center justify-between gap-4 px-5 py-4`}>
+            <div className="min-w-0">
+              <p className="font-display text-[15px] font-bold text-navy">
+                Site open to the public{' '}
+                <span className={pillClass(data.open ? 'green' : 'amber')}>{data.open ? 'Open' : 'Coming soon'}</span>
+              </p>
+              <p className="mt-1 text-[13px] text-navy/50">
+                {data.open
+                  ? 'Everyone can see and use the site.'
+                  : 'Visitors see “Coming soon” with a field to leave their e-mail. Only the team sees the site. Bruno’s course stays open.'}
+              </p>
+            </div>
+            <Button type="button" variant={data.open ? 'secondary' : 'primary'} disabled={busy} onClick={() => void toggleOpen()} className={SMALL_BUTTON}>
+              {data.open ? 'Close the site' : 'Open the site'}
+            </Button>
+          </section>
 
           <section className="space-y-4">
             <div className="flex flex-wrap items-end justify-between gap-3">

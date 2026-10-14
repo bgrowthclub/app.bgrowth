@@ -101,6 +101,14 @@ async function getCreator(req: VercelRequest, db: Db) {
   return { creator: data ?? null }
 }
 
+// Is the site open to everyone, or only to the team ("Coming soon")?
+// portal.site_settings key "site_open" (set in Admin → Site). No row = closed.
+async function getSiteOpen(db: Db) {
+  const { data, error } = await db.from('site_settings').select('value').eq('key', 'site_open').maybeSingle()
+  if (error) throw error
+  return { open: data?.value === true }
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Public, harmless actions: the course's own Vercel address may call them too.
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -115,6 +123,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const action = str(req.query.action)
     if (req.method === 'POST' && action === 'lead') return res.status(200).json(await saveLead(req, db))
     if (req.method === 'POST' && action === 'track') return res.status(200).json(await trackEvent(req, db))
+    if (req.method === 'GET' && action === 'site') {
+      res.setHeader('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=60')
+      return res.status(200).json(await getSiteOpen(db))
+    }
     if (req.method === 'GET' && action === 'creator') {
       res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600')
       return res.status(200).json(await getCreator(req, db))

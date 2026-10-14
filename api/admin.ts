@@ -2348,7 +2348,7 @@ function readAnnouncement(raw: Record<string, unknown> | undefined) {
 }
 
 async function siteOverview(db: Db) {
-  const [announcements, featured, products] = await Promise.all([
+  const [announcements, featured, products, openRow] = await Promise.all([
     db.from('site_announcements').select('*').order('created_at', { ascending: false }),
     db.from('home_featured').select('product_id, sort_order').order('sort_order'),
     db
@@ -2357,9 +2357,11 @@ async function siteOverview(db: Db) {
       .eq('status', 'published')
       .in('content_type', [...SELLABLE_TYPES, 'bundle'])
       .order('name'),
+    db.from('site_settings').select('value').eq('key', 'site_open').maybeSingle(),
   ])
+  const open = openRow.data?.value === true
   if (announcements.error) {
-    if (isMissingTable(announcements.error)) return { announcements: [], featured: [], products: [], ready: false }
+    if (isMissingTable(announcements.error)) return { announcements: [], featured: [], products: [], ready: false, open }
     throw announcements.error
   }
   if (featured.error) throw featured.error
@@ -2369,7 +2371,18 @@ async function siteOverview(db: Db) {
     announcements: announcements.data ?? [],
     featured: ((featured.data ?? []) as { product_id: string }[]).map((f) => f.product_id),
     ready: true,
+    open,
   }
+}
+
+// Open the site to everyone, or show "Coming soon" to all but the team.
+async function setSiteOpen(req: VercelRequest, db: Db, admin: Admin) {
+  const open = req.body?.open === true
+  const { error } = await db
+    .from('site_settings')
+    .upsert({ key: 'site_open', value: open, updated_at: new Date().toISOString(), updated_by: admin.email })
+  if (error) throw error
+  return { open }
 }
 
 async function createAnnouncement(req: VercelRequest, db: Db, admin: Admin) {
@@ -2619,6 +2632,8 @@ function describe(key: string, b: Body, r: Record<string, any>): Described {
       return { area: 'catalog', summary: `Merged the tag “${r.merged?.from}” into “${r.merged?.into}”` }
     case 'PUT product-tags':
       return { area: 'catalog', summary: `Set the tags of “${r.productName || 'a product'}”` }
+    case 'PUT site-open':
+      return { area: 'site', summary: r.open ? 'Opened the site to everyone' : 'Closed the site (Coming soon for visitors)' }
     case 'POST announcements':
       return { area: 'site', summary: `Created the announcement “${b.title}”` }
     case 'PATCH announcements':
@@ -2812,6 +2827,7 @@ const ROUTES: Record<string, Route> = {
   'POST tags-merge': (req, db) => mergeTags(req, db),
   'PUT product-tags': (req, db) => setProductTags(req, db),
   'GET site': (_req, db) => siteOverview(db),
+  'PUT site-open': (req, db, admin) => setSiteOpen(req, db, admin),
   'POST announcements': (req, db, admin) => createAnnouncement(req, db, admin),
   'PATCH announcements': (req, db) => updateAnnouncement(req, db),
   'DELETE announcements': (req, db) => deleteAnnouncement(req, db),

@@ -219,6 +219,9 @@ export const adminService = {
   getSite() {
     return call<AdminSiteOverview>('GET', 'site')
   },
+  async setSiteOpen(open: boolean) {
+    return (await call<{ open: boolean }>('PUT', 'site-open', undefined, { open })).open
+  },
   async saveAnnouncement(draft: AdminAnnouncementDraft) {
     return (await call<{ announcement: SiteAnnouncement }>(draft.id ? 'PATCH' : 'POST', 'announcements', undefined, draft)).announcement
   },

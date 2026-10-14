@@ -255,6 +255,13 @@ This repo is a **static, client-only MVP**:
   reminders.ts` run also calls `portal.publish_scheduled()`. Workspaces and
   calculators can be scheduled from their publish screens too. Imported Wix
   products can't be published before approval; others still can.
+  **Since Sprint 90 the site can be closed before launch** (approved by
+  the user): `portal.site_settings` key `site_open` (no row = closed),
+  switched in Admin → Site (resource `site-open`). `components/layout/
+  SiteGate` wraps the route table: while closed, everyone but the team
+  (`User.isAdmin`) sees `pages/ComingSoonPage` (newsletter sign-up, source
+  `coming-soon`, noindex); sign-in, legal and newsletter pages and Bruno's
+  page/course stay open. The flag is read through `api/ingles.ts?action=site`.
   **Since Sprint 87 sign-up, sign-in and newsletter forms have bot
   protection** (approved by the user, after bot sign-ups were found):
   Cloudflare Turnstile through `lib/captcha.ts` (`getCaptchaToken()`, run

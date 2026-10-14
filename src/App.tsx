@@ -1,6 +1,7 @@
 import { lazy, Suspense } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import AppLayout from './components/layout/AppLayout'
+import SiteGate from './components/layout/SiteGate'
 import HomePage from './pages/HomePage'
 import BrowseSystems from './pages/BrowseSystems'
 import ProductPage from './pages/ProductPage'
@@ -72,6 +73,7 @@ import ProductEnginePage from './studio/pages/ProductEnginePage'
 
 export default function App() {
   return (
+    <SiteGate>
     <Routes>
       <Route element={<AppLayout />}>
         <Route path="/" element={<HomePage />} />
@@ -223,5 +225,6 @@ export default function App() {
         <Route path="products" element={<ProductEnginePage />} />
       </Route>
     </Routes>
+    </SiteGate>
   )
 }
