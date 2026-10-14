@@ -415,6 +415,8 @@ export interface AdminSiteOverview {
   featured: string[]
   products: AdminSiteProduct[]
   ready: boolean
+  /** false = visitors see "Coming soon"; only the team sees the site. */
+  open: boolean
 }
 
 export interface AdminAnnouncementDraft {
