@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import SearchToolbar from '../components/ui/SearchToolbar'
+import { recordCatalogSearch } from '../lib/searchStats'
 import FilterPill from '../components/ui/FilterPill'
 import BusinessSystemCard from '../components/systems/BusinessSystemCard'
 import StudioWorkspaceCard from '../components/systems/StudioWorkspaceCard'
@@ -69,15 +70,21 @@ export default function BrowseSystems() {
   const [studioProducts, setStudioProducts] = useState<Product[]>([])
   // Bundles of those Workspaces (Portal migration 0041) — listed first.
   const [bundles, setBundles] = useState<Product[]>([])
+  // The Studio products have arrived — only then is "no results" true.
+  const [catalogLoaded, setCatalogLoaded] = useState(false)
 
   useEffect(() => {
     let cancelled = false
     loadPublishedSystemProducts().then((pairs) => {
       if (!cancelled) setPublishedSystems(pairs)
     })
-    loadStudioWorkspaceProducts().then((products) => {
-      if (!cancelled) setStudioProducts(products)
-    })
+    loadStudioWorkspaceProducts()
+      .then((products) => {
+        if (!cancelled) setStudioProducts(products)
+      })
+      .finally(() => {
+        if (!cancelled) setCatalogLoaded(true)
+      })
     loadBundleProducts()
       .then((products) => {
         if (!cancelled) setBundles(products)
@@ -204,6 +211,23 @@ export default function BrowseSystems() {
 
     return list
   }, [publishedList, query, category, area, moduleType, sort, tag])
+
+  // Records what was searched (Product Discovery data, Portal migration 0052)
+  // once the visitor stops typing — counted against the whole catalog, not
+  // the current filters, so "no results" means we really don't have it.
+  useEffect(() => {
+    const q = query.trim()
+    if (!catalogLoaded || q.length < 3) return
+    const timer = window.setTimeout(() => {
+      const found =
+        studioProducts.filter((p) => matchesSearch(q, `${p.title} ${p.description} ${tagsOf(p.id).join(' ')}`)).length +
+        bundles.filter((b) => matchesSearch(q, `${b.title} ${b.description} ${tagsOf(b.id).join(' ')}`)).length +
+        publishedList.filter((s) => matchesSearch(q, `${s.title} ${s.shortDescription}`)).length
+      recordCatalogSearch(q, found)
+    }, 1500)
+    return () => window.clearTimeout(timer)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [query, catalogLoaded])
 
   const updateParams = (nextArea: string, nextCategory: string, nextTag = tag) => {
     const params: Record<string, string> = {}
