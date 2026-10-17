@@ -48,8 +48,13 @@ class HttpError extends Error {
 }
 
 function str(value: unknown, max = 200) {
-  return typeof value === 'string' ? value.trim().slice(0, max) : ''
+  // A query value repeated after a rewrite arrives as an array: take the first.
+  const v = Array.isArray(value) ? value[0] : value
+  return typeof v === 'string' ? v.trim().slice(0, max) : ''
 }
+
+// Link-preview bots (same list as vercel.json's rewrite).
+const PREVIEW_BOT = /facebookexternalhit|Facebot|meta-externalagent|WhatsApp|Twitterbot|LinkedInBot|Slackbot|TelegramBot|Discordbot|Pinterest|redditbot|SkypeUriPreview|Iframely|Embedly|vkShare|Snapchat|bitlybot|Tumblr/
 
 async function saveLead(req: VercelRequest, db: Db) {
   const body = (req.body && typeof req.body === 'object' ? req.body : {}) as Record<string, unknown>
@@ -147,7 +152,9 @@ function escapeHtml(text: string) {
 type SeoRow = { defaultImage?: string; pages?: Record<string, { title?: string; description?: string; image?: string }> }
 
 async function linkPreview(req: VercelRequest, db: Db) {
-  let path = '/' + str(req.query.path, 300).replace(/^\/+/, '').split(/[?#]/)[0]
+  // The page address: ?path= from the rewrite, else the address the bot asked for.
+  const asked = str(req.query.path, 300) || (req.url && !req.url.startsWith('/api/') ? req.url : '')
+  let path = '/' + asked.replace(/^\/+/, '').split(/[?#]/)[0]
   if (path.length > 1) path = path.replace(/\/+$/, '')
 
   const { data: seoRow } = await db.from('site_content').select('value').eq('key', 'seo').eq('locale', 'en').maybeSingle()
@@ -214,7 +221,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY
     if (!url || !key) throw new HttpError(500, 'Not configured.')
     const db = createClient(url, key, { db: { schema: 'portal' }, auth: { persistSession: false, autoRefreshToken: false } }) as Db
-    const action = str(req.query.action)
+    let action = str(req.query.action)
+    // A preview bot sent here by vercel.json without the query (it can be
+    // replaced by the page's own ?…): still answer with the link preview.
+    if (!action && req.method === 'GET' && PREVIEW_BOT.test(String(req.headers['user-agent'] ?? ''))) action = 'og'
     if (req.method === 'POST' && action === 'lead') return res.status(200).json(await saveLead(req, db))
     if (req.method === 'POST' && action === 'track') return res.status(200).json(await trackEvent(req, db))
     if (req.method === 'POST' && action === 'search') return res.status(200).json(await trackSearch(req, db))
