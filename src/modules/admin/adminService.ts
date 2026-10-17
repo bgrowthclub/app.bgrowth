@@ -1,5 +1,5 @@
 import { supabase } from '../identity/supabase/supabaseClient'
-import type { SiteAnnouncement } from '../site/types'
+import type { SiteAnnouncement, SiteContentRow } from '../site/types'
 import type {
   AdminGrant,
   AdminLicense,
@@ -227,6 +227,15 @@ export const adminService = {
   },
   async removeAnnouncement(id: string) {
     await call('DELETE', 'announcements', undefined, { id })
+  },
+  async getSiteContent<T>(key: string) {
+    return call<{ content: SiteContentRow<T> | null; ready: boolean }>('GET', 'site-content', { key })
+  },
+  async saveSiteContent<T>(key: string, value: T) {
+    return (await call<{ content: SiteContentRow<T> }>('PUT', 'site-content', undefined, { key, value })).content
+  },
+  async resetSiteContent(key: string) {
+    await call('DELETE', 'site-content', undefined, { key })
   },
   async saveHomeFeatured(productIds: string[]) {
     return (await call<{ featured: string[] }>('PUT', 'home-featured', undefined, { productIds })).featured

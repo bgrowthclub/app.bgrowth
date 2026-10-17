@@ -1465,6 +1465,7 @@ async function catalogHealth(db: Db) {
       ['0050 Product gallery', 'products.gallery'],
       ['0051 Release flow (review, approval, release date)', 'products.scheduled_publish_at'],
       ['0052 Catalog searches (Product Discovery data)', 'site_search_stats'],
+      ['0053 Site texts (Admin → Site)', 'site_content'],
     ].map(async ([name, table]) => ({ name, ok: await tableExists(table) })),
   )
   const { data: address } = await db.from('site_settings').select('value').eq('key', 'newsletter_address').maybeSingle()
@@ -2563,6 +2564,82 @@ async function setProductTags(req: VercelRequest, db: Db) {
 }
 
 // ---------------------------------------------------------------------------
+// Site texts (Portal migration 0053, portal.site_content): pieces of the
+// public site edited in Admin → Site. No row = the site shows its built-in
+// text; "Restore original" deletes the row. English only for now (locale
+// 'en'). First: the legal pages (keys legal:privacy, legal:terms,
+// legal:refund-policy). Visitors read straight from Supabase (RLS).
+// ---------------------------------------------------------------------------
+const LEGAL_NAMES: Record<string, string> = {
+  'legal:privacy': 'Privacy Policy',
+  'legal:terms': 'Terms of Service',
+  'legal:refund-policy': 'Refund Policy',
+}
+const LEGAL_KEYS = new Set(Object.keys(LEGAL_NAMES))
+
+function cleanList(value: unknown, maxItems: number, maxLength: number) {
+  if (!Array.isArray(value)) return []
+  return value
+    .map((v) => cleanText(v, maxLength))
+    .filter((v): v is string => Boolean(v))
+    .slice(0, maxItems)
+}
+
+function readLegalContent(raw: Record<string, unknown> | undefined) {
+  const title = cleanText(raw?.title, 120)
+  if (!title) throw new HttpError(400, 'Give the page a title.')
+  const sections = (Array.isArray(raw?.sections) ? (raw?.sections as Record<string, unknown>[]) : [])
+    .slice(0, 40)
+    .map((s) => ({
+      heading: cleanText(s?.heading, 160) ?? '',
+      paragraphs: cleanList(s?.paragraphs, 30, 4000),
+      bullets: cleanList(s?.bullets, 40, 1000),
+    }))
+    .filter((s) => s.heading || s.paragraphs.length || s.bullets.length)
+  if (!sections.length) throw new HttpError(400, 'The page needs at least one section.')
+  if (sections.some((s) => !s.heading)) throw new HttpError(400, 'Every section needs a heading.')
+  return { title, summary: cleanText(raw?.summary, 500) ?? '', sections }
+}
+
+function siteContentKey(value: unknown) {
+  const key = cleanText(value, 100) ?? ''
+  if (!LEGAL_KEYS.has(key)) throw new HttpError(400, 'Unknown part of the site.')
+  return key
+}
+
+async function getSiteContent(req: VercelRequest, db: Db) {
+  const key = siteContentKey(req.query.key)
+  const { data, error } = await db.from('site_content').select('value, updated_at, updated_by').eq('key', key).eq('locale', 'en').maybeSingle()
+  if (error) {
+    if (isMissingTable(error)) return { key, content: null, ready: false }
+    throw error
+  }
+  return { key, content: data ?? null, ready: true }
+}
+
+async function saveSiteContent(req: VercelRequest, db: Db, admin: Admin) {
+  const key = siteContentKey(req.body?.key)
+  const value = readLegalContent(req.body?.value)
+  const { data, error } = await db
+    .from('site_content')
+    .upsert({ key, locale: 'en', value, updated_at: new Date().toISOString(), updated_by: admin.email })
+    .select('value, updated_at, updated_by')
+    .single()
+  if (error) {
+    if (isMissingTable(error)) throw new HttpError(400, 'Run the database update (Portal migration 0053) first.')
+    throw error
+  }
+  return { key, content: data, title: value.title }
+}
+
+async function resetSiteContent(req: VercelRequest, db: Db) {
+  const key = siteContentKey(req.body?.key ?? req.query.key)
+  const { error } = await db.from('site_content').delete().eq('key', key).eq('locale', 'en')
+  if (error) throw error
+  return { key, reset: true, title: LEGAL_NAMES[key] }
+}
+
+// ---------------------------------------------------------------------------
 // Activity log (portal.admin_activity, Portal migration 0042): every change
 // made in the Admin area — who, what, when, on which member or product.
 // Recorded by the router below after the change succeeds; best effort, so a
@@ -2641,6 +2718,10 @@ function describe(key: string, b: Body, r: Record<string, any>): Described {
       return { area: 'site', summary: `Edited the announcement “${r.announcement?.title ?? b.title}”` }
     case 'DELETE announcements':
       return { area: 'site', summary: `Deleted the announcement “${r.deleted?.title ?? ''}”` }
+    case 'PUT site-content':
+      return { area: 'site', summary: `Edited the page “${r.title ?? r.key}”` }
+    case 'DELETE site-content':
+      return { area: 'site', summary: `Restored the original text of “${r.title ?? r.key}”` }
     case 'PUT home-featured':
       return { area: 'site', summary: r.featured?.length ? `Set the Home highlights (${r.featured.length} products)` : 'Cleared the Home highlights' }
     case 'POST newsletter-campaign':
@@ -2833,6 +2914,9 @@ const ROUTES: Record<string, Route> = {
   'PATCH announcements': (req, db) => updateAnnouncement(req, db),
   'DELETE announcements': (req, db) => deleteAnnouncement(req, db),
   'PUT home-featured': (req, db) => saveHomeFeatured(req, db),
+  'GET site-content': (req, db) => getSiteContent(req, db),
+  'PUT site-content': (req, db, admin) => saveSiteContent(req, db, admin),
+  'DELETE site-content': (req, db) => resetSiteContent(req, db),
   'GET team': (_req, db) => listTeam(db),
   'POST team': (req, db) => addTeamMember(req, db),
   'PATCH team': (req, db, admin) => updateTeamMember(req, db, admin),

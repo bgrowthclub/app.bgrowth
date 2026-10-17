@@ -1,5 +1,5 @@
 import { supabase } from '../identity/supabase/supabaseClient'
-import type { SiteAnnouncement } from './types'
+import type { SiteAnnouncement, SiteContentRow } from './types'
 
 // Reads what is live (row-level security only returns active notices inside
 // their dates). Writes go through api/admin.ts; "seen" through api/account.ts.
@@ -75,4 +75,18 @@ export async function getSiteOpen(): Promise<boolean> {
   } catch {
     return true
   }
+}
+
+// A piece of the site edited in Admin → Site (portal.site_content, English
+// for now). null = not edited (or not available) — show the built-in text.
+export async function getSiteContent<T>(key: string): Promise<SiteContentRow<T> | null> {
+  if (!supabase) return null
+  const { data, error } = await supabase
+    .from('site_content')
+    .select('value, updated_at, updated_by')
+    .eq('key', key)
+    .eq('locale', 'en')
+    .maybeSingle()
+  if (error || !data) return null
+  return data as SiteContentRow<T>
 }

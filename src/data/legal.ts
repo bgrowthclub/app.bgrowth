@@ -17,6 +17,14 @@ export interface LegalSection {
   bullets?: string[]
 }
 
+// What Admin → Site can change on a legal page (stored in
+// portal.site_content as legal:<slug>).
+export interface LegalEditableContent {
+  title: string
+  summary: string
+  sections: LegalSection[]
+}
+
 export interface LegalDocumentData {
   slug: 'privacy' | 'terms' | 'refund-policy'
   title: string
