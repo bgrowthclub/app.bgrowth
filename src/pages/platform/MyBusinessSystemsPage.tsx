@@ -7,6 +7,7 @@ import EmptyState from '../../components/ui/EmptyState'
 import Button from '../../components/ui/Button'
 import Grid from '../../components/layout/Grid'
 import ProductLibraryCard from '../../components/systems/ProductLibraryCard'
+import MyWorkspacesTabs from '../../components/platform/MyWorkspacesTabs'
 import { useOwnedProductsState } from '../../lib/productLibrary'
 import { useIdentity } from '../../modules/identity/IdentityContext'
 
@@ -66,6 +67,8 @@ export default function MyBusinessSystemsPage() {
         description="Every Workspace you own, in one place — search, filter, and jump back in."
         path="/platform/my-systems"
       />
+
+      <MyWorkspacesTabs />
 
       <div>
         <p className="eyebrow">Your Workspaces</p>

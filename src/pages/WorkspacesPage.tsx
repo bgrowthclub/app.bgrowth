@@ -9,7 +9,8 @@ import Button from '../components/ui/Button'
 import { categoryCatalogPath, useWorkspaceCategories } from '../lib/useWorkspaceCategories'
 import { fadeUp, viewportOnce } from '../lib/motion'
 
-// The standalone entry point into the Workspace™ ecosystem — same content
+// The standalone entry point into the Life Worlds (shown as "Workspace™"
+// until 16/10/2026; the /workspaces URL is kept) — same content
 // and same WORKSPACE_CATEGORIES source as the homepage's Workspace section
 // (components/sections/LifeWorlds.tsx).
 export default function WorkspacesPage() {
@@ -28,7 +29,7 @@ export default function WorkspacesPage() {
   return (
     <div className="pb-24 pt-32 md:pt-40">
       <SEO
-        title="Workspace™"
+        title="Life Worlds"
         description="Choose an interactive workspace designed to help you organize, learn, plan and accomplish meaningful goals."
         keywords={['bgrowth workspace', 'growth systems', 'business workspace', 'personal growth']}
         path="/workspaces"
@@ -37,7 +38,7 @@ export default function WorkspacesPage() {
       {/* Hero */}
       <section className="container-px mx-auto max-w-page text-center">
         <div className="mx-auto max-w-xl">
-          <p className="eyebrow">Workspace™</p>
+          <p className="eyebrow">Life Worlds</p>
           <h1 className="mt-5 font-display text-3xl font-bold tracking-tight text-navy md:text-4xl">
             What do you want to achieve next?
           </h1>
@@ -47,7 +48,7 @@ export default function WorkspacesPage() {
           </p>
         </div>
         <div className="mx-auto mt-8 max-w-xl">
-          <SearchBar value={query} onChange={setQuery} placeholder="Search Workspaces…" />
+          <SearchBar value={query} onChange={setQuery} placeholder="Search Life Worlds…" />
         </div>
       </section>
 

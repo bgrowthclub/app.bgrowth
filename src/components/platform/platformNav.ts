@@ -1,7 +1,6 @@
 import {
   LayoutDashboard,
   FolderOpen,
-  FileText,
   LayoutGrid,
   GraduationCap,
   Users,
@@ -46,6 +45,9 @@ export interface PlatformNavItem {
   support?: boolean
   // Shown only to a member who has their own public page (User.memberPage).
   pageOwnerOnly?: boolean
+  // Other routes that keep this row highlighted (e.g. My Workspaces stays
+  // active on /platform/documents, its second tab).
+  alsoActiveOn?: string[]
 }
 
 // supportUnread: the member's conversations with a reply they haven't
@@ -75,10 +77,11 @@ export const PLATFORM_NAV_GROUPS: PlatformNavGroup[] = [
       // filter, sort — see pages/platform/MyBusinessSystemsPage.tsx). The
       // legacy /my-systems page (marketing AppLayout) is untouched and still
       // reachable from its own nav, but the Workspace no longer points at it.
-      { label: 'My Workspaces', to: '/platform/my-systems', icon: FolderOpen },
-      // Every saved record across Studio Workspaces — the Portal's "My
-      // Documents" (see pages/platform/MyDocumentsPage.tsx).
-      { label: 'My Documents', to: '/platform/documents', icon: FileText },
+      // One entry for both (decided 16/10/2026): the products the member
+      // can open and what they filled in ("My Documents",
+      // pages/platform/MyDocumentsPage.tsx) — shared "Workspaces |
+      // Documents" tabs on both pages (MyWorkspacesTabs). Both routes stay.
+      { label: 'My Workspaces', to: '/platform/my-systems', icon: FolderOpen, alsoActiveOn: ['/platform/documents'] },
       // BGrowth App still points at the existing catalog browse page (see
       // ARCHITECTURE.md on the Runtime) but is locked here — it isn't
       // available as its own experience inside the Workspace yet. /systems

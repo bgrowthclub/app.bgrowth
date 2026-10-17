@@ -6,6 +6,7 @@ import SearchBar from '../../components/ui/SearchBar'
 import EmptyState from '../../components/ui/EmptyState'
 import Button from '../../components/ui/Button'
 import DocumentCard from '../../components/workspace/DocumentCard'
+import MyWorkspacesTabs from '../../components/platform/MyWorkspacesTabs'
 import { useIdentity } from '../../modules/identity/IdentityContext'
 import { listStudioDocuments } from '../../modules/workspace/services/studioDocuments'
 import type { StudioDocumentGroup } from '../../modules/workspace/services/studioDocuments'
@@ -66,6 +67,7 @@ export default function MyDocumentsPage() {
   return (
     <div className="mx-auto max-w-6xl">
       <SEO title="My Documents" description="Everything you’ve created in your Workspaces." path="/platform/documents" />
+      <MyWorkspacesTabs className="mb-8" />
       <SectionHeader
         eyebrow="Your Records"
         title="My Documents"
