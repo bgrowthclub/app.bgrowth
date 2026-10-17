@@ -1,4 +1,4 @@
-import { NavLink } from 'react-router-dom'
+import { NavLink, useLocation } from 'react-router-dom'
 import { Lock } from 'lucide-react'
 import { useComingSoonModal } from './ComingSoonModalProvider'
 import type { PlatformNavItem } from './platformNav'
@@ -12,8 +12,10 @@ interface Props {
 }
 
 export default function SidebarItem({ item, collapsed = false, count = 0, onNavigate }: Props) {
-  const { label, to, icon: Icon, locked } = item
+  const { label, to, icon: Icon, locked, alsoActiveOn } = item
   const { openComingSoon } = useComingSoonModal()
+  const { pathname } = useLocation()
+  const activeElsewhere = alsoActiveOn?.some((path) => pathname === path || pathname.startsWith(`${path}/`)) ?? false
 
   if (locked) {
     return (
@@ -45,7 +47,7 @@ export default function SidebarItem({ item, collapsed = false, count = 0, onNavi
       title={collapsed ? label : undefined}
       className={({ isActive }) =>
         `relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13.5px] font-medium transition-colors ${
-          isActive ? 'bg-bg-soft text-primary' : 'text-navy/60 hover:bg-bg-soft hover:text-navy'
+          isActive || activeElsewhere ? 'bg-bg-soft text-primary' : 'text-navy/60 hover:bg-bg-soft hover:text-navy'
         } ${collapsed ? 'justify-center' : ''}`
       }
     >

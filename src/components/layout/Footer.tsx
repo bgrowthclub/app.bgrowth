@@ -7,7 +7,7 @@ import SignupInterests from '../newsletter/SignupInterests'
 
 const LINKS = [
   { label: 'Business Systems', to: '/systems' },
-  { label: 'Workspace', to: '/workspaces' },
+  { label: 'Life Worlds', to: '/workspaces' },
   { label: 'Resources', to: '/resources' },
   { label: 'About', to: '/about' },
 ]

@@ -262,6 +262,22 @@ This repo is a **static, client-only MVP**:
   (`User.isAdmin`) sees `pages/ComingSoonPage` (newsletter sign-up, source
   `coming-soon`, noindex); sign-in, legal and newsletter pages and Bruno's
   page/course stay open. The flag is read through `api/ingles.ts?action=site`.
+  **Since Sprint 93 (decided 16/10/2026 with the owner):** My Workspaces
+  and My Documents are ONE sidebar entry ("My Workspaces",
+  `alsoActiveOn` in `platformNav.ts`) with shared "Workspaces | Documents"
+  tabs (`components/platform/MyWorkspacesTabs`) on both pages; both routes
+  (`/platform/my-systems`, `/platform/documents`) and their data are
+  unchanged. The six homepage groupings (`data/workspaceCategories.ts`,
+  `sections/LifeWorlds.tsx`, `/workspaces`) are labeled **Life Worlds**
+  (no ™) — "Workspace" now means only a product a member owns/uses. Life
+  Worlds stay a presentation layer over the eight Growth Category Areas;
+  no slug, table or URL changed. Decided but NOT built: "Library" stays
+  retired and no "My Resources" area until it has a distinct purpose;
+  Account → Purchases, hiding locked nav items, Membership, Journal,
+  Journeys (Life World → Journey → Mission → Action, NOW; `LearningPath`
+  is not a competing Journey definition), Knowledge expansion (the 89 Wix
+  blog posts need an inventory/migration plan first) and Explore are
+  future work.
   **Since Sprint 87 sign-up, sign-in and newsletter forms have bot
   protection** (approved by the user, after bot sign-ups were found):
   Cloudflare Turnstile through `lib/captcha.ts` (`getCaptchaToken()`, run

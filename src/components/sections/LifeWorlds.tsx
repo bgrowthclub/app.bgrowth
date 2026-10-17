@@ -24,7 +24,7 @@ export default function LifeWorlds() {
           className="mb-5 flex justify-center"
         >
           <span className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-bg-soft px-5 py-2 text-sm font-bold uppercase tracking-[0.14em] text-primary shadow-softer">
-            Workspace™
+            Life Worlds
           </span>
         </motion.div>
 
