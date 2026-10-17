@@ -212,6 +212,16 @@ This repo is a **static, client-only MVP**:
   `en`; resources `site-content`), read by `components/legal/LegalDocument`
   through `siteService.getSiteContent()`. No row = the built-in text in
   `data/legal.ts`; "Restore original" deletes the row.
+  **Since Sprint 102 SEO and link previews are edited there too** (approved
+  by the user): Admin → Site → SEO saves key `seo` (`SeoSettings` in
+  `data/seoPages.ts`: per main page a title/description/share image, plus a
+  default share image). `data/seoPages.ts` (`SEO_PAGES`) holds the main
+  pages' built-in texts, which those pages pass to `<SEO>`; `<SEO>` applies
+  the saved values and the default image. Preview bots (WhatsApp, Facebook/
+  Instagram, LinkedIn, X…, by user-agent in `vercel.json`, before the SPA
+  catch-all) get `api/ingles.ts?action=og`: a small page with the product's,
+  bundle's or member page's own name/description/image, else the SEO
+  settings, else the defaults. Home, catalog and product pages now set <SEO>.
   **Since Sprint 81–82 the Admin menu is grouped and categories have a
   look** (approved by the user): the Admin part of the side menu is four
   collapsible groups (Overview, People, Catalog, Site & content —

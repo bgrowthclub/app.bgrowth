@@ -1022,9 +1022,9 @@ async function uploadNewsletterImage(req: VercelRequest, db: Db) {
   const bytes = Buffer.from(match[3], 'base64')
   if (bytes.length > 3 * 1024 * 1024) throw new HttpError(413, 'This image is too large (3 MB max).')
   const ext = match[2] === 'jpeg' ? 'jpg' : match[2]
-  // Also used for bundle covers (Admin → Bundles) and member page photos
-  // (Admin → Pages).
-  const folder = ['bundles', 'pages', 'categories'].includes(str(req.body?.folder)) ? str(req.body?.folder) : 'newsletter'
+  // Also used for bundle covers (Admin → Bundles), member page photos
+  // (Admin → Pages) and share images (Admin → Site → SEO).
+  const folder = ['bundles', 'pages', 'categories', 'site'].includes(str(req.body?.folder)) ? str(req.body?.folder) : 'newsletter'
   const path = `${folder}/${new Date().toISOString().slice(0, 10)}/${randomUUID()}.${ext}`
   const { error } = await db.storage.from('portal-product-assets').upload(path, bytes, { contentType: match[1], upsert: false })
   if (error) throw error
@@ -2575,7 +2575,27 @@ const LEGAL_NAMES: Record<string, string> = {
   'legal:terms': 'Terms of Service',
   'legal:refund-policy': 'Refund Policy',
 }
-const LEGAL_KEYS = new Set(Object.keys(LEGAL_NAMES))
+const SITE_CONTENT_NAMES: Record<string, string> = { ...LEGAL_NAMES, seo: 'SEO' }
+
+// SEO (key "seo"): per page (by its address) a Google title/description and
+// a share image, plus the default share image for every other link.
+function cleanImage(value: unknown) {
+  const url = cleanText(value, 500)
+  if (!url) return ''
+  if (!/^https:\/\/[^\s]+$/i.test(url)) throw new HttpError(400, 'An image must be a full https:// address.')
+  return url
+}
+
+function readSeoContent(raw: Record<string, unknown> | undefined) {
+  const rawPages = raw?.pages && typeof raw.pages === 'object' ? (raw.pages as Record<string, Record<string, unknown>>) : {}
+  const pages: Record<string, { title: string; description: string; image: string }> = {}
+  for (const [path, page] of Object.entries(rawPages).slice(0, 40)) {
+    if (!/^\/[a-z0-9\-/]*$/.test(path)) continue
+    const entry = { title: cleanText(page?.title, 70), description: cleanText(page?.description, 300), image: cleanImage(page?.image) }
+    if (entry.title || entry.description || entry.image) pages[path] = entry
+  }
+  return { defaultImage: cleanImage(raw?.defaultImage), pages }
+}
 
 function cleanList(value: unknown, maxItems: number, maxLength: number) {
   if (!Array.isArray(value)) return []
@@ -2603,7 +2623,7 @@ function readLegalContent(raw: Record<string, unknown> | undefined) {
 
 function siteContentKey(value: unknown) {
   const key = cleanText(value, 100) ?? ''
-  if (!LEGAL_KEYS.has(key)) throw new HttpError(400, 'Unknown part of the site.')
+  if (!SITE_CONTENT_NAMES[key]) throw new HttpError(400, 'Unknown part of the site.')
   return key
 }
 
@@ -2619,7 +2639,7 @@ async function getSiteContent(req: VercelRequest, db: Db) {
 
 async function saveSiteContent(req: VercelRequest, db: Db, admin: Admin) {
   const key = siteContentKey(req.body?.key)
-  const value = readLegalContent(req.body?.value)
+  const value = key === 'seo' ? readSeoContent(req.body?.value) : readLegalContent(req.body?.value)
   const { data, error } = await db
     .from('site_content')
     .upsert({ key, locale: 'en', value, updated_at: new Date().toISOString(), updated_by: admin.email })
@@ -2629,14 +2649,14 @@ async function saveSiteContent(req: VercelRequest, db: Db, admin: Admin) {
     if (isMissingTable(error)) throw new HttpError(400, 'Run the database update (Portal migration 0053) first.')
     throw error
   }
-  return { key, content: data, title: value.title }
+  return { key, content: data, title: SITE_CONTENT_NAMES[key] }
 }
 
 async function resetSiteContent(req: VercelRequest, db: Db) {
   const key = siteContentKey(req.body?.key ?? req.query.key)
   const { error } = await db.from('site_content').delete().eq('key', key).eq('locale', 'en')
   if (error) throw error
-  return { key, reset: true, title: LEGAL_NAMES[key] }
+  return { key, reset: true, title: SITE_CONTENT_NAMES[key] }
 }
 
 // ---------------------------------------------------------------------------
@@ -2719,7 +2739,7 @@ function describe(key: string, b: Body, r: Record<string, any>): Described {
     case 'DELETE announcements':
       return { area: 'site', summary: `Deleted the announcement “${r.deleted?.title ?? ''}”` }
     case 'PUT site-content':
-      return { area: 'site', summary: `Edited the page “${r.title ?? r.key}”` }
+      return { area: 'site', summary: `Edited “${r.title ?? r.key}” (Admin → Site)` }
     case 'DELETE site-content':
       return { area: 'site', summary: `Restored the original text of “${r.title ?? r.key}”` }
     case 'PUT home-featured':

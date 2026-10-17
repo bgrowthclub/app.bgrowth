@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ArrowRight } from 'lucide-react'
 import SEO from '../../components/seo/SEO'
+import { seoPage } from '../../data/seoPages'
 import SectionContainer from '../../components/layout/SectionContainer'
 import SectionHeader from '../../components/ui/SectionHeader'
 import Grid from '../../components/layout/Grid'
@@ -101,8 +102,8 @@ export default function KnowledgeHomePage() {
   return (
     <div className="pb-24">
       <SEO
-        title="Knowledge"
-        description="BGrowth Knowledge — practical business education, free resources, and expert guidance in one place."
+        title={seoPage('/knowledge').title}
+        description={seoPage('/knowledge').description}
         keywords={['business education', 'free business resources', 'business guides']}
         path="/knowledge"
       />

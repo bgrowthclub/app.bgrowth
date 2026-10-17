@@ -17,6 +17,17 @@
       "destination": "https://ingles-de-mudanca-bg-rowrh-club.vercel.app/p/bruno/ingles-de-mudanca/:path*"
     },
     {
+      "source": "/:path((?!api/|assets/).*)",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(facebookexternalhit|Facebot|meta-externalagent|WhatsApp|Twitterbot|LinkedInBot|Slackbot|TelegramBot|Discordbot|Pinterest|redditbot|SkypeUriPreview|Iframely|Embedly|vkShare|Snapchat|bitlybot|Tumblr).*"
+        }
+      ],
+      "destination": "/api/ingles?action=og&path=:path"
+    },
+    {
       "source": "/((?!api/).*)",
       "destination": "/index.html"
     }

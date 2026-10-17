@@ -11,6 +11,7 @@ import {
   ArrowRight,
 } from 'lucide-react'
 import SEO from '../components/seo/SEO'
+import { seoPage } from '../data/seoPages'
 import SectionContainer from '../components/layout/SectionContainer'
 import SectionHeader from '../components/ui/SectionHeader'
 import FAQ from '../components/ui/FAQ'
@@ -69,8 +70,8 @@ export default function ContactPage() {
   return (
     <div>
       <SEO
-        title="Contact"
-        description="Get in touch with BGrowth — general questions, support, sales, partnerships, business opportunities and media inquiries."
+        title={seoPage('/contact').title}
+        description={seoPage('/contact').description}
         keywords={['contact bgrowth', 'bgrowth support', 'bgrowth partnerships']}
         path="/contact"
       />
