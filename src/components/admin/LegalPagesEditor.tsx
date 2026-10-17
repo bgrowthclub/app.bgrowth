@@ -157,6 +157,27 @@ export default function LegalPagesEditor() {
         </p>
       </div>
 
+      <details className={`${CARD} px-5 py-3 text-[13.5px] text-navy/70`}>
+        <summary className="cursor-pointer font-semibold text-navy">How it works</summary>
+        <ul className="mt-3 list-disc space-y-1.5 pl-5">
+          <li>Pick a page: Privacy Policy, Terms of Service or Refund Policy.</li>
+          <li>Edit the title, the summary under it and the sections — add a section, move it with the arrows or delete it.</li>
+          <li>Inside a section: leave a blank line between paragraphs; start a line with “- ” to make it a bullet point.</li>
+          <li>
+            <strong>Save and publish</strong> puts the new text on the site right away, and the page’s “Last updated” becomes the
+            day you saved.
+          </li>
+          <li>
+            <strong>Restore original</strong> goes back to the site’s built-in text and deletes the edited version.
+          </li>
+          <li>Until you save a page here, the site shows its built-in text.</li>
+          <li>
+            <strong>View page</strong> opens the page on the site so you can check it.
+          </li>
+          <li>Every save or restore is listed in Admin → Activity. Only Admins can edit these pages (not Support).</li>
+        </ul>
+      </details>
+
       <div className="flex flex-wrap gap-2">
         {LEGAL_DOCUMENTS.map((d) => (
           <button
