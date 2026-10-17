@@ -1,4 +1,6 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { getSiteContent } from '../../modules/site/siteService'
+import type { SeoSettings } from '../../data/seoPages'
 
 // Lightweight head-tag manager for a client-rendered SPA. No dependency
 // (react-helmet, etc.) — just upserts <meta>/<link> tags on mount and
@@ -18,6 +20,16 @@ interface Props {
   ogImage?: string
 }
 
+// Admin → Site → SEO (portal.site_content key "seo"), loaded once per visit:
+// a page's own title/description/share image, and the default share image.
+let settingsPromise: Promise<SeoSettings | null> | null = null
+function loadSettings() {
+  settingsPromise ??= getSiteContent<SeoSettings>('seo')
+    .then((row) => row?.value ?? null)
+    .catch(() => null)
+  return settingsPromise
+}
+
 function upsertMeta(attr: 'name' | 'property', key: string, content: string) {
   let tag = document.querySelector<HTMLMetaElement>(`meta[${attr}="${key}"]`)
   if (!tag) {
@@ -28,7 +40,21 @@ function upsertMeta(attr: 'name' | 'property', key: string, content: string) {
   tag.setAttribute('content', content)
 }
 
-export default function SEO({ title, description, keywords, path, ogImage }: Props) {
+export default function SEO({ title: builtInTitle, description: builtInDescription, keywords, path, ogImage: pageImage }: Props) {
+  const [settings, setSettings] = useState<SeoSettings | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    loadSettings().then((s) => !cancelled && setSettings(s))
+    return () => {
+      cancelled = true
+    }
+  }, [])
+
+  const custom = settings?.pages?.[path]
+  const title = custom?.title || builtInTitle
+  const description = custom?.description || builtInDescription
+  const ogImage = custom?.image || pageImage || settings?.defaultImage
+
   useEffect(() => {
     const fullTitle = `${title} | BGrowth`
     document.title = fullTitle
@@ -40,7 +66,9 @@ export default function SEO({ title, description, keywords, path, ogImage }: Pro
     upsertMeta('property', 'og:description', description)
     upsertMeta('property', 'og:type', 'website')
     upsertMeta('property', 'og:url', `${SITE_URL}${path}`)
+    upsertMeta('property', 'og:site_name', 'BGrowth')
     if (ogImage) upsertMeta('property', 'og:image', ogImage)
+    upsertMeta('name', 'twitter:card', ogImage ? 'summary_large_image' : 'summary')
 
     let canonical = document.querySelector<HTMLLinkElement>('link[rel="canonical"]')
     if (!canonical) {

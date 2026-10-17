@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import SEO from '../components/seo/SEO'
+import { seoPage } from '../data/seoPages'
 import { motion } from 'framer-motion'
 import SearchToolbar from '../components/ui/SearchToolbar'
 import { recordCatalogSearch } from '../lib/searchStats'
@@ -254,6 +256,7 @@ export default function BrowseSystems() {
 
   return (
     <section className="pt-36 pb-24 md:pt-44">
+      <SEO title={seoPage('/systems').title} description={seoPage('/systems').description} path="/systems" />
       <div className="container-px mx-auto max-w-page">
         <div className="max-w-2xl">
           <p className="eyebrow">Business Systems™</p>

@@ -1,5 +1,6 @@
 import { Video, ArrowRight, MapPin } from 'lucide-react'
 import SEO from '../components/seo/SEO'
+import { seoPage } from '../data/seoPages'
 import SectionHeader from '../components/ui/SectionHeader'
 import EmptyState from '../components/ui/EmptyState'
 import MemberBanner from '../components/ui/MemberBanner'
@@ -39,8 +40,8 @@ export default function ResourcesPage() {
   return (
     <div className="pb-24 pt-32 md:pt-40">
       <SEO
-        title="Resources"
-        description="Free guides, templates, and tools for launching and running a service business — from BGrowth."
+        title={seoPage('/resources').title}
+        description={seoPage('/resources').description}
         keywords={['free business templates', 'business guides', 'service business resources']}
         path="/resources"
       />

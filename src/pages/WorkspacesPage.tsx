@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { motion } from 'framer-motion'
 import { ArrowRight } from 'lucide-react'
 import SEO from '../components/seo/SEO'
+import { seoPage } from '../data/seoPages'
 import SearchBar from '../components/ui/SearchBar'
 import IndustryCard from '../components/systems/IndustryCard'
 import Card from '../components/ui/Card'
@@ -29,8 +30,8 @@ export default function WorkspacesPage() {
   return (
     <div className="pb-24 pt-32 md:pt-40">
       <SEO
-        title="Life Worlds"
-        description="Choose an interactive workspace designed to help you organize, learn, plan and accomplish meaningful goals."
+        title={seoPage('/workspaces').title}
+        description={seoPage('/workspaces').description}
         keywords={['bgrowth workspace', 'growth systems', 'business workspace', 'personal growth']}
         path="/workspaces"
       />

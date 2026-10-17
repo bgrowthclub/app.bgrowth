@@ -1,5 +1,6 @@
 import { Target, Compass, Layers, GitBranch, Telescope, GraduationCap, ArrowRight } from 'lucide-react'
 import SEO from '../components/seo/SEO'
+import { seoPage } from '../data/seoPages'
 import SectionHeader from '../components/ui/SectionHeader'
 import Button from '../components/ui/Button'
 
@@ -19,8 +20,8 @@ export default function AboutPage() {
   return (
     <div className="pb-24 pt-32 md:pt-40">
       <SEO
-        title="About"
-        description="BGrowth builds interactive Workspaces — not courses — that help people turn ambition into action, in business, career, and life."
+        title={seoPage('/about').title}
+        description={seoPage('/about').description}
         keywords={['about bgrowth', 'bgrowth workspace', 'bgrowth mission', 'growth systems']}
         path="/about"
       />

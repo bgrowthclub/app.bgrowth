@@ -3,6 +3,7 @@ import { useParams, useSearchParams, Link, Navigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { CheckSquare, Square } from 'lucide-react'
 import Badge from '../components/ui/Badge'
+import SEO from '../components/seo/SEO'
 import SectionHeader from '../components/ui/SectionHeader'
 import FeatureGrid from '../components/ui/FeatureGrid'
 import PricingCard from '../components/ui/PricingCard'
@@ -141,6 +142,7 @@ export default function ProductPage() {
 
   return (
     <div className="pt-32 md:pt-40">
+      <SEO title={product.title} description={product.description} path={`/product/${product.slug}`} ogImage={product.assets.thumbnail ?? undefined} />
       {/* Hero */}
       <section className="container-px mx-auto max-w-page pb-16">
         <Link to="/systems" className="text-[13px] font-semibold text-primary">

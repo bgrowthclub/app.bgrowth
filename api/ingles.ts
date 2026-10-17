@@ -129,6 +129,80 @@ async function getSiteOpen(db: Db) {
   return { open: data?.value === true }
 }
 
+// Link previews (Website Sprint 102): WhatsApp, Facebook/Instagram,
+// LinkedIn, X and other preview bots don't run the site's JavaScript, so
+// vercel.json sends only them here for every page address. They get a tiny
+// page with the right title, description and image: a product's, bundle's
+// or member page's own, else Admin → Site → SEO (portal.site_content key
+// "seo"), else the site's defaults. People never land here.
+const OG_SITE = 'https://bgrowth.app'
+const OG_DEFAULT_TITLE = 'BGrowth — Business Systems That Help You Grow Anywhere'
+const OG_DEFAULT_DESCRIPTION =
+  'Interactive Workspaces, planners and ready-to-use kits that help you organize, plan and grow your business, career and life.'
+
+function escapeHtml(text: string) {
+  return text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
+type SeoRow = { defaultImage?: string; pages?: Record<string, { title?: string; description?: string; image?: string }> }
+
+async function linkPreview(req: VercelRequest, db: Db) {
+  let path = '/' + str(req.query.path, 300).replace(/^\/+/, '').split(/[?#]/)[0]
+  if (path.length > 1) path = path.replace(/\/+$/, '')
+
+  const { data: seoRow } = await db.from('site_content').select('value').eq('key', 'seo').eq('locale', 'en').maybeSingle()
+  const seo = ((seoRow as { value?: SeoRow } | null)?.value ?? {}) as SeoRow
+  const custom = seo.pages?.[path]
+  let title = custom?.title ? `${custom.title} | BGrowth` : OG_DEFAULT_TITLE
+  let description = custom?.description || OG_DEFAULT_DESCRIPTION
+  let image = custom?.image || seo.defaultImage || ''
+
+  const product = /^\/(product|bundle)\/([a-z0-9-]{1,120})$/.exec(path)
+  const member = /^\/p\/([a-z0-9-]{1,40})$/.exec(path)
+  if (product) {
+    const { data } = await db
+      .from('products')
+      .select('name, short_description, cover_image_url')
+      .eq('slug', product[2])
+      .eq('status', 'published')
+      .maybeSingle()
+    const p = data as { name?: string; short_description?: string | null; cover_image_url?: string | null } | null
+    if (p?.name) {
+      title = `${p.name} | BGrowth`
+      description = p.short_description || description
+      image = p.cover_image_url || image
+    }
+  } else if (member) {
+    const { data } = await db.from('member_pages').select('display_name, headline, photo_url').eq('slug', member[1]).eq('status', 'published').maybeSingle()
+    const m = data as { display_name?: string; headline?: string | null; photo_url?: string | null } | null
+    if (m?.display_name) {
+      title = `${m.display_name} | BGrowth`
+      description = m.headline || `${m.display_name} on BGrowth`
+      image = m.photo_url || image
+    }
+  }
+
+  const url = `${OG_SITE}${path === '/' ? '' : path}`
+  const t = escapeHtml(title)
+  const d = escapeHtml(description.slice(0, 300))
+  const tags = [
+    `<title>${t}</title>`,
+    `<meta name="description" content="${d}">`,
+    `<link rel="canonical" href="${escapeHtml(url)}">`,
+    '<meta property="og:type" content="website">',
+    '<meta property="og:site_name" content="BGrowth">',
+    `<meta property="og:title" content="${t}">`,
+    `<meta property="og:description" content="${d}">`,
+    `<meta property="og:url" content="${escapeHtml(url)}">`,
+    image ? `<meta property="og:image" content="${escapeHtml(image)}">` : '',
+    `<meta name="twitter:card" content="${image ? 'summary_large_image' : 'summary'}">`,
+    `<meta name="twitter:title" content="${t}">`,
+    `<meta name="twitter:description" content="${d}">`,
+    image ? `<meta name="twitter:image" content="${escapeHtml(image)}">` : '',
+  ].filter(Boolean)
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8">${tags.join('')}</head><body><h1>${t}</h1><p>${d}</p><p><a href="${escapeHtml(url)}">${escapeHtml(url)}</a></p></body></html>`
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Public, harmless actions: the course's own Vercel address may call them too.
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -147,6 +221,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (req.method === 'GET' && action === 'site') {
       res.setHeader('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=60')
       return res.status(200).json(await getSiteOpen(db))
+    }
+    if (req.method === 'GET' && action === 'og') {
+      const html = await linkPreview(req, db)
+      res.setHeader('Content-Type', 'text/html; charset=utf-8')
+      res.setHeader('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=3600')
+      return res.status(200).send(html)
     }
     if (req.method === 'GET' && action === 'creator') {
       res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600')

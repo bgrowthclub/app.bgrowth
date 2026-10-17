@@ -90,6 +90,9 @@ export const adminService = {
   async updateCategory(id: string, patch: { name?: string; parentId?: string; icon?: string; color?: string; coverImageUrl?: string }) {
     return (await call<{ category: AdminCategory }>('PATCH', 'categories', undefined, { id, ...patch })).category
   },
+  async uploadSiteImage(dataUrl: string) {
+    return (await call<{ url: string }>('POST', 'newsletter-image', undefined, { dataUrl, folder: 'site' })).url
+  },
   async uploadCategoryCover(dataUrl: string) {
     return (await call<{ url: string }>('POST', 'newsletter-image', undefined, { dataUrl, folder: 'categories' })).url
   },
