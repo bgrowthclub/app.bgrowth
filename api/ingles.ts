@@ -17,6 +17,9 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 //   POST track     { slug, kind: view|click|course_view, target? } — adds
 //                   one to the page's numbers for today (Portal migration
 //                   0045). Only totals are kept, nothing about the visitor.
+//   POST search    { q, results } — what was typed in the catalog search and
+//                   whether anything matched; daily totals only (Portal
+//                   migration 0052), the future Product Discovery's data.
 //
 // Self-contained (no relative imports), like the other functions.
 // Env: SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY.
@@ -80,6 +83,23 @@ async function trackEvent(req: VercelRequest, db: Db) {
   return { ok: true }
 }
 
+// Catalog searches (Portal migration 0052). Never breaks the page: before
+// the migration (or on any error) it simply doesn't count.
+async function trackSearch(req: VercelRequest, db: Db) {
+  const raw = typeof req.body === 'string' ? safeJson(req.body) : req.body
+  const body = (raw && typeof raw === 'object' ? raw : {}) as Record<string, unknown>
+  const q = str(body.q, 100)
+  const results = typeof body.results === 'number' && Number.isFinite(body.results) ? Math.max(0, Math.floor(body.results)) : 0
+  if (q.length < 2) return { ok: true }
+  try {
+    const { error } = await db.rpc('record_site_search', { p_query: q, p_results: results })
+    if (error) console.warn('[search] not counted:', error.message)
+  } catch (err) {
+    console.warn('[search] not counted:', err)
+  }
+  return { ok: true }
+}
+
 function safeJson(text: string): unknown {
   try {
     return JSON.parse(text)
@@ -123,6 +143,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const action = str(req.query.action)
     if (req.method === 'POST' && action === 'lead') return res.status(200).json(await saveLead(req, db))
     if (req.method === 'POST' && action === 'track') return res.status(200).json(await trackEvent(req, db))
+    if (req.method === 'POST' && action === 'search') return res.status(200).json(await trackSearch(req, db))
     if (req.method === 'GET' && action === 'site') {
       res.setHeader('Cache-Control', 'public, s-maxage=30, stale-while-revalidate=60')
       return res.status(200).json(await getSiteOpen(db))

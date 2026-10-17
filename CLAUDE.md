@@ -278,6 +278,16 @@ This repo is a **static, client-only MVP**:
   is not a competing Journey definition), Knowledge expansion (the 89 Wix
   blog posts need an inventory/migration plan first) and Explore are
   future work.
+  **Since Sprint 97 the catalog records what visitors search for**
+  (approved by the user; Portal migration 0052): `lib/searchStats.ts`
+  sends each finished search in `/systems` (once per session, 1.5 s after
+  typing stops, counted against the whole catalog) to
+  `api/ingles.ts?action=search` → `portal.record_site_search()` →
+  `portal.site_search_stats` (daily totals per normalized search and
+  whether anything matched; no user/IP; e-mail- or number-like searches
+  dropped; service role only). It is the first data source for the future
+  Product Discovery ("Opportunities") in Studio's Content Engine — no
+  screen reads it yet.
   **Since Sprint 87 sign-up, sign-in and newsletter forms have bot
   protection** (approved by the user, after bot sign-ups were found):
   Cloudflare Turnstile through `lib/captcha.ts` (`getCaptchaToken()`, run
