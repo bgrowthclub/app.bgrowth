@@ -205,6 +205,13 @@ This repo is a **static, client-only MVP**:
   Reads go straight to Supabase (RLS: only live notices); writes go through
   `api/admin.ts`. Next for this area (decided 11/10/2026): page texts and
   images, menu and footer, SEO, and the legal pages (Terms).
+  **Since Sprint 100 the legal pages are edited there** (decided 17/10/2026:
+  order legal → SEO → menu/footer → page texts; English only for now,
+  other languages later; admin-only): Admin → Site → Legal pages writes
+  `portal.site_content` (Portal migration 0053, key `legal:<slug>`, locale
+  `en`; resources `site-content`), read by `components/legal/LegalDocument`
+  through `siteService.getSiteContent()`. No row = the built-in text in
+  `data/legal.ts`; "Restore original" deletes the row.
   **Since Sprint 81–82 the Admin menu is grouped and categories have a
   look** (approved by the user): the Admin part of the side menu is four
   collapsible groups (Overview, People, Catalog, Site & content —

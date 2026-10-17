@@ -18,3 +18,11 @@ export interface SiteAnnouncement {
   created_at: string
   updated_at: string
 }
+
+// A piece of the site edited in Admin → Site (Portal migration 0053,
+// portal.site_content). No row = the site shows its built-in text.
+export interface SiteContentRow<T = unknown> {
+  value: T
+  updated_at: string
+  updated_by: string | null
+}

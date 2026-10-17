@@ -7,6 +7,7 @@ import Button from '../../../components/ui/Button'
 import ConfirmDialog from '../../../components/ui/ConfirmDialog'
 import AnnouncementEditor from '../../../components/admin/AnnouncementEditor'
 import HomeHighlightsEditor from '../../../components/admin/HomeHighlightsEditor'
+import LegalPagesEditor from '../../../components/admin/LegalPagesEditor'
 import { CARD, LINK_BUTTON, SMALL_BUTTON, formatDate, pillClass } from '../../../components/admin/styles'
 import { adminService } from '../../../modules/admin/adminService'
 import type { AdminAnnouncementDraft, AdminSiteOverview } from '../../../modules/admin/types'
@@ -23,8 +24,16 @@ function state(a: SiteAnnouncement): { label: string; tone: 'green' | 'amber' | 
 
 // Admin → Site (Portal migration 0046): announcements — the bar at the top
 // of the public site and/or the bell in the member area — and the Home
-// highlights. More of the site (texts, menu, SEO, terms) comes here later.
+// highlights — and, on the Legal pages tab (Portal migration 0053), the
+// Privacy, Terms and Refund texts. Next here: SEO, menu/footer, page texts.
+type SiteTab = 'general' | 'legal'
+const SITE_TABS: { id: SiteTab; label: string }[] = [
+  { id: 'general', label: 'General' },
+  { id: 'legal', label: 'Legal pages' },
+]
+
 export default function AdminSitePage() {
+  const [tab, setTab] = useState<SiteTab>('general')
   const [data, setData] = useState<AdminSiteOverview | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [editing, setEditing] = useState<SiteAnnouncement | 'new' | null>(null)
@@ -94,11 +103,28 @@ export default function AdminSitePage() {
       <SectionHeader
         eyebrow="Admin"
         title="Site"
-        description="Announcements on the top bar and in the members’ bell, and which products the Home highlights."
-        className="mb-8"
+        description="Announcements, Home highlights, and the texts of the site’s pages."
+        className="mb-6"
       />
 
-      {!data ? (
+      <div className="mb-8 flex gap-1 border-b border-navy/[0.08]">
+        {SITE_TABS.map((t) => (
+          <button
+            key={t.id}
+            type="button"
+            onClick={() => setTab(t.id)}
+            className={`-mb-px border-b-2 px-4 py-2.5 text-[13.5px] font-semibold transition-colors ${
+              tab === t.id ? 'border-primary text-primary' : 'border-transparent text-navy/50 hover:text-navy'
+            }`}
+          >
+            {t.label}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'legal' ? (
+        <LegalPagesEditor />
+      ) : !data ? (
         error ? (
           <EmptyState icon={Megaphone} title="We couldn’t load the site settings." description={error} />
         ) : (
