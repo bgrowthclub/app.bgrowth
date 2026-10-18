@@ -338,6 +338,15 @@ This repo is a **static, client-only MVP**:
   monthly revenue, cancelling, failed payments, cancelled in 30 days.
   Not yet: applying the benefits (step 3 — articles by plan in Studio,
   priority support, Workspace discount).
+  **Since Sprint 123 there are coupons** (approved by the user 18/10/2026):
+  Admin → Coupons (resource `coupons`, admin-only) creates discount codes in
+  Stripe (a coupon + its promotion code: % or US$ off, once / some months /
+  every payment on a plan, everything or only chosen plans — via the plans'
+  Stripe products —, total uses, end date, first purchase only) and turns
+  them on/off; the list reads Stripe. Accepted at every checkout
+  (`allow_promotion_codes` in `api/studio-checkout.ts` and the plan checkout).
+  Workspaces are charged without a stored Stripe product, so a coupon can't
+  be limited to some Workspaces.
   **Since Sprint 81–82 the Admin menu is grouped and categories have a
   look** (approved by the user): the Admin part of the side menu is four
   collapsible groups (Overview, People, Catalog, Site & content —

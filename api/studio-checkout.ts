@@ -268,6 +268,8 @@ async function bundleCheckout(
   const stripe = new Stripe(secretKey)
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',
+    // Coupons made in Admin → Coupons (Sprint 123).
+    allow_promotion_codes: true,
     customer_email: user.email,
     client_reference_id: user.id,
     line_items: [
@@ -401,6 +403,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const stripe = new Stripe(secretKey)
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
+      // Coupons made in Admin → Coupons (Sprint 123).
+      allow_promotion_codes: true,
       customer_email: user.email,
       client_reference_id: user.id,
       line_items: [
