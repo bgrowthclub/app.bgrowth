@@ -2,7 +2,8 @@ import { useEffect, useRef, useState } from 'react'
 import { EditorContent, useEditor } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Image from '@tiptap/extension-image'
-import { Bold, Heading2, Heading3, ImagePlus, Italic, Link2, List, ListOrdered, Quote, Undo2, Redo2 } from 'lucide-react'
+import { Bold, Heading2, Heading3, ImagePlus, Italic, Link2, List, ListOrdered, Newspaper, Quote, Undo2, Redo2 } from 'lucide-react'
+import NewsletterArticlePicker from './NewsletterArticlePicker'
 import { adminService } from '../../modules/admin/adminService'
 import { shrinkImage } from '../../lib/shrinkImage'
 
@@ -21,6 +22,7 @@ export default function NewsletterEditor({ value, onChange, readOnly }: Props) {
   const fileRef = useRef<HTMLInputElement>(null)
   const [uploading, setUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [picking, setPicking] = useState(false)
 
   const editor = useEditor({
     extensions: [
@@ -106,6 +108,16 @@ export default function NewsletterEditor({ value, onChange, readOnly }: Props) {
           >
             <ImagePlus size={17} />
           </button>
+          <button
+            type="button"
+            title="Insert article from Knowledge"
+            aria-label="Insert article from Knowledge"
+            aria-pressed={picking}
+            onClick={() => setPicking((p) => !p)}
+            className={TOOL}
+          >
+            <Newspaper size={17} />
+          </button>
           <span className="mx-1 h-5 w-px bg-navy/10" />
           <button type="button" title="Undo" aria-label="Undo" onClick={() => editor.chain().focus().undo().run()} disabled={!editor.can().undo()} className={TOOL}>
             <Undo2 size={17} />
@@ -125,6 +137,15 @@ export default function NewsletterEditor({ value, onChange, readOnly }: Props) {
             }}
           />
         </div>
+      )}
+      {picking && !readOnly && (
+        <NewsletterArticlePicker
+          onClose={() => setPicking(false)}
+          onInsert={(html) => {
+            editor.chain().focus().insertContent(html).run()
+            setPicking(false)
+          }}
+        />
       )}
       <EditorContent editor={editor} />
       {error && <p className="border-t border-navy/[0.06] px-5 py-2 text-[13px] text-red-500">{error}</p>}
