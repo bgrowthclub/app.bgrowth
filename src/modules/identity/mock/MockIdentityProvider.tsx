@@ -131,6 +131,8 @@ export function MockIdentityProvider({ children }: { children: ReactNode }) {
         logout,
         requestPasswordReset,
         resetPassword,
+        updateName: async () => undefined,
+        changeEmail: async () => false,
       }}
     >
       {children}

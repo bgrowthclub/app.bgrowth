@@ -31,6 +31,11 @@ export interface IdentityContextValue {
   logout: () => void
   requestPasswordReset: (email: string) => Promise<boolean>
   resetPassword: (newPassword: string) => Promise<void>
+  // My Profile (Sprint 110): the member's own name, and a new e-mail address
+  // (resolves true once the confirmation e-mail is on its way — the address
+  // only changes when the member opens it).
+  updateName: (fullName: string) => Promise<void>
+  changeEmail: (newEmail: string) => Promise<boolean>
 }
 
 export const IdentityContext = createContext<IdentityContextValue | undefined>(undefined)

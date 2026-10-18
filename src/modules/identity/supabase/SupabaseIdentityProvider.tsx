@@ -202,6 +202,48 @@ export function SupabaseIdentityProvider({ children }: { children: ReactNode }) 
     return true
   }
 
+  const updateName = async (fullName: string) => {
+    setError(undefined)
+    if (!supabase) {
+      setError(NOT_CONFIGURED)
+      throw new Error('not-configured')
+    }
+    const { data } = await supabase.auth.getSession()
+    const session = data.session
+    if (!session) throw new Error('Sign in to continue.')
+    const res = await fetch('/api/account?resource=profile', {
+      method: 'PATCH',
+      headers: { Authorization: `Bearer ${session.access_token}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ fullName }),
+    })
+    const body = (await res.json().catch(() => ({}))) as { ok?: boolean; error?: string }
+    if (!res.ok || !body.ok) {
+      const message = body.error || 'Couldn’t save your name.'
+      setError(message)
+      throw new Error(message)
+    }
+    await applySession(session)
+  }
+
+  const changeEmail = async (newEmail: string) => {
+    setError(undefined)
+    if (!supabase) {
+      setError(NOT_CONFIGURED)
+      return false
+    }
+    const email = newEmail.trim()
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setError('Enter a valid e-mail address.')
+      return false
+    }
+    const { error: updateError } = await supabase.auth.updateUser({ email }, { emailRedirectTo: verifyRedirect() })
+    if (updateError) {
+      setError(friendlyError(updateError))
+      return false
+    }
+    return true
+  }
+
   const resetPassword = async (newPassword: string) => {
     setError(undefined)
     if (!supabase) {
@@ -235,6 +277,8 @@ export function SupabaseIdentityProvider({ children }: { children: ReactNode }) 
         logout,
         requestPasswordReset,
         resetPassword,
+        updateName,
+        changeEmail,
       }}
     >
       {children}

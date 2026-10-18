@@ -242,6 +242,15 @@ This repo is a **static, client-only MVP**:
   edited there. A new editable text = a field in `PAGE_TEXT_BLOCKS` + a
   `t.text()` in the component. Signed-in members see "My Dashboard" instead
   of Login/Join in the public menu (Sprint 106).
+  **Since Sprint 110 My Profile is real and unbuilt surfaces say "Soon"**
+  (decided 17/10/2026 with the owner): `/platform/profile`
+  (`components/account/ProfileSettings`) changes the name (`api/account.ts`
+  resource `profile` → `portal.users.full_name` + auth metadata, through
+  `useIdentity().updateName`), the e-mail (`changeEmail`, Supabase sends a
+  confirmation link) and the password (`resetPassword`). Membership (user
+  menu), the "+ New" button and the plans badge in the TopBar stay visible
+  but locked, opening the shared Coming Soon modal; locked side-menu items
+  show a lock and "Soon". Nothing is hidden.
   **Since Sprint 81–82 the Admin menu is grouped and categories have a
   look** (approved by the user): the Admin part of the side menu is four
   collapsible groups (Overview, People, Catalog, Site & content —

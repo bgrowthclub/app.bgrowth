@@ -32,6 +32,7 @@ export default function SidebarItem({ item, collapsed = false, count = 0, onNavi
         {!collapsed && (
           <>
             <span className="flex-1 truncate text-left">{label}</span>
+            <span className="shrink-0 rounded-full bg-navy/[0.05] px-1.5 py-0.5 text-[9.5px] font-semibold uppercase tracking-wide text-navy/40">Soon</span>
             <Lock size={12} className="shrink-0 text-navy/30" />
           </>
         )}

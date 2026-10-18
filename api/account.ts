@@ -107,7 +107,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (req.method === 'OPTIONS') return res.status(204).end()
   try {
     const resource = str(req.query.resource)
-    if (resource !== 'deletion' && resource !== 'announcements-seen' && resource !== 'download') throw new HttpError(404, 'Unknown action.')
+    if (resource !== 'deletion' && resource !== 'announcements-seen' && resource !== 'download' && resource !== 'profile') throw new HttpError(404, 'Unknown action.')
     const url = process.env.SUPABASE_URL
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY
     if (!url || !key) throw new HttpError(500, 'This isn’t configured on this site yet.')
@@ -162,6 +162,21 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .createSignedUrl(file.storage_path, 120, { download: file.name })
       if (signError) throw signError
       return res.status(200).json({ ok: true, url: signed.signedUrl })
+    }
+
+    // My Profile (Sprint 110): the member's own name, in portal.users (what
+    // the site and the Portal show) and in the account's metadata.
+    if (resource === 'profile') {
+      if (req.method !== 'PATCH') throw new HttpError(405, 'Use PATCH.')
+      const name = str(req.body?.fullName).replace(/\s+/g, ' ').slice(0, 80)
+      if (name.length < 2) throw new HttpError(400, 'Write your name.')
+      const { error } = await db.from('users').update({ full_name: name }).eq('id', user.id)
+      if (error) throw error
+      const { error: authError } = await db.auth.admin.updateUserById(user.id, {
+        user_metadata: { ...(user.user_metadata ?? {}), full_name: name },
+      })
+      if (authError) throw authError
+      return res.status(200).json({ ok: true, fullName: name })
     }
 
     // The member opened the bell (Sprint 80): notices up to now are seen.
