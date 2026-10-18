@@ -1,19 +1,21 @@
 import { ArrowRight } from 'lucide-react'
 import SectionHeader from '../ui/SectionHeader'
+import { usePageTexts } from '../../lib/usePageTexts'
 import ArticleCard from '../ui/ArticleCard'
 import Button from '../ui/Button'
 import { ARTICLES } from '../../data/resources'
 
 export default function Knowledge() {
+  const t = usePageTexts()
   const preview = ARTICLES.slice(0, 3)
 
   return (
     <section id="knowledge" className="section-py relative">
       <div className="container-px mx-auto max-w-page">
         <SectionHeader
-          eyebrow="Knowledge"
-          title="Knowledge should be accessible to everyone."
-          description="Every meaningful journey begins by learning something new. Explore practical knowledge designed to help you move forward with confidence."
+          eyebrow={t.text('home.knowledge.eyebrow')}
+          title={t.text('home.knowledge.title')}
+          description={t.text('home.knowledge.description')}
           align="center"
           className="mb-14"
         />

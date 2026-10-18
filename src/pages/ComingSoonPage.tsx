@@ -7,10 +7,12 @@ import SEO from '../components/seo/SEO'
 import SignupInterests from '../components/newsletter/SignupInterests'
 import { useNewsletterSignup } from '../modules/newsletter/useNewsletterSignup'
 import { useIdentity } from '../modules/identity/IdentityContext'
+import { usePageTexts } from '../lib/usePageTexts'
 
 // Shown to everyone but the team while the site is closed (SiteGate).
 export default function ComingSoonPage() {
   const signup = useNewsletterSignup('coming-soon')
+  const t = usePageTexts()
   const { status, logout } = useIdentity()
 
   // Keep search engines out until launch.
@@ -29,13 +31,12 @@ export default function ComingSoonPage() {
     <main className="flex min-h-screen flex-col items-center justify-center bg-bg-soft px-4 py-16 text-center">
       <SEO title="Coming soon" description="BGrowth is almost here." path="/" />
       <img src={logo} alt="BGrowth" className="h-14 w-14 object-contain" />
-      <p className="eyebrow mt-8">Coming soon</p>
+      <p className="eyebrow mt-8">{t.text('soon.eyebrow')}</p>
       <h1 className="mt-3 max-w-xl font-display text-3xl font-bold tracking-tight text-navy sm:text-4xl">
-        BGrowth is almost here.
+        {t.text('soon.title')}
       </h1>
       <p className="mt-4 max-w-md text-[15px] leading-relaxed text-navy/55">
-        Interactive Workspaces™, ready-to-use documents and tools to help you organize, learn and grow. Leave your e-mail and
-        we’ll let you know the day we open.
+        {t.text('soon.text')}
       </p>
 
       <form onSubmit={signup.submit} className="mt-8 flex w-full max-w-md gap-2">
@@ -49,7 +50,7 @@ export default function ComingSoonPage() {
           className="w-full rounded-xl border border-navy/10 bg-white px-4 py-3 text-[14px] text-navy placeholder:text-navy/30 focus:border-primary/30"
         />
         <Button type="submit" className="shrink-0" icon={<ArrowRight size={15} />}>
-          {signup.state === 'sending' ? '…' : signup.done ? 'Done' : 'Notify me'}
+          {signup.state === 'sending' ? '…' : signup.done ? 'Done' : t.text('soon.button')}
         </Button>
       </form>
       {signup.message && (

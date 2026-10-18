@@ -231,6 +231,17 @@ This repo is a **static, client-only MVP**:
   only) and `Footer` read it through `lib/useSiteNavigation.ts`. The
   members' side menu (`platformNav.ts`) is not edited there; since Sprint
   104 it has a "Catalog" item (/systems).
+  **Since Sprint 109 page texts are edited there too** (approved by the
+  user; this completes the Admin → Site plan of 11/10/2026): Admin → Site →
+  Page texts saves key `page-texts` ({ fieldId: text | lines }, only fields
+  that differ from the built-in text). `data/pageTexts.ts`
+  (`PAGE_TEXT_BLOCKS`) lists every field of the Home (Hero, Life Worlds,
+  Start Here, Knowledge, Why BGrowth exists), About and Coming Soon pages
+  with its built-in text; those components read them through
+  `lib/usePageTexts.ts` (`text(id)`, `items(id)`). Layout and images are not
+  edited there. A new editable text = a field in `PAGE_TEXT_BLOCKS` + a
+  `t.text()` in the component. Signed-in members see "My Dashboard" instead
+  of Login/Join in the public menu (Sprint 106).
   **Since Sprint 81–82 the Admin menu is grouped and categories have a
   look** (approved by the user): the Admin part of the side menu is four
   collapsible groups (Overview, People, Catalog, Site & content —
