@@ -168,6 +168,32 @@ export interface AdminNewsletterCampaign extends AdminNewsletterCampaignSummary 
   created_by: string | null
 }
 
+// Admin → Newsletter → Wix contacts (Portal migration 0056).
+export type WixContactGroup = 'contact' | 'team' | 'spam'
+
+export interface AdminWixContact {
+  id: string
+  email: string
+  name: string | null
+  origin: string | null
+  grp: WixContactGroup
+  was_member: boolean
+  had_free_plan: boolean
+  unsubscribed_before: boolean
+  external_created_at: string | null
+  invited_at: string | null
+  accepted_at: string | null
+  /** Already a newsletter subscriber / has an account here, however they joined. */
+  subscribed: boolean
+  member: boolean
+}
+
+export interface AdminWixContactsOverview {
+  ready: boolean
+  address: string
+  contacts: AdminWixContact[]
+}
+
 export interface AdminNewsletterOverview {
   stats: {
     subscribed: number

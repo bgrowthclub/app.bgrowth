@@ -15,6 +15,10 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 //   GET  preferences    ?token=                 — e-mail, status, interests
 //   POST preferences    { token, interests?, status? } — change / unsubscribe
 //   POST unsubscribe    ?token=                 — one-click (List-Unsubscribe)
+//   POST invite-accept  { token }               — "Yes, keep me posted" from the
+//                        one-time invite to the old Wix site's contacts
+//                        (portal.imported_contacts, migration 0056): subscribes
+//                        them and returns the subscription token
 //   GET  me / PUT me    (Bearer)                — the signed-in member's own
 //
 // The tables have no browser access (Portal migration 0036). Self-contained
@@ -248,6 +252,25 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       if (insError) throw insError
       await sendWelcome(req, db, email, created.token)
       return res.status(200).json({ ok: true, status: 'subscribed', token: created.token })
+    }
+
+    if (action === 'POST invite-accept') {
+      const inviteToken = str(req.body?.token)
+      if (!isToken(inviteToken)) throw new HttpError(404, 'This invitation link isn’t valid.')
+      const { data: contact, error } = await db.from('imported_contacts').select('id, email, accepted_at').eq('invite_token', inviteToken).maybeSingle()
+      if (error || !contact) throw new HttpError(404, 'This invitation link isn’t valid.')
+      const email = String(contact.email).toLowerCase()
+      const { data: saved, error: upError } = await db
+        .from('newsletter_subscribers')
+        .upsert(
+          { email, status: 'subscribed', source: 'wix-invite', confirmed_at: now, unsubscribed_at: null, updated_at: now },
+          { onConflict: 'email' },
+        )
+        .select('token')
+        .single()
+      if (upError) throw upError
+      if (!contact.accepted_at) await db.from('imported_contacts').update({ accepted_at: now, updated_at: now }).eq('id', contact.id)
+      return res.status(200).json({ ok: true, token: saved.token })
     }
 
     if (action === 'POST confirm') {

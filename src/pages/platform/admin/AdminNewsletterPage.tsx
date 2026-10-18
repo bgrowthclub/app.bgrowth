@@ -7,6 +7,7 @@ import Button from '../../../components/ui/Button'
 import AdminStatTile from '../../../components/admin/AdminStatTile'
 import NewsletterCampaignRow from '../../../components/admin/NewsletterCampaignRow'
 import NewsletterCampaignForm from '../../../components/admin/NewsletterCampaignForm'
+import WixContactsPanel from '../../../components/admin/WixContactsPanel'
 import { CARD, INPUT, SMALL_BUTTON } from '../../../components/admin/styles'
 import { adminService } from '../../../modules/admin/adminService'
 import type { AdminNewsletterCampaign, AdminNewsletterOverview, AdminProduct } from '../../../modules/admin/types'
@@ -23,6 +24,8 @@ export default function AdminNewsletterPage() {
   const [address, setAddress] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
   const [notice, setNotice] = useState<string | null>(null)
+  // Newsletter | Wix contacts (Sprint 116)
+  const [tab, setTab] = useState<'newsletter' | 'wix'>('newsletter')
 
   const load = useCallback(() => {
     adminService
@@ -95,7 +98,31 @@ export default function AdminNewsletterPage() {
         className="mb-8"
       />
 
-      {open !== undefined ? (
+      {open === undefined && (
+        <div className="mb-6 flex flex-wrap gap-2">
+          {(
+            [
+              ['newsletter', 'Newsletter'],
+              ['wix', 'Wix contacts'],
+            ] as const
+          ).map(([id, label]) => (
+            <button
+              key={id}
+              type="button"
+              onClick={() => setTab(id)}
+              className={`rounded-full px-4 py-1.5 text-[13px] font-semibold transition-colors ${
+                tab === id ? 'bg-primary text-white' : 'bg-bg-soft text-navy/60 hover:text-navy'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+      )}
+
+      {open === undefined && tab === 'wix' ? (
+        <WixContactsPanel />
+      ) : open !== undefined ? (
         <NewsletterCampaignForm
           key={open?.id ?? 'new'}
           campaign={open}

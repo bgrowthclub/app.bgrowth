@@ -33,6 +33,11 @@ export const newsletterService = {
     const captchaToken = await getCaptchaToken('newsletter')
     return call<{ status: 'subscribed'; token?: string }>('POST', 'subscribe', undefined, { email, source, website, captchaToken })
   },
+  // "Yes, keep me posted" from the one-time invite to the old Wix site's
+  // contacts: subscribes them and returns the subscription token.
+  async acceptInvite(inviteToken: string) {
+    return (await call<{ token: string }>('POST', 'invite-accept', undefined, { token: inviteToken })).token
+  },
   confirm(token: string) {
     return call<NewsletterPreferences>('POST', 'confirm', undefined, { token })
   },

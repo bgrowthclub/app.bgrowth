@@ -901,6 +901,149 @@ ${escapeHtmlText(address)}
 </body></html>`
 }
 
+// Wix contacts (Portal migration 0056, Sprint 116): people who were in touch
+// with the old Wix site, kept in portal.imported_contacts. They never agreed
+// to BGrowth e-mails, so they get ONE invite; only who clicks "Yes, keep me
+// posted" joins the newsletter (api/newsletter.ts?resource=invite-accept).
+const CONTACT_GROUPS = ['contact', 'team', 'spam']
+
+type ImportedContactRow = {
+  id: string
+  email: string
+  name: string | null
+  origin: string | null
+  grp: string
+  was_member: boolean
+  had_free_plan: boolean
+  unsubscribed_before: boolean
+  external_created_at: string | null
+  invite_token: string
+  invited_at: string | null
+  accepted_at: string | null
+}
+
+async function listWixContacts(db: Db) {
+  const { data, error } = await db.from('imported_contacts').select('*').order('external_created_at', { ascending: false })
+  if (error) {
+    if (isMissingTable(error)) return { contacts: [], ready: false, address: '' }
+    throw error
+  }
+  const rows = (data ?? []) as ImportedContactRow[]
+  const emails = rows.map((r) => r.email)
+  // Joined some other way (signed up, or subscribed on the site) counts too.
+  const [subs, users] = emails.length
+    ? await Promise.all([
+        db.from('newsletter_subscribers').select('email').eq('status', 'subscribed').in('email', emails),
+        db.from('users').select('email').in('email', emails),
+      ])
+    : [{ data: [] }, { data: [] }]
+  const subscribed = new Set(((subs.data ?? []) as { email: string }[]).map((r) => r.email.toLowerCase()))
+  const members = new Set(((users.data ?? []) as { email: string }[]).map((r) => (r.email ?? '').toLowerCase()))
+  return {
+    ready: true,
+    address: await loadNewsletterAddress(db),
+    contacts: rows.map(({ invite_token: _token, ...r }) => ({
+      ...r,
+      subscribed: subscribed.has(r.email),
+      member: members.has(r.email),
+    })),
+  }
+}
+
+async function updateWixContact(req: VercelRequest, db: Db) {
+  const id = str(req.body?.id)
+  const grp = str(req.body?.grp)
+  if (!CONTACT_GROUPS.includes(grp)) throw new HttpError(400, 'Unknown group.')
+  const { data, error } = await db.from('imported_contacts').update({ grp, updated_at: new Date().toISOString() }).eq('id', id).select('email, grp').maybeSingle()
+  if (error) throw error
+  if (!data) throw new HttpError(404, 'Contact not found.')
+  return { contact: data }
+}
+
+function inviteParagraphs(message: string) {
+  return message
+    .split(/\n\s*\n/)
+    .map((p) => p.trim())
+    .filter(Boolean)
+    .map((p) => `<p style="margin:0 0 16px;font-size:16px;line-height:1.6;color:#33406B">${escapeHtmlText(p).replace(/\n/g, '<br>')}</p>`)
+    .join('')
+}
+
+function renderInviteEmail(subject: string, message: string, site: string, address: string, token: string | null) {
+  const accept = token ? `${site}/newsletter/confirm?invite=${token}` : `${site}/newsletter/confirm`
+  return `<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${escapeHtmlText(subject)}</title></head>
+<body style="margin:0;padding:0;background:#F4F7FD">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#F4F7FD"><tr><td align="center" style="padding:28px 12px">
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px;background:#FFFFFF;border-radius:18px">
+<tr><td style="padding:24px 28px 8px;font-family:Inter,Arial,sans-serif">
+<a href="${site}" style="text-decoration:none;color:#0A1B4D;font-weight:800;font-size:20px">BGrowth</a>
+</td></tr>
+<tr><td style="padding:8px 28px 8px;font-family:Inter,Arial,sans-serif">${inviteParagraphs(message)}</td></tr>
+<tr><td style="padding:0 28px 12px;font-family:Inter,Arial,sans-serif">
+<a href="${accept}" style="display:inline-block;background:#1061EC;color:#FFFFFF;text-decoration:none;font-weight:700;font-size:15px;padding:13px 22px;border-radius:12px">Yes, keep me posted</a>
+</td></tr>
+<tr><td style="padding:4px 28px 28px;font-family:Inter,Arial,sans-serif;font-size:14px;color:#33406B">
+Or <a href="${site}/register" style="color:#1061EC;font-weight:600">create your free BGrowth account</a>.
+</td></tr>
+</table>
+<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:600px"><tr><td style="padding:18px 28px;font-family:Inter,Arial,sans-serif;font-size:12px;line-height:1.6;color:#6B7896;text-align:center">
+You’re receiving this one-time message because you were in touch with us on our previous site (benterprises.biz).<br>
+We won’t e-mail you again unless you choose to.<br>
+${escapeHtmlText(address)}
+</td></tr></table>
+</td></tr></table>
+</body></html>`
+}
+
+function inviteContent(req: VercelRequest) {
+  const subject = str(req.body?.subject).slice(0, 150)
+  const message = str(req.body?.message).slice(0, 5000)
+  if (!subject) throw new HttpError(400, 'Add a subject first.')
+  if (!message.trim()) throw new HttpError(400, 'Write the message first.')
+  return { subject, message }
+}
+
+function inviteMessage(req: VercelRequest, subject: string, message: string, address: string, to: string, token: string | null) {
+  return {
+    from: process.env.NEWSLETTER_FROM_EMAIL || 'BGrowth <news@bgrowth.app>',
+    to,
+    subject,
+    html: renderInviteEmail(subject, message, newsletterSiteUrl(req), address, token),
+  }
+}
+
+async function sendWixInviteTest(req: VercelRequest, db: Db, admin: Admin) {
+  const { subject, message } = inviteContent(req)
+  const address = await loadNewsletterAddress(db)
+  if (!address) throw new HttpError(400, 'Add the mailing address (required by US law) in Admin → Newsletter first.')
+  await resendBatch([{ ...inviteMessage(req, `[Test] ${subject}`, message, address, admin.email, null) }])
+  return { sentTo: admin.email }
+}
+
+async function sendWixInvites(req: VercelRequest, db: Db) {
+  const { subject, message } = inviteContent(req)
+  const address = await loadNewsletterAddress(db)
+  if (!address) throw new HttpError(400, 'Add the mailing address (required by US law) in Admin → Newsletter first.')
+  const ids = Array.isArray(req.body?.ids) ? (req.body.ids as unknown[]).map(String).slice(0, 500) : []
+  if (!ids.length) throw new HttpError(400, 'Tick the contacts to invite.')
+  const { data, error } = await db.from('imported_contacts').select('id, email, invite_token').in('id', ids).is('invited_at', null).eq('unsubscribed_before', false)
+  if (error) throw error
+  const rows = (data ?? []) as Pick<ImportedContactRow, 'id' | 'email' | 'invite_token'>[]
+  let sent = 0
+  for (let i = 0; i < rows.length; i += 100) {
+    const chunk = rows.slice(i, i + 100)
+    await resendBatch(chunk.map((r) => inviteMessage(req, subject, message, address, r.email, r.invite_token)))
+    const { error: markError } = await db
+      .from('imported_contacts')
+      .update({ invited_at: new Date().toISOString(), updated_at: new Date().toISOString() })
+      .in('id', chunk.map((r) => r.id))
+    if (markError) console.error('[admin] wix invite mark failed:', markError.message)
+    sent += chunk.length
+  }
+  return { sent, skipped: ids.length - sent }
+}
+
 async function newsletterOverview(db: Db) {
   const { data: subs, error } = await db.from('newsletter_subscribers').select('status, interests')
   if (error) throw error
@@ -1468,6 +1611,7 @@ async function catalogHealth(db: Db) {
       ['0053 Site texts (Admin → Site)', 'site_content'],
       ['0054 Knowledge release flow & articles', 'knowledge_articles'],
       ['0055 Knowledge members-only articles', 'knowledge_articles.locked'],
+      ['0056 Wix contacts (Admin → Newsletter)', 'imported_contacts'],
     ].map(async ([name, table]) => ({ name, ok: await tableExists(table) })),
   )
   const { data: address } = await db.from('site_settings').select('value').eq('key', 'newsletter_address').maybeSingle()
@@ -2821,6 +2965,12 @@ function describe(key: string, b: Body, r: Record<string, any>): Described {
       return { area: 'newsletter', summary: `Sent a newsletter to ${r.sent ?? 0} subscribers` }
     case 'PUT newsletter-address':
       return { area: 'newsletter', summary: 'Changed the newsletter mailing address' }
+    case 'PATCH wix-contacts':
+      return { area: 'newsletter', summary: `Moved the Wix contact ${r.contact?.email ?? ''} to “${b.grp}”` }
+    case 'POST wix-contacts-test':
+      return { area: 'newsletter', summary: 'Sent the Wix contacts invite as a test to themselves' }
+    case 'POST wix-contacts-invite':
+      return { area: 'newsletter', summary: `Sent the one-time invite to ${r.sent ?? 0} Wix contact(s)` }
     case 'POST deletion-complete':
       return { area: 'deletions', summary: 'Deleted a member’s account and data' }
     case 'POST deletion-reject':
@@ -2971,6 +3121,10 @@ const ROUTES: Record<string, Route> = {
   'POST newsletter-test': (req, db, admin) => sendCampaignTest(req, db, admin),
   'POST newsletter-send': (req, db) => sendCampaign(req, db),
   'PUT newsletter-address': (req, db, admin) => saveNewsletterAddress(req, db, admin),
+  'GET wix-contacts': (_req, db) => listWixContacts(db),
+  'PATCH wix-contacts': (req, db) => updateWixContact(req, db),
+  'POST wix-contacts-test': (req, db, admin) => sendWixInviteTest(req, db, admin),
+  'POST wix-contacts-invite': (req, db) => sendWixInvites(req, db),
   'GET dashboard-members': (req, db) => memberDashboard(req, db),
   'GET catalog-health': (_req, db) => catalogHealth(db),
   'GET deletion-requests': (_req, db) => listDeletionRequests(db),
