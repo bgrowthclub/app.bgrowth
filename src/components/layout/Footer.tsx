@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { Instagram, Facebook, Youtube, Linkedin, ArrowRight } from 'lucide-react'
+import { Instagram, Facebook, Youtube, Linkedin, ArrowRight, MessageCircle, AtSign, Twitter, Send, Ghost, Podcast } from 'lucide-react'
 import logo from '../../assets/logo.png'
 import Button from '../ui/Button'
 import { useNewsletterSignup } from '../../modules/newsletter/useNewsletterSignup'
@@ -17,6 +17,12 @@ const SOCIAL_ICONS: Record<SocialNetwork, (props: { size: number; strokeWidth: n
   facebook: (p) => <Facebook {...p} />,
   youtube: (p) => <Youtube {...p} />,
   linkedin: (p) => <Linkedin {...p} />,
+  whatsapp: (p) => <MessageCircle {...p} />,
+  threads: (p) => <AtSign {...p} />,
+  x: (p) => <Twitter {...p} />,
+  telegram: (p) => <Send {...p} />,
+  snapchat: (p) => <Ghost {...p} />,
+  spotify: (p) => <Podcast {...p} />,
   tiktok: ({ size }) => (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
       <path d="M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 1 1-2.59-2.59c.27 0 .53.04.77.12V9.77a5.69 5.69 0 1 0 4.91 5.63V9.01a7.35 7.35 0 0 0 4.3 1.38V7.3a4.3 4.3 0 0 1-3.24-1.48Z" />

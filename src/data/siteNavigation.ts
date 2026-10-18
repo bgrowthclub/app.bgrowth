@@ -7,7 +7,7 @@ export interface SiteLink {
   to: string
 }
 
-export type SocialNetwork = 'instagram' | 'facebook' | 'youtube' | 'linkedin' | 'tiktok' | 'pinterest'
+export type SocialNetwork = 'instagram' | 'facebook' | 'youtube' | 'linkedin' | 'tiktok' | 'pinterest' | 'whatsapp' | 'threads' | 'x' | 'telegram' | 'snapchat' | 'spotify'
 
 export const SOCIAL_NETWORKS: { id: SocialNetwork; label: string }[] = [
   { id: 'instagram', label: 'Instagram' },
@@ -16,6 +16,12 @@ export const SOCIAL_NETWORKS: { id: SocialNetwork; label: string }[] = [
   { id: 'linkedin', label: 'LinkedIn' },
   { id: 'tiktok', label: 'TikTok' },
   { id: 'pinterest', label: 'Pinterest' },
+  { id: 'whatsapp', label: 'WhatsApp' },
+  { id: 'threads', label: 'Threads' },
+  { id: 'x', label: 'X (Twitter)' },
+  { id: 'telegram', label: 'Telegram' },
+  { id: 'snapchat', label: 'Snapchat' },
+  { id: 'spotify', label: 'Spotify / Podcast' },
 ]
 
 export interface SiteNavigation {

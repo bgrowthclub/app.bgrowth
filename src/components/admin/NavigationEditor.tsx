@@ -185,7 +185,8 @@ export default function NavigationEditor() {
           </li>
           <li>Use the arrows to change the order, the bin to remove a link, “Add link” for a new one.</li>
           <li>
-            <strong>Social networks</strong>: paste the full address of each profile. Leave it empty to hide that icon.
+            <strong>Social networks</strong>: paste the full address of each profile. Leave it empty to hide that icon. For WhatsApp, use
+            the wa.me link of the business number (e.g. https://wa.me/15551234567).
           </li>
           <li>
             <strong>Save</strong> applies everything at once; visitors see it the next time they open the site. <strong>Restore original</strong> goes

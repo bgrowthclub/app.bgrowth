@@ -2579,7 +2579,7 @@ const SITE_CONTENT_NAMES: Record<string, string> = { ...LEGAL_NAMES, seo: 'SEO',
 
 // Menu & footer (key "navigation"): link lists (a page of this site or an
 // https:// address), two footer sentences and the social network addresses.
-const SOCIAL_KEYS = ['instagram', 'facebook', 'youtube', 'linkedin', 'tiktok', 'pinterest']
+const SOCIAL_KEYS = ['instagram', 'facebook', 'youtube', 'linkedin', 'tiktok', 'pinterest', 'whatsapp', 'threads', 'x', 'telegram', 'snapchat', 'spotify']
 
 function readLinks(value: unknown, field: string, max: number) {
   if (!Array.isArray(value)) return []
