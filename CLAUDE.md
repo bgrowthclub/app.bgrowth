@@ -345,8 +345,14 @@ This repo is a **static, client-only MVP**:
   Stripe products —, total uses, end date, first purchase only) and turns
   them on/off; the list reads Stripe. Accepted at every checkout
   (`allow_promotion_codes` in `api/studio-checkout.ts` and the plan checkout).
-  Workspaces are charged without a stored Stripe product, so a coupon can't
-  be limited to some Workspaces.
+  Since Sprint 124 (Portal migration 0059) a coupon can be limited to chosen
+  plans and/or Workspaces, calculators, downloads and bundles: each plan
+  gets its Stripe product when saved in Admin → Plans
+  (`provider_prices.stripe.product`), and each product its own Stripe
+  product in `portal.provider_products` (made at checkout by
+  `api/studio-checkout.ts`, which then charges with `price_data.product`, or
+  when a coupon is created; falls back to the old inline product if that
+  fails).
   **Since Sprint 81–82 the Admin menu is grouped and categories have a
   look** (approved by the user): the Admin part of the side menu is four
   collapsible groups (Overview, People, Catalog, Site & content —
