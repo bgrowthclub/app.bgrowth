@@ -24,6 +24,10 @@ import Stripe from 'stripe'
 //          team grants), each with where it came from. Nothing is invented:
 //          an access with no payment or team record says so.
 //
+//   POST   ?resource=plan-checkout | plan-switch | plan-cancel | plan-resume |
+//          plan-portal → the member's plan subscription (Sprint 122, see the
+//          Plans section below)
+//
 // Called from the Website's Settings and the Portal's Profile (CORS below).
 // Table: portal.account_deletion_requests (Portal migration 0039).
 // Self-contained (no relative imports), like the other functions.
@@ -150,7 +154,8 @@ async function stripeOrders(email: string, userId: string): Promise<{ orders: Or
     // Also the member's own sessions under an e-mail they changed since (metadata.userId).
     const mine = sessions.filter((s) => !s.metadata?.userId || s.metadata.userId === userId || s.client_reference_id === userId)
     const orders = mine
-      .filter((s) => (s.amount_total ?? 0) > 0)
+      // Plan subscriptions are shown in Account → Membership (invoices in Stripe's billing page).
+      .filter((s) => (s.amount_total ?? 0) > 0 && s.mode !== 'subscription')
       .map((s): Order => {
         const pi = s.payment_intent && typeof s.payment_intent !== 'string' ? s.payment_intent : null
         const charge = pi?.latest_charge && typeof pi.latest_charge !== 'string' ? pi.latest_charge : null
@@ -264,12 +269,214 @@ async function purchasesOf(db: Db, userId: string, email: string) {
   return { orders, accesses, ordersAvailable: available }
 }
 
+// ---------------------------------------------------------------------------
+// Plans (Sprint 122, Portal migrations 0057–0058): a member subscribes,
+// switches, cancels or resumes their plan, and opens Stripe's page to change
+// the card or see invoices. portal.member_plans is updated by the webhook
+// (api/webhooks/stripe.ts); after a switch/cancel/resume it is also synced
+// here right away so the page shows it at once.
+//   POST ?resource=plan-checkout { planId, interval } → { url } (Stripe Checkout)
+//   POST ?resource=plan-switch   { planId, interval }
+//   POST ?resource=plan-cancel / plan-resume
+//   POST ?resource=plan-portal → { url } (Stripe's billing page)
+// ---------------------------------------------------------------------------
+type PlanRow = {
+  id: string
+  slug: string
+  name: string
+  status: string
+  is_free: boolean
+  price_on_request: boolean
+  currency: string
+  monthly_cents: number | null
+  yearly_cents: number | null
+  monthly_sale_cents: number | null
+  yearly_sale_cents: number | null
+  provider_prices: { stripe?: { product?: string; prices?: Record<string, string> } } | null
+}
+type PlanSettings = { cancelAt: 'period_end' | 'now'; graceDays: number; allowSwitch: boolean }
+
+function stripeClient() {
+  const key = process.env.STRIPE_SECRET_KEY
+  if (!key) throw new HttpError(503, 'Payments aren’t set up on this site yet.')
+  return new Stripe(key)
+}
+
+async function planSettings(db: Db): Promise<PlanSettings> {
+  const { data } = await db.from('site_settings').select('value').eq('key', 'plans').maybeSingle()
+  return { cancelAt: 'period_end', graceDays: 7, allowSwitch: true, ...((data?.value as Partial<PlanSettings> | undefined) ?? {}) }
+}
+
+async function sellablePlan(db: Db, planId: string, interval: string): Promise<{ plan: PlanRow; cents: number; interval: 'month' | 'year' }> {
+  if (interval !== 'month' && interval !== 'year') throw new HttpError(400, 'Choose monthly or yearly.')
+  const { data: plan, error } = await db.from('membership_plans').select('*').eq('id', planId).maybeSingle()
+  if (error) throw error
+  if (!plan || plan.status !== 'active') throw new HttpError(404, 'This plan isn’t available.')
+  if (plan.is_free) throw new HttpError(400, 'Free needs no subscription.')
+  if (plan.price_on_request) throw new HttpError(400, 'This plan is by request — talk to us through Support.')
+  const cents = interval === 'year' ? plan.yearly_sale_cents ?? plan.yearly_cents : plan.monthly_sale_cents ?? plan.monthly_cents
+  if (cents == null || cents < 50) throw new HttpError(400, `This plan has no ${interval === 'year' ? 'yearly' : 'monthly'} price.`)
+  return { plan: plan as PlanRow, cents, interval }
+}
+
+// The Stripe price for this plan, interval and amount — created the first
+// time it's needed and kept in membership_plans.provider_prices, so a new
+// price (or a promotion) never changes what current subscribers pay.
+async function stripePriceFor(db: Db, stripe: Stripe, plan: PlanRow, interval: 'month' | 'year', cents: number) {
+  const currency = (plan.currency || 'usd').toLowerCase()
+  const stored = plan.provider_prices?.stripe ?? {}
+  const key = `${interval}:${currency}:${cents}`
+  if (stored.prices?.[key]) return stored.prices[key]
+  let product = stored.product
+  if (!product) {
+    product = (await stripe.products.create({ name: `BGrowth ${plan.name} plan`, metadata: { kind: 'plan', plan_id: plan.id, plan_slug: plan.slug } })).id
+  }
+  const price = await stripe.prices.create({
+    product,
+    currency,
+    unit_amount: cents,
+    recurring: { interval },
+    metadata: { kind: 'plan', plan_id: plan.id },
+  })
+  const next = { ...(plan.provider_prices ?? {}), stripe: { product, prices: { ...(stored.prices ?? {}), [key]: price.id } } }
+  const { error } = await db.from('membership_plans').update({ provider_prices: next }).eq('id', plan.id)
+  if (error) throw error
+  return price.id
+}
+
+type MemberPlanRow = { id: string; status: string; ends_at: string | null; starts_at: string; provider_subscription_id: string | null; provider_customer_id: string | null }
+
+async function memberSubscriptions(db: Db, userId: string): Promise<MemberPlanRow[]> {
+  const { data, error } = await db
+    .from('member_plans')
+    .select('id, status, ends_at, starts_at, provider_subscription_id, provider_customer_id')
+    .eq('user_id', userId)
+    .eq('source', 'subscription')
+    .order('created_at', { ascending: false })
+  if (error) throw error
+  return (data ?? []) as MemberPlanRow[]
+}
+
+const liveSub = (rows: MemberPlanRow[]) =>
+  rows.find((r) => ['active', 'trialing', 'past_due'].includes(r.status) && (!r.ends_at || Date.parse(r.ends_at) > Date.now()))
+
+const isoSec = (seconds: number | null | undefined) => (seconds ? new Date(seconds * 1000).toISOString() : null)
+
+// Same rule as syncSubscription() in api/webhooks/stripe.ts.
+async function syncPlanSubscription(db: Db, sub: Stripe.Subscription, graceDays: number) {
+  const meta = sub.metadata ?? {}
+  if (meta.kind !== 'plan' || !meta.user_id || !meta.plan_id || sub.status === 'incomplete') return
+  const item = sub.items.data[0]
+  const periodEnd = isoSec(item?.current_period_end)
+  const { data: existing } = await db.from('member_plans').select('ends_at, status').eq('provider_subscription_id', sub.id).maybeSingle()
+  let status = sub.status === 'trialing' ? 'trialing' : 'active'
+  let endsAt: string | null = sub.cancel_at_period_end ? periodEnd : isoSec(sub.cancel_at)
+  if (sub.status === 'canceled' || sub.status === 'incomplete_expired') {
+    status = 'ended'
+    endsAt = isoSec(sub.ended_at) ?? isoSec(sub.canceled_at) ?? new Date().toISOString()
+  } else if (sub.status === 'past_due' || sub.status === 'unpaid') {
+    status = 'past_due'
+    endsAt = existing?.status === 'past_due' && existing.ends_at ? existing.ends_at : new Date(Date.now() + graceDays * 86400000).toISOString()
+  }
+  const { error } = await db.from('member_plans').upsert(
+    {
+      user_id: meta.user_id,
+      plan_id: meta.plan_id,
+      source: 'subscription',
+      status,
+      billing_interval: item?.price?.recurring?.interval === 'year' ? 'year' : 'month',
+      provider: 'stripe',
+      provider_customer_id: typeof sub.customer === 'string' ? sub.customer : sub.customer.id,
+      provider_subscription_id: sub.id,
+      starts_at: isoSec(sub.start_date) ?? new Date().toISOString(),
+      ends_at: endsAt,
+      current_period_end: periodEnd,
+      cancel_at_period_end: sub.cancel_at_period_end,
+      amount_cents: item?.price?.unit_amount ?? null,
+      currency: item?.price?.currency ?? 'usd',
+      canceled_at: isoSec(sub.canceled_at),
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: 'provider_subscription_id' },
+  )
+  if (error) throw error
+}
+
+async function planAction(req: VercelRequest, db: Db, user: { id: string; email?: string | null }, resource: string) {
+  if (req.method !== 'POST') throw new HttpError(405, 'Use POST.')
+  const stripe = stripeClient()
+  const settings = await planSettings(db)
+  const subs = await memberSubscriptions(db, user.id)
+  const live = liveSub(subs)
+  const customer = subs.find((s) => s.provider_customer_id)?.provider_customer_id ?? null
+  const site = siteUrl(req)
+
+  if (resource === 'plan-checkout') {
+    if (live) throw new HttpError(409, 'You already have a plan. Change it in Account → Membership.')
+    const { plan, cents, interval } = await sellablePlan(db, str(req.body?.planId), str(req.body?.interval))
+    const price = await stripePriceFor(db, stripe, plan, interval, cents)
+    const meta = { kind: 'plan', user_id: user.id, plan_id: plan.id, interval }
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      line_items: [{ price, quantity: 1 }],
+      ...(customer ? { customer } : { customer_email: user.email ?? undefined }),
+      client_reference_id: user.id,
+      metadata: meta,
+      subscription_data: { metadata: meta },
+      allow_promotion_codes: true,
+      success_url: `${site}/platform/membership?subscribed=1`,
+      cancel_url: `${site}/pricing`,
+    })
+    return { url: session.url }
+  }
+
+  if (resource === 'plan-portal') {
+    if (!customer) throw new HttpError(404, 'There’s no billing on your account yet.')
+    const session = await stripe.billingPortal.sessions.create({ customer, return_url: `${site}/platform/membership` })
+    return { url: session.url }
+  }
+
+  if (!live?.provider_subscription_id) throw new HttpError(404, 'You don’t have a paid plan right now.')
+  const subId = live.provider_subscription_id
+
+  if (resource === 'plan-switch') {
+    if (!settings.allowSwitch) throw new HttpError(403, 'To change your plan, talk to us through Support.')
+    const { plan, cents, interval } = await sellablePlan(db, str(req.body?.planId), str(req.body?.interval))
+    const price = await stripePriceFor(db, stripe, plan, interval, cents)
+    const current = await stripe.subscriptions.retrieve(subId)
+    const updated = await stripe.subscriptions.update(subId, {
+      items: [{ id: current.items.data[0].id, price }],
+      metadata: { ...current.metadata, plan_id: plan.id, interval },
+      proration_behavior: 'create_prorations',
+      cancel_at_period_end: false,
+    })
+    await syncPlanSubscription(db, updated, settings.graceDays)
+    return { switched: plan.name }
+  }
+
+  if (resource === 'plan-cancel') {
+    const updated =
+      settings.cancelAt === 'now' ? await stripe.subscriptions.cancel(subId) : await stripe.subscriptions.update(subId, { cancel_at_period_end: true })
+    await syncPlanSubscription(db, updated, settings.graceDays)
+    return { canceled: true, endsNow: settings.cancelAt === 'now' }
+  }
+
+  if (resource === 'plan-resume') {
+    const updated = await stripe.subscriptions.update(subId, { cancel_at_period_end: false })
+    await syncPlanSubscription(db, updated, settings.graceDays)
+    return { resumed: true }
+  }
+
+  throw new HttpError(404, 'Unknown action.')
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   allowPortal(req, res)
   if (req.method === 'OPTIONS') return res.status(204).end()
   try {
     const resource = str(req.query.resource)
-    if (resource !== 'deletion' && resource !== 'announcements-seen' && resource !== 'download' && resource !== 'profile' && resource !== 'purchases')
+    const planResource = ['plan-checkout', 'plan-switch', 'plan-cancel', 'plan-resume', 'plan-portal'].includes(resource)
+    if (!planResource && resource !== 'deletion' && resource !== 'announcements-seen' && resource !== 'download' && resource !== 'profile' && resource !== 'purchases')
       throw new HttpError(404, 'Unknown action.')
     const url = process.env.SUPABASE_URL
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -280,6 +487,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     }) as Db
     const user = await signedInUser(req, db)
 
+    if (planResource) return res.status(200).json({ ok: true, ...(await planAction(req, db, user, resource)) })
     if (resource === 'purchases' && req.method === 'GET') return res.status(200).json({ ok: true, ...(await purchasesOf(db, user.id, user.email ?? '')) })
 
     // One file of a Download the member owns (Sprint 86).

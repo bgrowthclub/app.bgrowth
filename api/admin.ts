@@ -1613,6 +1613,7 @@ async function catalogHealth(db: Db) {
       ['0055 Knowledge members-only articles', 'knowledge_articles.locked'],
       ['0056 Wix contacts (Admin → Newsletter)', 'imported_contacts'],
       ['0057 Plans (Admin → Plans)', 'membership_plans'],
+      ['0058 Plan billing (subscriptions)', 'member_plans.amount_cents'],
     ].map(async ([name, table]) => ({ name, ok: await tableExists(table) })),
   )
   const { data: address } = await db.from('site_settings').select('value').eq('key', 'newsletter_address').maybeSingle()
@@ -3102,6 +3103,48 @@ async function changeMemberPlan(req: VercelRequest, db: Db) {
   return { memberPlan: data, planName: (row as any).membership_plans?.name ?? 'a plan', user_id: row.user_id }
 }
 
+// Admin → Plans → Subscribers (Sprint 122, migration 0058): every paid
+// subscription, the monthly revenue (yearly plans count 1/12 a month) and
+// cancellations in the last 30 days.
+async function listPlanSubscribers(db: Db) {
+  const { data, error } = await db
+    .from('member_plans')
+    .select('id, user_id, plan_id, status, billing_interval, starts_at, ends_at, current_period_end, cancel_at_period_end, amount_cents, currency, canceled_at, membership_plans(name)')
+    .eq('source', 'subscription')
+    .order('created_at', { ascending: false })
+  if (error) {
+    if (notReady(error) || (error as { code?: string }).code === '42703') return { ready: false, subscribers: [], stats: null }
+    throw error
+  }
+  const rows = (data ?? []) as Record<string, any>[]
+  const ids = [...new Set(rows.map((r) => r.user_id))]
+  const { data: users } = ids.length ? await db.from('users').select('id, email, full_name').in('id', ids) : { data: [] }
+  const byId = new Map(((users ?? []) as { id: string; email: string; full_name: string | null }[]).map((u) => [u.id, u]))
+  const now = Date.now()
+  const subscribers: Record<string, any>[] = rows.map((r) => ({
+    ...r,
+    live: isLivePlan(r as any, now),
+    email: byId.get(r.user_id)?.email ?? null,
+    name: byId.get(r.user_id)?.full_name ?? null,
+    plan_name: r.membership_plans?.name ?? 'Plan',
+  }))
+  const live = subscribers.filter((s) => s.live)
+  const mrr = live.reduce((sum, s) => sum + (s.amount_cents ?? 0) / (s.billing_interval === 'year' ? 12 : 1), 0)
+  const { count: given } = await db.from('member_plans').select('id', { count: 'exact', head: true }).eq('source', 'team').eq('status', 'active')
+  return {
+    ready: true,
+    subscribers,
+    stats: {
+      paying: live.length,
+      mrrCents: Math.round(mrr),
+      cancelling: live.filter((s) => s.cancel_at_period_end).length,
+      pastDue: live.filter((s) => s.status === 'past_due').length,
+      canceled30: subscribers.filter((s) => s.canceled_at && Date.parse(s.canceled_at) > now - 30 * 86400000).length,
+      given: given ?? 0,
+    },
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Activity log (portal.admin_activity, Portal migration 0042): every change
 // made in the Admin area — who, what, when, on which member or product.
@@ -3407,6 +3450,7 @@ const ROUTES: Record<string, Route> = {
   'POST plans': (req, db) => createPlan(req, db),
   'PATCH plans': (req, db) => updatePlan(req, db),
   'PUT plan-settings': (req, db, admin) => savePlanSettings(req, db, admin),
+  'GET plan-subscribers': (_req, db) => listPlanSubscribers(db),
   'GET member-plans': (req, db) => listMemberPlans(req, db),
   'POST member-plans': (req, db, admin) => giveMemberPlan(req, db, admin),
   'PATCH member-plans': (req, db) => changeMemberPlan(req, db),

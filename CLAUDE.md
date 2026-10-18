@@ -316,10 +316,28 @@ This repo is a **static, client-only MVP**:
   or `team`; highest live rank wins, none = Free; `portal.member_plan_of()`);
   Admin → Members → a member → Plan gives one (reason promotion/giveaway/
   referral/support/other, until a date or no end; resource `member-plans`,
-  admin-only). Not yet: selling (step 2 — Pricing page from the database,
-  Stripe subscriptions, Account → Membership; `data/membershipPlans.ts` is
-  still what /pricing reads) and applying the benefits (step 3 — articles by
-  plan in Studio, priority support, Workspace discount).
+  admin-only).
+  **Since Sprint 122 plans are sold** (step 2, approved by the user
+  18/10/2026; Portal migration 0058 adds amount/currency/canceled_at):
+  /pricing shows the "Offered" plans from the database once at least one
+  paid plan is offered (Monthly | Yearly switch, `components/account/
+  PlanChooser`; before that the old Free / One Workspace / Bundles page from
+  `data/membershipPlans.ts`). Subscribing, switching (prorated), cancelling
+  (per the plan settings), resuming and Stripe's billing page (card,
+  invoices) go through `api/account.ts` (`plan-checkout`, `plan-switch`,
+  `plan-cancel`, `plan-resume`, `plan-portal`), which creates the Stripe
+  product/price per plan, interval and amount on first use and keeps them in
+  `membership_plans.provider_prices` (a new price never changes current
+  subscribers). `api/webhooks/stripe.ts` (the old disabled webhook, reused —
+  env `STRIPE_PLANS_WEBHOOK_SECRET`, events customer.subscription.*) keeps
+  `member_plans` in step; only subscriptions with metadata kind `plan`.
+  Members see and manage it in Account → Membership (`/platform/membership`,
+  `modules/account/planService.ts` + `useMemberPlan`), the TopBar badge
+  shows their plan; plan payments are left out of Account → Purchases.
+  Admin → Plans → Subscribers (resource `plan-subscribers`): paying members,
+  monthly revenue, cancelling, failed payments, cancelled in 30 days.
+  Not yet: applying the benefits (step 3 — articles by plan in Studio,
+  priority support, Workspace discount).
   **Since Sprint 81–82 the Admin menu is grouped and categories have a
   look** (approved by the user): the Admin part of the side menu is four
   collapsible groups (Overview, People, Catalog, Site & content —
@@ -951,6 +969,12 @@ rules are permanent, not specific to whichever milestone introduced them:
   checkout so both sell Studio Workspaces identically while both are
   live. It stays server-side and self-contained; folding it into a
   `ProviderAdapter` is part of retiring the Portal.
+- **Second sanctioned exception (Sprint 122, approved by the user):** plan
+  subscriptions call Stripe directly from `api/account.ts` (plan resources)
+  and `api/webhooks/stripe.ts`, server-side only; the provider is a plan
+  setting (`PlanSettings.provider`, Stripe only for now) and price ids live
+  per provider in `membership_plans.provider_prices`, so another provider
+  can be added later.
 - **Never implement a `ProviderAdapter`, checkout flow, webhook, or
   backend persistence without explicit user direction.** Milestone 5.1
   built the architecture only — see CLAUDE.md §3 on this repo's current

@@ -19,7 +19,7 @@ import type {
   AdminBundle, AdminBundleDraft, AdminBundlesOverview,
   AdminTeamMember, AdminActivityPage, AdminMemberPageDraft, AdminMemberPagesOverview,
   AdminWixContactsOverview, WixContactGroup,
-  AdminPlan, AdminPlanDraft, AdminPlansOverview, AdminMemberPlans, MemberPlanReason } from './types'
+  AdminPlan, AdminPlanDraft, AdminPlansOverview, AdminMemberPlans, MemberPlanReason, AdminPlanSubscribers } from './types'
 import type { PlanSettings } from '../commerce/types/membership'
 import type { MemberPage, MemberPageStats } from '../find/types'
 import type { SupportHours } from '../support/types'
@@ -285,6 +285,9 @@ export const adminService = {
   },
   async savePlanSettings(settings: PlanSettings) {
     return (await call<{ settings: PlanSettings }>('PUT', 'plan-settings', undefined, settings)).settings
+  },
+  listPlanSubscribers() {
+    return call<AdminPlanSubscribers>('GET', 'plan-subscribers')
   },
   getMemberPlans(userId: string) {
     return call<AdminMemberPlans>('GET', 'member-plans', { userId })

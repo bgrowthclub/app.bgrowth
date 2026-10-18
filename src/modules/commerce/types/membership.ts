@@ -75,3 +75,44 @@ export interface PlanSettings {
   allowSwitch: boolean
   yearlyDiscountPercent: number
 }
+
+// A plan as stored in portal.membership_plans (Portal migration 0057) —
+// edited in Admin → Plans, read by the Pricing page and Account →
+// Membership. Prices in cents; a sale price, when set, is what is charged.
+export interface StoredPlan {
+  id: string
+  slug: string
+  name: string
+  description: string
+  rank: number
+  status: 'active' | 'hidden' | 'disabled'
+  is_free: boolean
+  price_on_request: boolean
+  currency: string
+  monthly_cents: number | null
+  yearly_cents: number | null
+  monthly_sale_cents: number | null
+  yearly_sale_cents: number | null
+  features: string[]
+  highlighted: boolean
+  entitlements: PlanEntitlements
+  updated_at: string
+}
+
+export type BillingInterval = 'month' | 'year'
+
+// One of a member's plans (portal.member_plans): paid through a payment
+// provider, or given by the team.
+export interface MemberPlanRecord {
+  id: string
+  plan_id: string
+  source: 'subscription' | 'team'
+  status: 'active' | 'trialing' | 'past_due' | 'canceled' | 'ended'
+  billing_interval: BillingInterval | null
+  starts_at: string
+  ends_at: string | null
+  current_period_end: string | null
+  cancel_at_period_end: boolean
+  amount_cents: number | null
+  currency: string | null
+}
