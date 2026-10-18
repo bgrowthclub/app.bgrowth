@@ -9,6 +9,7 @@ import Button from '../../../components/ui/Button'
 import MonthlyRevenueChart from '../../../components/admin/MonthlyRevenueChart'
 import type { MonthPoint } from '../../../components/admin/MonthlyRevenueChart'
 import AdminStatTile from '../../../components/admin/AdminStatTile'
+import AdminDashboardViews from '../../../components/admin/AdminDashboardViews'
 import SalesOrderList, { saleStatus } from '../../../components/admin/SalesOrderList'
 import { CARD, SMALL_BUTTON } from '../../../components/admin/styles'
 import { adminService } from '../../../modules/admin/adminService'
@@ -180,6 +181,9 @@ export default function AdminSalesPage() {
         description="Paid orders and revenue across BGrowth — the Website and the Portal — straight from Stripe."
         className="mb-6"
       />
+      <div className="mb-6">
+        <AdminDashboardViews active="sales" />
+      </div>
 
       {status === 'loading' ? (
         <p className="py-16 text-center text-[14px] text-navy/40">Loading sales from Stripe…</p>
