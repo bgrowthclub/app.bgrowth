@@ -222,6 +222,15 @@ This repo is a **static, client-only MVP**:
   catch-all) get `api/ingles.ts?action=og`: a small page with the product's,
   bundle's or member page's own name/description/image, else the SEO
   settings, else the defaults. Home, catalog and product pages now set <SEO>.
+  **Since Sprint 105 the menu and footer are edited there too** (approved
+  by the user): Admin → Site → Menu & footer saves key `navigation`
+  (`SiteNavigation` in `data/siteNavigation.ts`, built-in `DEFAULT_NAVIGATION`):
+  the public top menu, the footer's Explore and bottom-row links (a page of
+  this site or an https:// address), the footer tagline and newsletter line,
+  and social network addresses (empty = icon hidden). `Navbar` (public mode
+  only) and `Footer` read it through `lib/useSiteNavigation.ts`. The
+  members' side menu (`platformNav.ts`) is not edited there; since Sprint
+  104 it has a "Catalog" item (/systems).
   **Since Sprint 81–82 the Admin menu is grouped and categories have a
   look** (approved by the user): the Admin part of the side menu is four
   collapsible groups (Overview, People, Catalog, Site & content —

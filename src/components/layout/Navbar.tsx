@@ -5,6 +5,8 @@ import { Link, NavLink } from 'react-router-dom'
 import { Menu, X, LogOut } from 'lucide-react'
 import logo from '../../assets/logo.png'
 import Button from '../ui/Button'
+import { useSiteNavigation } from '../../lib/useSiteNavigation'
+import { isExternalLink } from '../../data/siteNavigation'
 
 export type NavMode = 'public' | 'member'
 
@@ -13,22 +15,9 @@ interface NavItem {
   to: string
 }
 
-// Public nav: Home · Solutions · Knowledge · About. "Solutions" is a
-// same-page anchor on the homepage (see ScrollToTop.tsx, which already
-// handles hash-based scrolling into the Life Worlds section). "Knowledge"
-// now points to the real Knowledge Hub (/knowledge) — the homepage still
-// has its own inline Knowledge preview section (components/sections/
-// Knowledge.tsx, id="knowledge"), reachable by scrolling normally, but the
-// nav item leads to the full Hub instead of anchoring to that preview.
-// "About" keeps linking to the existing standalone /about page. Business
-// Systems/Workspace/Resources/Pricing remain fully reachable via the
-// Footer and in-section CTAs, same as before.
-const PUBLIC_LINKS: NavItem[] = [
-  { label: 'Home', to: '/' },
-  { label: 'Solutions', to: '/#life-worlds' },
-  { label: 'Knowledge', to: '/knowledge' },
-  { label: 'About', to: '/about' },
-]
+// Public nav: the built-in Home · Solutions · Knowledge · About, or the
+// menu edited in Admin → Site → Menu & footer (data/siteNavigation.ts,
+// lib/useSiteNavigation.ts). A link may be an https:// address.
 
 // Member nav: My Systems · Resources · Account · Logout. "My Systems"
 // points straight at the Customer Platform's Product Library
@@ -44,7 +33,8 @@ const MEMBER_LINKS: NavItem[] = [
 export default function Navbar({ mode = 'public', banner }: { mode?: NavMode; banner?: ReactNode }) {
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
-  const links = mode === 'member' ? MEMBER_LINKS : PUBLIC_LINKS
+  const siteNav = useSiteNavigation()
+  const links = mode === 'member' ? MEMBER_LINKS : siteNav.menu
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12)
@@ -103,6 +93,18 @@ export default function Navbar({ mode = 'public', banner }: { mode?: NavMode; ba
               // up together on the homepage. Only a real distinct route
               // (Home, About, My Systems, etc.) should ever show as active.
               const isAnchor = link.to.includes('#')
+              if (isExternalLink(link.to))
+                return (
+                  <a
+                    key={link.label}
+                    href={link.to}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="rounded-full px-4 py-2 text-[13.5px] font-medium text-navy/70 transition-colors hover:bg-bg-soft hover:text-navy"
+                  >
+                    {link.label}
+                  </a>
+                )
               return (
                 <NavLink
                   key={link.label}
@@ -180,16 +182,29 @@ export default function Navbar({ mode = 'public', banner }: { mode?: NavMode; ba
             >
               <div className="mx-auto mb-2 h-1.5 w-10 rounded-full bg-navy/10" />
               <div className="flex flex-col gap-0.5">
-                {links.map((link) => (
-                  <Link
-                    key={link.label}
-                    to={link.to}
-                    onClick={() => setOpen(false)}
-                    className="rounded-2xl px-4 py-4 text-[16px] font-medium text-navy/80 transition-colors hover:bg-bg-soft"
-                  >
-                    {link.label}
-                  </Link>
-                ))}
+                {links.map((link) =>
+                  isExternalLink(link.to) ? (
+                    <a
+                      key={link.label}
+                      href={link.to}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => setOpen(false)}
+                      className="rounded-2xl px-4 py-4 text-[16px] font-medium text-navy/80 transition-colors hover:bg-bg-soft"
+                    >
+                      {link.label}
+                    </a>
+                  ) : (
+                    <Link
+                      key={link.label}
+                      to={link.to}
+                      onClick={() => setOpen(false)}
+                      className="rounded-2xl px-4 py-4 text-[16px] font-medium text-navy/80 transition-colors hover:bg-bg-soft"
+                    >
+                      {link.label}
+                    </Link>
+                  ),
+                )}
               </div>
               <div className="my-2 border-t border-navy/[0.06]" />
               {mode === 'public' ? (
