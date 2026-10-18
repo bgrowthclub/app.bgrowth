@@ -1,5 +1,6 @@
 import {
   ShoppingBag,
+  Newspaper,
   LayoutDashboard,
   FolderOpen,
   LayoutGrid,
@@ -96,6 +97,8 @@ export const PLATFORM_NAV_GROUPS: PlatformNavGroup[] = [
   {
     label: 'Grow',
     items: [
+      // The Knowledge hub (articles published from Studio), Sprint 114.
+      { label: 'Knowledge', to: '/knowledge', icon: Newspaper },
       { label: 'Academy', to: '/platform/academy', icon: GraduationCap, locked: true },
       // Renamed from "Community" — this is the sidebar entry for what
       // VISION.md calls BGrowth Club™ (see CLAUDE.md's naming-gap note).
