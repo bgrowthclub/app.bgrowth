@@ -42,6 +42,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (err) {
     console.error('[cron] publish_scheduled failed:', err)
   }
+  // Knowledge articles scheduled in Studio (Portal migration 0054).
+  try {
+    const { data, error } = await supabase.schema('portal').rpc('publish_scheduled_knowledge')
+    if (error) console.error('[cron] publish_scheduled_knowledge failed:', error.message)
+    else released = (released ?? 0) + Number(data ?? 0)
+  } catch (err) {
+    console.error('[cron] publish_scheduled_knowledge failed:', err)
+  }
   const now = Date.now()
   const due: { id: string; email: string; day: number }[] = []
 

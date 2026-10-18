@@ -1466,6 +1466,8 @@ async function catalogHealth(db: Db) {
       ['0051 Release flow (review, approval, release date)', 'products.scheduled_publish_at'],
       ['0052 Catalog searches (Product Discovery data)', 'site_search_stats'],
       ['0053 Site texts (Admin → Site)', 'site_content'],
+      ['0054 Knowledge release flow & articles', 'knowledge_articles'],
+      ['0055 Knowledge members-only articles', 'knowledge_articles.locked'],
     ].map(async ([name, table]) => ({ name, ok: await tableExists(table) })),
   )
   const { data: address } = await db.from('site_settings').select('value').eq('key', 'newsletter_address').maybeSingle()

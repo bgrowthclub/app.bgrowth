@@ -1,4 +1,4 @@
-import { Navigate } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import type { ReactNode } from 'react'
 import { useIdentity } from '../IdentityContext'
 
@@ -15,11 +15,16 @@ interface Props {
 // goes straight into Workspace.
 export default function GuestRoute({ children }: Props) {
   const { status, emailVerified } = useIdentity()
+  const { search } = useLocation()
 
   if (status === 'loading') return null
 
   if (status === 'authenticated') {
-    return <Navigate to={emailVerified ? '/platform/dashboard' : '/verify-email'} replace />
+    // ?next=/some/page (e.g. a members-only article) sends the member back
+    // there; only paths of this site.
+    const next = new URLSearchParams(search).get('next')
+    const back = next && next.startsWith('/') && !next.startsWith('//') ? next : null
+    return <Navigate to={emailVerified ? back ?? '/platform/dashboard' : '/verify-email'} replace />
   }
 
   return <>{children}</>
