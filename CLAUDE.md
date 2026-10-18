@@ -632,7 +632,9 @@ extension costs every existing caller.
   actually exists in `App.tsx`. The old linked-but-unrouted gaps are
   closed (`/account` redirects to the profile; `/privacy`, `/terms` and
   `/refund-policy` are real pages since Sprint 48, text in
-  `data/legal.ts`) — either build the page or don't link it.
+  `data/legal.ts`; since Sprint 118 there are no refunds — all sales final,
+  problems go to a Support ticket, decided 18/10/2026) — either build the
+  page or don't link it.
 - Route param lookups (`useParams` + `getSystemBySlug`/`getModuleBySlug`)
   must always guard the "not found" case with `<Navigate to="/systems" />`,
   matching the existing pattern in `ProductPage`, `SystemOverviewPage`,
