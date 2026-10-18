@@ -5,31 +5,10 @@ import { ArrowRight } from 'lucide-react'
 import SearchBar from '../ui/SearchBar'
 import Button from '../ui/Button'
 import { fadeUp, floatY } from '../../lib/motion'
+import { usePageTexts } from '../../lib/usePageTexts'
 
-// Rotating examples for the "I want to ___" line beneath the headline —
-// purely presentational copy, not tied to any Growth Category data model.
-const EXAMPLES = [
-  'become a Mobile Notary.',
-  'start a cleaning business.',
-  'improve my finances.',
-  'build better habits.',
-  'learn English.',
-  'lose weight.',
-]
-
-// Popular goals — a single horizontal scrolling row (see useWheelHorizontalScroll
-// below), never wraps to a second row. Clicking one populates the search field.
-const POPULAR_GOALS = [
-  'Become a Mobile Notary',
-  'Start a Cleaning Business',
-  'Improve My Finances',
-  'Build Better Habits',
-  'Learn English',
-  'Lose Weight',
-  'Become a Tax Preparer',
-  'Start a Pressure Washing Business',
-]
-
+// The rotating examples and the popular goals under the search are page
+// texts (data/pageTexts.ts), editable in Admin → Site → Page texts.
 const ROTATE_MS = 2800
 
 // Lets a vertical mouse-wheel gesture drive the horizontal goals row (the
@@ -155,6 +134,9 @@ export default function Hero() {
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const [exampleIndex, setExampleIndex] = useState(0)
+  const t = usePageTexts()
+  const examples = t.items('home.hero.examples')
+  const goals = t.items('home.hero.goals')
   const goalsRowRef = useWheelHorizontalScroll<HTMLDivElement>()
   const sectionRef = useRef<HTMLElement>(null)
 
@@ -167,10 +149,10 @@ export default function Hero() {
   useEffect(() => {
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     const id = setInterval(() => {
-      setExampleIndex((i) => (i + 1) % EXAMPLES.length)
+      setExampleIndex((i) => (i + 1) % examples.length)
     }, ROTATE_MS)
     return () => clearInterval(id)
-  }, [])
+  }, [examples.length])
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault()
@@ -225,9 +207,9 @@ export default function Hero() {
           animate="show"
           className="font-display text-[32px] font-bold leading-[1.22] tracking-tight text-navy sm:text-[58px] sm:leading-[1.15] md:text-[68px] lg:text-[80px]"
         >
-          What do you want
-          <br className="hidden sm:block" /> to achieve{' '}
-          <span className="bg-grad-primary bg-clip-text text-transparent">next?</span>
+          {t.text('home.hero.title1')}
+          <br className="hidden sm:block" /> {t.text('home.hero.title2')}{' '}
+          <span className="bg-grad-primary bg-clip-text text-transparent">{t.text('home.hero.highlight')}</span>
         </motion.h1>
 
         <motion.p
@@ -237,8 +219,7 @@ export default function Hero() {
           animate="show"
           className="mx-auto mt-4 max-w-[280px] text-[15px] leading-relaxed text-navy/55 sm:mt-5 sm:max-w-md sm:text-[18px]"
         >
-          Discover the right solutions, knowledge and guidance to move forward, one goal at a
-          time.
+          {t.text('home.hero.subtitle')}
         </motion.p>
 
         <motion.div
@@ -248,7 +229,7 @@ export default function Hero() {
           animate="show"
           className="mt-4 flex h-7 items-center justify-center text-[14px] text-navy/50 sm:mt-5 sm:text-[16px]"
         >
-          <span className="mr-1.5">I want to</span>
+          <span className="mr-1.5">{t.text('home.hero.examplesLead')}</span>
           <AnimatePresence mode="wait">
             <motion.span
               key={exampleIndex}
@@ -258,7 +239,7 @@ export default function Hero() {
               transition={{ duration: 0.5, ease: 'easeOut' }}
               className="font-semibold text-navy"
             >
-              {EXAMPLES[exampleIndex]}
+              {examples[exampleIndex % examples.length]}
             </motion.span>
           </AnimatePresence>
           <span className="ml-0.5 h-[1em] w-[1.5px] animate-pulse bg-primary/60" aria-hidden />
@@ -275,7 +256,7 @@ export default function Hero() {
           <SearchBar
             value={query}
             onChange={setQuery}
-            placeholder="Search your next goal…"
+            placeholder={t.text('home.hero.searchPlaceholder')}
             size="lg"
             submitLabel="Search"
             className="hover:shadow-glow focus-within:shadow-glow"
@@ -287,7 +268,7 @@ export default function Hero() {
             ref={goalsRowRef}
             className="no-scrollbar flex snap-x snap-proximity gap-2.5 overflow-x-auto scroll-smooth px-6 [scroll-padding-inline:1.5rem]"
           >
-            {POPULAR_GOALS.map((goal) => (
+            {goals.map((goal) => (
               <button
                 key={goal}
                 type="button"

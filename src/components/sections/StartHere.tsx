@@ -6,6 +6,7 @@ import WorkspaceCoverCard from '../systems/WorkspaceCoverCard'
 import StudioWorkspaceCard from '../systems/StudioWorkspaceCard'
 import BundleCard from '../systems/BundleCard'
 import SectionHeader from '../ui/SectionHeader'
+import { usePageTexts } from '../../lib/usePageTexts'
 import Button from '../ui/Button'
 import { isBundleProduct, loadFeaturedSystemProducts, loadHomeFeatured, loadStudioWorkspaceProducts, systemForCard } from '../../lib/publishedCatalog'
 import type { Product } from '../../modules/commerce/types/product'
@@ -79,6 +80,7 @@ function useDragScroll(ref: RefObject<HTMLDivElement>) {
 }
 
 export default function StartHere() {
+  const t = usePageTexts()
   // Reads the Runtime↔Product Engine connection's Published Product
   // Repository (via ProductService.getFeatured()) instead of a hardcoded
   // catalog filter — a product only shows up here once Studio has both
@@ -122,9 +124,9 @@ export default function StartHere() {
     <section id="start-here" className="section-py relative">
       <div className="container-px mx-auto max-w-page">
         <SectionHeader
-          eyebrow="Start Here"
-          title="Start with one goal."
-          description="Explore some of the most popular BGrowth Workspaces designed to help you take action and achieve meaningful results."
+          eyebrow={t.text('home.start.eyebrow')}
+          title={t.text('home.start.title')}
+          description={t.text('home.start.description')}
           className="mb-10"
         />
       </div>

@@ -2575,7 +2575,7 @@ const LEGAL_NAMES: Record<string, string> = {
   'legal:terms': 'Terms of Service',
   'legal:refund-policy': 'Refund Policy',
 }
-const SITE_CONTENT_NAMES: Record<string, string> = { ...LEGAL_NAMES, seo: 'SEO', navigation: 'Menu & footer' }
+const SITE_CONTENT_NAMES: Record<string, string> = { ...LEGAL_NAMES, seo: 'SEO', navigation: 'Menu & footer', 'page-texts': 'Page texts' }
 
 // Menu & footer (key "navigation"): link lists (a page of this site or an
 // https:// address), two footer sentences and the social network addresses.
@@ -2592,6 +2592,24 @@ function readLinks(value: unknown, field: string, max: number) {
     }
     return { label, to }
   })
+}
+
+// Page texts (key "page-texts"): { fieldId: text | list of short lines }.
+// Field ids and built-in texts live in the site (data/pageTexts.ts); an empty
+// field is dropped so the page shows its built-in text.
+function readPageTexts(raw: Record<string, unknown> | undefined) {
+  const out: Record<string, string | string[]> = {}
+  for (const [id, value] of Object.entries(raw ?? {}).slice(0, 300)) {
+    if (!/^[a-z0-9.]{3,80}$/.test(id)) continue
+    if (Array.isArray(value)) {
+      const items = cleanList(value, 20, 120)
+      if (items.length) out[id] = items
+    } else {
+      const text = cleanText(value, 1500)
+      if (text) out[id] = text
+    }
+  }
+  return out
 }
 
 function readNavigationContent(raw: Record<string, unknown> | undefined) {
@@ -2682,7 +2700,9 @@ async function saveSiteContent(req: VercelRequest, db: Db, admin: Admin) {
       ? readSeoContent(req.body?.value)
       : key === 'navigation'
         ? readNavigationContent(req.body?.value)
-        : readLegalContent(req.body?.value)
+        : key === 'page-texts'
+          ? readPageTexts(req.body?.value)
+          : readLegalContent(req.body?.value)
   const { data, error } = await db
     .from('site_content')
     .upsert({ key, locale: 'en', value, updated_at: new Date().toISOString(), updated_by: admin.email })
