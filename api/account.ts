@@ -1,6 +1,7 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import Stripe from 'stripe'
 
 // A member's own account requests (Sprint 65). For now: asking to delete
 // the account and all its data, checking that request, and cancelling it
@@ -16,6 +17,12 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 //          one file of a Download (content_type 'pdf') the member has
 //          access to — the files sit in the private library-files bucket
 //          (Portal migration 0049)
+//   GET    ?resource=purchases → Account → Purchases (Sprint 119): the
+//          member's paid orders (read from Stripe by their e-mail — Website
+//          and Portal sell through the same account; receipt link when
+//          Stripe has one) and every access on their account (licenses and
+//          team grants), each with where it came from. Nothing is invented:
+//          an access with no payment or team record says so.
 //
 // Called from the Website's Settings and the Portal's Profile (CORS below).
 // Table: portal.account_deletion_requests (Portal migration 0039).
@@ -102,12 +109,168 @@ async function signedInUser(req: VercelRequest, db: Db) {
 
 const COLUMNS = 'id, status, reason, source, requested_at, decided_at, admin_note'
 
+// ---------------------------------------------------------------------------
+// Account → Purchases (Sprint 119)
+// ---------------------------------------------------------------------------
+type ProductRow = { id: string; slug: string; name: string; content_type: string; is_free: boolean }
+
+interface Order {
+  id: string
+  createdAt: string
+  amount: number
+  currency: string
+  refunded: number | null
+  status: 'paid' | 'refunded' | 'partly_refunded' | 'pending'
+  productSlug: string | null
+  productName: string | null
+  isBundle: boolean
+  receiptUrl: string | null
+}
+
+interface Access {
+  id: string
+  kind: 'purchase' | 'free' | 'trial' | 'team' | 'other'
+  productName: string
+  productSlug: string | null
+  // Where it came from, in words: the order, "Free product", "Given by the BGrowth team"...
+  origin: string
+  startedAt: string | null
+  endsAt: string | null
+  status: 'active' | 'expired' | 'cancelled'
+}
+
+async function stripeOrders(email: string, userId: string): Promise<{ orders: Order[]; available: boolean }> {
+  const key = process.env.STRIPE_SECRET_KEY
+  if (!key || !email) return { orders: [], available: false }
+  const stripe = new Stripe(key)
+  try {
+    const sessions = await stripe.checkout.sessions
+      .list({ customer_details: { email }, status: 'complete', limit: 100, expand: ['data.payment_intent.latest_charge'] })
+      .autoPagingToArray({ limit: 500 })
+    // Also the member's own sessions under an e-mail they changed since (metadata.userId).
+    const mine = sessions.filter((s) => !s.metadata?.userId || s.metadata.userId === userId || s.client_reference_id === userId)
+    const orders = mine
+      .filter((s) => (s.amount_total ?? 0) > 0)
+      .map((s): Order => {
+        const pi = s.payment_intent && typeof s.payment_intent !== 'string' ? s.payment_intent : null
+        const charge = pi?.latest_charge && typeof pi.latest_charge !== 'string' ? pi.latest_charge : null
+        const amount = s.amount_total ?? 0
+        const refunded = charge ? charge.amount_refunded : null
+        return {
+          id: s.id,
+          createdAt: new Date(s.created * 1000).toISOString(),
+          amount,
+          currency: s.currency ?? 'usd',
+          refunded,
+          status:
+            s.payment_status !== 'paid' ? 'pending' : refunded && refunded >= amount ? 'refunded' : refunded ? 'partly_refunded' : 'paid',
+          productSlug: s.metadata?.productSlug ?? null,
+          productName: null,
+          isBundle: false,
+          receiptUrl: charge?.receipt_url ?? null,
+        }
+      })
+    return { orders, available: true }
+  } catch (err) {
+    console.error('[account] purchases: Stripe read failed:', err instanceof Error ? err.message : err)
+    return { orders: [], available: false }
+  }
+}
+
+async function purchasesOf(db: Db, userId: string, email: string) {
+  const [{ orders, available }, licensesRes, grantsRes, teamRes] = await Promise.all([
+    stripeOrders(email.toLowerCase(), userId),
+    db.from('licenses').select('id, product_id, type, status, access_policy, activated_at, expires_at').eq('user_id', userId),
+    db.from('access_grants').select('id, scope, product_id, expires_at, created_at, revoked_at').eq('user_id', userId),
+    db.from('admin_activity').select('target_product_id').eq('target_user_id', userId).eq('action', 'POST licenses'),
+  ])
+  if (licensesRes.error) throw licensesRes.error
+  if (grantsRes.error) throw grantsRes.error
+  const licenses = (licensesRes.data ?? []) as {
+    id: string
+    product_id: string
+    type: string
+    status: string
+    access_policy: string
+    activated_at: string | null
+    expires_at: string | null
+  }[]
+  const grants = (grantsRes.data ?? []) as { id: string; scope: string; product_id: string | null; expires_at: string | null; created_at: string; revoked_at: string | null }[]
+  const teamGiven = new Set(((teamRes.data ?? []) as { target_product_id: string | null }[]).map((r) => r.target_product_id).filter(Boolean))
+
+  // Names for every product mentioned, and the items of every bundle bought.
+  const orderSlugs = orders.map((o) => o.productSlug).filter((v): v is string => Boolean(v))
+  const ids = [...licenses.map((l) => l.product_id), ...grants.map((g) => g.product_id).filter((v): v is string => Boolean(v))]
+  const [bySlug, byId] = await Promise.all([
+    orderSlugs.length ? db.from('products').select('id, slug, name, content_type, is_free').in('slug', orderSlugs) : { data: [] },
+    ids.length ? db.from('products').select('id, slug, name, content_type, is_free').in('id', ids) : { data: [] },
+  ])
+  const products = new Map<string, ProductRow>()
+  for (const p of [...((bySlug.data ?? []) as ProductRow[]), ...((byId.data ?? []) as ProductRow[])]) products.set(p.id, p)
+  const slugToProduct = new Map([...products.values()].map((p) => [p.slug, p]))
+
+  const orderOf = new Map<string, Order>()
+  const bundleIds: string[] = []
+  for (const o of orders) {
+    const p = o.productSlug ? slugToProduct.get(o.productSlug) : undefined
+    o.productName = p?.name ?? o.productSlug
+    o.isBundle = p?.content_type === 'bundle'
+    if (p && o.status !== 'refunded') {
+      orderOf.set(p.id, o)
+      if (o.isBundle) bundleIds.push(p.id)
+    }
+  }
+  if (bundleIds.length) {
+    const { data } = await db.from('bundle_items').select('bundle_id, product_id').in('bundle_id', bundleIds)
+    for (const row of (data ?? []) as { bundle_id: string; product_id: string }[]) {
+      const o = orderOf.get(row.bundle_id)
+      if (o && !orderOf.has(row.product_id)) orderOf.set(row.product_id, o)
+    }
+  }
+
+  const now = Date.now()
+  const day = (iso: string | null) => (iso ? new Date(iso).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) : '')
+  const accesses: Access[] = licenses.map((l) => {
+    const p = products.get(l.product_id)
+    const ended = l.status === 'revoked'
+    const expired = l.status === 'expired' || (l.access_policy !== 'lifetime' && !!l.expires_at && new Date(l.expires_at).getTime() < now)
+    const status: Access['status'] = ended ? 'cancelled' : expired ? 'expired' : 'active'
+    const base = { id: l.id, productName: p?.name ?? 'A product no longer available', productSlug: p?.slug ?? null, startedAt: l.activated_at, endsAt: l.access_policy === 'lifetime' ? null : l.expires_at, status }
+    if (l.type === 'trial') return { ...base, kind: 'trial', origin: 'Free trial' }
+    const order = orderOf.get(l.product_id)
+    if (order) {
+      const via = order.isBundle && order.productName !== p?.name ? ` (part of ${order.productName})` : ''
+      return { ...base, kind: 'purchase', origin: `Purchased on ${day(order.createdAt)}${via}` }
+    }
+    if (teamGiven.has(l.product_id)) return { ...base, kind: 'team', origin: 'Given by the BGrowth team' }
+    if (p?.is_free) return { ...base, kind: 'free', origin: 'Free product' }
+    return { ...base, kind: 'other', origin: 'Lifetime access on your account' }
+  })
+  for (const g of grants) {
+    const p = g.product_id ? products.get(g.product_id) : null
+    const expired = !!g.expires_at && new Date(g.expires_at).getTime() < now
+    accesses.push({
+      id: g.id,
+      kind: 'team',
+      productName: g.scope === 'all' ? 'All Workspaces' : p?.name ?? 'A product no longer available',
+      productSlug: g.scope === 'all' ? null : p?.slug ?? null,
+      origin: 'Given by the BGrowth team',
+      startedAt: g.created_at,
+      endsAt: g.expires_at,
+      status: g.revoked_at ? 'cancelled' : expired ? 'expired' : 'active',
+    })
+  }
+  accesses.sort((a, b) => (b.startedAt ?? '').localeCompare(a.startedAt ?? ''))
+  return { orders, accesses, ordersAvailable: available }
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   allowPortal(req, res)
   if (req.method === 'OPTIONS') return res.status(204).end()
   try {
     const resource = str(req.query.resource)
-    if (resource !== 'deletion' && resource !== 'announcements-seen' && resource !== 'download' && resource !== 'profile') throw new HttpError(404, 'Unknown action.')
+    if (resource !== 'deletion' && resource !== 'announcements-seen' && resource !== 'download' && resource !== 'profile' && resource !== 'purchases')
+      throw new HttpError(404, 'Unknown action.')
     const url = process.env.SUPABASE_URL
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY
     if (!url || !key) throw new HttpError(500, 'This isn’t configured on this site yet.')
@@ -116,6 +279,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       auth: { persistSession: false, autoRefreshToken: false },
     }) as Db
     const user = await signedInUser(req, db)
+
+    if (resource === 'purchases' && req.method === 'GET') return res.status(200).json({ ok: true, ...(await purchasesOf(db, user.id, user.email ?? '')) })
 
     // One file of a Download the member owns (Sprint 86).
     if (resource === 'download') {

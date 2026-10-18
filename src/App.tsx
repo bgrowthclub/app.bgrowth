@@ -38,6 +38,8 @@ import PlatformResourcesPage from './pages/platform/PlatformResourcesPage'
 import ProfilePage from './pages/platform/ProfilePage'
 import MembershipPage from './pages/platform/MembershipPage'
 import SettingsPage from './pages/platform/SettingsPage'
+import PurchasesPage from './pages/platform/PurchasesPage'
+import PublicToolPage from './pages/PublicToolPage'
 import SupportPage from './pages/platform/SupportPage'
 import MyDocumentsPage from './pages/platform/MyDocumentsPage'
 import AdminMembersPage from './pages/platform/admin/AdminMembersPage'
@@ -83,6 +85,10 @@ export default function App() {
         <Route path="/product/:slug" element={<ProductPage />} />
         <Route path="/bundle/:slug" element={<BundlePage />} />
         <Route path="/p/:slug" element={<MemberPublicPage />} />
+        {/* Public tool links shared outside (Sprint 120) — the tool runs in BGrowth Studio. */}
+        <Route path="/t/calc/:code" element={<PublicToolPage kind="calc" />} />
+        <Route path="/t/planner/:code" element={<PublicToolPage kind="planner" />} />
+        <Route path="/t/:code" element={<PublicToolPage kind="template" />} />
         {/* Requires a signed-in member (see CommerceEngineClient.ts —
             Checkout needs a memberId to create an Order) — a guest is
             redirected to /login, matching /platform/*'s existing gate. */}
@@ -190,6 +196,7 @@ export default function App() {
         <Route path="profile" element={<ProfilePage />} />
         <Route path="membership" element={<MembershipPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="purchases" element={<PurchasesPage />} />
         <Route path="my-page" element={<MyPagePage />} />
         <Route path="support" element={<SupportPage />} />
         {/* Admin — BGrowth administrators only (portal.website_admins),
