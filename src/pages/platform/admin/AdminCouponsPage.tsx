@@ -78,7 +78,7 @@ export default function AdminCouponsPage() {
           {error && <p className="text-[14px] text-red-500">{error}</p>}
 
           {creating ? (
-            <CouponForm plans={data.plans} onSave={create} onCancel={() => setCreating(false)} />
+            <CouponForm plans={data.plans} items={data.items} onSave={create} onCancel={() => setCreating(false)} />
           ) : (
             <div className="flex justify-end">
               <Button
@@ -105,7 +105,7 @@ export default function AdminCouponsPage() {
                     <p className="font-mono text-[14.5px] font-bold tracking-wide text-navy">{c.code}</p>
                     <p className="mt-0.5 text-[12.5px] text-navy/45">
                       {discount(c)}
-                      {c.appliesTo ? ` · only ${c.appliesTo.join(', ')}` : ' · everything'}
+                      {c.appliesTo ? ` · only ${c.appliesTo.length > 3 ? `${c.appliesTo.slice(0, 3).join(', ')} +${c.appliesTo.length - 3}` : c.appliesTo.join(', ')}` : ' · everything'}
                       {c.firstTimeOnly ? ' · first purchase only' : ''}
                       {c.name && c.name !== c.code ? ` · ${c.name}` : ''}
                     </p>

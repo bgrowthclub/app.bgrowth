@@ -5,6 +5,7 @@ import type { AdminCouponDraft, AdminCouponsOverview } from '../../modules/admin
 
 interface Props {
   plans: AdminCouponsOverview['plans']
+  items: AdminCouponsOverview['items']
   onSave: (draft: AdminCouponDraft) => Promise<void>
   onCancel: () => void
 }
@@ -13,15 +14,19 @@ const LABEL = 'text-[13px] font-semibold text-navy'
 
 // A new coupon: the code people type, the discount, how long it lasts on a
 // plan, what it applies to, and optional limits.
-export default function CouponForm({ plans, onSave, onCancel }: Props) {
+const KIND: Record<string, string> = { workspace: 'Workspace', calculator: 'Calculator', pdf: 'Download', bundle: 'Bundle' }
+
+export default function CouponForm({ plans, items, onSave, onCancel }: Props) {
   const [code, setCode] = useState('')
   const [name, setName] = useState('')
   const [kind, setKind] = useState<'percent' | 'amount'>('percent')
   const [value, setValue] = useState('20')
   const [duration, setDuration] = useState<AdminCouponDraft['duration']>('once')
   const [months, setMonths] = useState('3')
-  const [scope, setScope] = useState<'all' | 'plans'>('all')
+  const [scope, setScope] = useState<'all' | 'some'>('all')
   const [planIds, setPlanIds] = useState<string[]>([])
+  const [productIds, setProductIds] = useState<string[]>([])
+  const [filter, setFilter] = useState('')
   const [maxRedemptions, setMaxRedemptions] = useState('')
   const [expires, setExpires] = useState('')
   const [firstTimeOnly, setFirstTimeOnly] = useState(false)
@@ -39,7 +44,8 @@ export default function CouponForm({ plans, onSave, onCancel }: Props) {
         value: Number(value),
         duration,
         months: duration === 'repeating' ? Number(months) : null,
-        planIds: scope === 'plans' ? planIds : [],
+        planIds: scope === 'some' ? planIds : [],
+        productIds: scope === 'some' ? productIds : [],
         maxRedemptions: maxRedemptions ? Number(maxRedemptions) : null,
         expiresAt: expires ? endOfDayIso(expires) : null,
         firstTimeOnly,
@@ -94,7 +100,7 @@ export default function CouponForm({ plans, onSave, onCancel }: Props) {
           {(
             [
               ['all', 'Everything (plans, Workspaces, bundles)'],
-              ['plans', 'Only some plans'],
+              ['some', 'Only what I choose'],
             ] as const
           ).map(([id, label]) => (
             <button
@@ -109,21 +115,45 @@ export default function CouponForm({ plans, onSave, onCancel }: Props) {
             </button>
           ))}
         </div>
-        {scope === 'plans' && (
-          <div className="mt-3 space-y-2">
-            {plans.map((p) => (
-              <label key={p.id} className="flex items-center gap-2.5 text-[13.5px] text-navy">
-                <input
-                  type="checkbox"
-                  className="h-4 w-4 accent-primary"
-                  disabled={!p.product}
-                  checked={planIds.includes(p.id)}
-                  onChange={(e) => setPlanIds((ids) => (e.target.checked ? [...ids, p.id] : ids.filter((i) => i !== p.id)))}
-                />
-                {p.name}
-                {!p.product && <span className="text-[12px] text-navy/40">— available after its first checkout</span>}
-              </label>
-            ))}
+        {scope === 'some' && (
+          <div className="mt-3 grid gap-4 sm:grid-cols-2">
+            <div>
+              <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-navy/40">Plans</p>
+              <div className="space-y-2">
+                {plans.length === 0 && <p className="text-[13px] text-navy/40">No paid plans.</p>}
+                {plans.map((p) => (
+                  <label key={p.id} className="flex items-center gap-2.5 text-[13.5px] text-navy">
+                    <input
+                      type="checkbox"
+                      className="h-4 w-4 accent-primary"
+                      checked={planIds.includes(p.id)}
+                      onChange={(e) => setPlanIds((ids) => (e.target.checked ? [...ids, p.id] : ids.filter((i) => i !== p.id)))}
+                    />
+                    {p.name}
+                  </label>
+                ))}
+              </div>
+            </div>
+            <div>
+              <p className="mb-2 text-[12px] font-semibold uppercase tracking-wide text-navy/40">Workspaces &amp; bundles ({productIds.length})</p>
+              <input className={`${INPUT} mb-2`} value={filter} placeholder="Search…" onChange={(e) => setFilter(e.target.value)} />
+              <div className="max-h-64 space-y-2 overflow-y-auto pr-1">
+                {items
+                  .filter((i) => !filter || i.name.toLowerCase().includes(filter.toLowerCase()))
+                  .map((i) => (
+                    <label key={i.id} className="flex items-center gap-2.5 text-[13.5px] text-navy">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 accent-primary"
+                        checked={productIds.includes(i.id)}
+                        onChange={(e) => setProductIds((ids) => (e.target.checked ? [...ids, i.id] : ids.filter((x) => x !== i.id)))}
+                      />
+                      <span className="flex-1">{i.name}</span>
+                      <span className="text-[11.5px] text-navy/40">{KIND[i.kind] ?? i.kind}</span>
+                    </label>
+                  ))}
+              </div>
+            </div>
           </div>
         )}
       </div>
@@ -148,7 +178,7 @@ export default function CouponForm({ plans, onSave, onCancel }: Props) {
         <Button type="button" variant="secondary" onClick={onCancel} className={SMALL_BUTTON}>
           Cancel
         </Button>
-        <Button type="button" disabled={saving || !code || (scope === 'plans' && planIds.length === 0)} onClick={() => void save()} className={SMALL_BUTTON}>
+        <Button type="button" disabled={saving || !code || (scope === 'some' && planIds.length + productIds.length === 0)} onClick={() => void save()} className={SMALL_BUTTON}>
           {saving ? 'Creating…' : 'Create coupon'}
         </Button>
       </div>

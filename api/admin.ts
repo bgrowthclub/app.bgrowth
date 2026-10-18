@@ -1614,6 +1614,7 @@ async function catalogHealth(db: Db) {
       ['0056 Wix contacts (Admin → Newsletter)', 'imported_contacts'],
       ['0057 Plans (Admin → Plans)', 'membership_plans'],
       ['0058 Plan billing (subscriptions)', 'member_plans.amount_cents'],
+      ['0059 Products in Stripe (coupons per Workspace)', 'provider_products'],
     ].map(async ([name, table]) => ({ name, ok: await tableExists(table) })),
   )
   const { data: address } = await db.from('site_settings').select('value').eq('key', 'newsletter_address').maybeSingle()
@@ -2986,6 +2987,28 @@ async function listPlans(db: Db) {
   }
 }
 
+// A paid plan's own Stripe product (Sprint 124), made when the plan is saved
+// so coupons can be limited to it before its first sale. Renamed in Stripe
+// when the plan is. Best effort: a Stripe problem never blocks saving.
+async function ensurePlanProduct(db: Db, plan: Record<string, any>) {
+  const key = process.env.STRIPE_SECRET_KEY
+  if (!key || plan.is_free || plan.price_on_request) return
+  try {
+    const stripe = new Stripe(key)
+    const stored = (plan.provider_prices?.stripe ?? {}) as { product?: string; prices?: Record<string, string> }
+    const name = `BGrowth ${plan.name} plan`
+    if (stored.product) {
+      await stripe.products.update(stored.product, { name })
+      return
+    }
+    const product = await stripe.products.create({ name, metadata: { kind: 'plan', plan_id: plan.id, plan_slug: plan.slug } })
+    const next = { ...(plan.provider_prices ?? {}), stripe: { ...stored, product: product.id } }
+    await db.from('membership_plans').update({ provider_prices: next }).eq('id', plan.id)
+  } catch (err) {
+    console.warn('[admin] plan product not created in Stripe:', err instanceof Error ? err.message : err)
+  }
+}
+
 async function createPlan(req: VercelRequest, db: Db) {
   const input = readPlanInput(req)
   const slug = slugify(cleanText(req.body?.slug, 40) || input.name)
@@ -2997,6 +3020,7 @@ async function createPlan(req: VercelRequest, db: Db) {
     if (notReady(error)) throw new HttpError(409, 'Run the database update (Portal migration 0057) first.')
     throw error
   }
+  await ensurePlanProduct(db, { ...data, provider_prices: {} })
   return { plan: { ...data, members: { paid: 0, given: 0 } } }
 }
 
@@ -3008,9 +3032,11 @@ async function updatePlan(req: VercelRequest, db: Db) {
   if (!current) throw new HttpError(404, 'Plan not found.')
   // Every member without a plan is on Free, so it can't be switched off.
   if (current.slug === 'free' && (input.status !== 'active' || !input.is_free)) throw new HttpError(400, 'Free is the plan of every member without one — it stays active and free.')
-  const { data, error } = await db.from('membership_plans').update(input).eq('id', id).select(PLAN_COLUMNS).single()
+  const { data, error } = await db.from('membership_plans').update(input).eq('id', id).select(`${PLAN_COLUMNS}, provider_prices`).single()
   if (error) throw error
-  return { plan: data }
+  await ensurePlanProduct(db, data)
+  const { provider_prices: _skip, ...plan } = data as Record<string, any>
+  return { plan }
 }
 
 async function savePlanSettings(req: VercelRequest, db: Db, admin: Admin) {
@@ -3149,10 +3175,9 @@ async function listPlanSubscribers(db: Db) {
 // Coupons (Sprint 123): discount codes kept in Stripe — a coupon (the
 // discount) plus its promotion code (what the customer types). Accepted at
 // the checkout of plans, Workspaces and bundles. Limiting one to some plans
-// uses the plans' Stripe products (membership_plans.provider_prices), which
-// exist once each plan has been sold or checked out once; Workspaces are
-// charged without a stored Stripe product, so a coupon either applies to
-// everything or only to the chosen plans.
+// or products uses their own Stripe products (plans: provider_prices,
+// made when the plan is saved; products: portal.provider_products, Portal
+// migration 0059, made at checkout or here) — Sprint 124.
 // ---------------------------------------------------------------------------
 function stripeAdmin() {
   const key = process.env.STRIPE_SECRET_KEY
@@ -3173,19 +3198,73 @@ async function planProducts(db: Db) {
     .map((p) => ({ id: p.id, name: p.name, product: (p.provider_prices?.stripe?.product as string | undefined) ?? null }))
 }
 
+// What a coupon can be limited to besides plans: everything sold one by one
+// and bundles (published).
+async function couponItems(db: Db) {
+  const { data, error } = await db
+    .from('products')
+    .select('id, name, content_type, is_free')
+    .in('content_type', [...SELLABLE_TYPES, 'bundle'])
+    .eq('status', 'published')
+    .order('name')
+  if (error) throw error
+  return ((data ?? []) as { id: string; name: string; content_type: string; is_free: boolean }[])
+    .filter((p) => !p.is_free)
+    .map((p) => ({ id: p.id, name: p.name, kind: p.content_type }))
+}
+
+// A product's own Stripe product — same rule as stripeProductFor() in
+// api/studio-checkout.ts (Portal migration 0059, portal.provider_products).
+async function stripeProductForItem(stripe: Stripe, db: Db, productId: string) {
+  const { data: row, error } = await db.from('provider_products').select('external_id').eq('product_id', productId).eq('provider', 'stripe').maybeSingle()
+  if (error) {
+    if (notReady(error)) throw new HttpError(409, 'Run the database update (Portal migration 0059) first.')
+    throw error
+  }
+  if (row) return row.external_id as string
+  const { data: p, error: pError } = await db
+    .from('products')
+    .select('id, name, short_description, cover_image_url, stripe_price_id')
+    .eq('id', productId)
+    .maybeSingle()
+  if (pError) throw pError
+  if (!p) throw new HttpError(404, 'Product not found.')
+  let id: string
+  if (p.stripe_price_id) {
+    const price = await stripe.prices.retrieve(p.stripe_price_id)
+    id = typeof price.product === 'string' ? price.product : price.product.id
+  } else {
+    id = (
+      await stripe.products.create({
+        name: p.name,
+        ...(p.short_description ? { description: String(p.short_description).slice(0, 500) } : {}),
+        ...(p.cover_image_url ? { images: [p.cover_image_url] } : {}),
+        metadata: { product_id: p.id },
+      })
+    ).id
+  }
+  const { error: upError } = await db.from('provider_products').upsert({ product_id: p.id, provider: 'stripe', external_id: id, name: p.name })
+  if (upError) throw upError
+  return id
+}
+
 async function listCoupons(db: Db) {
   const stripe = stripeAdmin()
-  const [codes, plans] = await Promise.all([
+  const linked = await db.from('provider_products').select('external_id, name').eq('provider', 'stripe')
+  const itemByProduct = new Map(((linked.data ?? []) as { external_id: string; name: string }[]).map((r) => [r.external_id, r.name]))
+  const [codes, plans, items] = await Promise.all([
     stripe.promotionCodes
       .list({ limit: 100, expand: ['data.promotion.coupon.applies_to'] })
       .autoPagingToArray({ limit: 500 })
       // Fallback without the "applies to" detail if Stripe refuses that expansion.
       .catch(() => stripe.promotionCodes.list({ limit: 100, expand: ['data.promotion.coupon'] }).autoPagingToArray({ limit: 500 })),
     planProducts(db),
+    couponItems(db),
   ])
   const planByProduct = new Map(plans.filter((p) => p.product).map((p) => [p.product as string, p.name]))
   return {
     plans,
+    items,
     coupons: codes.map((c) => {
       const coupon = c.promotion?.coupon && typeof c.promotion.coupon !== 'string' ? c.promotion.coupon : null
       const products = coupon?.applies_to?.products ?? []
@@ -3202,7 +3281,7 @@ async function listCoupons(db: Db) {
         amountOffCents: coupon?.amount_off ?? null,
         duration: coupon?.duration ?? 'once',
         durationInMonths: coupon?.duration_in_months ?? null,
-        appliesTo: products.length ? products.map((p) => planByProduct.get(p) ?? 'Other product') : null,
+        appliesTo: products.length ? products.map((p) => planByProduct.get(p) ?? itemByProduct.get(p) ?? 'Other product') : null,
         name: coupon?.name ?? null,
       }
     }),
@@ -3220,16 +3299,24 @@ async function createCoupon(req: VercelRequest, db: Db) {
   const duration = b.duration === 'forever' ? 'forever' : b.duration === 'repeating' ? 'repeating' : 'once'
   const months = Math.round(Number(b.months))
   if (duration === 'repeating' && (!Number.isFinite(months) || months < 1 || months > 36)) throw new HttpError(400, 'Months: 1 to 36.')
-  let products: string[] = []
+  // Limited to some plans and/or products: each needs its Stripe product
+  // (made now when missing).
+  const products: string[] = []
   if (Array.isArray(b.planIds) && b.planIds.length) {
-    const plans = await planProducts(db)
-    const chosen = plans.filter((p) => b.planIds.includes(p.id))
-    const missing = chosen.filter((p) => !p.product)
-    if (missing.length) {
-      throw new HttpError(400, `${missing.map((p) => p.name).join(', ')} isn’t in Stripe yet (it appears after its first checkout). Choose “Everything” or other plans.`)
+    const { data: rows, error } = await db.from('membership_plans').select('*').in('id', b.planIds.filter(isUuid))
+    if (error) throw error
+    for (const plan of (rows ?? []) as Record<string, any>[]) {
+      if (!plan.provider_prices?.stripe?.product) await ensurePlanProduct(db, plan)
+      const { data: fresh } = await db.from('membership_plans').select('provider_prices').eq('id', plan.id).single()
+      const product = (fresh?.provider_prices as any)?.stripe?.product
+      if (!product) throw new HttpError(502, `Couldn’t set up “${plan.name}” in Stripe. Try again.`)
+      products.push(product)
     }
-    products = chosen.map((p) => p.product as string)
   }
+  if (Array.isArray(b.productIds) && b.productIds.length) {
+    for (const id of b.productIds.filter(isUuid).slice(0, 100)) products.push(await stripeProductForItem(stripe, db, id))
+  }
+  if ((b.planIds?.length || b.productIds?.length) && !products.length) throw new HttpError(400, 'Choose what the coupon applies to.')
   const maxRedemptions = b.maxRedemptions ? Math.round(Number(b.maxRedemptions)) : null
   if (maxRedemptions !== null && (!Number.isFinite(maxRedemptions) || maxRedemptions < 1)) throw new HttpError(400, 'Uses: a number of 1 or more, or empty for no limit.')
   const expires = futureDate(b.expiresAt, 'Expiry date')

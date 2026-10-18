@@ -174,6 +174,49 @@ function bundleEmail(firstName: string | null, bundleName: string, names: string
   return { subject: `${bundleName} is ready in your Workspaces`, html }
 }
 
+// The product's own Stripe product (Sprint 124, Portal migration 0059:
+// portal.provider_products), so a coupon can be limited to it. Created the
+// first time it's needed; renamed in Stripe when the name changes. Any
+// failure (e.g. the migration not run yet) returns null and the checkout
+// goes on as before, describing the product inline.
+async function stripeProductFor(
+  stripe: Stripe,
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: SupabaseClient<any, any, any>,
+  p: { id: string; name: string; short_description?: string | null; cover_image_url?: string | null; stripe_price_id?: string | null },
+): Promise<string | null> {
+  try {
+    const { data: row, error } = await supabase.from('provider_products').select('external_id, name').eq('product_id', p.id).eq('provider', 'stripe').maybeSingle()
+    if (error) throw error
+    if (row) {
+      if (row.name !== p.name) {
+        await stripe.products.update(row.external_id, { name: p.name })
+        await supabase.from('provider_products').update({ name: p.name, updated_at: new Date().toISOString() }).eq('product_id', p.id).eq('provider', 'stripe')
+      }
+      return row.external_id as string
+    }
+    let id: string
+    if (p.stripe_price_id) {
+      const price = await stripe.prices.retrieve(p.stripe_price_id)
+      id = typeof price.product === 'string' ? price.product : price.product.id
+    } else {
+      const created = await stripe.products.create({
+        name: p.name,
+        ...(p.short_description ? { description: p.short_description.slice(0, 500) } : {}),
+        ...(p.cover_image_url ? { images: [p.cover_image_url] } : {}),
+        metadata: { product_id: p.id },
+      })
+      id = created.id
+    }
+    const { error: insertError } = await supabase.from('provider_products').upsert({ product_id: p.id, provider: 'stripe', external_id: id, name: p.name })
+    if (insertError) throw insertError
+    return id
+  } catch (err) {
+    console.warn('[studio-checkout] Stripe product not linked:', err instanceof Error ? err.message : err)
+    return null
+  }
+}
+
 async function bundleCheckout(
   req: VercelRequest,
   res: VercelResponse,
@@ -266,6 +309,7 @@ async function bundleCheckout(
   const origin = siteOrigin(req)
   const pageUrl = `${origin}/bundle/${encodeURIComponent(bundle.slug)}`
   const stripe = new Stripe(secretKey)
+  const stripeProduct = await stripeProductFor(stripe, supabase, bundle)
   const session = await stripe.checkout.sessions.create({
     mode: 'payment',
     // Coupons made in Admin → Coupons (Sprint 123).
@@ -277,11 +321,15 @@ async function bundleCheckout(
         price_data: {
           currency: bundle.currency,
           unit_amount: amount,
-          product_data: {
-            name: bundle.name,
-            description,
-            ...(bundle.cover_image_url ? { images: [bundle.cover_image_url] } : {}),
-          },
+          ...(stripeProduct
+            ? { product: stripeProduct }
+            : {
+                product_data: {
+                  name: bundle.name,
+                  description,
+                  ...(bundle.cover_image_url ? { images: [bundle.cover_image_url] } : {}),
+                },
+              }),
         },
         quantity: 1,
       },
@@ -401,6 +449,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const origin = siteOrigin(req)
     const productUrl = `${origin}/product/${encodeURIComponent(product.slug)}`
     const stripe = new Stripe(secretKey)
+    const stripeProduct = product.stripe_price_id ? null : await stripeProductFor(stripe, supabase, product)
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       // Coupons made in Admin → Coupons (Sprint 123).
@@ -414,11 +463,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
               price_data: {
                 currency: product.currency,
                 unit_amount: product.price_cents,
-                product_data: {
-                  name: product.name,
-                  ...(product.short_description ? { description: product.short_description } : {}),
-                  ...(product.cover_image_url ? { images: [product.cover_image_url] } : {}),
-                },
+                ...(stripeProduct
+                  ? { product: stripeProduct }
+                  : {
+                      product_data: {
+                        name: product.name,
+                        ...(product.short_description ? { description: product.short_description } : {}),
+                        ...(product.cover_image_url ? { images: [product.cover_image_url] } : {}),
+                      },
+                    }),
               },
               quantity: 1,
             },

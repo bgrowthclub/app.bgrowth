@@ -574,13 +574,15 @@ export interface AdminCoupon {
   amountOffCents: number | null
   duration: 'once' | 'repeating' | 'forever'
   durationInMonths: number | null
-  // Plan names it's limited to; null = everything.
+  // Plan/product names it's limited to; null = everything.
   appliesTo: string[] | null
 }
 
 export interface AdminCouponsOverview {
   coupons: AdminCoupon[]
   plans: { id: string; name: string; product: string | null }[]
+  // Workspaces, calculators, downloads and bundles a coupon can be limited to.
+  items: { id: string; name: string; kind: string }[]
 }
 
 export interface AdminCouponDraft {
@@ -591,6 +593,7 @@ export interface AdminCouponDraft {
   duration: 'once' | 'repeating' | 'forever'
   months: number | null
   planIds: string[]
+  productIds: string[]
   maxRedemptions: number | null
   expiresAt: string | null
   firstTimeOnly: boolean
