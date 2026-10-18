@@ -1,5 +1,6 @@
 import {
   ShoppingBag,
+  ReceiptText,
   Newspaper,
   LayoutDashboard,
   FolderOpen,
@@ -114,6 +115,7 @@ export const PLATFORM_NAV_GROUPS: PlatformNavGroup[] = [
     label: 'Account',
     items: [
       { label: 'My Page', to: '/platform/my-page', icon: SquareUser, pageOwnerOnly: true },
+      { label: 'Purchases', to: '/platform/purchases', icon: ReceiptText },
       { label: 'Settings', to: '/platform/settings', icon: Settings },
       { label: 'Support', to: '/platform/support', icon: LifeBuoy, badge: 'supportUnread' },
     ],

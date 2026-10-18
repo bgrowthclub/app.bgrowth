@@ -24,7 +24,7 @@ const AUTH_ROUTES = ['/login', '/register', '/forgot-password', '/reset-password
 // Members' public pages (/p/:slug, BGrowth Find™) render the same bare way:
 // the page belongs to the member, so no BGrowth menu or footer (decided by
 // the user on 10/10/2026). Still inside this layout — no third layout.
-const BARE_PREFIXES = ['/p/']
+const BARE_PREFIXES = ['/p/', '/t/']
 
 // The visitor closed this version of the notice (id + last edit).
 const DISMISSED_KEY = 'bgrowth.banner.dismissed'

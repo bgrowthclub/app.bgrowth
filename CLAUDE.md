@@ -283,6 +283,25 @@ This repo is a **static, client-only MVP**:
   (resources `wix-contacts`, `wix-contacts-test`, `wix-contacts-invite`);
   its "Yes, keep me posted" button opens `/newsletter/confirm?invite=` →
   `api/newsletter.ts?resource=invite-accept`, which subscribes them.
+  **Since Sprint 119 there is Account → Purchases** (decided 18/10/2026 with
+  the owner): `/platform/purchases` (`components/account/PurchaseHistory`)
+  lists the member's paid orders read from Stripe by e-mail through
+  `api/account.ts?resource=purchases` (Website and Portal share the Stripe
+  account; receipt link when Stripe has one) and every access on the account
+  — licenses and team grants — grouped by origin (purchase, free product,
+  trial, given by the team via `admin_activity`, other). Nothing is invented:
+  an access with no payment or team record says so.
+  **Since Sprint 120 public tool links live on this site** (decided
+  18/10/2026): `bgrowth.app/t/<code>` (Studio checklist templates),
+  `/t/calc/<id>`, `/t/planner/<id>?owner=` render `pages/PublicToolPage` —
+  the Studio's public fill in a frame (Studio Sprint 104 allows framing by
+  bgrowth.app only for those links and postMessages ready/not-found), with
+  this site's own "Link not found". Bare layout, open while the site is
+  closed. Old studio.bgrowth.app/?template= links keep working. Decided, not
+  built: offline Workspaces (later, for any Workspace the member can open —
+  no "Save offline" button until it works), Journal and Explore (later),
+  Resources = free support materials once there is real content, Journeys =
+  guided goal trails (Life World → Journey → Mission → Action) — design next.
   **Since Sprint 81–82 the Admin menu is grouped and categories have a
   look** (approved by the user): the Admin part of the side menu is four
   collapsible groups (Overview, People, Catalog, Site & content —

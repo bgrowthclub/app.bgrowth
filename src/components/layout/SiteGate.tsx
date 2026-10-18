@@ -17,6 +17,8 @@ const ALWAYS_OPEN = [
   '/privacy',
   '/terms',
   '/refund-policy',
+  // Public tool links shared on Etsy, Pinterest… (Sprint 120) must keep working.
+  '/t',
   '/p/bruno', // Bruno's page and the "Inglês de Mudança" course (decided 14/10/2026)
   '/ingles-de-mudanca',
 ]

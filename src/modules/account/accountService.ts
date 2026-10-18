@@ -1,12 +1,12 @@
 import { supabase } from '../identity/supabase/supabaseClient'
-import type { DeletionRequest } from './types'
+import type { AccountPurchases, DeletionRequest } from './types'
 
 // The member's own account requests — every call goes to api/account.ts
 // with the signed-in member's token.
-async function call<T>(method: 'GET' | 'POST' | 'DELETE', body?: unknown): Promise<T> {
+async function call<T>(method: 'GET' | 'POST' | 'DELETE', body?: unknown, resource = 'deletion'): Promise<T> {
   const session = supabase ? (await supabase.auth.getSession()).data.session : null
   if (!session) throw new Error('Sign in to continue.')
-  const response = await fetch('/api/account?resource=deletion', {
+  const response = await fetch(`/api/account?resource=${resource}`, {
     method,
     headers: {
       Authorization: `Bearer ${session.access_token}`,
@@ -28,5 +28,9 @@ export const accountService = {
   },
   async cancelDeletion() {
     return (await call<{ request: DeletionRequest }>('DELETE')).request
+  },
+  // Account → Purchases: paid orders + every access and its origin.
+  getPurchases() {
+    return call<AccountPurchases>('GET', undefined, 'purchases')
   },
 }
