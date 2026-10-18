@@ -1,8 +1,10 @@
-import { Sparkles } from 'lucide-react'
+import { Lock, Sparkles } from 'lucide-react'
 import Badge from '../ui/Badge'
 
 interface Props {
   tier?: string
+  /** Plans not available yet (Sprint 110): a lock instead of the sparkle. */
+  locked?: boolean
 }
 
 // Static placeholder — there is no real membership/billing data yet (see
@@ -13,9 +15,9 @@ interface Props {
 // TopBar hides it below `sm` to avoid crowding a row of six other controls,
 // but other contexts (e.g. WorkspaceHero, which has no such crowding) should
 // always show it.
-export default function MembershipBadge({ tier = 'Free Plan' }: Props) {
+export default function MembershipBadge({ tier = 'Free Plan', locked = false }: Props) {
   return (
-    <Badge variant="outline" icon={<Sparkles size={11} strokeWidth={2.5} />}>
+    <Badge variant="outline" icon={locked ? <Lock size={11} strokeWidth={2.5} /> : <Sparkles size={11} strokeWidth={2.5} />}>
       {tier}
     </Badge>
   )
