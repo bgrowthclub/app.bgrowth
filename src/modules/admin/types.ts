@@ -104,6 +104,8 @@ export interface AdminSupportMember {
 export interface AdminSupportConversation extends SupportConversationSummary {
   user_id: string
   users: AdminSupportMember | null
+  // The member's plan includes priority support (Sprint 125).
+  priority?: boolean
 }
 
 export interface AdminSupportInbox {

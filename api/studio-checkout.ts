@@ -217,6 +217,29 @@ async function stripeProductFor(
   }
 }
 
+// The best "% off Workspaces" among the member's live plans (paid or given
+// by the team — membership_plans.entitlements.workspaceDiscountPercent,
+// Portal migration 0057). 0 when none, or before that migration.
+async function planWorkspaceDiscount(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: SupabaseClient<any, any, any>,
+  userId: string,
+): Promise<number> {
+  const { data, error } = await supabase
+    .from('member_plans')
+    .select('status, starts_at, ends_at, membership_plans(entitlements)')
+    .eq('user_id', userId)
+  if (error || !data) return 0
+  const now = Date.now()
+  let best = 0
+  for (const r of data as Record<string, any>[]) {
+    const live = ['active', 'trialing', 'past_due'].includes(r.status) && Date.parse(r.starts_at) <= now && (!r.ends_at || Date.parse(r.ends_at) > now)
+    const pct = Number(r.membership_plans?.entitlements?.workspaceDiscountPercent ?? 0)
+    if (live && pct > best) best = Math.min(pct, 100)
+  }
+  return best
+}
+
 async function bundleCheckout(
   req: VercelRequest,
   res: VercelResponse,
@@ -449,7 +472,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const origin = siteOrigin(req)
     const productUrl = `${origin}/product/${encodeURIComponent(product.slug)}`
     const stripe = new Stripe(secretKey)
-    const stripeProduct = product.stripe_price_id ? null : await stripeProductFor(stripe, supabase, product)
+    // The member's plan may take a % off Workspaces bought one by one (Sprint 125).
+    const discount = await planWorkspaceDiscount(supabase, user.id)
+    const unitAmount = discount > 0 ? Math.max(50, Math.round(product.price_cents * (1 - discount / 100))) : product.price_cents
+    const useStoredPrice = Boolean(product.stripe_price_id) && unitAmount === product.price_cents
+    const stripeProduct = useStoredPrice ? null : await stripeProductFor(stripe, supabase, product)
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
       // Coupons made in Admin → Coupons (Sprint 123).
@@ -457,12 +484,12 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       customer_email: user.email,
       client_reference_id: user.id,
       line_items: [
-        product.stripe_price_id
+        useStoredPrice && product.stripe_price_id
           ? { price: product.stripe_price_id, quantity: 1 }
           : {
               price_data: {
                 currency: product.currency,
-                unit_amount: product.price_cents,
+                unit_amount: unitAmount,
                 ...(stripeProduct
                   ? { product: stripeProduct }
                   : {
@@ -479,7 +506,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       success_url: `${productUrl}?checkout=success`,
       cancel_url: `${productUrl}?checkout=cancelled`,
       // Same keys the Portal's webhook reads to grant the license.
-      metadata: { userId: user.id, productId: product.id, productSlug: product.slug, source: 'website' },
+      metadata: {
+        userId: user.id,
+        productId: product.id,
+        productSlug: product.slug,
+        source: 'website',
+        ...(unitAmount !== product.price_cents ? { planDiscountPercent: String(discount) } : {}),
+      },
     })
     if (!session.url) throw new Error('Stripe did not return a checkout URL.')
 

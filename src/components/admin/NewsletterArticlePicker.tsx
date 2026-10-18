@@ -93,9 +93,9 @@ export default function NewsletterArticlePicker({ onInsert, onClose }: Props) {
                 <span className="block truncate text-[13.5px] font-semibold text-navy">{a.title}</span>
                 <span className="flex items-center gap-2 text-[11.5px] text-navy/45">
                   {a.language === 'pt' && <span>Português</span>}
-                  {a.access === 'members' && (
+                  {(a.access === 'members' || a.access === 'plan') && (
                     <span className="inline-flex items-center gap-1">
-                      <Lock size={10} /> Members
+                      <Lock size={10} /> {a.access === 'plan' ? a.requiredPlan?.name ?? 'Plan' : 'Members'}
                     </span>
                   )}
                 </span>

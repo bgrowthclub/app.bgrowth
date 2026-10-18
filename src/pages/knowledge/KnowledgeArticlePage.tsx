@@ -152,7 +152,7 @@ export default function KnowledgeArticlePage() {
         <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-start">
           <article className="min-w-0 space-y-5">
             <ArticleBody body={article.body} />
-            {article.locked && <ArticleMembersGate path={`/knowledge/article/${article.slug}`} />}
+            {article.locked && <ArticleMembersGate path={`/knowledge/article/${article.slug}`} planName={article.access === 'plan' ? article.requiredPlan?.name : undefined} />}
 
             {article.calloutCards && article.calloutCards.length > 0 && (
               <div className="!mt-8 space-y-4">

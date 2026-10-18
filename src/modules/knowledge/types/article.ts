@@ -23,8 +23,9 @@ export interface KnowledgeBodyBlock {
 
 // Who reads an article published from BGrowth Studio (Portal migration
 // 0055): everyone, or signed-in members — a visitor then gets only the start
-// (`locked`) and is asked to create a free account.
-export type KnowledgeAccess = 'everyone' | 'members'
+// (`locked`) and is asked to create a free account. Since Sprint 125 (Portal
+// migration 0060) also 'plan': members on `requiredPlan` or a higher plan.
+export type KnowledgeAccess = 'everyone' | 'members' | 'plan'
 
 // The universal free-content unit for BGrowth Knowledge — every future
 // content type (Article, Guide, Checklist, Planner, Calculator, Template,
@@ -54,6 +55,8 @@ export interface KnowledgeArticle {
   coverImage?: string
   language?: 'en' | 'pt'
   access?: KnowledgeAccess
+  /** For access 'plan': the lowest plan that reads it whole. */
+  requiredPlan?: { slug: string; name: string }
   /** true = only the start of the body was loaded (members-only, visitor). */
   locked?: boolean
 }
@@ -79,4 +82,5 @@ export type KnowledgeArticleIndexEntry = Pick<
   | 'coverImage'
   | 'language'
   | 'access'
+  | 'requiredPlan'
 >

@@ -19,6 +19,8 @@ interface Props {
   signInTo: string
   onBuy: () => void
   onStartTrial: () => void
+  // The member's plan takes a % off (Sprint 125) — applied at checkout.
+  planDiscount?: { percent: number; planName: string } | null
   className?: string
 }
 
@@ -45,9 +47,13 @@ const DOWNLOAD_SUMMARY = [
   'Instructions included when there are Canva links',
 ]
 
-function priceLabel(product: Product) {
-  const amount = Number.isInteger(product.basePrice) ? product.basePrice : product.basePrice.toFixed(2)
-  return `$${amount}`
+function money(value: number) {
+  return `$${Number.isInteger(value) ? value : value.toFixed(2)}`
+}
+
+function priceLabel(product: Product, percent = 0) {
+  if (!percent) return money(product.basePrice)
+  return money(Math.max(0.5, Math.round(product.basePrice * (100 - percent)) / 100))
 }
 
 // The buy box for a Workspace published from BGrowth Studio — a sibling of
@@ -69,9 +75,11 @@ export default function StudioPurchaseCard({
   signInTo,
   onBuy,
   onStartTrial,
+  planDiscount = null,
   className = '',
 }: Props) {
   const free = product.basePrice === 0
+  const pct = !free && planDiscount ? planDiscount.percent : 0
   const noun = studioProductNoun(product)
   const summary = product.type === 'Calculator' ? CALCULATOR_SUMMARY : product.type === 'Download' ? DOWNLOAD_SUMMARY : QUICK_SUMMARY
 
@@ -94,16 +102,22 @@ export default function StudioPurchaseCard({
           </Button>
           {trialActive && !free && (
             <Button type="button" variant="secondary" onClick={onBuy} disabled={busy !== null} className="mt-3 w-full">
-              {busy === 'buy' ? 'Opening checkout…' : `Buy Now — ${priceLabel(product)}`}
+              {busy === 'buy' ? 'Opening checkout…' : `Buy Now — ${priceLabel(product, pct)}`}
             </Button>
           )}
         </>
       ) : (
         <>
           <div className="flex items-baseline gap-2">
-            <span className="font-display text-3xl font-bold text-navy">{free ? 'Free' : priceLabel(product)}</span>
+            {pct > 0 && <span className="text-lg font-semibold text-navy/35 line-through">{priceLabel(product)}</span>}
+            <span className="font-display text-3xl font-bold text-navy">{free ? 'Free' : priceLabel(product, pct)}</span>
             {!free && <span className="text-[13px] text-navy/40">one-time</span>}
           </div>
+          {pct > 0 && planDiscount && (
+            <p className="mt-1 text-[12.5px] font-semibold text-primary">
+              {planDiscount.percent}% off with your {planDiscount.planName} plan
+            </p>
+          )}
 
           {!signedIn ? (
             <>

@@ -51,9 +51,9 @@ export default function KnowledgeArticleCard({ article, categoryName, authorName
         {article.language === 'pt' && (
           <span className="rounded-full bg-bg-soft px-3 py-1 text-[11px] font-semibold text-navy/55">Português</span>
         )}
-        {article.access === 'members' && (
+        {(article.access === 'members' || article.access === 'plan') && (
           <span className="inline-flex items-center gap-1 text-[11px] font-medium text-navy/40">
-            <Lock size={11} /> Members
+            <Lock size={11} /> {article.access === 'plan' ? article.requiredPlan?.name ?? 'Plan' : 'Members'}
           </span>
         )}
         {categoryName && <span className="text-[11px] font-medium text-navy/35">{categoryName}</span>}

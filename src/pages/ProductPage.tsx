@@ -34,6 +34,7 @@ import {
   resolveProductSystem,
 } from '../lib/publishedCatalog'
 import { useIdentity } from '../modules/identity/IdentityContext'
+import { useMemberPlan } from '../modules/account/useMemberPlan'
 import { workspaceViewerPath } from '../modules/workspace/config'
 import { useStudioPurchase } from '../modules/workspace/hooks/useStudioPurchase'
 import type { WorkspaceOutlineSection } from '../modules/workspace/types/portal'
@@ -62,6 +63,8 @@ export default function ProductPage() {
   const [bundles, setBundles] = useState<Awaited<ReturnType<typeof loadBundlesIncluding>>>([])
   const [gallery, setGallery] = useState<ProductGallery | null>(null)
   const { user } = useIdentity()
+  // The member's plan may take a % off Workspaces (Sprint 125).
+  const { current: memberPlan } = useMemberPlan()
   const [searchParams] = useSearchParams()
   // Studio Workspaces: ownership, trial and checkout (no-op for other products).
   const purchase = useStudioPurchase(slug, user?.id, searchParams.get('checkout'))
@@ -136,6 +139,11 @@ export default function ProductPage() {
       signInTo="/login"
       onBuy={purchase.buy}
       onStartTrial={purchase.startTrial}
+      planDiscount={
+        memberPlan?.entitlements?.workspaceDiscountPercent
+          ? { percent: memberPlan.entitlements.workspaceDiscountPercent, planName: memberPlan.name }
+          : null
+      }
       className={className}
     />
   )

@@ -208,7 +208,14 @@ export default function AdminSupportPage() {
                     title: c.users?.full_name || c.users?.email || 'Member',
                     subtitle: c.subject,
                     time: c.last_message_at,
-                    badge: c.status === 'open' && c.last_sender === 'customer' ? 'Waiting' : undefined,
+                    badge:
+                      c.status === 'open' && c.last_sender === 'customer'
+                        ? c.priority
+                          ? 'Priority · Waiting'
+                          : 'Waiting'
+                        : c.priority
+                          ? 'Priority'
+                          : undefined,
                     muted: c.status === 'closed',
                   }))}
                 />
