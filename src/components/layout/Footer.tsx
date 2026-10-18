@@ -4,30 +4,42 @@ import logo from '../../assets/logo.png'
 import Button from '../ui/Button'
 import { useNewsletterSignup } from '../../modules/newsletter/useNewsletterSignup'
 import SignupInterests from '../newsletter/SignupInterests'
+import type { ReactNode } from 'react'
+import { useSiteNavigation } from '../../lib/useSiteNavigation'
+import { SOCIAL_NETWORKS, isExternalLink } from '../../data/siteNavigation'
+import type { SiteLink, SocialNetwork } from '../../data/siteNavigation'
 
-const LINKS = [
-  { label: 'Business Systems', to: '/systems' },
-  { label: 'Life Worlds', to: '/workspaces' },
-  { label: 'Resources', to: '/resources' },
-  { label: 'About', to: '/about' },
-]
+// The site's built-in footer, or the one edited in Admin → Site → Menu &
+// footer (data/siteNavigation.ts, lib/useSiteNavigation.ts). A social icon
+// shows only when its address is filled in.
+const SOCIAL_ICONS: Record<SocialNetwork, (props: { size: number; strokeWidth: number }) => ReactNode> = {
+  instagram: (p) => <Instagram {...p} />,
+  facebook: (p) => <Facebook {...p} />,
+  youtube: (p) => <Youtube {...p} />,
+  linkedin: (p) => <Linkedin {...p} />,
+  tiktok: ({ size }) => (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+      <path d="M16.6 5.82A4.28 4.28 0 0 1 15.54 3h-3.09v12.4a2.59 2.59 0 1 1-2.59-2.59c.27 0 .53.04.77.12V9.77a5.69 5.69 0 1 0 4.91 5.63V9.01a7.35 7.35 0 0 0 4.3 1.38V7.3a4.3 4.3 0 0 1-3.24-1.48Z" />
+    </svg>
+  ),
+}
 
-const LEGAL_LINKS = [
-  { label: 'Privacy Policy', to: '/privacy' },
-  { label: 'Terms', to: '/terms' },
-  { label: 'Refund Policy', to: '/refund-policy' },
-  { label: 'Contact', to: '/contact' },
-]
-
-const SOCIALS = [
-  { icon: Instagram, label: 'Instagram', href: 'https://instagram.com' },
-  { icon: Facebook, label: 'Facebook', href: 'https://facebook.com' },
-  { icon: Youtube, label: 'YouTube', href: 'https://youtube.com' },
-  { icon: Linkedin, label: 'LinkedIn', href: 'https://linkedin.com' },
-]
+function FooterLink({ link, className }: { link: SiteLink; className: string }) {
+  return isExternalLink(link.to) ? (
+    <a href={link.to} target="_blank" rel="noopener noreferrer" className={className}>
+      {link.label}
+    </a>
+  ) : (
+    <Link to={link.to} className={className}>
+      {link.label}
+    </Link>
+  )
+}
 
 export default function Footer() {
   const signup = useNewsletterSignup('footer')
+  const nav = useSiteNavigation()
+  const socials = SOCIAL_NETWORKS.filter((n) => nav.socials[n.id])
 
   return (
     <footer className="relative border-t border-navy/[0.06] bg-bg-soft print:hidden">
@@ -41,19 +53,19 @@ export default function Footer() {
               </span>
             </Link>
             <p className="mt-4 max-w-xs text-[13.5px] leading-relaxed text-navy/45">
-              Interactive Workspaces™ that help you organize, learn, plan and accomplish meaningful goals.
+              {nav.tagline}
             </p>
             <div className="mt-5 flex gap-2">
-              {SOCIALS.map((s) => (
+              {socials.map((s) => (
                 <a
-                  key={s.label}
-                  href={s.href}
+                  key={s.id}
+                  href={nav.socials[s.id]}
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={s.label}
                   className="grid h-9 w-9 place-items-center rounded-full border border-navy/10 bg-white text-navy/45 transition-colors hover:border-primary/20 hover:text-primary"
                 >
-                  <s.icon size={15} strokeWidth={2} />
+                  {SOCIAL_ICONS[s.id]({ size: 15, strokeWidth: 2 })}
                 </a>
               ))}
             </div>
@@ -62,11 +74,9 @@ export default function Footer() {
           <div>
             <p className="text-[13px] font-semibold text-navy">Explore</p>
             <ul className="mt-4 space-y-2.5">
-              {LINKS.map((link) => (
+              {nav.footerLinks.map((link) => (
                 <li key={link.label}>
-                  <Link to={link.to} className="text-[13px] text-navy/45 transition-colors hover:text-primary">
-                    {link.label}
-                  </Link>
+                  <FooterLink link={link} className="text-[13px] text-navy/45 transition-colors hover:text-primary" />
                 </li>
               ))}
             </ul>
@@ -74,7 +84,7 @@ export default function Footer() {
 
           <div>
             <p className="text-[13px] font-semibold text-navy">Newsletter</p>
-            <p className="mt-4 text-[13px] text-navy/45">Get new resources and systems first.</p>
+            <p className="mt-4 text-[13px] text-navy/45">{nav.newsletterText}</p>
             <form onSubmit={signup.submit} className="mt-4 flex gap-2">
               <input
                 type="email"
@@ -103,10 +113,8 @@ export default function Footer() {
             © {new Date().getFullYear()} BGrowth. All rights reserved.
           </p>
           <div className="flex gap-6 text-[12.5px] text-navy/35">
-            {LEGAL_LINKS.map((link) => (
-              <Link key={link.label} to={link.to} className="hover:text-navy/60">
-                {link.label}
-              </Link>
+            {nav.legalLinks.map((link) => (
+              <FooterLink key={link.label} link={link} className="hover:text-navy/60" />
             ))}
           </div>
         </div>

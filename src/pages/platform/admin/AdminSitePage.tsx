@@ -9,6 +9,7 @@ import AnnouncementEditor from '../../../components/admin/AnnouncementEditor'
 import HomeHighlightsEditor from '../../../components/admin/HomeHighlightsEditor'
 import LegalPagesEditor from '../../../components/admin/LegalPagesEditor'
 import SeoEditor from '../../../components/admin/SeoEditor'
+import NavigationEditor from '../../../components/admin/NavigationEditor'
 import { CARD, LINK_BUTTON, SMALL_BUTTON, formatDate, pillClass } from '../../../components/admin/styles'
 import { adminService } from '../../../modules/admin/adminService'
 import type { AdminAnnouncementDraft, AdminSiteOverview } from '../../../modules/admin/types'
@@ -27,11 +28,12 @@ function state(a: SiteAnnouncement): { label: string; tone: 'green' | 'amber' | 
 // of the public site and/or the bell in the member area — and the Home
 // highlights — and, on the Legal pages tab (Portal migration 0053), the
 // Privacy, Terms and Refund texts. Next here: SEO, menu/footer, page texts.
-type SiteTab = 'general' | 'legal' | 'seo'
+type SiteTab = 'general' | 'legal' | 'seo' | 'navigation'
 const SITE_TABS: { id: SiteTab; label: string }[] = [
   { id: 'general', label: 'General' },
   { id: 'legal', label: 'Legal pages' },
   { id: 'seo', label: 'SEO' },
+  { id: 'navigation', label: 'Menu & footer' },
 ]
 
 export default function AdminSitePage() {
@@ -109,13 +111,13 @@ export default function AdminSitePage() {
         className="mb-6"
       />
 
-      <div className="mb-8 flex gap-1 border-b border-navy/[0.08]">
+      <div className="mb-8 flex gap-1 overflow-x-auto border-b border-navy/[0.08]">
         {SITE_TABS.map((t) => (
           <button
             key={t.id}
             type="button"
             onClick={() => setTab(t.id)}
-            className={`-mb-px border-b-2 px-4 py-2.5 text-[13.5px] font-semibold transition-colors ${
+            className={`-mb-px shrink-0 whitespace-nowrap border-b-2 px-4 py-2.5 text-[13.5px] font-semibold transition-colors ${
               tab === t.id ? 'border-primary text-primary' : 'border-transparent text-navy/50 hover:text-navy'
             }`}
           >
@@ -128,6 +130,8 @@ export default function AdminSitePage() {
         <LegalPagesEditor />
       ) : tab === 'seo' ? (
         <SeoEditor />
+      ) : tab === 'navigation' ? (
+        <NavigationEditor />
       ) : !data ? (
         error ? (
           <EmptyState icon={Megaphone} title="We couldn’t load the site settings." description={error} />

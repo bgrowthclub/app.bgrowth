@@ -2575,7 +2575,45 @@ const LEGAL_NAMES: Record<string, string> = {
   'legal:terms': 'Terms of Service',
   'legal:refund-policy': 'Refund Policy',
 }
-const SITE_CONTENT_NAMES: Record<string, string> = { ...LEGAL_NAMES, seo: 'SEO' }
+const SITE_CONTENT_NAMES: Record<string, string> = { ...LEGAL_NAMES, seo: 'SEO', navigation: 'Menu & footer' }
+
+// Menu & footer (key "navigation"): link lists (a page of this site or an
+// https:// address), two footer sentences and the social network addresses.
+const SOCIAL_KEYS = ['instagram', 'facebook', 'youtube', 'linkedin', 'tiktok']
+
+function readLinks(value: unknown, field: string, max: number) {
+  if (!Array.isArray(value)) return []
+  return (value as Record<string, unknown>[]).slice(0, max).map((l) => {
+    const label = cleanText(l?.label, 40)
+    const to = cleanText(l?.to, 300)
+    if (!label || !to) throw new HttpError(400, `${field}: every link needs a name and an address.`)
+    if (!/^\/[^\s]*$/.test(to) && !/^https:\/\/[^\s]+$/i.test(to)) {
+      throw new HttpError(400, `${field}: “${label}” must link to a page of this site (starting with /) or a full https:// address.`)
+    }
+    return { label, to }
+  })
+}
+
+function readNavigationContent(raw: Record<string, unknown> | undefined) {
+  const menu = readLinks(raw?.menu, 'Top menu', 8)
+  if (!menu.length) throw new HttpError(400, 'The top menu needs at least one link.')
+  const rawSocials = raw?.socials && typeof raw.socials === 'object' ? (raw.socials as Record<string, unknown>) : {}
+  const socials: Record<string, string> = {}
+  for (const key of SOCIAL_KEYS) {
+    const url = cleanText(rawSocials[key], 300)
+    if (!url) continue
+    if (!/^https:\/\/[^\s]+$/i.test(url)) throw new HttpError(400, `The ${key} address must be a full https:// address.`)
+    socials[key] = url
+  }
+  return {
+    menu,
+    footerLinks: readLinks(raw?.footerLinks, 'Footer links', 12),
+    legalLinks: readLinks(raw?.legalLinks, 'Bottom links', 8),
+    tagline: cleanText(raw?.tagline, 200),
+    newsletterText: cleanText(raw?.newsletterText, 150),
+    socials,
+  }
+}
 
 // SEO (key "seo"): per page (by its address) a Google title/description and
 // a share image, plus the default share image for every other link.
@@ -2639,7 +2677,12 @@ async function getSiteContent(req: VercelRequest, db: Db) {
 
 async function saveSiteContent(req: VercelRequest, db: Db, admin: Admin) {
   const key = siteContentKey(req.body?.key)
-  const value = key === 'seo' ? readSeoContent(req.body?.value) : readLegalContent(req.body?.value)
+  const value =
+    key === 'seo'
+      ? readSeoContent(req.body?.value)
+      : key === 'navigation'
+        ? readNavigationContent(req.body?.value)
+        : readLegalContent(req.body?.value)
   const { data, error } = await db
     .from('site_content')
     .upsert({ key, locale: 'en', value, updated_at: new Date().toISOString(), updated_by: admin.email })
