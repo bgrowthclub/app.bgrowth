@@ -23,6 +23,8 @@ import KnowledgeHomePage from './pages/knowledge/KnowledgeHomePage'
 import KnowledgeCategoryPage from './pages/knowledge/KnowledgeCategoryPage'
 import KnowledgeArticlePage from './pages/knowledge/KnowledgeArticlePage'
 import KnowledgeSearchPage from './pages/knowledge/KnowledgeSearchPage'
+import KnowledgeComingSoonPage from './pages/knowledge/KnowledgeComingSoonPage'
+import { KNOWLEDGE_LIVE } from './data/contentStatus'
 import NotFoundPage from './pages/NotFoundPage'
 import CourseAddressRedirect from './pages/CourseAddressRedirect'
 import PlatformLayout from './components/platform/PlatformLayout'
@@ -101,16 +103,16 @@ export default function App() {
         <Route path="/system/:slug/module/:moduleSlug" element={<SystemModulePage />} />
         <Route path="/workspaces" element={<WorkspacesPage />} />
         <Route path="/preview/:category" element={<CategoryPreviewPage />} />
-        <Route path="/resources" element={<ResourcesPage />} />
+        <Route path="/resources" element={KNOWLEDGE_LIVE ? <ResourcesPage /> : <KnowledgeComingSoonPage />} />
 
         {/* BGrowth Knowledge™ Foundation — the free-content hub, ready to
             receive future BGrowth Studio-published Knowledge Packages (see
             modules/knowledge/). Mock data only today; no Studio connection,
             no API, no backend. */}
-        <Route path="/knowledge" element={<KnowledgeHomePage />} />
-        <Route path="/knowledge/category/:slug" element={<KnowledgeCategoryPage />} />
-        <Route path="/knowledge/article/:slug" element={<KnowledgeArticlePage />} />
-        <Route path="/knowledge/search" element={<KnowledgeSearchPage />} />
+        <Route path="/knowledge" element={KNOWLEDGE_LIVE ? <KnowledgeHomePage /> : <KnowledgeComingSoonPage />} />
+        <Route path="/knowledge/category/:slug" element={KNOWLEDGE_LIVE ? <KnowledgeCategoryPage /> : <KnowledgeComingSoonPage />} />
+        <Route path="/knowledge/article/:slug" element={KNOWLEDGE_LIVE ? <KnowledgeArticlePage /> : <KnowledgeComingSoonPage />} />
+        <Route path="/knowledge/search" element={KNOWLEDGE_LIVE ? <KnowledgeSearchPage /> : <KnowledgeComingSoonPage />} />
 
         {/* No Pricing page until Plans & Subscriptions exist (decided 09/10/2026);
             PricingPage.tsx is kept for then. Old links land on the catalog. */}
