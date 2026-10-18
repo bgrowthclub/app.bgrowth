@@ -558,3 +558,40 @@ export interface AdminPlanSubscribers {
   subscribers: AdminPlanSubscriber[]
   stats: { paying: number; mrrCents: number; cancelling: number; pastDue: number; canceled30: number; given: number } | null
 }
+
+// Admin → Coupons (Sprint 123): discount codes kept in Stripe.
+export interface AdminCoupon {
+  id: string
+  code: string
+  name: string | null
+  active: boolean
+  createdAt: string
+  expiresAt: string | null
+  maxRedemptions: number | null
+  timesRedeemed: number
+  firstTimeOnly: boolean
+  percentOff: number | null
+  amountOffCents: number | null
+  duration: 'once' | 'repeating' | 'forever'
+  durationInMonths: number | null
+  // Plan names it's limited to; null = everything.
+  appliesTo: string[] | null
+}
+
+export interface AdminCouponsOverview {
+  coupons: AdminCoupon[]
+  plans: { id: string; name: string; product: string | null }[]
+}
+
+export interface AdminCouponDraft {
+  code: string
+  name: string
+  kind: 'percent' | 'amount'
+  value: number
+  duration: 'once' | 'repeating' | 'forever'
+  months: number | null
+  planIds: string[]
+  maxRedemptions: number | null
+  expiresAt: string | null
+  firstTimeOnly: boolean
+}

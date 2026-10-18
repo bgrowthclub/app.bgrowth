@@ -3146,6 +3146,123 @@ async function listPlanSubscribers(db: Db) {
 }
 
 // ---------------------------------------------------------------------------
+// Coupons (Sprint 123): discount codes kept in Stripe — a coupon (the
+// discount) plus its promotion code (what the customer types). Accepted at
+// the checkout of plans, Workspaces and bundles. Limiting one to some plans
+// uses the plans' Stripe products (membership_plans.provider_prices), which
+// exist once each plan has been sold or checked out once; Workspaces are
+// charged without a stored Stripe product, so a coupon either applies to
+// everything or only to the chosen plans.
+// ---------------------------------------------------------------------------
+function stripeAdmin() {
+  const key = process.env.STRIPE_SECRET_KEY
+  if (!key) throw new HttpError(503, 'Stripe isn’t configured on this site.')
+  return new Stripe(key)
+}
+
+const COUPON_CODE = /^[A-Za-z0-9-]{3,40}$/
+
+async function planProducts(db: Db) {
+  const { data, error } = await db.from('membership_plans').select('id, name, provider_prices, is_free, price_on_request').order('rank')
+  if (error) {
+    if (notReady(error)) return []
+    throw error
+  }
+  return ((data ?? []) as { id: string; name: string; provider_prices: any; is_free: boolean; price_on_request: boolean }[])
+    .filter((p) => !p.is_free && !p.price_on_request)
+    .map((p) => ({ id: p.id, name: p.name, product: (p.provider_prices?.stripe?.product as string | undefined) ?? null }))
+}
+
+async function listCoupons(db: Db) {
+  const stripe = stripeAdmin()
+  const [codes, plans] = await Promise.all([
+    stripe.promotionCodes
+      .list({ limit: 100, expand: ['data.promotion.coupon.applies_to'] })
+      .autoPagingToArray({ limit: 500 })
+      // Fallback without the "applies to" detail if Stripe refuses that expansion.
+      .catch(() => stripe.promotionCodes.list({ limit: 100, expand: ['data.promotion.coupon'] }).autoPagingToArray({ limit: 500 })),
+    planProducts(db),
+  ])
+  const planByProduct = new Map(plans.filter((p) => p.product).map((p) => [p.product as string, p.name]))
+  return {
+    plans,
+    coupons: codes.map((c) => {
+      const coupon = c.promotion?.coupon && typeof c.promotion.coupon !== 'string' ? c.promotion.coupon : null
+      const products = coupon?.applies_to?.products ?? []
+      return {
+        id: c.id,
+        code: c.code,
+        active: c.active && (coupon?.valid ?? true),
+        createdAt: new Date(c.created * 1000).toISOString(),
+        expiresAt: c.expires_at ? new Date(c.expires_at * 1000).toISOString() : null,
+        maxRedemptions: c.max_redemptions,
+        timesRedeemed: c.times_redeemed,
+        firstTimeOnly: c.restrictions?.first_time_transaction ?? false,
+        percentOff: coupon?.percent_off ?? null,
+        amountOffCents: coupon?.amount_off ?? null,
+        duration: coupon?.duration ?? 'once',
+        durationInMonths: coupon?.duration_in_months ?? null,
+        appliesTo: products.length ? products.map((p) => planByProduct.get(p) ?? 'Other product') : null,
+        name: coupon?.name ?? null,
+      }
+    }),
+  }
+}
+
+async function createCoupon(req: VercelRequest, db: Db) {
+  const b = (req.body ?? {}) as Record<string, any>
+  const stripe = stripeAdmin()
+  const code = str(b.code).toUpperCase()
+  if (!COUPON_CODE.test(code)) throw new HttpError(400, 'Code: 3 to 40 letters, numbers or dashes (no spaces).')
+  const value = Number(b.value)
+  const percent = b.kind !== 'amount'
+  if (!Number.isFinite(value) || value <= 0 || (percent && value > 100)) throw new HttpError(400, percent ? 'Discount: 1 to 100%.' : 'Discount: enter an amount in dollars.')
+  const duration = b.duration === 'forever' ? 'forever' : b.duration === 'repeating' ? 'repeating' : 'once'
+  const months = Math.round(Number(b.months))
+  if (duration === 'repeating' && (!Number.isFinite(months) || months < 1 || months > 36)) throw new HttpError(400, 'Months: 1 to 36.')
+  let products: string[] = []
+  if (Array.isArray(b.planIds) && b.planIds.length) {
+    const plans = await planProducts(db)
+    const chosen = plans.filter((p) => b.planIds.includes(p.id))
+    const missing = chosen.filter((p) => !p.product)
+    if (missing.length) {
+      throw new HttpError(400, `${missing.map((p) => p.name).join(', ')} isn’t in Stripe yet (it appears after its first checkout). Choose “Everything” or other plans.`)
+    }
+    products = chosen.map((p) => p.product as string)
+  }
+  const maxRedemptions = b.maxRedemptions ? Math.round(Number(b.maxRedemptions)) : null
+  if (maxRedemptions !== null && (!Number.isFinite(maxRedemptions) || maxRedemptions < 1)) throw new HttpError(400, 'Uses: a number of 1 or more, or empty for no limit.')
+  const expires = futureDate(b.expiresAt, 'Expiry date')
+
+  const existing = await stripe.promotionCodes.list({ code, active: true, limit: 1 })
+  if (existing.data.length) throw new HttpError(409, `The code ${code} already exists.`)
+
+  const coupon = await stripe.coupons.create({
+    name: cleanText(b.name, 40) || code,
+    ...(percent ? { percent_off: value } : { amount_off: Math.round(value * 100), currency: 'usd' }),
+    duration,
+    ...(duration === 'repeating' ? { duration_in_months: months } : {}),
+    ...(products.length ? { applies_to: { products } } : {}),
+    metadata: { created_in: 'bgrowth-admin' },
+  })
+  const promo = await stripe.promotionCodes.create({
+    promotion: { type: 'coupon', coupon: coupon.id },
+    code,
+    ...(maxRedemptions ? { max_redemptions: maxRedemptions } : {}),
+    ...(expires ? { expires_at: Math.floor(Date.parse(expires) / 1000) } : {}),
+    ...(b.firstTimeOnly === true ? { restrictions: { first_time_transaction: true } } : {}),
+  })
+  return { coupon: { id: promo.id, code: promo.code } }
+}
+
+async function setCouponActive(req: VercelRequest) {
+  const id = str(req.body?.id)
+  if (!id.startsWith('promo_')) throw new HttpError(400, 'Which coupon?')
+  const promo = await stripeAdmin().promotionCodes.update(id, { active: req.body?.active === true })
+  return { coupon: { id: promo.id, code: promo.code, active: promo.active } }
+}
+
+// ---------------------------------------------------------------------------
 // Activity log (portal.admin_activity, Portal migration 0042): every change
 // made in the Admin area — who, what, when, on which member or product.
 // Recorded by the router below after the change succeeds; best effort, so a
@@ -3267,6 +3384,10 @@ function describe(key: string, b: Body, r: Record<string, any>): Described {
       }
     case 'PATCH member-plans':
       return { area: 'plans', summary: b.action === 'end' ? `Ended the plan “${r.planName}” given by the team` : `Changed the end date of the plan “${r.planName}”${b.endsAt ? ` to ${fmtDay(b.endsAt)}` : ' (no end date)'}` }
+    case 'POST coupons':
+      return { area: 'plans', summary: `Created the coupon ${r.coupon?.code ?? ''} (${b.kind === 'amount' ? `$${b.value} off` : `${b.value}% off`})` }
+    case 'PATCH coupons':
+      return { area: 'plans', summary: `${r.coupon?.active ? 'Turned on' : 'Turned off'} the coupon ${r.coupon?.code ?? ''}` }
     case 'POST team':
       return { area: 'team', summary: `Added ${r.member?.email ?? b.email} to the team as ${b.role === 'support' ? 'Support' : 'Admin'}` }
     case 'PATCH team':
@@ -3451,6 +3572,9 @@ const ROUTES: Record<string, Route> = {
   'PATCH plans': (req, db) => updatePlan(req, db),
   'PUT plan-settings': (req, db, admin) => savePlanSettings(req, db, admin),
   'GET plan-subscribers': (_req, db) => listPlanSubscribers(db),
+  'GET coupons': (_req, db) => listCoupons(db),
+  'POST coupons': (req, db) => createCoupon(req, db),
+  'PATCH coupons': (req) => setCouponActive(req),
   'GET member-plans': (req, db) => listMemberPlans(req, db),
   'POST member-plans': (req, db, admin) => giveMemberPlan(req, db, admin),
   'PATCH member-plans': (req, db) => changeMemberPlan(req, db),

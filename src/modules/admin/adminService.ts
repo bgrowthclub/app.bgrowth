@@ -19,7 +19,8 @@ import type {
   AdminBundle, AdminBundleDraft, AdminBundlesOverview,
   AdminTeamMember, AdminActivityPage, AdminMemberPageDraft, AdminMemberPagesOverview,
   AdminWixContactsOverview, WixContactGroup,
-  AdminPlan, AdminPlanDraft, AdminPlansOverview, AdminMemberPlans, MemberPlanReason, AdminPlanSubscribers } from './types'
+  AdminPlan, AdminPlanDraft, AdminPlansOverview, AdminMemberPlans, MemberPlanReason, AdminPlanSubscribers,
+  AdminCouponsOverview, AdminCouponDraft } from './types'
 import type { PlanSettings } from '../commerce/types/membership'
 import type { MemberPage, MemberPageStats } from '../find/types'
 import type { SupportHours } from '../support/types'
@@ -285,6 +286,15 @@ export const adminService = {
   },
   async savePlanSettings(settings: PlanSettings) {
     return (await call<{ settings: PlanSettings }>('PUT', 'plan-settings', undefined, settings)).settings
+  },
+  listCoupons() {
+    return call<AdminCouponsOverview>('GET', 'coupons')
+  },
+  async createCoupon(draft: AdminCouponDraft) {
+    await call('POST', 'coupons', undefined, draft)
+  },
+  async setCouponActive(id: string, active: boolean) {
+    await call('PATCH', 'coupons', undefined, { id, active })
   },
   listPlanSubscribers() {
     return call<AdminPlanSubscribers>('GET', 'plan-subscribers')

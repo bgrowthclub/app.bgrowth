@@ -59,6 +59,7 @@ import AdminMemberPagesPage from './pages/platform/admin/AdminMemberPagesPage'
 import AdminSitePage from './pages/platform/admin/AdminSitePage'
 import AdminTagsPage from './pages/platform/admin/AdminTagsPage'
 import AdminPlansPage from './pages/platform/admin/AdminPlansPage'
+import AdminCouponsPage from './pages/platform/admin/AdminCouponsPage'
 import MyPagePage from './pages/platform/MyPagePage'
 import NewsletterConfirmPage from './pages/newsletter/NewsletterConfirmPage'
 import NewsletterPreferencesPage from './pages/newsletter/NewsletterPreferencesPage'
@@ -217,6 +218,7 @@ export default function App() {
         <Route path="admin/catalog" element={<AdminRoute><AdminCatalogPage /></AdminRoute>} />
         <Route path="admin/bundles" element={<AdminRoute><AdminBundlesPage /></AdminRoute>} />
         <Route path="admin/plans" element={<AdminRoute><AdminPlansPage /></AdminRoute>} />
+        <Route path="admin/coupons" element={<AdminRoute><AdminCouponsPage /></AdminRoute>} />
         <Route path="admin/pages" element={<AdminRoute><AdminMemberPagesPage /></AdminRoute>} />
         <Route path="admin/site" element={<AdminRoute><AdminSitePage /></AdminRoute>} />
         <Route path="admin/tags" element={<AdminRoute><AdminTagsPage /></AdminRoute>} />
