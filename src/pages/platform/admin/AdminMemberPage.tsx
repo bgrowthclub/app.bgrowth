@@ -7,6 +7,9 @@ import EmptyState from '../../../components/ui/EmptyState'
 import AdminLicenseRow from '../../../components/admin/AdminLicenseRow'
 import AdminGrantRow from '../../../components/admin/AdminGrantRow'
 import GiveAccessForm from '../../../components/admin/GiveAccessForm'
+import MemberPlanCard from '../../../components/admin/MemberPlanCard'
+import { useIdentity } from '../../../modules/identity/IdentityContext'
+import { isFullAdmin } from '../../../modules/admin/permissions'
 import type { GiveAccessValues } from '../../../components/admin/GiveAccessForm'
 import { CARD, LINK_BUTTON, SMALL_BUTTON, formatDate, pillClass } from '../../../components/admin/styles'
 import { adminService } from '../../../modules/admin/adminService'
@@ -20,6 +23,7 @@ function message(err: unknown) {
 // the access an admin gave them — with the actions to change any of it.
 export default function AdminMemberPage() {
   const { id } = useParams()
+  const fullAdmin = isFullAdmin(useIdentity().user)
   const [detail, setDetail] = useState<AdminMemberDetail | null>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [loadError, setLoadError] = useState<string>()
@@ -181,6 +185,8 @@ export default function AdminMemberPage() {
 
       {actionError && <p className="rounded-xl bg-red-50 px-4 py-3 text-[13px] text-red-600">{actionError}</p>}
       {notice && <p className="rounded-xl bg-emerald-50 px-4 py-3 text-[13px] text-emerald-700">{notice}</p>}
+
+      {fullAdmin && <MemberPlanCard userId={member.id} />}
 
       <section>
         <div className="mb-3 flex items-center justify-between gap-3">

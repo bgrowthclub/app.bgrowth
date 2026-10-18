@@ -377,7 +377,7 @@ export interface AdminTeamMember {
 }
 
 // Admin → Activity: one change made in the Admin area.
-export type AdminActivityArea = 'members' | 'support' | 'catalog' | 'pages' | 'site' | 'newsletter' | 'deletions' | 'reviews' | 'team'
+export type AdminActivityArea = 'members' | 'support' | 'catalog' | 'pages' | 'site' | 'newsletter' | 'deletions' | 'reviews' | 'team' | 'plans'
 
 export interface AdminActivityEntry {
   id: string
@@ -473,4 +473,80 @@ export interface AdminTagsOverview {
   links: { product_id: string; tag_id: string }[]
   products: { id: string; name: string; slug: string; content_type: string; status: string }[]
   ready: boolean
+}
+
+// Admin → Plans (Portal migration 0057): a plan as stored (prices in cents).
+export interface AdminPlan {
+  id: string
+  slug: string
+  name: string
+  description: string
+  rank: number
+  status: 'active' | 'hidden' | 'disabled'
+  is_free: boolean
+  price_on_request: boolean
+  currency: string
+  monthly_cents: number | null
+  yearly_cents: number | null
+  monthly_sale_cents: number | null
+  yearly_sale_cents: number | null
+  features: string[]
+  highlighted: boolean
+  entitlements: import('../commerce/types/membership').PlanEntitlements
+  updated_at: string
+  // Members on it right now: paid subscriptions and plans given by the team.
+  members: { paid: number; given: number }
+}
+
+// What the plan editor sends (prices in dollars; null = no price).
+export interface AdminPlanDraft {
+  id?: string
+  slug?: string
+  name: string
+  description: string
+  rank: number
+  status: AdminPlan['status']
+  isFree: boolean
+  priceOnRequest: boolean
+  monthly: number | null
+  yearly: number | null
+  monthlySale: number | null
+  yearlySale: number | null
+  features: string[]
+  highlighted: boolean
+  entitlements: import('../commerce/types/membership').PlanEntitlements
+}
+
+export interface AdminPlansOverview {
+  ready: boolean
+  plans: AdminPlan[]
+  settings: import('../commerce/types/membership').PlanSettings
+}
+
+export type MemberPlanReason = 'promotion' | 'giveaway' | 'referral' | 'support' | 'other'
+
+// One row of a member's plans (paid or given by the team).
+export interface AdminMemberPlan {
+  id: string
+  plan_id: string
+  source: 'subscription' | 'team'
+  reason: MemberPlanReason | null
+  note: string | null
+  status: 'active' | 'trialing' | 'past_due' | 'canceled' | 'ended'
+  billing_interval: 'month' | 'year' | null
+  provider: string | null
+  starts_at: string
+  ends_at: string | null
+  current_period_end: string | null
+  cancel_at_period_end: boolean
+  created_at: string
+  live: boolean
+  membership_plans: { name: string; slug: string; rank: number } | null
+}
+
+export interface AdminMemberPlans {
+  ready: boolean
+  entries: AdminMemberPlan[]
+  plans: { id: string; name: string; slug: string; rank: number; status: AdminPlan['status']; is_free: boolean }[]
+  current: string
 }

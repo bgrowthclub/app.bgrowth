@@ -13,6 +13,7 @@ export const ACTIVITY_AREAS: { id: AdminActivityArea; label: string; tone: Tone 
   { id: 'reviews', label: 'Reviews', tone: 'gray' },
   { id: 'deletions', label: 'Deletions', tone: 'red' },
   { id: 'team', label: 'Team', tone: 'red' },
+  { id: 'plans', label: 'Plans', tone: 'amber' },
 ]
 
 function when(iso: string) {

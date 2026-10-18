@@ -18,7 +18,9 @@ import type {
   AdminNewsletterCampaign, AdminNewsletterDraft, AdminNewsletterOverview, AdminReview, AdminMemberDashboard, DashboardPeriod, AdminDeletionRequest, AdminCatalogHealth,
   AdminBundle, AdminBundleDraft, AdminBundlesOverview,
   AdminTeamMember, AdminActivityPage, AdminMemberPageDraft, AdminMemberPagesOverview,
-  AdminWixContactsOverview, WixContactGroup } from './types'
+  AdminWixContactsOverview, WixContactGroup,
+  AdminPlan, AdminPlanDraft, AdminPlansOverview, AdminMemberPlans, MemberPlanReason } from './types'
+import type { PlanSettings } from '../commerce/types/membership'
 import type { MemberPage, MemberPageStats } from '../find/types'
 import type { SupportHours } from '../support/types'
 
@@ -274,6 +276,24 @@ export const adminService = {
     if (filters.admin) params.admin = filters.admin
     if (filters.member) params.member = filters.member
     return call<AdminActivityPage>('GET', 'activity', params)
+  },
+  listPlans() {
+    return call<AdminPlansOverview>('GET', 'plans')
+  },
+  async savePlan(draft: AdminPlanDraft) {
+    return (await call<{ plan: AdminPlan }>(draft.id ? 'PATCH' : 'POST', 'plans', undefined, draft)).plan
+  },
+  async savePlanSettings(settings: PlanSettings) {
+    return (await call<{ settings: PlanSettings }>('PUT', 'plan-settings', undefined, settings)).settings
+  },
+  getMemberPlans(userId: string) {
+    return call<AdminMemberPlans>('GET', 'member-plans', { userId })
+  },
+  async giveMemberPlan(input: { userId: string; planId: string; endsAt: string | null; reason: MemberPlanReason; note: string }) {
+    await call('POST', 'member-plans', undefined, input)
+  },
+  async changeMemberPlan(id: string, action: 'end' | 'extend', endsAt?: string | null) {
+    await call('PATCH', 'member-plans', undefined, { id, action, endsAt: endsAt ?? null })
   },
   async saveNewsletterAddress(address: string) {
     return (await call<{ address: string }>('PUT', 'newsletter-address', undefined, { address })).address
