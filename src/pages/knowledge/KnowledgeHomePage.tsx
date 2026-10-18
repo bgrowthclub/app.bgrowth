@@ -122,15 +122,18 @@ export default function KnowledgeHomePage() {
         </SectionContainer>
       )}
 
-      {/* 2. Browse by Content Type */}
-      <SectionContainer background="soft">
-        <SectionHeader eyebrow="Formats" title="Browse by Content Type" className="mb-10" />
-        <Grid cols={4}>
-          {KNOWLEDGE_TYPES.map((type) => (
-            <ContentTypeTile key={type} type={type} count={data.typeCounts[type]} />
-          ))}
-        </Grid>
-      </SectionContainer>
+      {/* 2. Browse by Content Type — only the formats that have content,
+          and only once there is more than one. */}
+      {KNOWLEDGE_TYPES.filter((type) => data.typeCounts[type]).length > 1 && (
+        <SectionContainer background="soft">
+          <SectionHeader eyebrow="Formats" title="Browse by Content Type" className="mb-10" />
+          <Grid cols={4}>
+            {KNOWLEDGE_TYPES.filter((type) => data.typeCounts[type]).map((type) => (
+              <ContentTypeTile key={type} type={type} count={data.typeCounts[type]} />
+            ))}
+          </Grid>
+        </SectionContainer>
+      )}
 
       {/* 3. Featured Guides */}
       {data.featuredGuides.length > 0 && (

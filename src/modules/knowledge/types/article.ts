@@ -13,9 +13,18 @@ export interface KnowledgeCalloutCard {
 // author-authored markup — kept simple (two block kinds) since this is
 // mock content, not a rich-text renderer.
 export interface KnowledgeBodyBlock {
-  kind: 'heading' | 'paragraph'
+  kind: 'heading' | 'paragraph' | 'quote' | 'image' | 'video' | 'divider'
   text: string
+  /** heading: 2 or 3 (default 2) */
+  level?: number
+  /** image/video address */
+  url?: string
 }
+
+// Who reads an article published from BGrowth Studio (Portal migration
+// 0055): everyone, or signed-in members — a visitor then gets only the start
+// (`locked`) and is asked to create a free account.
+export type KnowledgeAccess = 'everyone' | 'members'
 
 // The universal free-content unit for BGrowth Knowledge — every future
 // content type (Article, Guide, Checklist, Planner, Calculator, Template,
@@ -41,6 +50,12 @@ export interface KnowledgeArticle {
   // full records by a page, never stored denormalized here.
   relatedProductSlugs?: string[]
   relatedArticleSlugs?: string[]
+  // Studio-published articles (Portal 0054/0055):
+  coverImage?: string
+  language?: 'en' | 'pt'
+  access?: KnowledgeAccess
+  /** true = only the start of the body was loaded (members-only, visitor). */
+  locked?: boolean
 }
 
 // The lightweight row a future Studio-published Knowledge index would list
@@ -61,4 +76,7 @@ export type KnowledgeArticleIndexEntry = Pick<
   | 'publishedAt'
   | 'readingTimeMinutes'
   | 'featured'
+  | 'coverImage'
+  | 'language'
+  | 'access'
 >

@@ -258,6 +258,20 @@ This repo is a **static, client-only MVP**:
   sign-up, source `knowledge`) and the Home's Knowledge section show a
   "coming soon" pill instead of example cards. Turn it on once the Wix blog
   posts are migrated.
+  **Since Sprint 112 the Knowledge hub reads BGrowth Studio** (approved by
+  the user; Portal migrations 0054–0055): articles are written/imported in
+  Studio → Knowledge Engine (the 89 Wix blog posts imported as drafts, 5 in
+  Portuguese) and go Draft → Reviewed → Approved (Bruno) → Scheduled →
+  Published there. `modules/knowledge/store/studioKnowledgeRepository.ts`
+  reads `portal.knowledge_articles` (published only; the mock repository is
+  kept, unused). Each article is for "everyone" or "members" (default): a
+  visitor gets the first 3 blocks plus `ArticleMembersGate` (sign up / log
+  in with `?next=` — `GuestRoute` sends the member back); signed-in members
+  read `portal.knowledge_article_bodies`. `KNOWLEDGE_LIVE = true` (still
+  only the team sees it while the site is closed); `/resources` stays
+  "coming soon" (`RESOURCES_LIVE = false`). The daily cron also calls
+  `portal.publish_scheduled_knowledge()`; link previews cover
+  `/knowledge/article/:slug`.
   **Since Sprint 81–82 the Admin menu is grouped and categories have a
   look** (approved by the user): the Admin part of the side menu is four
   collapsible groups (Overview, People, Catalog, Site & content —

@@ -24,7 +24,7 @@ import KnowledgeCategoryPage from './pages/knowledge/KnowledgeCategoryPage'
 import KnowledgeArticlePage from './pages/knowledge/KnowledgeArticlePage'
 import KnowledgeSearchPage from './pages/knowledge/KnowledgeSearchPage'
 import KnowledgeComingSoonPage from './pages/knowledge/KnowledgeComingSoonPage'
-import { KNOWLEDGE_LIVE } from './data/contentStatus'
+import { KNOWLEDGE_LIVE, RESOURCES_LIVE } from './data/contentStatus'
 import NotFoundPage from './pages/NotFoundPage'
 import CourseAddressRedirect from './pages/CourseAddressRedirect'
 import PlatformLayout from './components/platform/PlatformLayout'
@@ -103,7 +103,7 @@ export default function App() {
         <Route path="/system/:slug/module/:moduleSlug" element={<SystemModulePage />} />
         <Route path="/workspaces" element={<WorkspacesPage />} />
         <Route path="/preview/:category" element={<CategoryPreviewPage />} />
-        <Route path="/resources" element={KNOWLEDGE_LIVE ? <ResourcesPage /> : <KnowledgeComingSoonPage />} />
+        <Route path="/resources" element={RESOURCES_LIVE ? <ResourcesPage /> : <KnowledgeComingSoonPage />} />
 
         {/* BGrowth Knowledge™ Foundation — the free-content hub, ready to
             receive future BGrowth Studio-published Knowledge Packages (see

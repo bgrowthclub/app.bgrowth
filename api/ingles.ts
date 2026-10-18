@@ -166,7 +166,17 @@ async function linkPreview(req: VercelRequest, db: Db) {
 
   const product = /^\/(product|bundle)\/([a-z0-9-]{1,120})$/.exec(path)
   const member = /^\/p\/([a-z0-9-]{1,40})$/.exec(path)
-  if (product) {
+  const article = /^\/knowledge\/article\/([a-z0-9-]{1,200})$/.exec(path)
+  if (article) {
+    // Knowledge articles published from Studio (Portal migration 0054).
+    const { data } = await db.from('knowledge_articles').select('title, excerpt, featured_image, seo').eq('slug', article[1]).maybeSingle()
+    const a = data as { title?: string; excerpt?: string | null; featured_image?: string | null; seo?: { title?: string; metaDescription?: string; ogImage?: string } | null } | null
+    if (a?.title) {
+      title = `${a.seo?.title || a.title} | BGrowth`
+      description = a.seo?.metaDescription || a.excerpt || description
+      image = a.seo?.ogImage || a.featured_image || image
+    }
+  } else if (product) {
     const { data } = await db
       .from('products')
       .select('name, short_description, cover_image_url')

@@ -1,14 +1,26 @@
 import { ArrowRight } from 'lucide-react'
 import SectionHeader from '../ui/SectionHeader'
 import { usePageTexts } from '../../lib/usePageTexts'
-import ArticleCard from '../ui/ArticleCard'
+import { useEffect, useState } from 'react'
 import Button from '../ui/Button'
-import { ARTICLES } from '../../data/resources'
+import KnowledgeArticleCard from '../knowledge/KnowledgeArticleCard'
+import { knowledgeService } from '../../modules/knowledge/services/KnowledgeService'
+import type { KnowledgeArticleIndexEntry } from '../../modules/knowledge/types/article'
 import { KNOWLEDGE_LIVE } from '../../data/contentStatus'
 
 export default function Knowledge() {
   const t = usePageTexts()
-  const preview = ARTICLES.slice(0, 3)
+  // The three newest articles published from BGrowth Studio.
+  const [preview, setPreview] = useState<KnowledgeArticleIndexEntry[] | null>(null)
+
+  useEffect(() => {
+    if (!KNOWLEDGE_LIVE) return
+    let cancelled = false
+    knowledgeService.getLatestArticles(3).then((list) => !cancelled && setPreview(list))
+    return () => {
+      cancelled = true
+    }
+  }, [])
 
   return (
     <section id="knowledge" className="section-py relative">
@@ -21,23 +33,25 @@ export default function Knowledge() {
           className="mb-14"
         />
 
-        {KNOWLEDGE_LIVE ? (
+        {KNOWLEDGE_LIVE && preview === null ? (
+          <div className="h-40" />
+        ) : KNOWLEDGE_LIVE && preview && preview.length > 0 ? (
           <>
             <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
               {preview.map((article) => (
-                <ArticleCard key={article.title} {...article} />
+                <KnowledgeArticleCard key={article.id} article={article} />
               ))}
             </div>
 
             <div className="mt-10 flex justify-center">
-              <Button to="/resources" variant="secondary" icon={<ArrowRight size={16} />}>
+              <Button to="/knowledge" variant="secondary" icon={<ArrowRight size={16} />}>
                 Explore Knowledge
               </Button>
             </div>
           </>
         ) : (
-          // Example articles stay hidden until real content is in
-          // (data/contentStatus.ts).
+          // Nothing published from Studio yet (or Knowledge off in
+          // data/contentStatus.ts).
           <div className="flex flex-col items-center gap-4">
             <span className="rounded-full bg-bg-soft px-4 py-1.5 text-[12.5px] font-semibold text-primary">Free guides, articles and videos — coming soon</span>
             <Button to="/knowledge" variant="secondary" icon={<ArrowRight size={16} />}>

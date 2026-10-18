@@ -12,12 +12,14 @@ import SectionHeader from '../../components/ui/SectionHeader'
 import Grid from '../../components/layout/Grid'
 import TableOfContents from '../../components/knowledge/TableOfContents'
 import ArticleCallout from '../../components/knowledge/ArticleCallout'
+import ArticleBody from '../../components/knowledge/ArticleBody'
+import ArticleMembersGate from '../../components/knowledge/ArticleMembersGate'
 import ArticleShareBar from '../../components/knowledge/ArticleShareBar'
 import PrevNextArticleNav from '../../components/knowledge/PrevNextArticleNav'
 import KnowledgeArticleCard from '../../components/knowledge/KnowledgeArticleCard'
 import RelatedProductsBySlug from '../../components/knowledge/RelatedProductsBySlug'
 import { KNOWLEDGE_TYPE_ICONS } from '../../components/knowledge/knowledgeTypeIcons'
-import { extractHeadings, slugifyHeading } from '../../lib/articleToc'
+import { extractHeadings } from '../../lib/articleToc'
 import { knowledgeService } from '../../modules/knowledge/services/KnowledgeService'
 import type { KnowledgeArticle } from '../../modules/knowledge/types/article'
 import type { KnowledgeCategory } from '../../modules/knowledge/types/category'
@@ -36,7 +38,9 @@ function authorInitials(name: string): string {
 }
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
+  // A date-only value ("2026-05-20") is a calendar day, not UTC midnight.
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(iso) ? new Date(`${iso}T12:00:00`) : new Date(iso)
+  return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
 }
 
 export default function KnowledgeArticlePage() {
@@ -94,11 +98,12 @@ export default function KnowledgeArticlePage() {
 
   return (
     <div className="pb-24 pt-32 md:pt-40">
-      <SEO title={article.title} description={article.excerpt} path={`/knowledge/article/${article.slug}`} />
+      <SEO title={article.title} description={article.excerpt} path={`/knowledge/article/${article.slug}`} ogImage={article.coverImage} />
 
       <PageContainer width="narrow">
         <div className="flex flex-wrap items-center gap-2">
           <Badge>{article.type}</Badge>
+          {article.language === 'pt' && <Badge>Português</Badge>}
           {category && (
             <Link to={`/knowledge/category/${category.slug}`} className="text-[12.5px] font-semibold text-primary hover:underline">
               {category.name}
@@ -134,29 +139,20 @@ export default function KnowledgeArticlePage() {
         {/* Featured image — no stock photography; a brand-gradient panel
             with the content type's icon, same visual language as every
             other Knowledge card. */}
-        <div className="mt-8 flex h-56 items-center justify-center rounded-xl3 bg-grad-primary shadow-glow sm:h-72">
-          <Icon size={64} strokeWidth={1.5} className="text-white/90" />
-        </div>
+        {article.coverImage ? (
+          <img src={article.coverImage} alt="" className="mt-8 aspect-[16/9] w-full rounded-xl3 object-cover shadow-glow" />
+        ) : (
+          <div className="mt-8 flex h-56 items-center justify-center rounded-xl3 bg-grad-primary shadow-glow sm:h-72">
+            <Icon size={64} strokeWidth={1.5} className="text-white/90" />
+          </div>
+        )}
       </PageContainer>
 
       <PageContainer width="narrow" className="mt-12">
         <div className="grid gap-10 lg:grid-cols-[minmax(0,1fr)_260px] lg:items-start">
           <article className="min-w-0 space-y-5">
-            {article.body.map((block, i) =>
-              block.kind === 'heading' ? (
-                <h2
-                  key={i}
-                  id={slugifyHeading(block.text, i)}
-                  className="!mt-10 scroll-mt-28 font-display text-xl font-bold text-navy first:!mt-0"
-                >
-                  {block.text}
-                </h2>
-              ) : (
-                <p key={i} className="text-[15px] leading-relaxed text-navy/65">
-                  {block.text}
-                </p>
-              ),
-            )}
+            <ArticleBody body={article.body} />
+            {article.locked && <ArticleMembersGate path={`/knowledge/article/${article.slug}`} />}
 
             {article.calloutCards && article.calloutCards.length > 0 && (
               <div className="!mt-8 space-y-4">

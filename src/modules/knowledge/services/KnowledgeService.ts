@@ -6,7 +6,7 @@ import type { KnowledgeTag } from '../types/tag'
 import type { FeaturedContentPlacement } from '../types/featuredContent'
 import type { LearningPath } from '../types/learningPath'
 import type { KnowledgeRepository } from './KnowledgeRepository'
-import { createMockKnowledgeRepository } from '../store/mockKnowledgeRepository'
+import { createStudioKnowledgeRepository } from '../store/studioKnowledgeRepository'
 
 export interface KnowledgeArticleFilter {
   categorySlug?: string
@@ -158,8 +158,8 @@ export function createKnowledgeService(repository: KnowledgeRepository): Knowled
   }
 }
 
-// Ready-to-use singleton every page/component reads through — backed by
-// the mock repository today (see store/mockKnowledgeRepository.ts). A
-// future BGrowth Studio integration swaps only the repository passed in
-// here; every caller of `knowledgeService` stays the same.
-export const knowledgeService: KnowledgeService = createKnowledgeService(createMockKnowledgeRepository())
+// Ready-to-use singleton every page/component reads through — since Sprint
+// 112 backed by the articles published from BGrowth Studio (see
+// store/studioKnowledgeRepository.ts). The mock repository stays for
+// reference; every caller of `knowledgeService` is unchanged.
+export const knowledgeService: KnowledgeService = createKnowledgeService(createStudioKnowledgeRepository())

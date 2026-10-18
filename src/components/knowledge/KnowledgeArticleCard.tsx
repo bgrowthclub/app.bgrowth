@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ArrowUpRight, Clock } from 'lucide-react'
+import { ArrowUpRight, Clock, Lock } from 'lucide-react'
 import { KNOWLEDGE_TYPE_ICONS } from './knowledgeTypeIcons'
 import type { KnowledgeArticleIndexEntry } from '../../modules/knowledge/types/article'
 
@@ -31,18 +31,31 @@ export default function KnowledgeArticleCard({ article, categoryName, authorName
         isFeatured ? 'p-7' : 'p-6'
       }`}
     >
-      <div
-        className={`grid place-items-center rounded-2xl bg-grad-primary text-white shadow-soft ${
-          isFeatured ? 'h-40 w-full' : 'h-12 w-12'
-        }`}
-      >
-        <Icon size={isFeatured ? 40 : 21} strokeWidth={1.75} />
-      </div>
+      {article.coverImage ? (
+        // Studio-published articles carry their own cover.
+        <img src={article.coverImage} alt="" loading="lazy" className="h-40 w-full rounded-2xl object-cover" />
+      ) : (
+        <div
+          className={`grid place-items-center rounded-2xl bg-grad-primary text-white shadow-soft ${
+            isFeatured ? 'h-40 w-full' : 'h-12 w-12'
+          }`}
+        >
+          <Icon size={isFeatured ? 40 : 21} strokeWidth={1.75} />
+        </div>
+      )}
 
       <div className={`flex flex-wrap items-center gap-2 ${isFeatured ? 'mt-6' : 'mt-5'}`}>
         <span className="rounded-full bg-bg-soft px-3 py-1 text-[11px] font-semibold text-primary">
           {article.type}
         </span>
+        {article.language === 'pt' && (
+          <span className="rounded-full bg-bg-soft px-3 py-1 text-[11px] font-semibold text-navy/55">Português</span>
+        )}
+        {article.access === 'members' && (
+          <span className="inline-flex items-center gap-1 text-[11px] font-medium text-navy/40">
+            <Lock size={11} /> Members
+          </span>
+        )}
         {categoryName && <span className="text-[11px] font-medium text-navy/35">{categoryName}</span>}
       </div>
 
