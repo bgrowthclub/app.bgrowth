@@ -32,6 +32,7 @@ export function planBenefits(plan: Pick<AdminPlan, 'entitlements'>): string[] {
   const out: string[] = []
   if (e.memberPage) out.push(e.memberPage === 'full' ? 'Member page (all)' : 'Member page (part)')
   if (e.prioritySupport) out.push('Priority support')
+  if (e.includesAll) out.push('Every product included')
   if (e.workspaceDiscountPercent) out.push(`${e.workspaceDiscountPercent}% off Workspaces`)
   if (e.academyDiscount) out.push(`${e.academyDiscount.percent}% off ${e.academyDiscount.scope === 'all' ? 'the Academy' : 'some courses'}`)
   return out

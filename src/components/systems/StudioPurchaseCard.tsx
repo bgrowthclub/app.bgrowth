@@ -21,6 +21,8 @@ interface Props {
   onStartTrial: () => void
   // The member's plan takes a % off (Sprint 125) — applied at checkout.
   planDiscount?: { percent: number; planName: string } | null
+  // The lowest plan that includes it (Sprint 126): "Included in Pro and above".
+  includedInPlan?: string | null
   className?: string
 }
 
@@ -76,6 +78,7 @@ export default function StudioPurchaseCard({
   onBuy,
   onStartTrial,
   planDiscount = null,
+  includedInPlan = null,
   className = '',
 }: Props) {
   const free = product.basePrice === 0
@@ -113,6 +116,14 @@ export default function StudioPurchaseCard({
             <span className="font-display text-3xl font-bold text-navy">{free ? 'Free' : priceLabel(product, pct)}</span>
             {!free && <span className="text-[13px] text-navy/40">one-time</span>}
           </div>
+          {!free && includedInPlan && (
+            <p className="mt-1 text-[12.5px] text-navy/55">
+              Included in the {includedInPlan} plan and above ·{' '}
+              <Link to="/pricing" className="font-semibold text-primary hover:underline">
+                See plans
+              </Link>
+            </p>
+          )}
           {pct > 0 && planDiscount && (
             <p className="mt-1 text-[12.5px] font-semibold text-primary">
               {planDiscount.percent}% off with your {planDiscount.planName} plan

@@ -600,3 +600,12 @@ export interface AdminCouponDraft {
   expiresAt: string | null
   firstTimeOnly: boolean
 }
+
+// Admin → Plans → Included (Sprint 126, Portal migration 0061).
+export interface AdminPlanProducts {
+  ready: boolean
+  products: { id: string; name: string; slug: string; content_type: string; is_free: boolean; status: string }[]
+  plans: { id: string; name: string; rank: number; status: string; includesAll: boolean }[]
+  // product id → the lowest plan that includes it
+  included: Record<string, string>
+}

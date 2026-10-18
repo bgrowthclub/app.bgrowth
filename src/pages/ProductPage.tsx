@@ -65,6 +65,8 @@ export default function ProductPage() {
   const { user } = useIdentity()
   // The member's plan may take a % off Workspaces (Sprint 125).
   const { current: memberPlan } = useMemberPlan()
+  // The lowest plan that includes this product, if any (Sprint 126).
+  const [includedPlan, setIncludedPlan] = useState<string | null>(null)
   const [searchParams] = useSearchParams()
   // Studio Workspaces: ownership, trial and checkout (no-op for other products).
   const purchase = useStudioPurchase(slug, user?.id, searchParams.get('checkout'))
@@ -81,6 +83,7 @@ export default function ProductPage() {
     setOutline([])
     setBundles([])
     setGallery(null)
+    setIncludedPlan(null)
     productCatalogService.getBySlug(slug).then((result) => {
       if (cancelled) return
       setProduct(result ?? null)
@@ -95,6 +98,12 @@ export default function ProductPage() {
             .getProductGallery(portalId)
             .then((found) => {
               if (!cancelled) setGallery(found)
+            })
+            .catch(() => undefined)
+          studioWorkspaceService
+            .getIncludedPlan(portalId)
+            .then((name) => {
+              if (!cancelled) setIncludedPlan(name)
             })
             .catch(() => undefined)
         }
@@ -144,6 +153,7 @@ export default function ProductPage() {
           ? { percent: memberPlan.entitlements.workspaceDiscountPercent, planName: memberPlan.name }
           : null
       }
+      includedInPlan={includedPlan}
       className={className}
     />
   )

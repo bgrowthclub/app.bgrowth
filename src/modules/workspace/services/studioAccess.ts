@@ -60,7 +60,7 @@ export async function listStudioLibrary(memberId: string): Promise<StudioLibrary
         productId: `studio-${row.id}`,
         memberId,
         hasAccess: accessState !== 'expired',
-        source: accessState === 'unlocked' ? 'gift' : license?.type === 'trial' ? 'trial' : 'purchase',
+        source: accessState === 'unlocked' ? (grant?.via_plan ? 'membership' : 'gift') : license?.type === 'trial' ? 'trial' : 'purchase',
         grantedAt: license?.activated_at ?? grant?.created_at ?? row.created_at,
         expiresAt: license?.access_policy === 'expiring' ? license.expires_at ?? undefined : undefined,
         lastOpenedAt: license?.last_opened_at ?? undefined,
