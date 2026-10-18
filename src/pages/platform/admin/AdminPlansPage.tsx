@@ -7,11 +7,12 @@ import Button from '../../../components/ui/Button'
 import AdminPlanRow from '../../../components/admin/AdminPlanRow'
 import PlanEditor from '../../../components/admin/PlanEditor'
 import PlanSettingsForm from '../../../components/admin/PlanSettingsForm'
+import PlanSubscribersPanel from '../../../components/admin/PlanSubscribersPanel'
 import { CARD, SMALL_BUTTON } from '../../../components/admin/styles'
 import { adminService } from '../../../modules/admin/adminService'
 import type { AdminPlan, AdminPlanDraft, AdminPlansOverview } from '../../../modules/admin/types'
 
-type Tab = 'plans' | 'settings'
+type Tab = 'plans' | 'subscribers' | 'settings'
 
 // Admin → Plans (Portal migration 0057): the plans BGrowth offers, their
 // prices and what each one unlocks, plus how subscriptions behave. A plan is
@@ -51,7 +52,7 @@ export default function AdminPlansPage() {
       <SectionHeader
         eyebrow="Admin"
         title="Plans"
-        description="The plans BGrowth offers, their prices and what each one unlocks. Plans aren’t sold yet — for now you can set them up and give one to a member (Admin → Members)."
+        description="The plans BGrowth offers, their prices and what each one unlocks. A plan is sold on the Pricing page once its status is “Offered”; give one to a member in Admin → Members."
         className="mb-8"
       />
 
@@ -70,6 +71,7 @@ export default function AdminPlansPage() {
               {(
                 [
                   ['plans', 'Plans'],
+                  ['subscribers', 'Subscribers'],
                   ['settings', 'Settings'],
                 ] as const
               ).map(([id, label]) => (
@@ -106,7 +108,9 @@ export default function AdminPlansPage() {
 
           {notice && <p className="rounded-xl bg-emerald-50 px-4 py-3 text-[13.5px] text-emerald-700">{notice}</p>}
 
-          {tab === 'settings' ? (
+          {tab === 'subscribers' ? (
+            <PlanSubscribersPanel />
+          ) : tab === 'settings' ? (
             <PlanSettingsForm
               settings={data.settings}
               onSave={async (s) => {

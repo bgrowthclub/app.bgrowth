@@ -13,6 +13,9 @@ interface Props {
   ctaLabel: string
   ctaTo?: string
   ctaHref?: string
+  // An action instead of a link (e.g. starting a checkout).
+  onCtaClick?: () => void
+  ctaDisabled?: boolean
   highlighted?: boolean
   badge?: ReactNode
 }
@@ -27,6 +30,8 @@ export default function PricingTierCard({
   ctaLabel,
   ctaTo,
   ctaHref,
+  onCtaClick,
+  ctaDisabled = false,
   highlighted = false,
   badge,
 }: Props) {
@@ -58,7 +63,11 @@ export default function PricingTierCard({
         ))}
       </ul>
 
-      {ctaTo ? (
+      {onCtaClick ? (
+        <Button type="button" onClick={onCtaClick} disabled={ctaDisabled} variant={highlighted ? 'primary' : 'secondary'} className="mt-8 w-full">
+          {ctaLabel}
+        </Button>
+      ) : ctaTo ? (
         <Button to={ctaTo} variant={highlighted ? 'primary' : 'secondary'} className="mt-8 w-full">
           {ctaLabel}
         </Button>

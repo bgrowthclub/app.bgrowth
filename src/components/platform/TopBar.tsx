@@ -1,9 +1,10 @@
 import { Menu } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { useMemberPlan } from '../../modules/account/useMemberPlan'
 import GlobalSearch from './GlobalSearch'
 import NotificationButton from './NotificationButton'
 import QuickActionButton from './QuickActionButton'
 import MembershipBadge from './MembershipBadge'
-import { useComingSoonModal } from './ComingSoonModalProvider'
 import UserMenu from './UserMenu'
 import ThemeToggleButton from './ThemeToggleButton'
 
@@ -14,7 +15,7 @@ interface Props {
 }
 
 export default function TopBar({ onOpenMobileSidebar, menuBadge = false }: Props) {
-  const { openComingSoon } = useComingSoonModal()
+  const { current } = useMemberPlan()
   return (
     <header className="no-print sticky top-0 z-30 border-b border-navy/[0.06] bg-white/90 backdrop-blur-xl">
       <div className="flex items-center gap-3 px-4 py-3 md:px-6">
@@ -37,10 +38,10 @@ export default function TopBar({ onOpenMobileSidebar, menuBadge = false }: Props
           <ThemeToggleButton />
           {/* Hidden below sm — the one item here with no shorter fallback
               form, and it overflowed a 375px viewport when always shown. */}
-          {/* Plans don't exist yet (Sprint 110): locked, "coming soon". */}
-          <button type="button" onClick={openComingSoon} className="hidden sm:inline-flex" title="Plans — coming soon">
-            <MembershipBadge tier="Plans · Soon" locked />
-          </button>
+          {/* The member's plan (Sprint 122) → Account → Membership. */}
+          <Link to="/platform/membership" className="hidden sm:inline-flex" title="Your plan">
+            <MembershipBadge tier={`${current?.name ?? 'Free'} Plan`} />
+          </Link>
           <UserMenu />
         </div>
       </div>

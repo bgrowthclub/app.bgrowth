@@ -1,6 +1,5 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { User, Sparkles, Settings, LifeBuoy, LogOut, Lock } from 'lucide-react'
-import { useComingSoonModal } from './ComingSoonModalProvider'
+import { User, Sparkles, Settings, LifeBuoy, LogOut } from 'lucide-react'
 import Popover from './Popover'
 import Avatar from '../ui/Avatar'
 import { useIdentity } from '../../modules/identity/IdentityContext'
@@ -8,12 +7,10 @@ import { useIdentity } from '../../modules/identity/IdentityContext'
 // Sign Out is wired to BGrowth Identity™'s mock session (see
 // MockIdentityProvider) — it ends the mock session and returns to the
 // Homepage, per Milestone 5.2's Workspace Integration requirement.
-// Profile, Settings and Help are real pages; Membership is locked ("coming
-// soon") until plans exist (Sprint 110).
+// Profile, Membership (Sprint 122), Settings and Help are real pages.
 export default function UserMenu() {
   const { user, logout } = useIdentity()
   const navigate = useNavigate()
-  const { openComingSoon } = useComingSoonModal()
   const displayName = user?.displayName ?? 'Guest Member'
 
   const handleSignOut = () => {
@@ -44,16 +41,13 @@ export default function UserMenu() {
         <User size={15} />
         My Profile
       </Link>
-      <button
-        type="button"
-        onClick={openComingSoon}
-        className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-left text-[13px] font-medium text-navy/45 hover:bg-bg-soft"
+      <Link
+        to="/platform/membership"
+        className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-medium text-navy/70 hover:bg-bg-soft"
       >
         <Sparkles size={15} />
-        <span className="flex-1">Membership</span>
-        <span className="rounded-full bg-navy/[0.05] px-1.5 py-0.5 text-[9.5px] font-semibold uppercase tracking-wide text-navy/40">Soon</span>
-        <Lock size={12} className="text-navy/30" />
-      </button>
+        Membership
+      </Link>
       <Link
         to="/platform/settings"
         className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-medium text-navy/70 hover:bg-bg-soft"

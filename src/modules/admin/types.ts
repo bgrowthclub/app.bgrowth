@@ -1,3 +1,4 @@
+import type { StoredPlan } from '../commerce/types/membership'
 import type { MemberPage, MemberPageHighlight, MemberPageLink, MemberPageService } from '../find/types'
 import type { PortalAccessGrantRow, PortalLicenseRow } from '../workspace/types/portal'
 import type { SupportConversationSummary, SupportHours, SupportMessage } from '../support/types'
@@ -475,26 +476,9 @@ export interface AdminTagsOverview {
   ready: boolean
 }
 
-// Admin → Plans (Portal migration 0057): a plan as stored (prices in cents).
-export interface AdminPlan {
-  id: string
-  slug: string
-  name: string
-  description: string
-  rank: number
-  status: 'active' | 'hidden' | 'disabled'
-  is_free: boolean
-  price_on_request: boolean
-  currency: string
-  monthly_cents: number | null
-  yearly_cents: number | null
-  monthly_sale_cents: number | null
-  yearly_sale_cents: number | null
-  features: string[]
-  highlighted: boolean
-  entitlements: import('../commerce/types/membership').PlanEntitlements
-  updated_at: string
-  // Members on it right now: paid subscriptions and plans given by the team.
+// Admin → Plans (Portal migration 0057): a plan as stored, plus how many
+// members have it right now (paid subscriptions and plans given by the team).
+export interface AdminPlan extends StoredPlan {
   members: { paid: number; given: number }
 }
 
@@ -549,4 +533,28 @@ export interface AdminMemberPlans {
   entries: AdminMemberPlan[]
   plans: { id: string; name: string; slug: string; rank: number; status: AdminPlan['status']; is_free: boolean }[]
   current: string
+}
+
+// Admin → Plans → Subscribers (Sprint 122).
+export interface AdminPlanSubscriber {
+  id: string
+  user_id: string
+  email: string | null
+  name: string | null
+  plan_name: string
+  status: 'active' | 'trialing' | 'past_due' | 'canceled' | 'ended'
+  billing_interval: 'month' | 'year' | null
+  starts_at: string
+  ends_at: string | null
+  current_period_end: string | null
+  cancel_at_period_end: boolean
+  amount_cents: number | null
+  canceled_at: string | null
+  live: boolean
+}
+
+export interface AdminPlanSubscribers {
+  ready: boolean
+  subscribers: AdminPlanSubscriber[]
+  stats: { paying: number; mrrCents: number; cancelling: number; pastDue: number; canceled30: number; given: number } | null
 }
