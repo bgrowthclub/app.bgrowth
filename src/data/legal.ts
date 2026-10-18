@@ -1,15 +1,15 @@
 // The site's legal pages — Privacy Policy, Terms of Service and Refund
 // Policy — as data, rendered by components/legal/LegalDocument.tsx. Facts
-// come from the business owner (seller name, 7-day refund window, contact
+// come from the business owner (seller name, no refunds — all sales final,
+// decided 18/10/2026 — contact
 // e-mail) and from how the site actually works (Supabase accounts, Stripe
 // payments, Vercel hosting). Change a policy here, not in a page.
 
 export const LEGAL_COMPANY = 'BGrowth'
 export const LEGAL_SITE = 'bgrowth.app'
 export const LEGAL_EMAIL = 'info@bgrowth.app'
-export const LEGAL_UPDATED = 'October 3, 2026'
+export const LEGAL_UPDATED = 'October 18, 2026'
 export const LEGAL_JURISDICTION = 'California, United States'
-export const REFUND_WINDOW_DAYS = 7
 
 export interface LegalSection {
   heading: string
@@ -159,7 +159,7 @@ export const TERMS_OF_SERVICE: LegalDocumentData = {
     {
       heading: 'Refunds',
       paragraphs: [
-        `You can ask for a refund within ${REFUND_WINDOW_DAYS} days of a purchase. The details are in our Refund Policy.`,
+        'All sales are final: products are digital and available right away, so purchases are not refundable, except where the law requires otherwise. If something isn’t working, open a ticket in Support and we will look into it. The details are in our Refund Policy.',
       ],
     },
     {
@@ -219,36 +219,38 @@ export const TERMS_OF_SERVICE: LegalDocumentData = {
 export const REFUND_POLICY: LegalDocumentData = {
   slug: 'refund-policy',
   title: 'Refund Policy',
-  summary: `If a Workspace isn’t right for you, you can ask for a refund within ${REFUND_WINDOW_DAYS} days of buying it.`,
+  summary: 'Our products are digital and available right away, so all sales are final. If something isn’t working, open a ticket in Support and we’ll look into it.',
   sections: [
     {
-      heading: `${REFUND_WINDOW_DAYS}-day refund`,
+      heading: 'All sales are final',
       paragraphs: [
-        `You can request a full refund of any paid Workspace within ${REFUND_WINDOW_DAYS} days of the purchase date.`,
+        `Workspaces, calculators, downloads and bundles are digital products you can use as soon as you buy them, so ${LEGAL_COMPANY} does not offer refunds, except where the law requires otherwise.`,
       ],
     },
     {
-      heading: 'How to ask for a refund',
-      paragraphs: [`E-mail ${LEGAL_EMAIL} from the address you used to buy, and tell us:`],
-      bullets: ['which Workspace you want refunded;', 'the purchase date (or the receipt).'],
+      heading: 'Try before you buy',
+      paragraphs: [
+        'Where a product offers a free trial, you can use it before buying. Each product page shows what is included, and many show images or a video of what it looks like inside.',
+      ],
+    },
+    {
+      heading: 'If something isn’t working',
+      paragraphs: ['Open a ticket in Support (in your account) and tell us:'],
+      bullets: ['which product it is;', 'what went wrong — for example, it doesn’t open, a file is damaged, or you were charged twice.'],
     },
     {
       heading: 'What happens next',
-      bullets: [
-        'We confirm your request, usually within 2 business days.',
-        'The refund goes back to the card or payment method you used. Your bank may take 5 to 10 business days to show it.',
-        'Access to the refunded Workspace ends when the refund is issued.',
-      ],
-    },
-    {
-      heading: 'Free Workspaces and trials',
-      paragraphs: ['Free Workspaces and free trials are never charged, so there is nothing to refund.'],
-    },
-    {
-      heading: `After ${REFUND_WINDOW_DAYS} days`,
       paragraphs: [
-        `Purchases are not refundable after ${REFUND_WINDOW_DAYS} days, except where the law requires otherwise. If something isn’t working, write to us anyway — we’re happy to help.`,
+        'Our team reviews each case and can fix the problem or restore your access. We usually answer within 2 business days.',
       ],
+    },
+    {
+      heading: 'Free products and trials',
+      paragraphs: ['Free products and free trials are never charged.'],
+    },
+    {
+      heading: 'Contact',
+      paragraphs: [`You can also write to ${LEGAL_EMAIL}.`],
     },
   ],
 }

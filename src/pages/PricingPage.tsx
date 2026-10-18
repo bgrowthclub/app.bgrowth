@@ -4,7 +4,6 @@ import SectionHeader from '../components/ui/SectionHeader'
 import PricingTierCard from '../components/ui/PricingTierCard'
 import FAQ from '../components/ui/FAQ'
 import { MEMBERSHIP_PLANS, formatPlanPrice } from '../data/membershipPlans'
-import { REFUND_WINDOW_DAYS } from '../data/legal'
 
 // What BGrowth really sells today (09/10/2026): a free account, Workspaces
 // bought once, and bundles of them. The monthly plans in
@@ -35,7 +34,7 @@ const OPTIONS = [
       'Lifetime access — no subscription',
       'Save as many records as you need',
       'Print or download as PDF',
-      `${REFUND_WINDOW_DAYS}-day refund`,
+      'Help from our Support team',
     ],
     ctaLabel: 'Browse Workspaces',
     ctaTo: '/systems',
@@ -72,7 +71,7 @@ const PRICING_FAQ = [
   },
   {
     question: 'Can I get a refund?',
-    answer: `Yes — within ${REFUND_WINDOW_DAYS} days of your purchase. See our Refund Policy for the details.`,
+    answer: 'Products are digital and available right away, so all sales are final. If something isn’t working, open a ticket in Support and we’ll look into it. See our Refund Policy.',
   },
 ]
 
