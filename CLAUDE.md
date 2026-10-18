@@ -272,6 +272,9 @@ This repo is a **static, client-only MVP**:
   "coming soon" (`RESOURCES_LIVE = false`). The daily cron also calls
   `portal.publish_scheduled_knowledge()`; link previews cover
   `/knowledge/article/:slug`.
+  Since Sprint 113 Admin → Newsletter's editor has "Insert article"
+  (`components/admin/NewsletterArticlePicker`): published articles go into
+  the e-mail as cover + linked title + summary + "Read more" (a digest).
   **Since Sprint 81–82 the Admin menu is grouped and categories have a
   look** (approved by the user): the Admin part of the side menu is four
   collapsible groups (Overview, People, Catalog, Site & content —
