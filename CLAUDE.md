@@ -251,6 +251,13 @@ This repo is a **static, client-only MVP**:
   menu), the "+ New" button and the plans badge in the TopBar stay visible
   but locked, opening the shared Coming Soon modal; locked side-menu items
   show a lock and "Soon". Nothing is hidden.
+  **Since Sprint 111 Knowledge and Resources show "coming soon"** (decided
+  17/10/2026: their articles, videos and downloads were example content):
+  `data/contentStatus.ts` `KNOWLEDGE_LIVE = false` makes `/knowledge/*` and
+  `/resources` render `pages/knowledge/KnowledgeComingSoonPage` (e-mail
+  sign-up, source `knowledge`) and the Home's Knowledge section show a
+  "coming soon" pill instead of example cards. Turn it on once the Wix blog
+  posts are migrated.
   **Since Sprint 81–82 the Admin menu is grouped and categories have a
   look** (approved by the user): the Admin part of the side menu is four
   collapsible groups (Overview, People, Catalog, Site & content —
