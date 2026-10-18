@@ -10,6 +10,7 @@ import SignupsChart from '../../../components/admin/SignupsChart'
 import TopWorkspacesList from '../../../components/admin/TopWorkspacesList'
 import type { SignupPoint } from '../../../components/admin/SignupsChart'
 import { CARD } from '../../../components/admin/styles'
+import AdminDashboardViews from '../../../components/admin/AdminDashboardViews'
 import { adminService } from '../../../modules/admin/adminService'
 import type { AdminMemberDashboard, DashboardPeriod } from '../../../modules/admin/types'
 
@@ -21,17 +22,8 @@ const PERIODS: { id: DashboardPeriod; label: string }[] = [
   { id: 'all', label: 'All time' },
 ]
 
-// The views the Dashboard switches between. Members is built; the others
-// come next (Sales still lives on its own page for now).
-const VIEWS = [
-  { id: 'members', label: 'Members' },
-  { id: 'sales', label: 'Sales', to: '/platform/admin/sales' },
-  { id: 'engagement', label: 'Engagement', soon: true },
-] as const
-
 const SELECT =
   'rounded-xl2 border border-navy/10 bg-white px-4 py-3 text-[14px] text-navy shadow-softer outline-none focus:border-primary/30'
-const TAB = 'rounded-full px-4 py-2 text-[13px] font-semibold transition-colors'
 
 function toPoint(key: string, unit: AdminMemberDashboard['unit']): Pick<SignupPoint, 'label' | 'fullLabel'> {
   if (unit === 'month') {
@@ -87,23 +79,7 @@ export default function AdminDashboardPage() {
       <SectionHeader eyebrow="Admin" title="Dashboard" description="BGrowth at a glance — pick what you want to see." className="mb-6" />
 
       <div className="mb-6 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-        <div className="flex flex-wrap gap-2" role="tablist" aria-label="Dashboard view">
-          {VIEWS.map((v) =>
-            v.id === 'members' ? (
-              <button key={v.id} type="button" role="tab" aria-selected className={`${TAB} bg-grad-primary text-white shadow-softer`}>
-                {v.label}
-              </button>
-            ) : 'to' in v ? (
-              <Link key={v.id} to={v.to} className={`${TAB} border border-navy/10 bg-white text-navy/60 hover:border-primary/20`}>
-                {v.label}
-              </Link>
-            ) : (
-              <span key={v.id} className={`${TAB} cursor-default border border-dashed border-navy/10 text-navy/35`} title="Coming soon">
-                {v.label} · soon
-              </span>
-            ),
-          )}
-        </div>
+        <AdminDashboardViews active="members" />
         <select value={period} onChange={(e) => setPeriod(e.target.value as DashboardPeriod)} className={`${SELECT} sm:ml-auto`} aria-label="Period">
           {PERIODS.map((p) => (
             <option key={p.id} value={p.id}>
