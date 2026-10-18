@@ -6,6 +6,7 @@ import { Menu, X, LogOut } from 'lucide-react'
 import logo from '../../assets/logo.png'
 import Button from '../ui/Button'
 import { useSiteNavigation } from '../../lib/useSiteNavigation'
+import { useIdentity } from '../../modules/identity/IdentityContext'
 import { isExternalLink } from '../../data/siteNavigation'
 
 export type NavMode = 'public' | 'member'
@@ -34,6 +35,9 @@ export default function Navbar({ mode = 'public', banner }: { mode?: NavMode; ba
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
   const siteNav = useSiteNavigation()
+  // Signed in on a public page (catalog, product…): a way back to the
+  // member area instead of Login / Join.
+  const { user } = useIdentity()
   const links = mode === 'member' ? MEMBER_LINKS : siteNav.menu
 
   useEffect(() => {
@@ -125,7 +129,11 @@ export default function Navbar({ mode = 'public', banner }: { mode?: NavMode; ba
           </nav>
 
           <div className="hidden items-center gap-2 lg:flex">
-            {mode === 'public' ? (
+            {mode === 'public' && user ? (
+              <Button to="/platform/dashboard" className="!px-5 !py-2.5 !text-[13.5px]">
+                My Dashboard
+              </Button>
+            ) : mode === 'public' ? (
               <>
                 <Link
                   to="/login"
@@ -207,7 +215,11 @@ export default function Navbar({ mode = 'public', banner }: { mode?: NavMode; ba
                 )}
               </div>
               <div className="my-2 border-t border-navy/[0.06]" />
-              {mode === 'public' ? (
+              {mode === 'public' && user ? (
+                <Button to="/platform/dashboard" className="!h-14 w-full" onClick={() => setOpen(false)}>
+                  My Dashboard
+                </Button>
+              ) : mode === 'public' ? (
                 <div className="flex flex-col gap-2">
                   <Link
                     to="/login"
