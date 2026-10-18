@@ -17,7 +17,8 @@ import type {
   NewGrantInput, AdminCatalogCategories, AdminCategory,
   AdminNewsletterCampaign, AdminNewsletterDraft, AdminNewsletterOverview, AdminReview, AdminMemberDashboard, DashboardPeriod, AdminDeletionRequest, AdminCatalogHealth,
   AdminBundle, AdminBundleDraft, AdminBundlesOverview,
-  AdminTeamMember, AdminActivityPage, AdminMemberPageDraft, AdminMemberPagesOverview } from './types'
+  AdminTeamMember, AdminActivityPage, AdminMemberPageDraft, AdminMemberPagesOverview,
+  AdminWixContactsOverview, WixContactGroup } from './types'
 import type { MemberPage, MemberPageStats } from '../find/types'
 import type { SupportHours } from '../support/types'
 
@@ -137,6 +138,18 @@ export const adminService = {
   },
   getNewsletter() {
     return call<AdminNewsletterOverview>('GET', 'newsletter')
+  },
+  getWixContacts() {
+    return call<AdminWixContactsOverview>('GET', 'wix-contacts')
+  },
+  async setWixContactGroup(id: string, grp: WixContactGroup) {
+    await call('PATCH', 'wix-contacts', undefined, { id, grp })
+  },
+  async sendWixInviteTest(subject: string, message: string) {
+    return (await call<{ sentTo: string }>('POST', 'wix-contacts-test', undefined, { subject, message })).sentTo
+  },
+  sendWixInvites(ids: string[], subject: string, message: string) {
+    return call<{ sent: number; skipped: number }>('POST', 'wix-contacts-invite', undefined, { ids, subject, message })
   },
   async getNewsletterCampaign(id: string) {
     return (await call<{ campaign: AdminNewsletterCampaign }>('GET', 'newsletter-campaign', { id })).campaign

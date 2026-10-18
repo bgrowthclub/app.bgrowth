@@ -275,6 +275,14 @@ This repo is a **static, client-only MVP**:
   Since Sprint 113 Admin → Newsletter's editor has "Insert article"
   (`components/admin/NewsletterArticlePicker`): published articles go into
   the e-mail as cover + linked title + summary + "Read more" (a digest).
+  **Since Sprint 116 Admin → Newsletter has a "Wix contacts" tab**
+  (approved by the user; Portal migration 0056): the old Wix site's contacts
+  live in `portal.imported_contacts` (loaded once by an SQL file kept out of
+  the repo), grouped contact / team / spam (editable). They are not
+  subscribers: `components/admin/WixContactsPanel` sends each one ONE invite
+  (resources `wix-contacts`, `wix-contacts-test`, `wix-contacts-invite`);
+  its "Yes, keep me posted" button opens `/newsletter/confirm?invite=` →
+  `api/newsletter.ts?resource=invite-accept`, which subscribes them.
   **Since Sprint 81–82 the Admin menu is grouped and categories have a
   look** (approved by the user): the Admin part of the side menu is four
   collapsible groups (Overview, People, Catalog, Site & content —
