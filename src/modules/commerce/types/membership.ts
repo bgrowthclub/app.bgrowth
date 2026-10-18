@@ -60,6 +60,10 @@ export interface PlanEntitlements {
   // The member's own page (/p/…): part of it editable, or all of it.
   memberPage?: 'partial' | 'full'
   prioritySupport?: boolean
+  // Opens every product (Workspaces, calculators, downloads) while the plan
+  // is live — Portal migration 0061. Otherwise a plan opens the products
+  // included from it or a lower plan (portal.product_plan_access).
+  includesAll?: boolean
   // Off the price of Workspaces bought one by one.
   workspaceDiscountPercent?: number
   // Off Academy courses (applies once the Academy exists): every course or

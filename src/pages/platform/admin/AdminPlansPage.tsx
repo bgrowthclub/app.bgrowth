@@ -8,11 +8,12 @@ import AdminPlanRow from '../../../components/admin/AdminPlanRow'
 import PlanEditor from '../../../components/admin/PlanEditor'
 import PlanSettingsForm from '../../../components/admin/PlanSettingsForm'
 import PlanSubscribersPanel from '../../../components/admin/PlanSubscribersPanel'
+import PlanProductsPanel from '../../../components/admin/PlanProductsPanel'
 import { CARD, SMALL_BUTTON } from '../../../components/admin/styles'
 import { adminService } from '../../../modules/admin/adminService'
 import type { AdminPlan, AdminPlanDraft, AdminPlansOverview } from '../../../modules/admin/types'
 
-type Tab = 'plans' | 'subscribers' | 'settings'
+type Tab = 'plans' | 'included' | 'subscribers' | 'settings'
 
 // Admin → Plans (Portal migration 0057): the plans BGrowth offers, their
 // prices and what each one unlocks, plus how subscriptions behave. A plan is
@@ -71,6 +72,7 @@ export default function AdminPlansPage() {
               {(
                 [
                   ['plans', 'Plans'],
+                  ['included', 'Included'],
                   ['subscribers', 'Subscribers'],
                   ['settings', 'Settings'],
                 ] as const
@@ -108,7 +110,9 @@ export default function AdminPlansPage() {
 
           {notice && <p className="rounded-xl bg-emerald-50 px-4 py-3 text-[13.5px] text-emerald-700">{notice}</p>}
 
-          {tab === 'subscribers' ? (
+          {tab === 'included' ? (
+            <PlanProductsPanel />
+          ) : tab === 'subscribers' ? (
             <PlanSubscribersPanel />
           ) : tab === 'settings' ? (
             <PlanSettingsForm

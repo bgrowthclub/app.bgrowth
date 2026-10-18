@@ -147,6 +147,9 @@ export interface PortalAccessGrantRow {
   expires_at: string | null
   revoked_at: string | null
   created_at: string
+  // Not a real grant: the product is included in the member's plan (Sprint
+  // 126, portal.plan_included_products() — Portal migration 0061).
+  via_plan?: string
 }
 
 export interface WorkspaceInstanceRow {

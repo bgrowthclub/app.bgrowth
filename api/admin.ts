@@ -1636,6 +1636,7 @@ async function catalogHealth(db: Db) {
       ['0058 Plan billing (subscriptions)', 'member_plans.amount_cents'],
       ['0059 Products in Stripe (coupons per Workspace)', 'provider_products'],
       ['0060 Knowledge articles by plan', 'knowledge_articles.required_plan'],
+      ['0061 Products included in plans', 'product_plan_access'],
     ].map(async ([name, table]) => ({ name, ok: await tableExists(table) })),
   )
   const { data: address } = await db.from('site_settings').select('value').eq('key', 'newsletter_address').maybeSingle()
@@ -2927,6 +2928,8 @@ function cleanEntitlements(value: unknown) {
   const out: Record<string, unknown> = {}
   if (v.memberPage === 'partial' || v.memberPage === 'full') out.memberPage = v.memberPage
   if (v.prioritySupport === true) out.prioritySupport = true
+  // Opens every product while the plan is live (Portal migration 0061).
+  if (v.includesAll === true) out.includesAll = true
   const ws = percent(v.workspaceDiscountPercent, 'Workspace discount')
   if (ws > 0) out.workspaceDiscountPercent = ws
   const ac = v.academyDiscount
@@ -3148,6 +3151,59 @@ async function changeMemberPlan(req: VercelRequest, db: Db) {
   const { data, error } = await db.from('member_plans').update(patch).eq('id', id).select('*').single()
   if (error) throw error
   return { memberPlan: data, planName: (row as any).membership_plans?.name ?? 'a plan', user_id: row.user_id }
+}
+
+// Admin → Plans → Included (Sprint 126, Portal migration 0061): which
+// products a plan opens without buying — each product's lowest plan.
+async function listPlanProducts(db: Db) {
+  const [products, links, plans] = await Promise.all([
+    db
+      .from('products')
+      .select('id, name, slug, content_type, is_free, status, category_id')
+      .in('content_type', SELLABLE_TYPES)
+      .neq('status', 'archived')
+      .order('name'),
+    db.from('product_plan_access').select('product_id, plan_id'),
+    db.from('membership_plans').select('id, name, rank, is_free, status, entitlements').order('rank'),
+  ])
+  if (links.error) {
+    if (notReady(links.error)) return { ready: false, products: [], plans: [], included: {} }
+    throw links.error
+  }
+  if (products.error) throw products.error
+  if (plans.error) throw plans.error
+  return {
+    ready: true,
+    products: products.data ?? [],
+    plans: ((plans.data ?? []) as Record<string, any>[])
+      .filter((p) => !p.is_free)
+      .map((p) => ({ id: p.id, name: p.name, rank: p.rank, status: p.status, includesAll: Boolean(p.entitlements?.includesAll) })),
+    included: Object.fromEntries(((links.data ?? []) as { product_id: string; plan_id: string }[]).map((l) => [l.product_id, l.plan_id])),
+  }
+}
+
+async function setPlanProduct(req: VercelRequest, db: Db) {
+  const productIds: string[] = (Array.isArray(req.body?.productIds) ? req.body.productIds : [req.body?.productId]).filter(isUuid)
+  if (!productIds.length) throw new HttpError(400, 'Choose the products.')
+  const planId = req.body?.planId ? str(req.body.planId) : null
+  let planName: string | null = null
+  if (planId) {
+    const { data: plan } = await db.from('membership_plans').select('id, name, is_free').eq('id', planId).maybeSingle()
+    if (!plan || plan.is_free) throw new HttpError(400, 'Choose a paid plan.')
+    planName = plan.name
+    const { error } = await db
+      .from('product_plan_access')
+      .upsert(productIds.map((id) => ({ product_id: id, plan_id: planId, updated_at: new Date().toISOString() })))
+    if (error) {
+      if (notReady(error)) throw new HttpError(409, 'Run the database update (Portal migration 0061) first.')
+      throw error
+    }
+  } else {
+    const { error } = await db.from('product_plan_access').delete().in('product_id', productIds)
+    if (error) throw error
+  }
+  const { data: names } = await db.from('products').select('name').in('id', productIds)
+  return { planName, count: productIds.length, names: ((names ?? []) as { name: string }[]).map((n) => n.name) }
 }
 
 // Admin → Plans → Subscribers (Sprint 122, migration 0058): every paid
@@ -3492,6 +3548,10 @@ function describe(key: string, b: Body, r: Record<string, any>): Described {
       }
     case 'PATCH member-plans':
       return { area: 'plans', summary: b.action === 'end' ? `Ended the plan “${r.planName}” given by the team` : `Changed the end date of the plan “${r.planName}”${b.endsAt ? ` to ${fmtDay(b.endsAt)}` : ' (no end date)'}` }
+    case 'PUT plan-products': {
+      const what = r.count === 1 ? `“${r.names?.[0] ?? 'a product'}”` : `${r.count} products`
+      return { area: 'plans', summary: r.planName ? `Included ${what} in the ${r.planName} plan and above` : `Took ${what} out of the plans` }
+    }
     case 'POST coupons':
       return { area: 'plans', summary: `Created the coupon ${r.coupon?.code ?? ''} (${b.kind === 'amount' ? `$${b.value} off` : `${b.value}% off`})` }
     case 'PATCH coupons':
@@ -3680,6 +3740,8 @@ const ROUTES: Record<string, Route> = {
   'PATCH plans': (req, db) => updatePlan(req, db),
   'PUT plan-settings': (req, db, admin) => savePlanSettings(req, db, admin),
   'GET plan-subscribers': (_req, db) => listPlanSubscribers(db),
+  'GET plan-products': (_req, db) => listPlanProducts(db),
+  'PUT plan-products': (req, db) => setPlanProduct(req, db),
   'GET coupons': (_req, db) => listCoupons(db),
   'POST coupons': (req, db) => createCoupon(req, db),
   'PATCH coupons': (req) => setCouponActive(req),

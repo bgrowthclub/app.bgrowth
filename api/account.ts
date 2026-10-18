@@ -470,6 +470,25 @@ async function planAction(req: VercelRequest, db: Db, user: { id: string; email?
   throw new HttpError(404, 'Unknown action.')
 }
 
+// Included in the member's plan (Sprint 126) — same rule as the plan part
+// of portal.has_workspace_access() (Portal migration 0061): their plan
+// includes every product, or the product's plan is at or below theirs.
+async function includedInPlan(db: Db, userId: string, productId: string): Promise<boolean> {
+  const [{ data: rows, error }, { data: link }] = await Promise.all([
+    db.from('member_plans').select('status, starts_at, ends_at, membership_plans(rank, entitlements)').eq('user_id', userId),
+    db.from('product_plan_access').select('membership_plans(rank)').eq('product_id', productId).maybeSingle(),
+  ])
+  if (error || !rows) return false
+  const now = Date.now()
+  const live = (rows as Record<string, any>[]).filter(
+    (r) => ['active', 'trialing', 'past_due'].includes(r.status) && Date.parse(r.starts_at) <= now && (!r.ends_at || Date.parse(r.ends_at) > now),
+  )
+  if (live.some((r) => r.membership_plans?.entitlements?.includesAll === true)) return true
+  const need = (link as Record<string, any> | null)?.membership_plans?.rank
+  if (typeof need !== 'number' || need <= 0) return false
+  return live.some((r) => (r.membership_plans?.rank ?? 0) >= need)
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   allowPortal(req, res)
   if (req.method === 'OPTIONS') return res.status(204).end()
@@ -526,7 +545,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       const granted = (grants ?? []).some(
         (g) => (!g.expires_at || g.expires_at > now) && (g.scope === 'all' || (g.scope === 'specific' && g.product_id === productId)),
       )
-      if (!licensed && !granted) throw new HttpError(403, 'You don’t have access to this file.')
+      if (!licensed && !granted && !(await includedInPlan(db, user.id, productId))) throw new HttpError(403, 'You don’t have access to this file.')
       const { data: file, error: fileError } = await db.from('library_files').select('name, storage_path').eq('id', fileId).maybeSingle()
       if (fileError) throw fileError
       if (!file) throw new HttpError(404, 'This file is no longer available. Please contact support.')

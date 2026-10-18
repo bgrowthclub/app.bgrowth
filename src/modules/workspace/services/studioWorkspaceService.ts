@@ -190,13 +190,43 @@ export const studioWorkspaceService = {
     return (data ?? []) as PortalLicenseRow[]
   },
 
+  // The lowest plan that includes this product (Portal migration 0061), or
+  // null — shown on the product page. Public read.
+  async getIncludedPlan(productId: string): Promise<string | null> {
+    const { data, error } = await client()
+      .from('product_plan_access')
+      .select('membership_plans(name, status)')
+      .eq('product_id', productId)
+      .maybeSingle()
+    if (error || !data) return null
+    const plan = (data as unknown as { membership_plans: { name: string; status: string } | null }).membership_plans
+    return plan && plan.status !== 'disabled' ? plan.name : null
+  },
+
+  // The member's access grants, plus what their plan includes as grant-like
+  // rows (`via_plan`), so every access check counts plans the same way the
+  // database's has_workspace_access() does (Portal migration 0061).
   async listAccessGrants(userId: string): Promise<PortalAccessGrantRow[]> {
     const { data, error } = await client()
       .from('access_grants')
       .select('*')
       .eq('user_id', userId)
     if (error) throw error
-    return (data ?? []) as PortalAccessGrantRow[]
+    const grants = (data ?? []) as PortalAccessGrantRow[]
+    const { data: included, error: planError } = await client().rpc('plan_included_products')
+    if (planError || !Array.isArray(included)) return grants
+    const now = new Date().toISOString()
+    for (const row of included as { product_id: string | null; plan_name: string | null; includes_all: boolean }[]) {
+      grants.push({
+        scope: row.includes_all ? 'all' : 'specific',
+        product_id: row.includes_all ? null : row.product_id,
+        expires_at: null,
+        revoked_at: null,
+        created_at: now,
+        via_plan: row.plan_name ?? 'your plan',
+      })
+    }
+    return grants
   },
 
   // "Recently opened" — the one self-service column (with is_favorite) a

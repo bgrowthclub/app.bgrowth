@@ -185,6 +185,15 @@ export default function PlanEditor({ plan, nextRank, yearlyDiscountPercent, onSa
             />
             Priority support (their conversations stand out in Admin → Support)
           </label>
+          <label className={CHECK}>
+            <input
+              type="checkbox"
+              className="mt-0.5 h-4 w-4 accent-primary"
+              checked={ent.includesAll === true}
+              onChange={(e) => setEnt({ ...ent, includesAll: e.target.checked || undefined })}
+            />
+            Includes every Workspace, calculator and download (no purchase needed while subscribed)
+          </label>
           <label className="block">
             <span className="text-[13px] font-semibold text-navy">Discount on Workspaces bought one by one (%)</span>
             <input
@@ -241,7 +250,7 @@ export default function PlanEditor({ plan, nextRank, yearlyDiscountPercent, onSa
             )}
           </div>
           <p className="text-[12px] text-navy/45">
-            Which articles a plan reads is set on each article, in Studio → Knowledge Engine → “Who can read it” (that plan or above).
+            Which articles a plan reads is set on each article, in Studio → Knowledge Engine → “Who can read it” (that plan or above). Which products a plan opens is set in the “Included” tab.
           </p>
         </div>
       </section>

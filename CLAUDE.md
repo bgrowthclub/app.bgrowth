@@ -348,7 +348,18 @@ This repo is a **static, client-only MVP**:
   Workspace discount: `api/studio-checkout.ts` takes the best live
   `workspaceDiscountPercent` off single Workspaces/calculators/downloads
   (not bundles; min $0.50; metadata planDiscountPercent), and the product
-  page's `StudioPurchaseCard` shows the reduced price. The member page
+  page's `StudioPurchaseCard` shows the reduced price. Since Sprint 126
+  (decided 18/10/2026; Portal migration 0061) products can be *included* in
+  a plan: Admin → Plans → Included (resources `plan-products`) sets each
+  Workspace/calculator/download's lowest plan (`portal.product_plan_access`;
+  higher ranks include it too), and a plan's `includesAll` entitlement opens
+  everything. `portal.has_workspace_access()` counts it (content, instances,
+  Portal too); the site adds it to `studioWorkspaceService.listAccessGrants()`
+  as grant-like rows with `via_plan` (from `portal.plan_included_products()`),
+  so My Workspaces (source `membership`), the product page and the viewer
+  agree; `api/account.ts` download checks it too. Cancelling ends that access;
+  filled-in records stay. The product page says "Included in the X plan and
+  above". The member page
   (part/all editing) and the Academy discount are stored per plan and wait
   for those features.
   **Since Sprint 123 there are coupons** (approved by the user 18/10/2026):
