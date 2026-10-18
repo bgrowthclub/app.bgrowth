@@ -1612,6 +1612,7 @@ async function catalogHealth(db: Db) {
       ['0054 Knowledge release flow & articles', 'knowledge_articles'],
       ['0055 Knowledge members-only articles', 'knowledge_articles.locked'],
       ['0056 Wix contacts (Admin → Newsletter)', 'imported_contacts'],
+      ['0057 Plans (Admin → Plans)', 'membership_plans'],
     ].map(async ([name, table]) => ({ name, ok: await tableExists(table) })),
   )
   const { data: address } = await db.from('site_settings').select('value').eq('key', 'newsletter_address').maybeSingle()
@@ -2869,6 +2870,239 @@ async function resetSiteContent(req: VercelRequest, db: Db) {
 }
 
 // ---------------------------------------------------------------------------
+// Plans (Portal migration 0057, Sprint 121): the plans BGrowth offers and
+// what each one unlocks, edited here; the plan a member has (paid, or given
+// by the team: a promotion, a giveaway, a referral…). Selling them is step 2.
+// ---------------------------------------------------------------------------
+const PLAN_STATUSES = new Set(['active', 'hidden', 'disabled'])
+const PLAN_REASONS = new Set(['promotion', 'giveaway', 'referral', 'support', 'other'])
+const DEFAULT_PLAN_SETTINGS = { provider: 'stripe', cancelAt: 'period_end', graceDays: 7, allowSwitch: true, yearlyDiscountPercent: 20 }
+const PLAN_COLUMNS =
+  'id, slug, name, description, rank, status, is_free, price_on_request, currency, monthly_cents, yearly_cents, monthly_sale_cents, yearly_sale_cents, features, highlighted, entitlements, updated_at'
+
+function notReady(error: unknown) {
+  const code = (error as { code?: string } | null)?.code
+  return code === '42P01' || code === 'PGRST205'
+}
+
+function cents(value: unknown, field: string): number | null {
+  if (value === null || value === undefined || value === '') return null
+  const n = Number(value)
+  if (!Number.isFinite(n) || n < 0 || n > 100000) throw new HttpError(400, `${field}: enter a price between 0 and 100,000.`)
+  return Math.round(n * 100)
+}
+
+function percent(value: unknown, field: string): number {
+  const n = Number(value ?? 0)
+  if (!Number.isFinite(n) || n < 0 || n > 100) throw new HttpError(400, `${field}: enter a percentage between 0 and 100.`)
+  return Math.round(n)
+}
+
+// What a plan unlocks. Only what is set is kept (an empty object = nothing).
+function cleanEntitlements(value: unknown) {
+  const v = (value && typeof value === 'object' ? value : {}) as Record<string, any>
+  const out: Record<string, unknown> = {}
+  if (v.memberPage === 'partial' || v.memberPage === 'full') out.memberPage = v.memberPage
+  if (v.prioritySupport === true) out.prioritySupport = true
+  const ws = percent(v.workspaceDiscountPercent, 'Workspace discount')
+  if (ws > 0) out.workspaceDiscountPercent = ws
+  const ac = v.academyDiscount
+  if (ac && typeof ac === 'object') {
+    const p = percent(ac.percent, 'Academy discount')
+    if (p > 0) {
+      const courses = Array.isArray(ac.courses)
+        ? [...new Set(ac.courses.map((c: unknown) => cleanText(c, 120)).filter(Boolean))].slice(0, 50)
+        : []
+      out.academyDiscount = { percent: p, scope: ac.scope === 'selected' && courses.length ? 'selected' : 'all', courses: ac.scope === 'selected' ? courses : [] }
+    }
+  }
+  return out
+}
+
+function readPlanInput(req: VercelRequest) {
+  const b = (req.body ?? {}) as Record<string, any>
+  const name = cleanText(b.name, 60)
+  if (!name) throw new HttpError(400, 'Give the plan a name.')
+  const status = PLAN_STATUSES.has(b.status) ? b.status : 'hidden'
+  const rank = Math.round(Number(b.rank))
+  if (!Number.isFinite(rank) || rank < 0 || rank > 1000) throw new HttpError(400, 'Order: enter a number from 0 to 1000.')
+  const isFree = b.isFree === true
+  const onRequest = !isFree && b.priceOnRequest === true
+  const monthly = isFree ? 0 : onRequest ? null : cents(b.monthly, 'Monthly price')
+  const yearly = isFree ? 0 : onRequest ? null : cents(b.yearly, 'Yearly price')
+  const monthlySale = isFree || onRequest ? null : cents(b.monthlySale, 'Monthly sale price')
+  const yearlySale = isFree || onRequest ? null : cents(b.yearlySale, 'Yearly sale price')
+  if (!isFree && !onRequest && monthly === null && yearly === null) throw new HttpError(400, 'Enter a monthly or a yearly price (or mark it “Free” or “Price on request”).')
+  if (monthlySale !== null && (monthly === null || monthlySale >= monthly)) throw new HttpError(400, 'The monthly sale price must be lower than the monthly price.')
+  if (yearlySale !== null && (yearly === null || yearlySale >= yearly)) throw new HttpError(400, 'The yearly sale price must be lower than the yearly price.')
+  const features = Array.isArray(b.features) ? b.features.map((f: unknown) => cleanText(f, 160)).filter(Boolean).slice(0, 20) : []
+  return {
+    name,
+    description: cleanText(b.description, 240),
+    rank,
+    status,
+    is_free: isFree,
+    price_on_request: onRequest,
+    monthly_cents: monthly,
+    yearly_cents: yearly,
+    monthly_sale_cents: monthlySale,
+    yearly_sale_cents: yearlySale,
+    features,
+    highlighted: b.highlighted === true,
+    entitlements: cleanEntitlements(b.entitlements),
+    updated_at: new Date().toISOString(),
+  }
+}
+
+async function loadPlanSettings(db: Db) {
+  const { data } = await db.from('site_settings').select('value').eq('key', 'plans').maybeSingle()
+  return { ...DEFAULT_PLAN_SETTINGS, ...((data?.value as Record<string, unknown> | undefined) ?? {}) }
+}
+
+const isLivePlan = (m: { status: string; starts_at: string; ends_at: string | null }, now = Date.now()) =>
+  ['active', 'trialing', 'past_due'].includes(m.status) && Date.parse(m.starts_at) <= now && (!m.ends_at || Date.parse(m.ends_at) > now)
+
+async function listPlans(db: Db) {
+  const { data, error } = await db.from('membership_plans').select(PLAN_COLUMNS).order('rank')
+  if (error) {
+    if (notReady(error)) return { ready: false, plans: [], settings: DEFAULT_PLAN_SETTINGS }
+    throw error
+  }
+  const { data: members, error: mError } = await db.from('member_plans').select('plan_id, source, status, starts_at, ends_at')
+  if (mError) throw mError
+  const counts = new Map<string, { paid: number; given: number }>()
+  for (const m of (members ?? []) as { plan_id: string; source: string; status: string; starts_at: string; ends_at: string | null }[]) {
+    if (!isLivePlan(m)) continue
+    const c = counts.get(m.plan_id) ?? { paid: 0, given: 0 }
+    if (m.source === 'subscription') c.paid += 1
+    else c.given += 1
+    counts.set(m.plan_id, c)
+  }
+  return {
+    ready: true,
+    plans: (data ?? []).map((p: Record<string, any>) => ({ ...p, members: counts.get(p.id) ?? { paid: 0, given: 0 } })),
+    settings: await loadPlanSettings(db),
+  }
+}
+
+async function createPlan(req: VercelRequest, db: Db) {
+  const input = readPlanInput(req)
+  const slug = slugify(cleanText(req.body?.slug, 40) || input.name)
+  if (!slug) throw new HttpError(400, 'Give the plan a name with letters or numbers.')
+  const { data: taken } = await db.from('membership_plans').select('id').eq('slug', slug).maybeSingle()
+  if (taken) throw new HttpError(409, `There is already a plan with the address “${slug}”.`)
+  const { data, error } = await db.from('membership_plans').insert({ ...input, slug }).select(PLAN_COLUMNS).single()
+  if (error) {
+    if (notReady(error)) throw new HttpError(409, 'Run the database update (Portal migration 0057) first.')
+    throw error
+  }
+  return { plan: { ...data, members: { paid: 0, given: 0 } } }
+}
+
+async function updatePlan(req: VercelRequest, db: Db) {
+  const id = str(req.body?.id)
+  if (!isUuid(id)) throw new HttpError(400, 'Which plan?')
+  const input = readPlanInput(req)
+  const { data: current } = await db.from('membership_plans').select('slug').eq('id', id).maybeSingle()
+  if (!current) throw new HttpError(404, 'Plan not found.')
+  // Every member without a plan is on Free, so it can't be switched off.
+  if (current.slug === 'free' && (input.status !== 'active' || !input.is_free)) throw new HttpError(400, 'Free is the plan of every member without one — it stays active and free.')
+  const { data, error } = await db.from('membership_plans').update(input).eq('id', id).select(PLAN_COLUMNS).single()
+  if (error) throw error
+  return { plan: data }
+}
+
+async function savePlanSettings(req: VercelRequest, db: Db, admin: Admin) {
+  const b = (req.body ?? {}) as Record<string, any>
+  const graceDays = Math.round(Number(b.graceDays))
+  if (!Number.isFinite(graceDays) || graceDays < 0 || graceDays > 30) throw new HttpError(400, 'Days of tolerance: 0 to 30.')
+  const settings = {
+    // Only Stripe exists today; another provider becomes one more option here.
+    provider: 'stripe',
+    cancelAt: b.cancelAt === 'now' ? 'now' : 'period_end',
+    graceDays,
+    allowSwitch: b.allowSwitch !== false,
+    yearlyDiscountPercent: percent(b.yearlyDiscountPercent, 'Yearly discount'),
+  }
+  const { error } = await db
+    .from('site_settings')
+    .upsert({ key: 'plans', value: settings, updated_at: new Date().toISOString(), updated_by: admin.email })
+  if (error) throw error
+  return { settings }
+}
+
+async function listMemberPlans(req: VercelRequest, db: Db) {
+  const userId = str(req.query.userId)
+  if (!isUuid(userId)) throw new HttpError(400, 'Which member?')
+  const [rows, plans] = await Promise.all([
+    db
+      .from('member_plans')
+      .select('id, plan_id, source, reason, note, status, billing_interval, provider, starts_at, ends_at, current_period_end, cancel_at_period_end, created_at, membership_plans(name, slug, rank)')
+      .eq('user_id', userId)
+      .order('created_at', { ascending: false }),
+    db.from('membership_plans').select('id, name, slug, rank, status, is_free').order('rank'),
+  ])
+  if (rows.error) {
+    if (notReady(rows.error)) return { ready: false, entries: [], plans: [], current: 'free' }
+    throw rows.error
+  }
+  if (plans.error) throw plans.error
+  const entries: Record<string, any>[] = (rows.data ?? []).map((r: Record<string, any>) => ({ ...r, live: isLivePlan(r as any) }))
+  const top = entries
+    .filter((e) => e.live)
+    .sort((a, b) => (b.membership_plans?.rank ?? 0) - (a.membership_plans?.rank ?? 0))[0]
+  return { ready: true, entries, plans: plans.data ?? [], current: top?.membership_plans?.name ?? 'Free' }
+}
+
+async function giveMemberPlan(req: VercelRequest, db: Db, admin: Admin) {
+  const b = (req.body ?? {}) as Record<string, any>
+  const userId = str(b.userId)
+  const planId = str(b.planId)
+  if (!isUuid(userId) || !isUuid(planId)) throw new HttpError(400, 'Choose the member and the plan.')
+  const { data: plan } = await db.from('membership_plans').select('id, name, status, is_free').eq('id', planId).maybeSingle()
+  if (!plan) throw new HttpError(404, 'Plan not found.')
+  if (plan.is_free) throw new HttpError(400, 'Every member already has Free — choose another plan.')
+  if (plan.status === 'disabled') throw new HttpError(400, `“${plan.name}” is disabled. Turn it back on in Admin → Plans first.`)
+  const reason = PLAN_REASONS.has(b.reason) ? b.reason : 'other'
+  const { data, error } = await db
+    .from('member_plans')
+    .insert({
+      user_id: userId,
+      plan_id: planId,
+      source: 'team',
+      reason,
+      note: cleanText(b.note, 300) || null,
+      status: 'active',
+      ends_at: futureDate(b.endsAt, 'End date'),
+      granted_by: admin.id,
+    })
+    .select('*')
+    .single()
+  if (error) {
+    if (notReady(error)) throw new HttpError(409, 'Run the database update (Portal migration 0057) first.')
+    throw error
+  }
+  return { memberPlan: data, planName: plan.name }
+}
+
+async function changeMemberPlan(req: VercelRequest, db: Db) {
+  const b = (req.body ?? {}) as Record<string, any>
+  const id = str(b.id)
+  if (!isUuid(id)) throw new HttpError(400, 'Which plan?')
+  const { data: row } = await db.from('member_plans').select('id, user_id, source, membership_plans(name)').eq('id', id).maybeSingle()
+  if (!row) throw new HttpError(404, 'Not found.')
+  if (row.source !== 'team') throw new HttpError(400, 'A paid subscription is changed by the member (or in the payment provider), not here.')
+  const now = new Date().toISOString()
+  const patch =
+    b.action === 'end'
+      ? { status: 'ended', ends_at: now, updated_at: now }
+      : { status: 'active', ends_at: futureDate(b.endsAt, 'End date'), updated_at: now }
+  const { data, error } = await db.from('member_plans').update(patch).eq('id', id).select('*').single()
+  if (error) throw error
+  return { memberPlan: data, planName: (row as any).membership_plans?.name ?? 'a plan', user_id: row.user_id }
+}
+
+// ---------------------------------------------------------------------------
 // Activity log (portal.admin_activity, Portal migration 0042): every change
 // made in the Admin area — who, what, when, on which member or product.
 // Recorded by the router below after the change succeeds; best effort, so a
@@ -2977,6 +3211,19 @@ function describe(key: string, b: Body, r: Record<string, any>): Described {
       return { area: 'deletions', summary: 'Declined an account deletion request' }
     case 'DELETE reviews':
       return { area: 'reviews', summary: 'Removed a review' }
+    case 'POST plans':
+      return { area: 'plans', summary: `Created the plan “${b.name}”` }
+    case 'PATCH plans':
+      return { area: 'plans', summary: `Edited the plan “${b.name}”${b.status === 'disabled' ? ' (disabled)' : b.status === 'hidden' ? ' (hidden)' : ''}` }
+    case 'PUT plan-settings':
+      return { area: 'plans', summary: 'Changed the plan settings' }
+    case 'POST member-plans':
+      return {
+        area: 'plans',
+        summary: `Gave the plan “${r.planName}”${b.endsAt ? ` until ${fmtDay(b.endsAt)}` : ' with no end date'} (${String(b.reason ?? 'other')})`,
+      }
+    case 'PATCH member-plans':
+      return { area: 'plans', summary: b.action === 'end' ? `Ended the plan “${r.planName}” given by the team` : `Changed the end date of the plan “${r.planName}”${b.endsAt ? ` to ${fmtDay(b.endsAt)}` : ' (no end date)'}` }
     case 'POST team':
       return { area: 'team', summary: `Added ${r.member?.email ?? b.email} to the team as ${b.role === 'support' ? 'Support' : 'Admin'}` }
     case 'PATCH team':
@@ -3009,7 +3256,7 @@ async function recordActivity(db: Db, admin: Admin, key: string, req: VercelRequ
   const b = (req.body && typeof req.body === 'object' ? req.body : {}) as Body
   const described = describe(key, b, result)
   if (!described) return
-  const row = result.grant ?? result.license ?? {}
+  const row = result.grant ?? result.license ?? result.memberPlan ?? {}
   // A deleted account keeps no link back to the person.
   const userId = key === 'POST deletion-complete' ? null : b.userId ?? row.user_id ?? null
   const productId = b.productId ?? row.product_id ?? (key.endsWith(' bundles') ? result.bundle?.id ?? b.id ?? req.query.id : null)
@@ -3156,6 +3403,13 @@ const ROUTES: Record<string, Route> = {
   'GET site-content': (req, db) => getSiteContent(req, db),
   'PUT site-content': (req, db, admin) => saveSiteContent(req, db, admin),
   'DELETE site-content': (req, db) => resetSiteContent(req, db),
+  'GET plans': (_req, db) => listPlans(db),
+  'POST plans': (req, db) => createPlan(req, db),
+  'PATCH plans': (req, db) => updatePlan(req, db),
+  'PUT plan-settings': (req, db, admin) => savePlanSettings(req, db, admin),
+  'GET member-plans': (req, db) => listMemberPlans(req, db),
+  'POST member-plans': (req, db, admin) => giveMemberPlan(req, db, admin),
+  'PATCH member-plans': (req, db) => changeMemberPlan(req, db),
   'GET team': (_req, db) => listTeam(db),
   'POST team': (req, db) => addTeamMember(req, db),
   'PATCH team': (req, db, admin) => updateTeamMember(req, db, admin),

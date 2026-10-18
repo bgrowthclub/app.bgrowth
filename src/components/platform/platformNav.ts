@@ -21,6 +21,7 @@ import {
   UserX,
   ClipboardCheck,
   Package,
+  Crown,
   SquareUser,
   ShieldCheck,
   History,
@@ -151,6 +152,7 @@ export const PLATFORM_NAV_GROUPS: PlatformNavGroup[] = [
     items: [
       { label: 'Health Check', to: '/platform/admin/catalog', icon: ClipboardCheck },
       { label: 'Bundles', to: '/platform/admin/bundles', icon: Package },
+      { label: 'Plans', to: '/platform/admin/plans', icon: Crown },
       { label: 'Categories', to: '/platform/admin/categories', icon: Tags },
       { label: 'Tags', to: '/platform/admin/tags', icon: Tag },
       { label: 'Reviews', to: '/platform/admin/reviews', icon: Star, support: true },

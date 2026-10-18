@@ -302,6 +302,24 @@ This repo is a **static, client-only MVP**:
   no "Save offline" button until it works), Journal and Explore (later),
   Resources = free support materials once there is real content, Journeys =
   guided goal trails (Life World → Journey → Mission → Action) — design next.
+  **Since Sprint 121 plans live in the database** (Plans & Subscriptions
+  step 1, approved by the user 18/10/2026; Portal migration 0057): Admin →
+  Plans (resources `plans`, `plan-settings`) creates, edits, hides or
+  disables plans (`portal.membership_plans`: order/rank, monthly and yearly
+  price with optional sale price, Pricing card texts, and what each unlocks —
+  `entitlements`, typed `PlanEntitlements` in commerce/types/membership.ts:
+  member page part/all, priority support, % off Workspaces, % off the
+  Academy for all or named courses). Settings (`site_settings` key `plans`,
+  `PlanSettings`): payment provider (Stripe only for now), cancel at period
+  end or now, days of tolerance, self-service switch, suggested yearly
+  discount. A member's plan is `portal.member_plans` (source `subscription`
+  or `team`; highest live rank wins, none = Free; `portal.member_plan_of()`);
+  Admin → Members → a member → Plan gives one (reason promotion/giveaway/
+  referral/support/other, until a date or no end; resource `member-plans`,
+  admin-only). Not yet: selling (step 2 — Pricing page from the database,
+  Stripe subscriptions, Account → Membership; `data/membershipPlans.ts` is
+  still what /pricing reads) and applying the benefits (step 3 — articles by
+  plan in Studio, priority support, Workspace discount).
   **Since Sprint 81–82 the Admin menu is grouped and categories have a
   look** (approved by the user): the Admin part of the side menu is four
   collapsible groups (Overview, People, Catalog, Site & content —

@@ -51,3 +51,27 @@ export interface MembershipPlan {
   permissions: MembershipPermissions
   status: ProductStatus
 }
+
+// What a plan unlocks (Portal migration 0057, Sprint 121) — set per plan in
+// Admin → Plans and kept in portal.membership_plans.entitlements. Only what
+// is set is present; nothing = nothing extra. A new kind of benefit is a new
+// optional field here (plus its cleaning in api/admin.ts cleanEntitlements).
+export interface PlanEntitlements {
+  // The member's own page (/p/…): part of it editable, or all of it.
+  memberPage?: 'partial' | 'full'
+  prioritySupport?: boolean
+  // Off the price of Workspaces bought one by one.
+  workspaceDiscountPercent?: number
+  // Off Academy courses (applies once the Academy exists): every course or
+  // only the ones named.
+  academyDiscount?: { percent: number; scope: 'all' | 'selected'; courses: string[] }
+}
+
+// How subscriptions behave (portal.site_settings key 'plans').
+export interface PlanSettings {
+  provider: 'stripe'
+  cancelAt: 'period_end' | 'now'
+  graceDays: number
+  allowSwitch: boolean
+  yearlyDiscountPercent: number
+}
