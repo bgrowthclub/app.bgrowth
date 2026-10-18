@@ -336,8 +336,21 @@ This repo is a **static, client-only MVP**:
   shows their plan; plan payments are left out of Account → Purchases.
   Admin → Plans → Subscribers (resource `plan-subscribers`): paying members,
   monthly revenue, cancelling, failed payments, cancelled in 30 days.
-  Not yet: applying the benefits (step 3 — articles by plan in Studio,
-  priority support, Workspace discount).
+  **Since Sprint 125 the plan benefits apply** (step 3, approved by the user
+  18/10/2026; Portal migration 0060, Studio Sprint 105): an article's "Who
+  can read it" in Studio can be `plan:<slug>` (that plan or a higher rank);
+  `portal.knowledge_articles` adds required_plan(_name), and
+  `portal.knowledge_article_bodies` returns it only to members whose
+  `portal.member_plan_rank()` is high enough, or to the team — the site shows
+  `ArticleMembersGate` with "See the plans" (repository falls back to the old
+  columns before 0060). Priority support: Admin → Support marks and lists
+  first the conversations of members whose plan has `prioritySupport`.
+  Workspace discount: `api/studio-checkout.ts` takes the best live
+  `workspaceDiscountPercent` off single Workspaces/calculators/downloads
+  (not bundles; min $0.50; metadata planDiscountPercent), and the product
+  page's `StudioPurchaseCard` shows the reduced price. The member page
+  (part/all editing) and the Academy discount are stored per plan and wait
+  for those features.
   **Since Sprint 123 there are coupons** (approved by the user 18/10/2026):
   Admin → Coupons (resource `coupons`, admin-only) creates discount codes in
   Stripe (a coupon + its promotion code: % or US$ off, once / some months /

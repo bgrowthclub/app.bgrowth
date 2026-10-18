@@ -32,10 +32,22 @@ interface ArticleRow {
   updated_at: string
   access: string
   locked: boolean
+  required_plan?: string | null
+  required_plan_name?: string | null
 }
 
-const INDEX_COLUMNS =
+const BASE_COLUMNS =
   'id, slug, title, excerpt, featured_image, content_type, category, language, reading_time, tags, author_id, featured_options, publish_date, published_at, updated_at, access, locked'
+// Plan columns exist since Portal migration 0060; before it, the base ones.
+const INDEX_COLUMNS = `${BASE_COLUMNS}, required_plan, required_plan_name`
+
+// Runs a query with the plan columns, falling back to the base columns when
+// the database doesn't have them yet.
+async function withPlanColumns<T>(run: (columns: string) => PromiseLike<{ data: T | null; error: { message: string } | null }>) {
+  const first = await run(INDEX_COLUMNS)
+  if (!first.error) return first
+  return run(BASE_COLUMNS)
+}
 
 export const KNOWLEDGE_AUTHOR = { id: 'bgrowth', name: 'BGrowth Team' }
 
@@ -73,7 +85,10 @@ function toEntry(row: ArticleRow): KnowledgeArticleIndexEntry {
     featured: Boolean(row.featured_options?.featured || row.featured_options?.featuredOnHomepage),
     coverImage: row.featured_image || undefined,
     language: row.language === 'pt' ? 'pt' : 'en',
-    access: (row.access === 'everyone' ? 'everyone' : 'members') as KnowledgeAccess,
+    access: (row.access === 'everyone' ? 'everyone' : row.access?.startsWith('plan:') ? 'plan' : 'members') as KnowledgeAccess,
+    ...(row.access?.startsWith('plan:')
+      ? { requiredPlan: { slug: row.required_plan || row.access.slice(5), name: row.required_plan_name || row.access.slice(5) } }
+      : {}),
   }
 }
 
@@ -129,10 +144,10 @@ export function createStudioKnowledgeRepository(): KnowledgeRepository {
     if (!index) {
       index = (async () => {
         if (!supabase) return []
-        const { data, error } = await supabase
-          .from('knowledge_articles')
-          .select(INDEX_COLUMNS)
-          .order('published_at', { ascending: false })
+        const client = supabase
+        const { data, error } = await withPlanColumns((columns) =>
+          client.from('knowledge_articles').select(columns).order('published_at', { ascending: false }),
+        )
         if (error) {
           console.warn('[knowledge] articles not available:', error.message)
           return []
@@ -152,13 +167,15 @@ export function createStudioKnowledgeRepository(): KnowledgeRepository {
 
     async loadArticle(slug) {
       if (!supabase) return undefined
-      const { data, error } = await supabase.from('knowledge_articles').select(`${INDEX_COLUMNS}, blocks`).eq('slug', slug).maybeSingle()
+      const client = supabase
+      const { data, error } = await withPlanColumns((columns) => client.from('knowledge_articles').select(`${columns}, blocks`).eq('slug', slug).maybeSingle())
       if (error || !data) return undefined
       const row = data as unknown as ArticleRow
       let blocks = row.blocks
       let locked = row.locked
       if (locked) {
-        // Only a signed-in member can read this view; a visitor keeps the start.
+        // Only a signed-in member (on the required plan, for plan articles —
+        // migration 0060) gets a row here; anyone else keeps the start.
         const { data: full, error: fullError } = await supabase.from('knowledge_article_bodies').select('blocks').eq('slug', slug).maybeSingle()
         if (!fullError && full) {
           blocks = (full as { blocks: unknown }).blocks

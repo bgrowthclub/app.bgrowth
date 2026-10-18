@@ -493,6 +493,22 @@ async function emailMember(to: string, subject: string, html: string) {
   }
 }
 
+// Which of these members have a live plan with priority support
+// (membership_plans.entitlements.prioritySupport — Portal migration 0057).
+async function priorityMembers(db: Db, userIds: string[]): Promise<Set<string>> {
+  if (!userIds.length) return new Set()
+  const { data, error } = await db
+    .from('member_plans')
+    .select('user_id, status, starts_at, ends_at, membership_plans(entitlements)')
+    .in('user_id', userIds)
+  if (error) return new Set()
+  const out = new Set<string>()
+  for (const r of (data ?? []) as Record<string, any>[]) {
+    if (r.membership_plans?.entitlements?.prioritySupport && isLivePlan(r as any)) out.add(r.user_id)
+  }
+  return out
+}
+
 async function listSupport(req: VercelRequest, db: Db) {
   const status = str(req.query.status) === 'closed' ? 'closed' : 'open'
   const hours = await loadHours(db)
@@ -503,10 +519,14 @@ async function listSupport(req: VercelRequest, db: Db) {
     .order('last_message_at', { ascending: false })
     .limit(200)
   if (error) throw error
-  // Waiting for the team first, then the most recent.
-  const conversations = (data ?? []).sort((a, b) =>
-    a.last_sender === b.last_sender ? 0 : a.last_sender === 'customer' ? -1 : 1,
-  )
+  // Members whose plan includes priority support (Sprint 125).
+  const priorityUsers = await priorityMembers(db, [...new Set((data ?? []).map((c) => c.user_id as string))])
+  // Priority members waiting first, then anyone waiting, then the most recent.
+  const score = (c: { last_sender: string; user_id: string }) =>
+    (c.last_sender === 'customer' ? 2 : 0) + (priorityUsers.has(c.user_id) ? 1 : 0)
+  const conversations = (data ?? [])
+    .map((c) => ({ ...c, priority: priorityUsers.has(c.user_id as string) }))
+    .sort((a, b) => score(b) - score(a))
   const { count } = await db
     .from('support_conversations')
     .select('id', { count: 'exact', head: true })
@@ -1615,6 +1635,7 @@ async function catalogHealth(db: Db) {
       ['0057 Plans (Admin → Plans)', 'membership_plans'],
       ['0058 Plan billing (subscriptions)', 'member_plans.amount_cents'],
       ['0059 Products in Stripe (coupons per Workspace)', 'provider_products'],
+      ['0060 Knowledge articles by plan', 'knowledge_articles.required_plan'],
     ].map(async ([name, table]) => ({ name, ok: await tableExists(table) })),
   )
   const { data: address } = await db.from('site_settings').select('value').eq('key', 'newsletter_address').maybeSingle()

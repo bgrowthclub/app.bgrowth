@@ -241,7 +241,7 @@ export default function PlanEditor({ plan, nextRank, yearlyDiscountPercent, onSa
             )}
           </div>
           <p className="text-[12px] text-navy/45">
-            Which articles each plan reads is set on each article, in Studio (coming in step 3).
+            Which articles a plan reads is set on each article, in Studio → Knowledge Engine → “Who can read it” (that plan or above).
           </p>
         </div>
       </section>
