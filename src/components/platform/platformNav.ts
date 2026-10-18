@@ -1,4 +1,5 @@
 import {
+  ShoppingBag,
   LayoutDashboard,
   FolderOpen,
   LayoutGrid,
@@ -82,6 +83,9 @@ export const PLATFORM_NAV_GROUPS: PlatformNavGroup[] = [
       // pages/platform/MyDocumentsPage.tsx) — shared "Workspaces |
       // Documents" tabs on both pages (MyWorkspacesTabs). Both routes stay.
       { label: 'My Workspaces', to: '/platform/my-systems', icon: FolderOpen, alsoActiveOn: ['/platform/documents'] },
+      // The store (decided 17/10/2026): members had no menu path to the
+      // catalog — every product to buy, at /systems.
+      { label: 'Catalog', to: '/systems', icon: ShoppingBag },
       // BGrowth App still points at the existing catalog browse page (see
       // ARCHITECTURE.md on the Runtime) but is locked here — it isn't
       // available as its own experience inside the Workspace yet. /systems
