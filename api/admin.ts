@@ -2458,9 +2458,24 @@ async function createMemberPage(req: VercelRequest, db: Db) {
   const input = readMemberPageInput(req)
   await ensurePageSlugFree(db, input.slug)
   const userId = await resolvePageOwner(db, req.body?.ownerEmail)
-  const { data, error } = await db.from('member_pages').insert({ ...input, user_id: userId }).select('*').single()
+  const managed = pageManagedBy(req, userId)
+  const { data, error } = await db.from('member_pages').insert({ ...input, ...managed, user_id: userId }).select('*').single()
   if (error) throw error
-  return { page: (await withOwnerEmails(db, [data]))[0] }
+  return { page: (await withOwnerEmails(db, [data]))[0], ...(await ownerPageWarning(db, managed, userId)) }
+}
+
+// Who edits the page (Sprint 133): the owner (owner_managed — shown only
+// while their plan includes a page) or the team. Sent only by the new editor.
+function pageManagedBy(req: VercelRequest, userId: string | null): { owner_managed?: boolean } {
+  const v = req.body?.ownerManaged
+  if (typeof v !== 'boolean') return {}
+  return { owner_managed: v && Boolean(userId) }
+}
+
+async function ownerPageWarning(db: Db, managed: { owner_managed?: boolean }, userId: string | null) {
+  if (!managed.owner_managed || !userId) return {}
+  const { data } = await db.rpc('member_page_level', { p_user: userId })
+  return data ? {} : { warning: 'Saved — the owner edits this page now, but their plan has no page, so it is off the site until they get one (Admin → Members → Plan).' }
 }
 
 async function updateMemberPage(req: VercelRequest, db: Db) {
@@ -2471,15 +2486,16 @@ async function updateMemberPage(req: VercelRequest, db: Db) {
   const userId = await resolvePageOwner(db, req.body?.ownerEmail)
   const { data: before } = await db.from('member_pages').select('slug').eq('id', id).maybeSingle()
   const moved = await previousSlugsAfter(db, id, (before as { slug?: string } | null)?.slug, input.slug)
+  const managed = pageManagedBy(req, userId)
   const { data, error } = await db
     .from('member_pages')
-    .update({ ...input, ...moved, user_id: userId, updated_at: new Date().toISOString() })
+    .update({ ...input, ...moved, ...managed, user_id: userId, updated_at: new Date().toISOString() })
     .eq('id', id)
     .select('*')
     .maybeSingle()
   if (error) throw error
   if (!data) throw new HttpError(404, 'This page no longer exists — reload the list.')
-  return { page: (await withOwnerEmails(db, [data]))[0] }
+  return { page: (await withOwnerEmails(db, [data]))[0], ...(await ownerPageWarning(db, managed, userId)) }
 }
 
 async function deleteMemberPage(req: VercelRequest, db: Db) {

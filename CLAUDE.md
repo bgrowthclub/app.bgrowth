@@ -232,6 +232,10 @@ This repo is a **static, client-only MVP**:
   plans' lists, `my-page` GET returns `templates`). 0064 seeds three hidden
   page plans, monthly and yearly: Simple Page (5 simple models, rank 2),
   Business Page (all models, rank 4), Business Page Plus (whole page, rank 6).
+  Since Sprint 133 Admin → Pages can hand a team-made page to its owner
+  ("The owner edits this page in My Business Page" → `owner_managed`,
+  `ownerManaged` in the `member-pages` draft); the save warns when the owner
+  has no plan with a page (the page is then off the site, per RLS).
   **Since Sprint 76 member pages have numbers** (approved by the user;
   Portal migration 0045): daily totals of visits, clicks per contact
   button/featured item, course visits and course e-mails

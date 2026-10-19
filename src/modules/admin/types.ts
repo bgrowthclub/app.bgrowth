@@ -418,6 +418,9 @@ export interface AdminMemberPageDraft extends MemberPageDraft {
   // The BGrowth account that owns the page (sees its numbers in My Page);
   // empty = no owner.
   ownerEmail: string
+  // The owner edits the page themselves in My Business Page (needs a plan
+  // with a page — otherwise it stays off the site). Sprint 133.
+  ownerManaged?: boolean
 }
 
 // Admin → Site (Portal migration 0046).

@@ -205,8 +205,9 @@ export const adminService = {
   listMemberPages() {
     return call<AdminMemberPagesOverview>('GET', 'member-pages')
   },
-  async saveMemberPage(draft: AdminMemberPageDraft) {
-    return (await call<{ page: MemberPage }>(draft.id ? 'PATCH' : 'POST', 'member-pages', undefined, draft)).page
+  // `warning`: the owner edits the page but has no plan with a page yet.
+  saveMemberPage(draft: AdminMemberPageDraft) {
+    return call<{ page: MemberPage; warning?: string }>(draft.id ? 'PATCH' : 'POST', 'member-pages', undefined, draft)
   },
   getMemberPageStats(id: string, days: number) {
     return call<MemberPageStats>('GET', 'member-page-stats', { id, days: String(days) })
