@@ -1,7 +1,9 @@
-import { ArrowRight, Globe, Instagram, Link2, Mail, MapPin, MessageCircle, Music2, Youtube } from 'lucide-react'
+import { ArrowRight, Globe, Instagram, Link2, Mail, MapPin, MessageCircle, Music2, Quote, Youtube } from 'lucide-react'
+import type { CSSProperties } from 'react'
 import type { LucideIcon } from 'lucide-react'
 import { MEMBER_PAGE_LABELS, memberLinkHref, memberLinkLabel, videoEmbed } from '../../modules/find/memberPageService'
-import type { MemberPage, MemberPageLinkType } from '../../modules/find/types'
+import { PAGE_COLORS, pageBlocks } from '../../modules/find/memberPageTemplates'
+import type { MemberPage, MemberPageBlock, MemberPageLinkType } from '../../modules/find/types'
 
 const ICONS: Record<MemberPageLinkType, LucideIcon> = {
   whatsapp: MessageCircle,
@@ -14,7 +16,8 @@ const ICONS: Record<MemberPageLinkType, LucideIcon> = {
 }
 
 interface Props {
-  page: Pick<MemberPage, 'display_name' | 'headline' | 'bio' | 'photo_url' | 'location' | 'services' | 'highlights' | 'links' | 'language'>
+  page: Pick<MemberPage, 'display_name' | 'headline' | 'bio' | 'photo_url' | 'location' | 'services' | 'highlights' | 'links' | 'language'> &
+    Partial<Pick<MemberPage, 'blocks' | 'theme'>>
   // Admin preview: links don't navigate.
   preview?: boolean
   // Called when a visitor opens a contact button or featured item, with
@@ -32,7 +35,10 @@ function initials(name: string) {
 }
 
 // A member's own page (BGrowth Find™): the person first, then what they
-// offer and how to reach them. Shared by /p/:slug and the Admin preview.
+// offer and how to reach them. Shared by /p/:slug, the Admin preview and the
+// subscriber's editor. Since Sprint 127 it draws the page's blocks in order
+// (hidden and empty ones skipped) in the page's color; a page without blocks
+// keeps the original layout (top, contacts, featured, services, about).
 export default function MemberPageView({ page, preview = false, onLinkClick }: Props) {
   const t = MEMBER_PAGE_LABELS[page.language] ?? MEMBER_PAGE_LABELS.en
   const [primary, ...others] = page.links
@@ -41,8 +47,17 @@ export default function MemberPageView({ page, preview = false, onLinkClick }: P
       ? { href: '#', onClick: (e: React.MouseEvent) => e.preventDefault() }
       : { href: memberLinkHref(type, url), target: '_blank', rel: 'noreferrer', onClick: () => onLinkClick?.(target) }
 
-  return (
-    <div className="mx-auto w-full max-w-xl px-5 py-12">
+  const color = PAGE_COLORS.find((c) => c.id === page.theme?.color)
+  const style = color
+    ? ({ '--color-primary-rgb': color.rgb, '--color-primary-accent-rgb': color.rgb, '--color-primary': `rgb(${color.rgb})`, '--color-primary-accent': `rgb(${color.rgb})` } as CSSProperties)
+    : undefined
+  const cover = page.theme?.cover
+
+  function renderBlock(block: MemberPageBlock) {
+    const d = block.data ?? {}
+    switch (block.type) {
+      case 'hero':
+        return (
       <header className="flex flex-col items-center text-center">
         {page.photo_url ? (
           <img src={page.photo_url} alt={page.display_name} className="h-28 w-28 rounded-full object-cover shadow-softer ring-4 ring-white" />
@@ -59,8 +74,9 @@ export default function MemberPageView({ page, preview = false, onLinkClick }: P
           </p>
         )}
       </header>
-
-      {page.links.length > 0 && (
+        )
+      case 'contact':
+        return page.links.length > 0 ? (
         <section aria-label={t.contact} className="mt-8 space-y-3">
           {primary && (
             <a
@@ -91,9 +107,9 @@ export default function MemberPageView({ page, preview = false, onLinkClick }: P
             </div>
           )}
         </section>
-      )}
-
-      {page.highlights.length > 0 && (
+      ) : null
+      case 'highlights':
+        return page.highlights.length > 0 ? (
         <section className="mt-10">
           <h2 className="font-display text-lg font-bold text-navy">{t.highlights}</h2>
           <div className="mt-3 space-y-3">
@@ -155,9 +171,9 @@ export default function MemberPageView({ page, preview = false, onLinkClick }: P
             })}
           </div>
         </section>
-      )}
-
-      {page.services.length > 0 && (
+      ) : null
+      case 'services':
+        return page.services.length > 0 ? (
         <section className="mt-10">
           <h2 className="font-display text-lg font-bold text-navy">{t.services}</h2>
           <ul className="mt-3 divide-y divide-navy/[0.06] overflow-hidden rounded-2xl border border-navy/[0.08] bg-white">
@@ -172,20 +188,120 @@ export default function MemberPageView({ page, preview = false, onLinkClick }: P
             ))}
           </ul>
         </section>
-      )}
-
-      {page.bio && (
+      ) : null
+      case 'about':
+        return page.bio ? (
         <section className="mt-10">
           <h2 className="font-display text-lg font-bold text-navy">{t.about}</h2>
           <p className="mt-3 whitespace-pre-line text-[15px] leading-relaxed text-navy/70">{page.bio}</p>
         </section>
-      )}
+      ) : null
+      case 'testimonials': {
+        const items = (d.items ?? []).filter((i) => i.title.trim())
+        if (!items.length) return null
+        return (
+          <section className="mt-10">
+            {d.title && <h2 className="font-display text-lg font-bold text-navy">{d.title}</h2>}
+            <div className="mt-3 space-y-3">
+              {items.map((item, i) => (
+                <figure key={i} className="rounded-2xl border border-navy/[0.08] bg-white p-4 shadow-softer">
+                  <Quote size={18} className="text-primary" aria-hidden />
+                  <blockquote className="mt-2 text-[15px] leading-relaxed text-navy/75">{item.title}</blockquote>
+                  {item.body && <figcaption className="mt-2 text-[13px] font-semibold text-navy/50">— {item.body}</figcaption>}
+                </figure>
+              ))}
+            </div>
+          </section>
+        )
+      }
+      case 'gallery': {
+        const images = (d.images ?? []).filter(Boolean)
+        if (!images.length) return null
+        return (
+          <section className="mt-10">
+            {d.title && <h2 className="font-display text-lg font-bold text-navy">{d.title}</h2>}
+            <div className="mt-3 grid grid-cols-2 gap-2">
+              {images.map((src, i) => (
+                <img key={i} src={src} alt="" loading="lazy" className="aspect-square w-full rounded-xl object-cover" />
+              ))}
+            </div>
+          </section>
+        )
+      }
+      case 'text':
+      case 'area':
+        if (!d.title?.trim() && !d.body?.trim()) return null
+        return (
+          <section className="mt-10">
+            {d.title && (
+              <h2 className="flex items-center gap-2 font-display text-lg font-bold text-navy">
+                {block.type === 'area' && <MapPin size={18} className="text-primary" aria-hidden />}
+                {d.title}
+              </h2>
+            )}
+            {d.body && <p className="mt-3 whitespace-pre-line text-[15px] leading-relaxed text-navy/70">{d.body}</p>}
+          </section>
+        )
+      case 'faq': {
+        const items = (d.items ?? []).filter((i) => i.title.trim())
+        if (!items.length) return null
+        return (
+          <section className="mt-10">
+            {d.title && <h2 className="font-display text-lg font-bold text-navy">{d.title}</h2>}
+            <div className="mt-3 divide-y divide-navy/[0.06] overflow-hidden rounded-2xl border border-navy/[0.08] bg-white">
+              {items.map((item, i) => (
+                <details key={i} className="group px-4 py-3.5">
+                  <summary className="cursor-pointer list-none font-semibold text-navy">{item.title}</summary>
+                  {item.body && <p className="mt-2 whitespace-pre-line text-[14px] leading-relaxed text-navy/60">{item.body}</p>}
+                </details>
+              ))}
+            </div>
+          </section>
+        )
+      }
+      case 'cta': {
+        if (!d.title?.trim() && !d.body?.trim()) return null
+        return (
+          <section className="mt-10 rounded-2xl bg-primary px-6 py-8 text-center text-white">
+            {d.title && <h2 className="font-display text-xl font-bold">{d.title}</h2>}
+            {d.body && <p className="mt-2 text-[15px] leading-relaxed text-white/85">{d.body}</p>}
+            {primary && (
+              <a
+                {...linkProps(primary.type, primary.url, `link:${primary.type}`)}
+                className="mt-5 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-[15px] font-semibold text-primary transition-opacity hover:opacity-90"
+              >
+                {d.button?.trim() || memberLinkLabel(primary, page.language)} <ArrowRight size={16} aria-hidden />
+              </a>
+            )}
+          </section>
+        )
+      }
+      default:
+        return null
+    }
+  }
+
+  return (
+    <div style={style} className="w-full">
+      {cover && <div className="h-40 w-full bg-cover bg-center sm:h-52" style={{ backgroundImage: `url(${cover})` }} aria-hidden />}
+      <div className={`mx-auto w-full max-w-xl px-5 ${cover ? 'pb-12' : 'py-12'}`}>
+        {pageBlocks(page)
+          .filter((block) => !block.hidden)
+          .map((block) => {
+            const node = renderBlock(block)
+            return node ? (
+              <div key={block.id} className={block.type === 'hero' && cover ? '-mt-14' : undefined}>
+                {node}
+              </div>
+            ) : null
+          })}
 
       <footer className="mt-14 text-center">
         <a href={preview ? '#' : '/'} onClick={preview ? (e) => e.preventDefault() : undefined} className="text-[12.5px] font-medium text-navy/35 hover:text-navy/60">
           {t.madeWith}
         </a>
       </footer>
+      </div>
     </div>
   )
 }

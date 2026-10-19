@@ -174,7 +174,7 @@ export default function PlanEditor({ plan, nextRank, yearlyDiscountPercent, onSa
               <option value="partial">Part of the page</option>
               <option value="full">The whole page</option>
             </select>
-            <span className="mt-1 block text-[12px] text-navy/40">Applies once members can edit their own page.</span>
+            <span className="mt-1 block text-[12px] text-navy/40">Part: a ready-made model as it is, one featured item, no numbers. Whole: sections, look, address, numbers.</span>
           </label>
           <label className={CHECK}>
             <input

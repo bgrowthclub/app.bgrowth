@@ -82,15 +82,24 @@ async function loadMemberPage(supabase: PortalClient, userId: string): Promise<U
   return row ? { id: row.id, slug: row.slug, displayName: row.display_name, language: row.language === 'pt' ? 'pt' : 'en' } : null
 }
 
+// What the member's plan allows for their own page (Portal migration 0062);
+// null before it runs or with no such plan.
+async function loadPageLevel(supabase: PortalClient, userId: string): Promise<User['pageLevel'] | null> {
+  const { data, error } = await supabase.rpc('member_page_level', { p_user: userId })
+  if (error) return null
+  return data === 'full' || data === 'partial' ? data : null
+}
+
 // Builds BGrowth Identity™'s User from a real Supabase account. Profile and
 // ownership are read best-effort: if either read fails the member is still
 // signed in, just with nothing owned shown yet.
 export async function loadPortalMember(supabase: PortalClient, authUser: AuthUser): Promise<User> {
-  const [profile, ownedProducts, adminRole, memberPage] = await Promise.all([
+  const [profile, ownedProducts, adminRole, memberPage, pageLevel] = await Promise.all([
     loadProfile(supabase, authUser.id).catch(() => null),
     loadOwnedProductSlugs(supabase, authUser.id).catch(() => [] as string[]),
     loadAdminRole(supabase, authUser.id).catch(() => null),
     loadMemberPage(supabase, authUser.id).catch(() => null),
+    loadPageLevel(supabase, authUser.id).catch(() => null),
   ])
 
   const email = authUser.email ?? ''
@@ -121,5 +130,6 @@ export async function loadPortalMember(supabase: PortalClient, authUser: AuthUse
     isAdmin: adminRole !== null,
     adminRole: adminRole ?? undefined,
     memberPage: memberPage ?? undefined,
+    pageLevel: pageLevel ?? undefined,
   }
 }

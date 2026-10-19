@@ -6,7 +6,8 @@ import EmptyState from '../../../components/ui/EmptyState'
 import Button from '../../../components/ui/Button'
 import ConfirmDialog from '../../../components/ui/ConfirmDialog'
 import AdminMemberPageRow from '../../../components/admin/AdminMemberPageRow'
-import MemberPageEditor from '../../../components/admin/MemberPageEditor'
+import MemberPageBuilder from '../../../components/find/MemberPageBuilder'
+import { INPUT } from '../../../components/admin/styles'
 import AdminMemberPageStats from '../../../components/admin/AdminMemberPageStats'
 import { CARD, SMALL_BUTTON } from '../../../components/admin/styles'
 import { adminService } from '../../../modules/admin/adminService'
@@ -24,6 +25,11 @@ export default function AdminMemberPagesPage() {
   const [numbers, setNumbers] = useState<MemberPage | null>(null)
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
+  // The owner e-mail field of the page being edited (team only).
+  const [ownerEmail, setOwnerEmail] = useState('')
+  useEffect(() => {
+    setOwnerEmail(editing && editing !== 'new' ? editing.owner_email ?? '' : '')
+  }, [editing])
 
   useEffect(() => {
     adminService
@@ -81,7 +87,20 @@ export default function AdminMemberPagesPage() {
           {numbers && !editing && <AdminMemberPageStats key={numbers.id} page={numbers} onClose={() => setNumbers(null)} />}
 
           {editing ? (
-            <MemberPageEditor key={editing === 'new' ? 'new' : editing.id} page={editing === 'new' ? null : editing} onSave={save} onCancel={() => setEditing(null)} />
+            <MemberPageBuilder
+              key={editing === 'new' ? 'new' : editing.id}
+              mode="team"
+              page={editing === 'new' ? null : editing}
+              upload={(dataUrl) => adminService.uploadMemberPageImage(dataUrl)}
+              onSave={(draft) => save({ ...draft, ownerEmail })}
+              onCancel={() => setEditing(null)}
+              extra={
+                <label className="block">
+                  <span className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-navy/40">Owner — BGrowth account e-mail (optional)</span>
+                  <input type="email" value={ownerEmail} onChange={(e) => setOwnerEmail(e.target.value)} className={INPUT} placeholder="The member sees this page’s numbers in My Page" />
+                </label>
+              }
+            />
           ) : (
             <div className="flex justify-end">
               <Button
