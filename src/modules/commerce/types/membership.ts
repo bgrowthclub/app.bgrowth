@@ -59,6 +59,8 @@ export interface MembershipPlan {
 export interface PlanEntitlements {
   // The member's own page (/p/…): part of it editable, or all of it.
   memberPage?: 'partial' | 'full'
+  // Which page models it allows (ids from memberPageTemplates); none = all.
+  pageTemplates?: string[]
   prioritySupport?: boolean
   // Opens every product (Workspaces, calculators, downloads) while the plan
   // is live — Portal migration 0061. Otherwise a plan opens the products

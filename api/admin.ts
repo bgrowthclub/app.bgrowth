@@ -3016,6 +3016,11 @@ function cleanEntitlements(value: unknown) {
   const out: Record<string, unknown> = {}
   if (v.memberPage === 'partial' || v.memberPage === 'full') out.memberPage = v.memberPage
   if (v.prioritySupport === true) out.prioritySupport = true
+  // Which page models the plan allows (Sprint 132); none listed = all.
+  if (out.memberPage && Array.isArray(v.pageTemplates)) {
+    const list = [...new Set(v.pageTemplates.filter((t: unknown) => typeof t === 'string' && PAGE_TEMPLATES.has(t)))]
+    if (list.length && list.length < PAGE_TEMPLATES.size) out.pageTemplates = list
+  }
   // Opens every product while the plan is live (Portal migration 0061).
   if (v.includesAll === true) out.includesAll = true
   const ws = percent(v.workspaceDiscountPercent, 'Workspace discount')

@@ -3,6 +3,7 @@ import Button from '../ui/Button'
 import { CARD, INPUT, SMALL_BUTTON } from './styles'
 import type { AdminPlan, AdminPlanDraft } from '../../modules/admin/types'
 import type { PlanEntitlements } from '../../modules/commerce/types/membership'
+import { MEMBER_PAGE_TEMPLATES } from '../../modules/find/memberPageTemplates'
 
 interface Props {
   plan: AdminPlan | null
@@ -176,6 +177,31 @@ export default function PlanEditor({ plan, nextRank, yearlyDiscountPercent, onSa
             </select>
             <span className="mt-1 block text-[12px] text-navy/40">Part: a ready-made model as it is, one featured item, no numbers. Whole: sections, look, address, numbers.</span>
           </label>
+          {ent.memberPage && (
+            <div>
+              <span className="text-[13px] font-semibold text-navy">Page models this plan allows</span>
+              <span className="mb-2 block text-[12px] text-navy/40">None ticked = all models.</span>
+              <div className="grid gap-1.5 sm:grid-cols-2">
+                {MEMBER_PAGE_TEMPLATES.map((t) => {
+                  const list = ent.pageTemplates ?? []
+                  return (
+                    <label key={t.id} className={CHECK}>
+                      <input
+                        type="checkbox"
+                        className="mt-0.5 h-4 w-4 accent-primary"
+                        checked={list.includes(t.id)}
+                        onChange={(e) => {
+                          const next = e.target.checked ? [...list, t.id] : list.filter((x) => x !== t.id)
+                          setEnt({ ...ent, pageTemplates: next.length ? next : undefined })
+                        }}
+                      />
+                      <span className="text-[13px] text-navy/75">{t.name.en}</span>
+                    </label>
+                  )
+                })}
+              </div>
+            </div>
+          )}
           <label className={CHECK}>
             <input
               type="checkbox"

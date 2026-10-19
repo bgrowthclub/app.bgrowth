@@ -58,6 +58,8 @@ export default function MyPagePage() {
   const linked = user?.memberPage
   const [level, setLevel] = useState<MemberPageLevel | null>(user?.pageLevel ?? null)
   const [page, setPage] = useState<MemberPage | null | undefined>(undefined)
+  // The models the plan allows (null = all).
+  const [templates, setTemplates] = useState<string[] | null>(null)
   const [tab, setTab] = useState<'edit' | 'numbers'>('edit')
   const [days, setDays] = useState(30)
   const [stats, setStats] = useState<MemberPageStats | null>(null)
@@ -70,6 +72,7 @@ export default function MyPagePage() {
       .get()
       .then((r) => {
         setLevel(r.level)
+        setTemplates(r.templates ?? null)
         setPage(r.page)
       })
       .catch((err) => {
@@ -143,6 +146,7 @@ export default function MyPagePage() {
           key={page?.id ?? 'new'}
           mode={level}
           page={page}
+          allowedTemplates={templates}
           upload={(dataUrl) => myPageService.uploadImage(dataUrl)}
           onSave={async (draft) => {
             const saved = await myPageService.save(draft)
