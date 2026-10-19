@@ -33,6 +33,16 @@ export const MEMBER_PAGE_LABELS = {
     credentials: 'Licenses & credentials',
     credentialsNote: 'As stated by this professional — not verified by BGrowth.',
     disclaimer: 'The information on this page is provided by its owner and isn’t verified by BGrowth.',
+    picks: 'My picks',
+    topPicks: 'My top picks',
+    allPicks: 'All',
+    searchPicks: 'Search products…',
+    seeProduct: 'See product',
+    seePicks: 'See my picks',
+    noPicks: 'Nothing here yet.',
+    affiliateNote:
+      'Some links on this page are affiliate links: if you buy through them, I may earn a commission at no extra cost to you. Prices and availability are set by each store.',
+    categories: { car: 'Car & Driving', work: 'Work & Business', home: 'Home & Living', tech: 'Tech & Gadgets', travel: 'Travel', finance: 'Money & Finance', learning: 'Learning', other: 'Other' },
   },
   pt: {
     services: 'Serviços',
@@ -45,6 +55,16 @@ export const MEMBER_PAGE_LABELS = {
     credentials: 'Licenças e credenciais',
     credentialsNote: 'Informadas pelo profissional — não verificadas pela BGrowth.',
     disclaimer: 'As informações desta página são do seu responsável e não são verificadas pela BGrowth.',
+    picks: 'Minhas indicações',
+    topPicks: 'Meus favoritos',
+    allPicks: 'Todos',
+    searchPicks: 'Buscar produtos…',
+    seeProduct: 'Ver produto',
+    seePicks: 'Ver minhas indicações',
+    noPicks: 'Nada aqui ainda.',
+    affiliateNote:
+      'Alguns links desta página são de afiliado: se você comprar por eles, posso receber uma comissão, sem custo extra para você. Preços e disponibilidade são definidos por cada loja.',
+    categories: { car: 'Carro', work: 'Trabalho e negócios', home: 'Casa', tech: 'Tecnologia', travel: 'Viagem', finance: 'Finanças', learning: 'Aprendizado', other: 'Outros' },
   },
 } as const
 

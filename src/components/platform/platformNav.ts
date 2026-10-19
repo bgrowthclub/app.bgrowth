@@ -43,6 +43,9 @@ export interface PlatformNavItem {
   // the ComingSoonModal instead of navigating — see SidebarItem.tsx. Only
   // Dashboard, My Workspaces, Settings, and Support are unlocked today.
   locked?: boolean
+  // Shown with a lock and "Upgrade", leading to the plans (set by the
+  // Sidebar for a page-plan item the member's plan doesn't include).
+  upgrade?: boolean
   // A live count shown next to the label (see useNavBadges.ts).
   badge?: NavBadgeKey
   // In an adminOnly group: also shown to the Support role (see

@@ -50,6 +50,26 @@ export type MemberPageBlockType =
   // Licenses, certifications, insurance — shown as stated by the member,
   // with a note that BGrowth hasn't verified them (Sprint 128).
   | 'credentials'
+  // Affiliate Picks (Sprint 131): products the member recommends, each with
+  // their own buy link (affiliate code kept as typed).
+  | 'products'
+
+export type MemberPageProductCategory = 'car' | 'work' | 'home' | 'tech' | 'travel' | 'finance' | 'learning' | 'other'
+
+// A product the member recommends. Everything comes from the member — the
+// platform never adds prices, ratings or reviews.
+export interface MemberPageProduct {
+  title: string
+  description?: string
+  image?: string
+  // The buy link exactly as the member gave it (affiliate code included).
+  url: string
+  category?: MemberPageProductCategory
+  // Shown in "My top picks".
+  favorite?: boolean
+  // Button text (default: "See product").
+  cta?: string
+}
 
 export interface MemberPageBlockData {
   title?: string
@@ -60,6 +80,9 @@ export interface MemberPageBlockData {
   images?: string[]
   // cta: button text; it opens the page's first contact button
   button?: string
+  // products: the recommendations; body = the member's own disclosure
+  // (a standard one is always shown too)
+  products?: MemberPageProduct[]
 }
 
 export interface MemberPageBlock {

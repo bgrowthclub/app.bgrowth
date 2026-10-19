@@ -17,6 +17,27 @@ export default function SidebarItem({ item, collapsed = false, count = 0, onNavi
   const { pathname } = useLocation()
   const activeElsewhere = alsoActiveOn?.some((path) => pathname === path || pathname.startsWith(`${path}/`)) ?? false
 
+  if (item.upgrade) {
+    return (
+      <NavLink
+        to="/platform/membership"
+        onClick={onNavigate}
+        title={`${label} — available with a plan`}
+        aria-label={`${label} — available with a plan`}
+        className={`flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13.5px] font-medium text-navy/50 transition-colors hover:bg-bg-soft hover:text-navy ${collapsed ? 'justify-center' : ''}`}
+      >
+        <Icon size={17} strokeWidth={2} className="shrink-0" />
+        {!collapsed && (
+          <>
+            <span className="flex-1 truncate">{label}</span>
+            <span className="shrink-0 rounded-full bg-primary/10 px-1.5 py-0.5 text-[9.5px] font-semibold uppercase tracking-wide text-primary">Upgrade</span>
+            <Lock size={12} className="shrink-0 text-navy/30" />
+          </>
+        )}
+      </NavLink>
+    )
+  }
+
   if (locked) {
     return (
       <button

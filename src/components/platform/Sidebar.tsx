@@ -20,10 +20,11 @@ function SidebarBody({ collapsed, badges, onNavigate }: { collapsed: boolean; ba
   const role = adminRoleOf(user)
   // Admin groups: everything for Admins, only the items marked `support`
   // for the Support role.
-  // "My Page" only for members who have one.
+  // "My Business Page": open for members who have one; for everyone else it
+  // shows locked, leading to the plans (Sprint 131).
   const groups = PLATFORM_NAV_GROUPS.filter((group) => !group.adminOnly || role)
     .map((group) => (group.adminOnly && role === 'support' ? { ...group, items: group.items.filter((item) => item.support) } : group))
-    .map((group) => ({ ...group, items: group.items.filter((item) => !item.pageOwnerOnly || user?.memberPage || user?.pageLevel) }))
+    .map((group) => ({ ...group, items: group.items.map((item) => (item.pageOwnerOnly && !user?.memberPage && !user?.pageLevel ? { ...item, upgrade: true } : item)) }))
     .filter((group) => group.items.length > 0)
   return (
     <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5">

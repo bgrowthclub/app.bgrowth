@@ -1,6 +1,7 @@
 import { ArrowRight, Link2, MapPin, Quote } from 'lucide-react'
 import { MEMBER_LINK_ICONS } from './memberLinkIcons'
 import MemberSiteView from './MemberSiteView'
+import MemberProductPicks from './MemberProductPicks'
 import type { CSSProperties } from 'react'
 import { MEMBER_PAGE_LABELS, memberLinkHref, memberLinkLabel, videoEmbed } from '../../modules/find/memberPageService'
 import { PAGE_COLORS, pageBlocks, pageSkin } from '../../modules/find/memberPageTemplates'
@@ -255,6 +256,13 @@ export default function MemberPageView({ page, preview = false, onLinkClick }: P
           </section>
         )
       }
+      case 'products':
+        if (!(d.products ?? []).length) return null
+        return (
+          <section className="mt-10">
+            <MemberProductPicks products={d.products ?? []} title={d.title} note={d.body} language={page.language} preview={preview} onLinkClick={onLinkClick} headingClass="font-display text-xl font-bold text-navy" />
+          </section>
+        )
       case 'cta': {
         if (!d.title?.trim() && !d.body?.trim()) return null
         return (

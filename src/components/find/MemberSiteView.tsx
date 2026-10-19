@@ -1,6 +1,7 @@
 import { ArrowRight, BadgeCheck, Link2, MapPin, Quote } from 'lucide-react'
 import type { CSSProperties, MouseEvent, ReactNode } from 'react'
 import { MEMBER_LINK_ICONS } from './memberLinkIcons'
+import MemberProductPicks from './MemberProductPicks'
 import { MEMBER_PAGE_LABELS, memberLinkHref, memberLinkLabel, videoEmbed } from '../../modules/find/memberPageService'
 import { PAGE_COLORS, pageBlocks } from '../../modules/find/memberPageTemplates'
 import type { MemberPageSkin } from '../../modules/find/memberPageTemplates'
@@ -35,6 +36,13 @@ const LOOK: Record<MemberPageSkin, { page: string; band: string; h2: string; car
     band: 'bg-[color:var(--color-paper)]',
     h2: 'font-display text-3xl font-bold uppercase tracking-tight text-navy md:text-5xl',
     card: 'border-t border-navy/15',
+    wide: 'max-w-6xl',
+  },
+  affiliate: {
+    page: 'bg-white text-navy',
+    band: 'bg-white',
+    h2: 'font-display text-2xl font-bold tracking-tight text-navy md:text-3xl',
+    card: 'rounded-2xl border border-navy/[0.08] bg-white shadow-softer',
     wide: 'max-w-6xl',
   },
   personal: {
@@ -162,6 +170,55 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
             {buttons()}
           </div>
         </section>
+      )
+    }
+
+    if (skin === 'affiliate') {
+      const heroData = blocks.find((b) => b.type === 'hero')?.data ?? {}
+      const art = page.theme?.cover || page.photo_url
+      return (
+        <div key="hero">
+          <header className="border-b border-navy/[0.06] bg-white">
+            <div className={`mx-auto flex ${look.wide} items-center gap-3 px-5 py-3`}>
+              {photo('h-10 w-10 shrink-0 rounded-full !text-sm')}
+              <div className="min-w-0">
+                <p className="truncate font-display text-[15px] font-bold leading-tight">{name}</p>
+                {page.location && <p className="truncate text-[12px] text-navy/55">{page.location}</p>}
+              </div>
+            </div>
+          </header>
+          <section className="relative overflow-hidden bg-gradient-to-br from-primary/[0.08] via-white to-primary/[0.04]">
+            {art && (
+              <div className="absolute inset-y-0 right-0 hidden w-1/2 md:block" aria-hidden>
+                <img src={art} alt="" className="h-full w-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-r from-white via-white/30 to-transparent" />
+              </div>
+            )}
+            {art && (
+              <div className="relative h-48 md:hidden" aria-hidden>
+                <img src={art} alt="" className="h-full w-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-t from-white to-transparent" />
+              </div>
+            )}
+            <div className={`relative mx-auto ${look.wide} px-5 pb-12 pt-6 md:py-20`}>
+              <div className="md:max-w-[52%]">
+                {heroData.title && <p className="text-[12.5px] font-bold uppercase tracking-[0.18em] text-primary">{heroData.title}</p>}
+                <h1 className="mt-3 font-display text-4xl font-bold leading-[1.05] tracking-tight md:text-6xl">{headline || name}</h1>
+                {heroData.body && <p className="mt-4 text-[16.5px] leading-relaxed text-navy/70">{heroData.body}</p>}
+                <a
+                  href="#picks"
+                  onClick={(e) => {
+                    e.preventDefault()
+                    ;(e.currentTarget.ownerDocument.getElementById('picks') ?? null)?.scrollIntoView({ behavior: 'smooth' })
+                  }}
+                  className="mt-7 inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-[15px] font-semibold text-white hover:bg-primary/90"
+                >
+                  {heroData.button || t.seePicks} <ArrowRight size={17} aria-hidden />
+                </a>
+              </div>
+            </div>
+          </section>
+        </div>
       )
     }
 
@@ -399,6 +456,12 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
           band,
         )
       }
+      case 'products':
+        if (!(d.products ?? []).length) return null
+        return section(
+          block.id,
+          <MemberProductPicks products={d.products ?? []} title={d.title} note={d.body} language={page.language} preview={preview} onLinkClick={onLinkClick} headingClass={look.h2} />,
+        )
       case 'cta': {
         if (!d.title?.trim() && !d.body?.trim()) return null
         return (
