@@ -236,6 +236,9 @@ This repo is a **static, client-only MVP**:
   ("The owner edits this page in My Business Page" → `owner_managed`,
   `ownerManaged` in the `member-pages` draft); the save warns when the owner
   has no plan with a page (the page is then off the site, per RLS).
+  Since Sprint 134 a contact button can be a WhatsApp group (`whatsapp_group`:
+  the chat.whatsapp.com invite link, validated; default label "Join the
+  WhatsApp group").
   **Since Sprint 76 member pages have numbers** (approved by the user;
   Portal migration 0045): daily totals of visits, clicks per contact
   button/featured item, course visits and course e-mails

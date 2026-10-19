@@ -46,6 +46,7 @@ const SMALL = LINK_BUTTON
 
 const LINK_TYPES: { id: MemberPageLinkType; label: string; placeholder: string }[] = [
   { id: 'whatsapp', label: 'WhatsApp', placeholder: '+1 555 123 4567' },
+  { id: 'whatsapp_group', label: 'WhatsApp group', placeholder: 'https://chat.whatsapp.com/…' },
   { id: 'phone', label: 'Call', placeholder: '+1 555 123 4567' },
   { id: 'booking', label: 'Booking', placeholder: 'https://calendly.com/…' },
   { id: 'instagram', label: 'Instagram', placeholder: 'https://instagram.com/…' },
@@ -309,6 +310,9 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                     </select>
                     <input value={link.url} onChange={(e) => setLink(i, { url: e.target.value })} className={INPUT} placeholder={LINK_TYPES.find((t) => t.id === link.type)?.placeholder} aria-label="Address" />
                   </div>
+                  {link.type === 'whatsapp_group' && link.url.trim() && !/^https:\/\/chat\.whatsapp\.com\/\S+$/i.test(link.url.trim()) && (
+                    <p className="text-[12.5px] text-red-500">Paste the full invite link: in WhatsApp, Group info → Invite via link → Copy link.</p>
+                  )}
                   <input value={link.label} onChange={(e) => setLink(i, { label: e.target.value })} maxLength={40} className={INPUT} placeholder="Button text (optional)" aria-label="Button text" />
                 </Row>
               ))}

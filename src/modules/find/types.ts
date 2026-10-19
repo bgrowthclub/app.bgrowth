@@ -3,7 +3,7 @@
 // Subscriptions exist; until then the team builds pages in Admin → Pages.
 
 // 'phone' (call) and 'booking' (a scheduling link) since Sprint 128.
-export type MemberPageLinkType = 'whatsapp' | 'phone' | 'booking' | 'email' | 'instagram' | 'tiktok' | 'youtube' | 'website' | 'other'
+export type MemberPageLinkType = 'whatsapp' | 'whatsapp_group' | 'phone' | 'booking' | 'email' | 'instagram' | 'tiktok' | 'youtube' | 'website' | 'other'
 
 export interface MemberPageLink {
   type: MemberPageLinkType
