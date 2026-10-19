@@ -2222,7 +2222,7 @@ async function archiveBundle(req: VercelRequest, db: Db) {
 // builds them here. Visitors read published pages straight from Supabase
 // (row-level security); every write comes through here.
 // ---------------------------------------------------------------------------
-const MEMBER_LINK_TYPES = ['whatsapp', 'phone', 'booking', 'email', 'instagram', 'tiktok', 'youtube', 'website', 'other']
+const MEMBER_LINK_TYPES = ['whatsapp', 'whatsapp_group', 'phone', 'booking', 'email', 'instagram', 'tiktok', 'youtube', 'website', 'other']
 const PAGE_SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/
 // Addresses the site itself uses at the top level of /p/ — kept free.
 const RESERVED_PAGE_SLUGS = new Set(['admin', 'bgrowth', 'support', 'help', 'api', 'new', 'edit', 'settings'])
@@ -2379,6 +2379,10 @@ function readMemberPageInput(req: VercelRequest) {
     const url = cleanText(raw?.url, 300)
     if (!url) return []
     if (type === 'email' && !/^(mailto:)?[^\s@]+@[^\s@]+\.[^\s@]+$/.test(url)) throw new HttpError(400, `“${url}” isn’t an e-mail address.`)
+    // A WhatsApp group is its invite link (Sprint 134).
+    if (type === 'whatsapp_group' && !/^https:\/\/chat\.whatsapp\.com\/\S+$/i.test(url)) {
+      throw new HttpError(400, 'Paste the group’s full invite link (https://chat.whatsapp.com/…) — in WhatsApp: Group info → Invite via link → Copy link.')
+    }
     if ((type === 'whatsapp' || type === 'phone') && !/^https?:\/\//.test(url) && url.replace(/\D/g, '').length < 8) {
       throw new HttpError(400, 'Write the WhatsApp number with country code (for example +1 555 123 4567).')
     }

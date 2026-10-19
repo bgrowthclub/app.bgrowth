@@ -83,6 +83,7 @@ export function memberLinkHref(type: string, url: string): string {
 
 const DEFAULT_LINK_LABELS: Record<string, { en: string; pt: string }> = {
   whatsapp: { en: 'WhatsApp', pt: 'WhatsApp' },
+  whatsapp_group: { en: 'Join the WhatsApp group', pt: 'Entrar no grupo do WhatsApp' },
   phone: { en: 'Call', pt: 'Ligar' },
   booking: { en: 'Book a time', pt: 'Agendar horário' },
   email: { en: 'E-mail', pt: 'E-mail' },
