@@ -27,8 +27,11 @@ export default function AdminMemberPagesPage() {
   const [notice, setNotice] = useState<string | null>(null)
   // The owner e-mail field of the page being edited (team only).
   const [ownerEmail, setOwnerEmail] = useState('')
+  // The owner edits it themselves (Sprint 133).
+  const [ownerManaged, setOwnerManaged] = useState(false)
   useEffect(() => {
     setOwnerEmail(editing && editing !== 'new' ? editing.owner_email ?? '' : '')
+    setOwnerManaged(editing && editing !== 'new' ? Boolean(editing.owner_managed) : false)
   }, [editing])
 
   useEffect(() => {
@@ -39,10 +42,17 @@ export default function AdminMemberPagesPage() {
   }, [])
 
   async function save(draft: AdminMemberPageDraft) {
-    const saved = await adminService.saveMemberPage(draft)
+    const { page: saved, warning } = await adminService.saveMemberPage(draft)
     setData((d) => (d ? { ...d, pages: draft.id ? d.pages.map((p) => (p.id === saved.id ? saved : p)) : [saved, ...d.pages] } : d))
     setEditing(null)
-    setNotice(saved.status === 'published' ? `bgrowth.app/p/${saved.slug} is live.` : `${saved.display_name}’s page saved as a draft.`)
+    setNotice(
+      warning ??
+        (saved.owner_managed
+          ? `${saved.display_name} now edits this page in My Business Page.`
+          : saved.status === 'published'
+            ? `bgrowth.app/p/${saved.slug} is live.`
+            : `${saved.display_name}’s page saved as a draft.`),
+    )
   }
 
   async function confirmRemove() {
@@ -92,12 +102,21 @@ export default function AdminMemberPagesPage() {
               mode="team"
               page={editing === 'new' ? null : editing}
               upload={(dataUrl) => adminService.uploadMemberPageImage(dataUrl)}
-              onSave={(draft) => save({ ...draft, ownerEmail })}
+              onSave={(draft) => save({ ...draft, ownerEmail, ownerManaged: ownerManaged && Boolean(ownerEmail.trim()) })}
               onCancel={() => setEditing(null)}
               extra={
                 <label className="block">
                   <span className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-navy/40">Owner — BGrowth account e-mail (optional)</span>
                   <input type="email" value={ownerEmail} onChange={(e) => setOwnerEmail(e.target.value)} className={INPUT} placeholder="The member sees this page’s numbers in My Page" />
+                  <span className="mt-2 flex items-start gap-2 text-[13px] text-navy/70">
+                    <input type="checkbox" className="mt-0.5 h-4 w-4 accent-primary" checked={ownerManaged} disabled={!ownerEmail.trim()} onChange={(e) => setOwnerManaged(e.target.checked)} />
+                    <span>
+                      The owner edits this page in My Business Page
+                      <span className="block text-[12px] text-navy/45">
+                        They need a plan with a page (Pro, Enterprise or a page plan) — without one the page goes off the site. With a “part of the page” plan they keep the model’s sections. The team can still edit it here.
+                      </span>
+                    </span>
+                  </span>
                 </label>
               }
             />
