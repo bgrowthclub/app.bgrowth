@@ -591,6 +591,27 @@ async function memberPageLevel(db: Db, userId: string): Promise<'partial' | 'ful
   return data === 'full' || data === 'partial' ? data : null
 }
 
+// The page models the member's plans allow (Sprint 132): null = all of them
+// (a plan with a page and no list), else the union of the plans' lists.
+async function memberPageTemplates(db: Db, userId: string): Promise<string[] | null> {
+  const now = new Date().toISOString()
+  const { data, error } = await db
+    .from('member_plans')
+    .select('starts_at, ends_at, membership_plans(entitlements)')
+    .eq('user_id', userId)
+    .in('status', ['active', 'trialing', 'past_due'])
+  if (error) return null
+  const allowed = new Set<string>()
+  for (const row of (data ?? []) as any[]) {
+    if (row.starts_at > now || (row.ends_at && row.ends_at <= now)) continue
+    const ent = (Array.isArray(row.membership_plans) ? row.membership_plans[0] : row.membership_plans)?.entitlements ?? {}
+    if (ent.memberPage !== 'partial' && ent.memberPage !== 'full') continue
+    if (!Array.isArray(ent.pageTemplates) || !ent.pageTemplates.length) return null
+    ent.pageTemplates.forEach((t: string) => allowed.add(t))
+  }
+  return [...allowed]
+}
+
 function slugFrom(text: string) {
   return text
     .normalize('NFD')
@@ -683,7 +704,8 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string }, re
     throw error
   }
 
-  if (resource === 'my-page' && req.method === 'GET') return { level, page: existing ?? null }
+  const templates = level ? await memberPageTemplates(db, user.id) : null
+  if (resource === 'my-page' && req.method === 'GET') return { level, templates, page: existing ?? null }
   if (!level) throw new HttpError(403, 'Your plan doesn’t include a page. See the plans in Account → Membership.')
   // A page the team made for this member stays the team's to edit.
   if (existing && !existing.owner_managed) throw new HttpError(403, 'Your page is managed by the BGrowth team — talk to us through Support to change it.')
@@ -702,6 +724,7 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string }, re
 
   if (req.method !== 'PUT') throw new HttpError(405, 'Use PUT.')
   const input = readMyPage((req.body ?? {}) as Record<string, any>)
+  if (templates && !templates.includes(input.template)) throw new HttpError(403, 'Your plan doesn’t include this model — choose another one or see the plans in Account → Membership.')
   let slug = existing?.slug as string | undefined
 
   if (level === 'partial') {

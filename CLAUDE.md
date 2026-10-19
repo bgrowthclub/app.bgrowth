@@ -225,6 +225,13 @@ This repo is a **static, client-only MVP**:
   `platformNav`). A page sold on its own = a plan with only the `memberPage`
   entitlement and a rank just above Free (below any plan whose included
   products it must not open).
+  Since Sprint 132 (Portal migration 0064) a plan can limit the page models
+  (`entitlements.pageTemplates`, none = all; Admin → Plans checkboxes): the
+  picker shows the others locked ("Higher plan" → /platform/membership) and
+  `api/account.ts` refuses them (`memberPageTemplates()`: union of the live
+  plans' lists, `my-page` GET returns `templates`). 0064 seeds three hidden
+  page plans, monthly and yearly: Simple Page (5 simple models, rank 2),
+  Business Page (all models, rank 4), Business Page Plus (whole page, rank 6).
   **Since Sprint 76 member pages have numbers** (approved by the user;
   Portal migration 0045): daily totals of visits, clicks per contact
   button/featured item, course visits and course e-mails

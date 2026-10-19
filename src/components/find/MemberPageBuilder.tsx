@@ -37,6 +37,8 @@ interface Props {
   onCancel?: () => void
   // Extra fields above the sections (the team's owner e-mail).
   extra?: ReactNode
+  // The models the member's plan allows (null/undefined = all).
+  allowedTemplates?: string[] | null
 }
 
 const LABEL = 'mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-navy/40'
@@ -113,7 +115,8 @@ function Add({ label, onClick, disabled }: { label: string; onClick: () => void;
 
 // The page editor with a live preview: model, basics, look and the page's
 // sections (blocks). Shared by Admin → Pages and the subscriber's My Page.
-export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel, extra }: Props) {
+export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel, extra, allowedTemplates }: Props) {
+  const allowed = (id: string) => !allowedTemplates || allowedTemplates.includes(id)
   const free = mode !== 'partial'
   const [language, setLanguage] = useState<MemberPage['language']>(page?.language ?? 'en')
   const [template, setTemplate] = useState(page ? (page.template ?? 'blank') : '')
@@ -487,15 +490,21 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
               <button type="button" onClick={() => setCandidate(template ? '' : null)} className={`${SMALL} inline-flex items-center gap-1.5 text-navy/60 hover:bg-bg-soft`}>
                 <ArrowLeft size={14} /> See the other models
               </button>
-              <Button type="button" onClick={() => chooseTemplate(chosen.id)} className={SMALL_BUTTON}>
-                <Check size={16} /> {template === chosen.id ? 'Keep this model' : 'Use this model'}
-              </Button>
+              {allowed(chosen.id) ? (
+                <Button type="button" onClick={() => chooseTemplate(chosen.id)} className={SMALL_BUTTON}>
+                  <Check size={16} /> {template === chosen.id ? 'Keep this model' : 'Use this model'}
+                </Button>
+              ) : (
+                <Button to="/platform/membership" className={SMALL_BUTTON}>
+                  <Lock size={15} /> See the plans with this model
+                </Button>
+              )}
             </div>
           </>
         ) : (
           <>
             <div className="grid gap-4 md:grid-cols-2">
-              {templates.map((t) => (
+              {[...templates].sort((a, b) => Number(allowed(b.id)) - Number(allowed(a.id))).map((t) => (
                 <button
                   key={t.id}
                   type="button"
@@ -516,6 +525,11 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                     <span className="flex items-center gap-2 font-semibold text-navy">
                       {t.name[language]}
                       {template === t.id && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">Current</span>}
+                      {!allowed(t.id) && (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-navy/[0.06] px-2 py-0.5 text-[11px] font-semibold text-navy/55">
+                          <Lock size={11} /> Higher plan
+                        </span>
+                      )}
                     </span>
                     <span className="mt-1 block text-[13px] text-navy/55">{t.description[language]}</span>
                     <span className="mt-2 inline-block text-[13px] font-semibold text-primary group-hover:underline">See it on computer and phone →</span>
