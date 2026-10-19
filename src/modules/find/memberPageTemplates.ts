@@ -208,14 +208,141 @@ export function memberPageTemplates(lang: Lang): MemberPageTemplate[] {
         ],
       },
     },
+    {
+      id: 'cleaning',
+      name: { en: 'Cleaning & home services', pt: 'Limpeza e serviços para casa' },
+      description: { en: 'Services with prices, area served and reviews up front.', pt: 'Serviços com preço, área atendida e avaliações em destaque.' },
+      color: 'teal',
+      blocks: [
+        b('hero'),
+        b('contact'),
+        b('services'),
+        b('highlights'),
+        b('testimonials', {
+          title: L('What clients say', 'O que os clientes dizem'),
+          items: [
+            { title: L('Always on time and the house looks brand new.', 'Sempre pontual e a casa fica como nova.'), body: L('Client name', 'Nome do cliente') },
+            { title: L('Trustworthy and careful with every detail.', 'Confiável e cuidadosa em cada detalhe.'), body: L('Client name', 'Nome do cliente') },
+          ],
+        }),
+        b('area', { title: L('Areas I serve', 'Onde eu atendo'), body: L('City 1 · City 2 · City 3', 'Cidade 1 · Cidade 2 · Cidade 3') }),
+        b('faq', {
+          title: L('Questions', 'Perguntas'),
+          items: [
+            { title: L('Do you bring the cleaning products?', 'Você leva os produtos de limpeza?'), body: L('Yes — tell me if you prefer specific products.', 'Sim — me avise se preferir algum produto específico.') },
+            { title: L('How do I book?', 'Como eu agendo?'), body: L('Send a message on WhatsApp with your address and the day you prefer.', 'Mande uma mensagem no WhatsApp com o endereço e o dia que prefere.') },
+          ],
+        }),
+        b('cta', { title: L('Ready for a clean home?', 'Pronta para uma casa limpinha?'), body: L('Ask for a free estimate today.', 'Peça seu orçamento grátis hoje.'), button: L('Get a free estimate', 'Pedir orçamento') }),
+      ],
+      example: {
+        headline: L('Residential, deep and move-out cleaning', 'Limpeza residencial, pesada e de mudança'),
+        services: [
+          { title: L('Standard cleaning', 'Limpeza padrão'), description: L('Kitchen, bathrooms, bedrooms and living areas', 'Cozinha, banheiros, quartos e salas'), price: L('from $120', 'a partir de $120') },
+          { title: L('Deep cleaning', 'Limpeza pesada'), description: L('Inside appliances, baseboards and details', 'Dentro dos eletrodomésticos, rodapés e detalhes'), price: L('from $220', 'a partir de $220') },
+          { title: 'Move-in / move-out', description: L('Empty house, ready for the next family', 'Casa vazia, pronta para a próxima família'), price: L('from $250', 'a partir de $250') },
+        ],
+      },
+    },
+    {
+      id: 'notary',
+      name: { en: 'Notary & loan signing', pt: 'Notary e loan signing' },
+      description: { en: 'Clear services, where you go and how to schedule.', pt: 'Serviços claros, onde você atende e como agendar.' },
+      color: 'navy',
+      blocks: [
+        b('hero'),
+        b('contact'),
+        b('services'),
+        b('area', { title: L('Mobile notary — I come to you', 'Notary móvel — eu vou até você'), body: L('County 1 · County 2 · Online (RON, where allowed)', 'Condado 1 · Condado 2 · Online (RON, onde for permitido)') }),
+        b('about'),
+        b('faq', {
+          title: L('Before your appointment', 'Antes do seu atendimento'),
+          items: [
+            { title: L('What do I need to bring?', 'O que preciso levar?'), body: L('A valid government photo ID and the unsigned document.', 'Um documento oficial com foto válido e o documento ainda sem assinatura.') },
+            { title: L('Can you give legal advice?', 'Você dá orientação jurídica?'), body: L('No — a notary public can’t give legal advice or prepare legal documents.', 'Não — o notary public não pode dar orientação jurídica nem preparar documentos legais.') },
+          ],
+        }),
+        b('cta', { title: L('Need a document notarized?', 'Precisa reconhecer um documento?'), body: L('Send a message with the document type and your location.', 'Mande uma mensagem com o tipo de documento e onde você está.'), button: L('Schedule now', 'Agendar agora') }),
+      ],
+      example: {
+        headline: L('Mobile notary public & loan signing agent', 'Notary public móvel e loan signing agent'),
+        services: [
+          { title: L('General notary work', 'Serviços de notary'), description: 'Acknowledgments, jurats, affidavits', price: L('per state fee', 'taxa do estado') },
+          { title: 'Loan signing', description: L('Refinance, purchase, HELOC packages', 'Refinanciamento, compra, HELOC'), price: L('from $150', 'a partir de $150') },
+          { title: L('Travel fee', 'Taxa de deslocamento'), description: L('Within my service area', 'Dentro da minha área de atendimento'), price: L('from $25', 'a partir de $25') },
+        ],
+      },
+    },
+    {
+      id: 'teacher',
+      name: { en: 'Teacher & tutor', pt: 'Professor e tutor' },
+      description: { en: 'Classes, method and results, with a call to book.', pt: 'Aulas, método e resultados, com chamada para agendar.' },
+      color: 'purple',
+      blocks: [
+        b('hero'),
+        b('contact'),
+        b('highlights'),
+        b('services'),
+        b('text', {
+          title: L('How my classes work', 'Como são minhas aulas'),
+          body: L('Tell here how a class goes: level test, plan, materials, homework and follow-up.', 'Conte aqui como é a aula: teste de nível, plano, materiais, tarefas e acompanhamento.'),
+        }),
+        b('testimonials', {
+          title: L('Students say', 'O que os alunos dizem'),
+          items: [{ title: L('In three months I could handle my job interview in English.', 'Em três meses consegui fazer minha entrevista de emprego em inglês.'), body: L('Student name', 'Nome do aluno') }],
+        }),
+        b('about'),
+        b('cta', { title: L('Book a trial class', 'Agende uma aula experimental'), body: L('Let’s find your level and your goal together.', 'Vamos descobrir juntos seu nível e seu objetivo.'), button: L('Book a trial class', 'Agendar aula') }),
+      ],
+      example: {
+        headline: L('Private classes, online and in person', 'Aulas particulares, online e presenciais'),
+        services: [
+          { title: L('Private class (60 min)', 'Aula particular (60 min)'), price: '$40' },
+          { title: L('Package — 8 classes', 'Pacote — 8 aulas'), description: L('Two classes a week for a month', 'Duas aulas por semana durante um mês'), price: '$280' },
+        ],
+      },
+    },
+    {
+      id: 'creator',
+      name: { en: 'Content creator', pt: 'Criador de conteúdo' },
+      description: { en: 'Videos first, then your links and partnerships.', pt: 'Vídeos em destaque, depois seus links e parcerias.' },
+      color: 'rose',
+      blocks: [
+        b('hero'),
+        b('contact'),
+        b('highlights'),
+        b('gallery', { title: L('Recent work', 'Trabalhos recentes'), images: [] }),
+        b('services'),
+        b('text', {
+          title: L('Partnerships', 'Parcerias'),
+          body: L('Brands I have worked with, my audience and what I create. Ask for my media kit.', 'Marcas com quem já trabalhei, meu público e o que eu crio. Peça meu media kit.'),
+        }),
+        b('cta', { title: L('Let’s work together', 'Vamos trabalhar juntos'), body: L('Send a message with your brand and your idea.', 'Mande uma mensagem com sua marca e sua ideia.'), button: L('Talk to me', 'Fale comigo') }),
+      ],
+      example: {
+        headline: L('Videos about … for … · Partnerships open', 'Vídeos sobre … para … · Parcerias abertas'),
+        services: [
+          { title: L('Sponsored video', 'Vídeo patrocinado'), description: 'TikTok / Reels / Shorts', price: L('on request', 'sob consulta') },
+          { title: L('UGC content', 'Conteúdo UGC'), description: L('Videos for your brand’s ads', 'Vídeos para os anúncios da sua marca'), price: L('on request', 'sob consulta') },
+        ],
+      },
+    },
+    {
+      id: 'blank',
+      name: { en: 'Blank', pt: 'Em branco' },
+      description: { en: 'Just the top and contacts — build the rest your way.', pt: 'Só o topo e os contatos — monte o resto do seu jeito.' },
+      color: 'blue',
+      blocks: [b('hero'), b('contact')],
+      example: {},
+    },
   ]
 }
 
-// Pages started with the first models (Sprint 127) take the closest look.
-export const OLD_TEMPLATE_SKIN: Record<string, string> = { cleaning: 'local', notary: 'professional', teacher: 'personal', creator: 'creative' }
+// The four full-site looks (Sprint 128). The first five models (Sprint 127:
+// cleaning, notary, teacher, creator, blank) keep the simple one-column page.
 export type MemberPageSkin = 'professional' | 'local' | 'creative' | 'personal'
 export function pageSkin(template: string | null | undefined): MemberPageSkin | null {
-  const id = template ? OLD_TEMPLATE_SKIN[template] ?? template : ''
+  const id = template ?? ''
   return id === 'professional' || id === 'local' || id === 'creative' || id === 'personal' ? id : null
 }
 
@@ -258,6 +385,11 @@ export function switchTemplateBlocks(templateId: string, lang: Lang, current: Me
 
 // A complete example page for the model picker's previews.
 const SAMPLE: Record<string, { name: string; location: { en: string; pt: string }; bio: { en: string; pt: string } }> = {
+  cleaning: { name: 'Sparkle Cleaning', location: { en: 'Orlando, FL', pt: 'Orlando, FL' }, bio: { en: 'Careful, on-time cleaning for homes and offices.', pt: 'Limpeza cuidadosa e pontual para casas e escritórios.' } },
+  notary: { name: 'Paula Lima', location: { en: 'Tampa, FL · Mobile', pt: 'Tampa, FL · Móvel' }, bio: { en: 'Mobile notary — I come to you.', pt: 'Notary móvel — eu vou até você.' } },
+  teacher: { name: 'Marina Costa', location: { en: 'Online', pt: 'Online' }, bio: { en: 'Practical classes for real life.', pt: 'Aulas práticas para a vida real.' } },
+  creator: { name: 'Duda Reis', location: { en: 'Miami, FL', pt: 'Miami, FL' }, bio: { en: 'Content that sells, with a real voice.', pt: 'Conteúdo que vende, com voz de verdade.' } },
+  blank: { name: 'Your name', location: { en: '', pt: '' }, bio: { en: '', pt: '' } },
   professional: {
     name: 'Ana Ribeiro',
     location: { en: 'Orlando, FL · Online', pt: 'Orlando, FL · Online' },

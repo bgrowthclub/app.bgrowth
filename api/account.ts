@@ -558,8 +558,16 @@ const TEMPLATE_SEQUENCES: Record<string, string> = {
   local: 'hero,services,highlights,area,testimonials,faq,contact,cta',
   creative: 'hero,highlights,gallery,about,services,testimonials,contact,cta',
   personal: 'hero,about,services,testimonials,highlights,faq,contact,cta',
+  cleaning: 'hero,contact,services,highlights,testimonials,area,faq,cta',
+  notary: 'hero,contact,services,area,about,faq,cta',
+  teacher: 'hero,contact,highlights,services,text,testimonials,about,cta',
+  creator: 'hero,contact,highlights,gallery,services,text,cta',
+  blank: 'hero,contact',
 }
-const TEMPLATE_COLORS: Record<string, string> = { professional: 'navy', local: 'orange', creative: 'rose', personal: 'green' }
+const TEMPLATE_COLORS: Record<string, string> = {
+  professional: 'navy', local: 'orange', creative: 'rose', personal: 'green',
+  cleaning: 'teal', notary: 'navy', teacher: 'purple', creator: 'rose', blank: 'blue',
+}
 
 async function memberPageLevel(db: Db, userId: string): Promise<'partial' | 'full' | null> {
   const { data, error } = await db.rpc('member_page_level', { p_user: userId })

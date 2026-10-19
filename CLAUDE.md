@@ -197,9 +197,9 @@ This repo is a **static, client-only MVP**:
   (decided 19/10/2026): the models are four skins of one page — Professional
   (navy, credentials), Local Services (photos, areas, quote), Creative
   Portfolio (editorial, `--color-paper`) and Personal Brand (warm, programs,
-  FAQ) — drawn by `components/find/MemberSiteView` (pages with a template;
-  older pages without one keep `MemberPageView`'s narrow layout; the first
-  models map to the closest skin, `pageSkin()`). The picker shows each look
+  FAQ) — drawn by `components/find/MemberSiteView` (`pageSkin()`); the
+  first five models (cleaning, notary, teacher, creator, blank) stay as
+  well, listed after the four, with `MemberPageView`'s one-column layout. The picker shows each look
   on computer and phone (`components/ui/ResponsiveFrame`, an iframe with the
   site's styles so breakpoints work) and asks to confirm; switching keeps the
   texts (`switchTemplateBlocks`). New: block `credentials` (shown as stated,
