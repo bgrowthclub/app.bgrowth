@@ -174,6 +174,25 @@ This repo is a **static, client-only MVP**:
   pages straight from Supabase (RLS); writes go through `api/admin.ts`.
   `/p/*` renders inside `AppLayout` but bare (`BARE_PREFIXES`, like the
   auth pages: no Navbar/Footer, only a discreet "Made with BGrowth").
+  **Since Sprint 127 subscribers build their own page** (decided 19/10/2026;
+  Portal migration 0062): a page is a list of blocks (`member_pages.blocks`:
+  hero, contact, highlights, services, about, testimonials, gallery, text,
+  faq, area, cta; null = the original fixed layout) plus `template` and
+  `theme` (color, cover). `modules/find/memberPageTemplates.ts` holds 4
+  models (cleaning, notary, teacher, creator — example texts in EN/PT) and a
+  blank one; `components/find/MemberPageBuilder` is the one editor (model
+  picker, basics, look, sections, live preview) used by Admin → Pages (mode
+  `team`, `components/admin/MemberPageEditor` is no longer used) and by the
+  subscriber at `/platform/my-page` (`api/account.ts` resources `my-page`,
+  `my-page-image`). The plan's `memberPage` entitlement decides
+  (`portal.member_page_level()`, `User.pageLevel`): `partial` (Pro) = a
+  model's sections as they are, its color, ONE featured item, no gallery, no
+  numbers, address made from the name; `full` (Enterprise) = add/reorder/
+  hide sections, color, cover, address, numbers. A page made by the
+  subscriber (`owner_managed`) is shown only while their plan includes a page
+  (RLS); team-made pages are unchanged and stay the team's to edit. A page
+  sold on its own = a plan with only the `memberPage` entitlement and a low
+  rank. Not built: an e-mail list collected by the page itself.
   **Since Sprint 76 member pages have numbers** (approved by the user;
   Portal migration 0045): daily totals of visits, clicks per contact
   button/featured item, course visits and course e-mails

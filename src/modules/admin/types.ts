@@ -1,5 +1,5 @@
 import type { StoredPlan } from '../commerce/types/membership'
-import type { MemberPage, MemberPageHighlight, MemberPageLink, MemberPageService } from '../find/types'
+import type { MemberPage, MemberPageDraft, MemberPageHighlight, MemberPageLink, MemberPageService } from '../find/types'
 import type { PortalAccessGrantRow, PortalLicenseRow } from '../workspace/types/portal'
 import type { SupportConversationSummary, SupportHours, SupportMessage } from '../support/types'
 import type { GrowthCategoryId } from '../../types/growth'
@@ -413,19 +413,8 @@ export interface AdminMemberPagesOverview {
   ready: boolean
 }
 
-export interface AdminMemberPageDraft {
-  id?: string
-  slug: string
-  displayName: string
-  headline: string
-  bio: string
-  photoUrl: string
-  location: string
-  links: MemberPageLink[]
-  services: MemberPageService[]
-  highlights: MemberPageHighlight[]
-  language: MemberPage['language']
-  status: MemberPage['status']
+// The team's page editor sends the shared draft plus the owner.
+export interface AdminMemberPageDraft extends MemberPageDraft {
   // The BGrowth account that owns the page (sees its numbers in My Page);
   // empty = no owner.
   ownerEmail: string

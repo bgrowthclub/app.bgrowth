@@ -30,6 +30,52 @@ export interface MemberPageHighlight {
   cta?: string
 }
 
+// Since Sprint 127 (Portal migration 0062) a page is a list of blocks the
+// subscriber (or the team) orders, hides and fills. The person's own data
+// (name, photo, contacts, services, featured work, about) stays in the
+// page's fields; blocks with their own content keep it in `data`.
+export type MemberPageBlockType =
+  | 'hero'
+  | 'contact'
+  | 'highlights'
+  | 'services'
+  | 'about'
+  | 'testimonials'
+  | 'gallery'
+  | 'text'
+  | 'faq'
+  | 'area'
+  | 'cta'
+
+export interface MemberPageBlockData {
+  title?: string
+  body?: string
+  // testimonials: quote + name; faq: question (title) + answer (body)
+  items?: { title: string; body?: string }[]
+  // gallery
+  images?: string[]
+  // cta: button text; it opens the page's first contact button
+  button?: string
+}
+
+export interface MemberPageBlock {
+  id: string
+  type: MemberPageBlockType
+  hidden?: boolean
+  data?: MemberPageBlockData
+}
+
+export type MemberPageColor = 'blue' | 'teal' | 'green' | 'purple' | 'rose' | 'orange' | 'navy'
+
+export interface MemberPageTheme {
+  color?: MemberPageColor
+  // A wide image behind the top of the page.
+  cover?: string
+}
+
+// What the subscriber's plan lets them do with their page.
+export type MemberPageLevel = 'partial' | 'full'
+
 export interface MemberPage {
   id: string
   slug: string
@@ -44,6 +90,10 @@ export interface MemberPage {
   links: MemberPageLink[]
   language: 'en' | 'pt'
   status: 'draft' | 'published'
+  template?: string | null
+  blocks?: MemberPageBlock[] | null
+  theme?: MemberPageTheme | null
+  owner_managed?: boolean
   created_at: string
   updated_at: string
   // Admin → Pages only: the e-mail of the account linked as owner.
@@ -68,4 +118,25 @@ export interface MemberPageStats {
   days: number
   // false until the database update (migration 0045) runs.
   ready: boolean
+}
+
+// What the page editor (MemberPageBuilder) saves — the team's (Admin →
+// Pages) and the subscriber's (My Page).
+export interface MemberPageDraft {
+  id?: string
+  slug: string
+  displayName: string
+  headline: string
+  bio: string
+  photoUrl: string
+  location: string
+  links: MemberPageLink[]
+  services: MemberPageService[]
+  highlights: MemberPageHighlight[]
+  language: MemberPage['language']
+  status: MemberPage['status']
+  // Sent by the block editor (Sprint 127); absent = keep the page's own.
+  template?: string
+  blocks?: MemberPageBlock[]
+  theme?: MemberPageTheme
 }

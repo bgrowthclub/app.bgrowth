@@ -1637,6 +1637,7 @@ async function catalogHealth(db: Db) {
       ['0059 Products in Stripe (coupons per Workspace)', 'provider_products'],
       ['0060 Knowledge articles by plan', 'knowledge_articles.required_plan'],
       ['0061 Products included in plans', 'product_plan_access'],
+      ['0062 Member pages with blocks (My Page editor)', 'member_pages.blocks'],
     ].map(async ([name, table]) => ({ name, ok: await tableExists(table) })),
   )
   const { data: address } = await db.from('site_settings').select('value').eq('key', 'newsletter_address').maybeSingle()
@@ -2301,6 +2302,52 @@ async function memberPageStats(req: VercelRequest, db: Db) {
   return { rows: data ?? [], days, ready: true }
 }
 
+// Member page blocks and theme (Sprint 127, Portal migration 0062) — the
+// same cleaning in api/admin.ts and api/account.ts.
+const PAGE_BLOCK_TYPES = new Set(['hero', 'contact', 'highlights', 'services', 'about', 'testimonials', 'gallery', 'text', 'faq', 'area', 'cta'])
+const PAGE_COLORS = new Set(['blue', 'teal', 'green', 'purple', 'rose', 'orange', 'navy'])
+const PAGE_TEMPLATES = new Set(['cleaning', 'notary', 'teacher', 'creator', 'blank'])
+const pageText = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '')
+const pageUrl = (v: unknown) => {
+  const s = pageText(v, 500)
+  return /^https:\/\//.test(s) ? s : ''
+}
+
+function cleanPageBlocks(value: unknown) {
+  if (!Array.isArray(value)) return null
+  const seen = new Set<string>()
+  const blocks = value.slice(0, 30).flatMap((raw: any) => {
+    const type = pageText(raw?.type, 20)
+    if (!PAGE_BLOCK_TYPES.has(type)) return []
+    let id = pageText(raw?.id, 40).replace(/[^a-zA-Z0-9_-]/g, '') || `${type}-${seen.size}`
+    while (seen.has(id)) id = `${id}x`
+    seen.add(id)
+    const d = raw?.data && typeof raw.data === 'object' ? raw.data : {}
+    const data: Record<string, unknown> = {}
+    if (pageText(d.title, 120)) data.title = pageText(d.title, 120)
+    if (pageText(d.body, 2000)) data.body = pageText(d.body, 2000)
+    if (pageText(d.button, 40)) data.button = pageText(d.button, 40)
+    if (Array.isArray(d.items)) {
+      data.items = d.items
+        .slice(0, 12)
+        .map((i: any) => ({ title: pageText(i?.title, 300), body: pageText(i?.body, 600) }))
+        .filter((i: { title: string }) => i.title)
+    }
+    if (Array.isArray(d.images)) data.images = d.images.slice(0, 12).map(pageUrl).filter(Boolean)
+    return [{ id, type, ...(raw?.hidden === true ? { hidden: true } : {}), ...(Object.keys(data).length ? { data } : {}) }]
+  })
+  return blocks.length ? blocks : null
+}
+
+function cleanPageTheme(value: unknown) {
+  const v = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>
+  const theme: Record<string, string> = {}
+  if (typeof v.color === 'string' && PAGE_COLORS.has(v.color)) theme.color = v.color
+  const cover = pageUrl(v.cover)
+  if (cover) theme.cover = cover
+  return theme
+}
+
 function readMemberPageInput(req: VercelRequest) {
   const b = req.body ?? {}
   const slug = cleanText(b.slug, 40).toLowerCase()
@@ -2354,6 +2401,10 @@ function readMemberPageInput(req: VercelRequest) {
     highlights,
     language: b.language === 'pt' ? 'pt' : 'en',
     status: b.status === 'published' ? 'published' : 'draft',
+    // Blocks, model and look (migration 0062) — only sent once that runs.
+    ...(b.blocks !== undefined
+      ? { blocks: cleanPageBlocks(b.blocks), theme: cleanPageTheme(b.theme), template: PAGE_TEMPLATES.has(b.template) ? b.template : null }
+      : {}),
   }
 }
 

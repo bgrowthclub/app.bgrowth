@@ -86,6 +86,9 @@ export interface User {
   // when the team has linked one to this account — unlocks "My Page" with
   // its numbers (Portal migration 0045). Absent = no page.
   memberPage?: { id: string; slug: string; displayName: string; language: 'en' | 'pt' }
+  // What the member's plan lets them do with their own page (Sprint 127,
+  // portal.member_page_level — Portal migration 0062). Absent = no page.
+  pageLevel?: 'partial' | 'full'
   // Escape hatch for a field a future product needs before this interface
   // is formally extended — never read ad hoc without adding the field
   // properly once its shape is known.

@@ -23,7 +23,7 @@ function SidebarBody({ collapsed, badges, onNavigate }: { collapsed: boolean; ba
   // "My Page" only for members who have one.
   const groups = PLATFORM_NAV_GROUPS.filter((group) => !group.adminOnly || role)
     .map((group) => (group.adminOnly && role === 'support' ? { ...group, items: group.items.filter((item) => item.support) } : group))
-    .map((group) => ({ ...group, items: group.items.filter((item) => !item.pageOwnerOnly || user?.memberPage) }))
+    .map((group) => ({ ...group, items: group.items.filter((item) => !item.pageOwnerOnly || user?.memberPage || user?.pageLevel) }))
     .filter((group) => group.items.length > 0)
   return (
     <nav className="flex-1 space-y-6 overflow-y-auto px-3 py-5">

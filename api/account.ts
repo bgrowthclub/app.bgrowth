@@ -24,6 +24,8 @@ import Stripe from 'stripe'
 //          team grants), each with where it came from. Nothing is invented:
 //          an access with no payment or team record says so.
 //
+//   GET/PUT ?resource=my-page, POST my-page-image → the subscriber's own
+//          public page (Sprint 127, see the My Page section below)
 //   POST   ?resource=plan-checkout | plan-switch | plan-cancel | plan-resume |
 //          plan-portal → the member's plan subscription (Sprint 122, see the
 //          Plans section below)
@@ -489,13 +491,223 @@ async function includedInPlan(db: Db, userId: string, productId: string): Promis
   return live.some((r) => (r.membership_plans?.rank ?? 0) >= need)
 }
 
+// Member page blocks and theme (Sprint 127, Portal migration 0062) — the
+// same cleaning in api/admin.ts and api/account.ts.
+const PAGE_BLOCK_TYPES = new Set(['hero', 'contact', 'highlights', 'services', 'about', 'testimonials', 'gallery', 'text', 'faq', 'area', 'cta'])
+const PAGE_COLORS = new Set(['blue', 'teal', 'green', 'purple', 'rose', 'orange', 'navy'])
+const PAGE_TEMPLATES = new Set(['cleaning', 'notary', 'teacher', 'creator', 'blank'])
+const pageText = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '')
+const pageUrl = (v: unknown) => {
+  const s = pageText(v, 500)
+  return /^https:\/\//.test(s) ? s : ''
+}
+
+function cleanPageBlocks(value: unknown) {
+  if (!Array.isArray(value)) return null
+  const seen = new Set<string>()
+  const blocks = value.slice(0, 30).flatMap((raw: any) => {
+    const type = pageText(raw?.type, 20)
+    if (!PAGE_BLOCK_TYPES.has(type)) return []
+    let id = pageText(raw?.id, 40).replace(/[^a-zA-Z0-9_-]/g, '') || `${type}-${seen.size}`
+    while (seen.has(id)) id = `${id}x`
+    seen.add(id)
+    const d = raw?.data && typeof raw.data === 'object' ? raw.data : {}
+    const data: Record<string, unknown> = {}
+    if (pageText(d.title, 120)) data.title = pageText(d.title, 120)
+    if (pageText(d.body, 2000)) data.body = pageText(d.body, 2000)
+    if (pageText(d.button, 40)) data.button = pageText(d.button, 40)
+    if (Array.isArray(d.items)) {
+      data.items = d.items
+        .slice(0, 12)
+        .map((i: any) => ({ title: pageText(i?.title, 300), body: pageText(i?.body, 600) }))
+        .filter((i: { title: string }) => i.title)
+    }
+    if (Array.isArray(d.images)) data.images = d.images.slice(0, 12).map(pageUrl).filter(Boolean)
+    return [{ id, type, ...(raw?.hidden === true ? { hidden: true } : {}), ...(Object.keys(data).length ? { data } : {}) }]
+  })
+  return blocks.length ? blocks : null
+}
+
+function cleanPageTheme(value: unknown) {
+  const v = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>
+  const theme: Record<string, string> = {}
+  if (typeof v.color === 'string' && PAGE_COLORS.has(v.color)) theme.color = v.color
+  const cover = pageUrl(v.cover)
+  if (cover) theme.cover = cover
+  return theme
+}
+
+// ---------------------------------------------------------------------------
+// My Page (Sprint 127, Portal migration 0062): the subscriber edits their own
+// public page, as far as their plan allows (portal.member_page_level):
+//   'partial' (Pro) — a model's blocks as they are (no adding, hiding or
+//     reordering), the model's color, no cover, ONE featured photo/video, no
+//     gallery photos; the address is set once, from the name.
+//   'full' (Enterprise) — everything, including the address.
+//   GET  ?resource=my-page        → { level, page }
+//   PUT  ?resource=my-page        { …page } → { page }
+//   POST ?resource=my-page-image  { dataUrl } → { url }
+// ---------------------------------------------------------------------------
+const MEMBER_LINK_TYPES = ['whatsapp', 'email', 'instagram', 'tiktok', 'youtube', 'website', 'other']
+const PAGE_SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/
+const RESERVED_PAGE_SLUGS = new Set(['admin', 'bgrowth', 'support', 'help', 'api', 'new', 'edit', 'settings'])
+const VIDEO_HOSTS = /^https:\/\/((www|m)\.)?(youtube\.com|youtu\.be|tiktok\.com|instagram\.com)\//i
+// The block order of each model — a Pro page must keep one of these.
+const TEMPLATE_SEQUENCES: Record<string, string> = {
+  cleaning: 'hero,contact,services,highlights,testimonials,area,faq,cta',
+  notary: 'hero,contact,services,area,about,faq,cta',
+  teacher: 'hero,contact,highlights,services,text,testimonials,about,cta',
+  creator: 'hero,contact,highlights,gallery,services,text,cta',
+  blank: 'hero,contact',
+}
+const TEMPLATE_COLORS: Record<string, string> = { cleaning: 'teal', notary: 'navy', teacher: 'purple', creator: 'rose', blank: 'blue' }
+
+async function memberPageLevel(db: Db, userId: string): Promise<'partial' | 'full' | null> {
+  const { data, error } = await db.rpc('member_page_level', { p_user: userId })
+  if (error) return null
+  return data === 'full' || data === 'partial' ? data : null
+}
+
+function slugFrom(text: string) {
+  return text
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40)
+}
+
+async function slugTaken(db: Db, slug: string, exceptId?: string) {
+  let q = db.from('member_pages').select('id').eq('slug', slug).limit(1)
+  if (exceptId) q = q.neq('id', exceptId)
+  const { data } = await q
+  return Boolean(data && data.length)
+}
+
+function readMyPage(b: Record<string, any>) {
+  const displayName = pageText(b.displayName, 80)
+  if (!displayName) throw new HttpError(400, 'Write the name shown on your page.')
+  const links = (Array.isArray(b.links) ? b.links : []).slice(0, 12).flatMap((raw: any) => {
+    const type = MEMBER_LINK_TYPES.includes(raw?.type) ? raw.type : 'other'
+    const url = pageText(raw?.url, 300)
+    if (!url) return []
+    if (type === 'email' && !/^(mailto:)?[^\s@]+@[^\s@]+\.[^\s@]+$/.test(url)) throw new HttpError(400, `“${url}” isn’t an e-mail address.`)
+    if (type === 'whatsapp' && !/^https?:\/\//.test(url) && url.replace(/\D/g, '').length < 8) {
+      throw new HttpError(400, 'Write the WhatsApp number with country code (for example +1 555 123 4567).')
+    }
+    return [{ type, label: pageText(raw?.label, 40), url }]
+  })
+  const services = (Array.isArray(b.services) ? b.services : []).slice(0, 12).flatMap((raw: any) => {
+    const title = pageText(raw?.title, 100)
+    return title ? [{ title, description: pageText(raw?.description, 400), price: pageText(raw?.price, 40) }] : []
+  })
+  const highlights = (Array.isArray(b.highlights) ? b.highlights : []).slice(0, 8).flatMap((raw: any) => {
+    const title = pageText(raw?.title, 100)
+    if (!title) return []
+    const video = pageText(raw?.video, 300)
+    if (video && !VIDEO_HOSTS.test(video)) throw new HttpError(400, `The video of “${title}” must be a YouTube, TikTok or Instagram link.`)
+    return [{ title, description: pageText(raw?.description, 400), url: pageUrl(raw?.url), image: pageUrl(raw?.image), video, cta: pageText(raw?.cta, 40) }]
+  })
+  return {
+    display_name: displayName,
+    headline: pageText(b.headline, 140) || null,
+    bio: pageText(b.bio, 3000) || null,
+    photo_url: pageUrl(b.photoUrl) || null,
+    location: pageText(b.location, 100) || null,
+    links,
+    services,
+    highlights,
+    language: b.language === 'pt' ? 'pt' : 'en',
+    status: b.status === 'published' ? 'published' : 'draft',
+    template: PAGE_TEMPLATES.has(b.template) ? b.template : 'blank',
+    blocks: cleanPageBlocks(b.blocks),
+    theme: cleanPageTheme(b.theme),
+  }
+}
+
+async function myPageAction(req: VercelRequest, db: Db, user: { id: string }, resource: string) {
+  const level = await memberPageLevel(db, user.id)
+  const { data: existing, error } = await db
+    .from('member_pages')
+    .select('*')
+    .eq('user_id', user.id)
+    .order('created_at')
+    .limit(1)
+    .maybeSingle()
+  if (error) {
+    const code = (error as { code?: string }).code
+    if (code === '42703' || code === '42P01' || code === 'PGRST205') throw new HttpError(503, 'Your page isn’t available yet (database update pending).')
+    throw error
+  }
+
+  if (resource === 'my-page' && req.method === 'GET') return { level, page: existing ?? null }
+  if (!level) throw new HttpError(403, 'Your plan doesn’t include a page. See the plans in Account → Membership.')
+  // A page the team made for this member stays the team's to edit.
+  if (existing && !existing.owner_managed) throw new HttpError(403, 'Your page is managed by the BGrowth team — talk to us through Support to change it.')
+
+  if (resource === 'my-page-image') {
+    if (req.method !== 'POST') throw new HttpError(405, 'Use POST.')
+    const match = /^data:(image\/(png|jpeg|webp));base64,([A-Za-z0-9+/=]+)$/.exec(str(req.body?.dataUrl))
+    if (!match) throw new HttpError(400, 'Use a PNG, JPG or WebP image.')
+    const bytes = Buffer.from(match[3], 'base64')
+    if (bytes.length > 3 * 1024 * 1024) throw new HttpError(413, 'This image is too large (3 MB max).')
+    const path = `pages/members/${user.id}/${Date.now()}.${match[2] === 'jpeg' ? 'jpg' : match[2]}`
+    const { error: upError } = await db.storage.from('portal-product-assets').upload(path, bytes, { contentType: match[1], upsert: false })
+    if (upError) throw upError
+    return { url: db.storage.from('portal-product-assets').getPublicUrl(path).data.publicUrl }
+  }
+
+  if (req.method !== 'PUT') throw new HttpError(405, 'Use PUT.')
+  const input = readMyPage((req.body ?? {}) as Record<string, any>)
+  let slug = existing?.slug as string | undefined
+
+  if (level === 'partial') {
+    // A model's blocks as they are; the model's color; one featured item.
+    // They may switch to another model; its sections then come as they are.
+    const template = input.template
+    const sequence = (input.blocks ?? []).map((b) => b.type).join(',')
+    if (sequence !== TEMPLATE_SEQUENCES[template]) throw new HttpError(400, 'Your plan keeps the model’s sections as they are.')
+    input.template = template
+    input.blocks = (input.blocks ?? []).map((b) => {
+      const { hidden: _hidden, ...rest } = b as Record<string, any>
+      return b.type === 'gallery' ? { ...rest, data: { ...(rest.data ?? {}), images: [] } } : rest
+    }) as typeof input.blocks
+    input.theme = { color: TEMPLATE_COLORS[template] }
+    input.highlights = input.highlights.slice(0, 1)
+  } else {
+    const wanted = slugFrom(pageText(req.body?.slug, 40))
+    if (wanted && wanted !== slug) {
+      if (!PAGE_SLUG.test(wanted) || wanted.length < 3) throw new HttpError(400, 'The address needs 3 to 40 lowercase letters, numbers or dashes.')
+      if (RESERVED_PAGE_SLUGS.has(wanted)) throw new HttpError(400, 'This address is reserved — choose another one.')
+      if (await slugTaken(db, wanted, existing?.id)) throw new HttpError(409, `bgrowth.app/p/${wanted} is already taken — choose another address.`)
+      slug = wanted
+    }
+  }
+
+  if (!slug) {
+    // First save: an address from the name, made unique.
+    const base = slugFrom(input.display_name).slice(0, 34) || 'page'
+    slug = base.length >= 3 ? base : `${base}-page`
+    for (let n = 2; RESERVED_PAGE_SLUGS.has(slug) || (await slugTaken(db, slug)); n += 1) slug = `${base}-${n}`
+  }
+
+  const row = { ...input, slug, user_id: user.id, owner_managed: true, updated_at: new Date().toISOString() }
+  const { data, error: saveError } = existing
+    ? await db.from('member_pages').update(row).eq('id', existing.id).select('*').single()
+    : await db.from('member_pages').insert(row).select('*').single()
+  if (saveError) throw saveError
+  return { page: data }
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   allowPortal(req, res)
   if (req.method === 'OPTIONS') return res.status(204).end()
   try {
     const resource = str(req.query.resource)
     const planResource = ['plan-checkout', 'plan-switch', 'plan-cancel', 'plan-resume', 'plan-portal'].includes(resource)
-    if (!planResource && resource !== 'deletion' && resource !== 'announcements-seen' && resource !== 'download' && resource !== 'profile' && resource !== 'purchases')
+    const pageResource = resource === 'my-page' || resource === 'my-page-image'
+    if (!planResource && !pageResource && resource !== 'deletion' && resource !== 'announcements-seen' && resource !== 'download' && resource !== 'profile' && resource !== 'purchases')
       throw new HttpError(404, 'Unknown action.')
     const url = process.env.SUPABASE_URL
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -507,6 +719,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const user = await signedInUser(req, db)
 
     if (planResource) return res.status(200).json({ ok: true, ...(await planAction(req, db, user, resource)) })
+    if (pageResource) return res.status(200).json({ ok: true, ...(await myPageAction(req, db, user, resource)) })
     if (resource === 'purchases' && req.method === 'GET') return res.status(200).json({ ok: true, ...(await purchasesOf(db, user.id, user.email ?? '')) })
 
     // One file of a Download the member owns (Sprint 86).

@@ -1,5 +1,5 @@
 import { supabase } from '../identity/supabase/supabaseClient'
-import type { MemberPage, MemberPageStats } from './types'
+import type { MemberPage, MemberPageDraft, MemberPageLevel, MemberPageStats } from './types'
 
 // Reads a published member page (row-level security only returns
 // published ones). Writes go through api/admin.ts.
@@ -146,4 +146,31 @@ export async function getMyMemberPageStats(pageId: string, days: number): Promis
     throw error
   }
   return { rows: (data ?? []) as MemberPageStats['rows'], days, ready: true }
+}
+
+// The subscriber's own page (Sprint 127): read and saved through
+// api/account.ts, which applies what their plan allows.
+async function accountCall<T>(method: 'GET' | 'PUT' | 'POST', resource: string, body?: unknown): Promise<T> {
+  const session = supabase ? (await supabase.auth.getSession()).data.session : null
+  if (!session) throw new Error('Sign in to continue.')
+  const response = await fetch(`/api/account?resource=${resource}`, {
+    method,
+    headers: { Authorization: `Bearer ${session.access_token}`, ...(body ? { 'Content-Type': 'application/json' } : {}) },
+    body: body ? JSON.stringify(body) : undefined,
+  })
+  const json = (await response.json().catch(() => ({}))) as { ok?: boolean; error?: string } & T
+  if (!response.ok || !json.ok) throw new Error(json.error ?? `Request failed (${response.status}).`)
+  return json
+}
+
+export const myPageService = {
+  get() {
+    return accountCall<{ level: MemberPageLevel | null; page: MemberPage | null }>('GET', 'my-page')
+  },
+  async save(draft: MemberPageDraft) {
+    return (await accountCall<{ page: MemberPage }>('PUT', 'my-page', draft)).page
+  },
+  async uploadImage(dataUrl: string) {
+    return (await accountCall<{ url: string }>('POST', 'my-page-image', { dataUrl })).url
+  },
 }
