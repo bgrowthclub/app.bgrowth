@@ -16,14 +16,37 @@ export async function getPublishedMemberPage(slug: string): Promise<MemberPage |
 
 // Labels a page shows in its own language.
 export const MEMBER_PAGE_LABELS = {
-  en: { services: 'Services', highlights: 'Featured', about: 'About', contact: 'Get in touch', learnMore: 'Learn more', madeWith: 'Made with BGrowth', notFound: 'This page isn’t available.' },
-  pt: { services: 'Serviços', highlights: 'Destaques', about: 'Sobre', contact: 'Fale comigo', learnMore: 'Saiba mais', madeWith: 'Feito com BGrowth', notFound: 'Esta página não está disponível.' },
+  en: {
+    services: 'Services',
+    highlights: 'Featured',
+    about: 'About',
+    contact: 'Get in touch',
+    learnMore: 'Learn more',
+    madeWith: 'Made with BGrowth',
+    notFound: 'This page isn’t available.',
+    credentials: 'Licenses & credentials',
+    credentialsNote: 'As stated by this professional — not verified by BGrowth.',
+    disclaimer: 'The information on this page is provided by its owner and isn’t verified by BGrowth.',
+  },
+  pt: {
+    services: 'Serviços',
+    highlights: 'Destaques',
+    about: 'Sobre',
+    contact: 'Fale comigo',
+    learnMore: 'Saiba mais',
+    madeWith: 'Feito com BGrowth',
+    notFound: 'Esta página não está disponível.',
+    credentials: 'Licenças e credenciais',
+    credentialsNote: 'Informadas pelo profissional — não verificadas pela BGrowth.',
+    disclaimer: 'As informações desta página são do seu responsável e não são verificadas pela BGrowth.',
+  },
 } as const
 
 // A link as something a phone can open: e-mail → mailto:, WhatsApp → wa.me.
 export function memberLinkHref(type: string, url: string): string {
   const value = url.trim()
   if (type === 'email') return value.startsWith('mailto:') ? value : `mailto:${value}`
+  if (type === 'phone') return value.startsWith('tel:') ? value : `tel:${value.replace(/[^\d+]/g, '')}`
   if (type === 'whatsapp') {
     if (/^https?:\/\//.test(value)) return value
     const digits = value.replace(/\D/g, '')
@@ -34,6 +57,8 @@ export function memberLinkHref(type: string, url: string): string {
 
 const DEFAULT_LINK_LABELS: Record<string, { en: string; pt: string }> = {
   whatsapp: { en: 'WhatsApp', pt: 'WhatsApp' },
+  phone: { en: 'Call', pt: 'Ligar' },
+  booking: { en: 'Book a time', pt: 'Agendar horário' },
   email: { en: 'E-mail', pt: 'E-mail' },
   instagram: { en: 'Instagram', pt: 'Instagram' },
   tiktok: { en: 'TikTok', pt: 'TikTok' },

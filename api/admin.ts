@@ -2222,7 +2222,7 @@ async function archiveBundle(req: VercelRequest, db: Db) {
 // builds them here. Visitors read published pages straight from Supabase
 // (row-level security); every write comes through here.
 // ---------------------------------------------------------------------------
-const MEMBER_LINK_TYPES = ['whatsapp', 'email', 'instagram', 'tiktok', 'youtube', 'website', 'other']
+const MEMBER_LINK_TYPES = ['whatsapp', 'phone', 'booking', 'email', 'instagram', 'tiktok', 'youtube', 'website', 'other']
 const PAGE_SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/
 // Addresses the site itself uses at the top level of /p/ — kept free.
 const RESERVED_PAGE_SLUGS = new Set(['admin', 'bgrowth', 'support', 'help', 'api', 'new', 'edit', 'settings'])
@@ -2304,9 +2304,9 @@ async function memberPageStats(req: VercelRequest, db: Db) {
 
 // Member page blocks and theme (Sprint 127, Portal migration 0062) — the
 // same cleaning in api/admin.ts and api/account.ts.
-const PAGE_BLOCK_TYPES = new Set(['hero', 'contact', 'highlights', 'services', 'about', 'testimonials', 'gallery', 'text', 'faq', 'area', 'cta'])
+const PAGE_BLOCK_TYPES = new Set(['hero', 'contact', 'highlights', 'services', 'about', 'testimonials', 'gallery', 'text', 'faq', 'area', 'cta', 'credentials'])
 const PAGE_COLORS = new Set(['blue', 'teal', 'green', 'purple', 'rose', 'orange', 'navy'])
-const PAGE_TEMPLATES = new Set(['cleaning', 'notary', 'teacher', 'creator', 'blank'])
+const PAGE_TEMPLATES = new Set(['professional', 'local', 'creative', 'personal', 'cleaning', 'notary', 'teacher', 'creator', 'blank'])
 const pageText = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '')
 const pageUrl = (v: unknown) => {
   const s = pageText(v, 500)
@@ -2364,7 +2364,7 @@ function readMemberPageInput(req: VercelRequest) {
     const url = cleanText(raw?.url, 300)
     if (!url) return []
     if (type === 'email' && !/^(mailto:)?[^\s@]+@[^\s@]+\.[^\s@]+$/.test(url)) throw new HttpError(400, `“${url}” isn’t an e-mail address.`)
-    if (type === 'whatsapp' && !/^https?:\/\//.test(url) && url.replace(/\D/g, '').length < 8) {
+    if ((type === 'whatsapp' || type === 'phone') && !/^https?:\/\//.test(url) && url.replace(/\D/g, '').length < 8) {
       throw new HttpError(400, 'Write the WhatsApp number with country code (for example +1 555 123 4567).')
     }
     return [{ type, label: cleanText(raw?.label, 40), url }]

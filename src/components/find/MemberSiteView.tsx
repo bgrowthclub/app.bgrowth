@@ -1,0 +1,442 @@
+import { ArrowRight, BadgeCheck, Link2, MapPin, Quote } from 'lucide-react'
+import type { CSSProperties, MouseEvent, ReactNode } from 'react'
+import { MEMBER_LINK_ICONS } from './memberLinkIcons'
+import { MEMBER_PAGE_LABELS, memberLinkHref, memberLinkLabel, videoEmbed } from '../../modules/find/memberPageService'
+import { PAGE_COLORS, pageBlocks } from '../../modules/find/memberPageTemplates'
+import type { MemberPageSkin } from '../../modules/find/memberPageTemplates'
+import type { MemberPage, MemberPageBlock, MemberPageHighlight, MemberPageLink } from '../../modules/find/types'
+
+interface Props {
+  page: Pick<MemberPage, 'display_name' | 'headline' | 'bio' | 'photo_url' | 'location' | 'services' | 'highlights' | 'links' | 'language'> &
+    Partial<Pick<MemberPage, 'blocks' | 'theme'>>
+  skin: MemberPageSkin
+  preview?: boolean
+  onLinkClick?: (target: string) => void
+}
+
+// How each look dresses the same sections.
+const LOOK: Record<MemberPageSkin, { page: string; band: string; h2: string; card: string; wide: string }> = {
+  professional: {
+    page: 'bg-white text-navy',
+    band: 'bg-bg-soft',
+    h2: 'font-display text-2xl font-bold tracking-tight text-navy md:text-3xl',
+    card: 'rounded-xl border border-navy/10 bg-white',
+    wide: 'max-w-5xl',
+  },
+  local: {
+    page: 'bg-white text-navy',
+    band: 'bg-bg-soft',
+    h2: 'font-display text-2xl font-bold tracking-tight text-navy md:text-3xl',
+    card: 'rounded-2xl border border-navy/[0.08] bg-white shadow-softer',
+    wide: 'max-w-6xl',
+  },
+  creative: {
+    page: 'bg-[color:var(--color-paper)] text-navy',
+    band: 'bg-[color:var(--color-paper)]',
+    h2: 'font-display text-3xl font-bold uppercase tracking-tight text-navy md:text-5xl',
+    card: 'border-t border-navy/15',
+    wide: 'max-w-6xl',
+  },
+  personal: {
+    page: 'bg-white text-navy',
+    band: 'bg-primary/[0.06]',
+    h2: 'font-display text-2xl font-bold tracking-tight text-navy md:text-4xl',
+    card: 'rounded-3xl bg-white shadow-softer',
+    wide: 'max-w-5xl',
+  },
+}
+
+function initials(name: string) {
+  return name
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((w) => w[0]?.toUpperCase())
+    .join('')
+}
+
+// A member's page in one of the four looks (Sprint 128: Professional, Local
+// Services, Creative Portfolio, Personal Brand) — the same fields and
+// blocks, laid out as a small professional website, phone first.
+export default function MemberSiteView({ page, skin, preview = false, onLinkClick }: Props) {
+  const t = MEMBER_PAGE_LABELS[page.language] ?? MEMBER_PAGE_LABELS.en
+  const look = LOOK[skin]
+  const color = PAGE_COLORS.find((c) => c.id === page.theme?.color)
+  const style = color
+    ? ({ '--color-primary-rgb': color.rgb, '--color-primary-accent-rgb': color.rgb, '--color-primary': `rgb(${color.rgb})`, '--color-primary-accent': `rgb(${color.rgb})` } as CSSProperties)
+    : undefined
+  const [primary, secondary] = page.links
+  const blocks = pageBlocks(page).filter((b) => !b.hidden)
+
+  const linkProps = (type: string, url: string, target: string) =>
+    preview
+      ? { href: '#', onClick: (e: MouseEvent) => e.preventDefault() }
+      : { href: memberLinkHref(type, url), target: '_blank', rel: 'noreferrer', onClick: () => onLinkClick?.(target) }
+
+  const button = (link: MemberPageLink, kind: 'solid' | 'outline' | 'light', label?: string) => {
+    const Icon = MEMBER_LINK_ICONS[link.type] ?? Link2
+    const cls =
+      kind === 'solid'
+        ? 'bg-primary text-white hover:bg-primary/90'
+        : kind === 'light'
+          ? 'bg-white text-primary hover:opacity-90'
+          : skin === 'local'
+            ? 'border border-navy/15 bg-white text-navy hover:border-primary/40'
+            : 'border border-navy/15 bg-white/70 text-navy hover:border-primary/40'
+    return (
+      <a
+        key={link.type + link.url}
+        {...linkProps(link.type, link.url, `link:${link.type}`)}
+        className={`inline-flex items-center justify-center gap-2 px-5 py-3 text-[15px] font-semibold transition-colors ${skin === 'creative' ? 'rounded-none uppercase tracking-wide' : 'rounded-xl'} ${cls}`}
+      >
+        <Icon size={17} aria-hidden /> {label ?? memberLinkLabel(link, page.language)}
+      </a>
+    )
+  }
+
+  const section = (key: string, children: ReactNode, band = false) => (
+    <section key={key} className={band ? look.band : undefined}>
+      <div className={`mx-auto ${look.wide} px-5 py-14 md:py-20`}>{children}</div>
+    </section>
+  )
+
+  const photo = (cls: string) =>
+    page.photo_url ? (
+      <img src={page.photo_url} alt={page.display_name} className={`object-cover ${cls}`} />
+    ) : (
+      <span className={`grid place-items-center bg-grad-primary font-display text-5xl font-bold text-white ${cls}`}>{initials(page.display_name)}</span>
+    )
+
+  function hero() {
+    const name = page.display_name
+    const headline = page.headline
+    const location = page.location && (
+      <p className="inline-flex items-center gap-1.5 text-[14px] opacity-70">
+        <MapPin size={15} aria-hidden /> {page.location}
+      </p>
+    )
+    const buttons = (light = false) =>
+      primary ? (
+        <div className="mt-7 flex flex-wrap gap-3">
+          {button(primary, light ? 'solid' : 'solid')}
+          {secondary && button(secondary, 'outline')}
+        </div>
+      ) : null
+
+    if (skin === 'local') {
+      const bg = page.theme?.cover || page.photo_url
+      return (
+        <section key="hero" className="relative overflow-hidden bg-navy text-white">
+          {bg && <div className="absolute inset-0 bg-cover bg-center opacity-40" style={{ backgroundImage: `url(${bg})` }} aria-hidden />}
+          <div className="absolute inset-0 bg-gradient-to-r from-navy via-navy/80 to-navy/30" aria-hidden />
+          <div className={`relative mx-auto grid ${look.wide} gap-10 px-5 py-16 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] md:items-center md:py-24`}>
+            <div>
+              {location}
+              <h1 className="mt-3 font-display text-4xl font-bold leading-tight md:text-6xl">{headline || name}</h1>
+              {headline && <p className="mt-4 text-[17px] text-white/80">{name}</p>}
+              {buttons(true)}
+            </div>
+            {page.links.length > 0 && (
+              <div className="rounded-2xl bg-white p-6 text-navy shadow-softer">
+                <p className="font-display text-xl font-bold">{t.contact}</p>
+                <div className="mt-4 grid gap-2">{page.links.slice(0, 5).map((l, i) => button(l, i === 0 ? 'solid' : 'outline'))}</div>
+              </div>
+            )}
+          </div>
+        </section>
+      )
+    }
+
+    if (skin === 'creative') {
+      return (
+        <section key="hero">
+          <div className={`mx-auto ${look.wide} px-5 pb-10 pt-14 md:pt-20`}>
+            <div className="grid gap-6 md:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] md:items-end">
+              <h1 className="font-display text-5xl font-bold uppercase leading-[0.95] tracking-tight md:text-8xl">{name}</h1>
+              <div className="space-y-3 text-[13px] font-semibold uppercase tracking-wide text-navy/70 md:text-right">
+                {headline && <p>{headline}</p>}
+                {location}
+              </div>
+            </div>
+            {page.photo_url && <img src={page.photo_url} alt={name} className="mt-10 aspect-[16/9] w-full object-cover" />}
+            {buttons()}
+          </div>
+        </section>
+      )
+    }
+
+    if (skin === 'personal') {
+      return (
+        <section key="hero">
+          <div className={`mx-auto grid ${look.wide} gap-10 px-5 py-14 md:grid-cols-2 md:items-center md:py-20`}>
+            <div>
+              {location}
+              <h1 className="mt-3 font-display text-4xl font-bold leading-tight tracking-tight md:text-6xl">{headline || name}</h1>
+              {headline && <p className="mt-4 text-[17px] text-navy/60">{name}</p>}
+              {buttons()}
+            </div>
+            <div className="rounded-[2rem] bg-gradient-to-br from-primary/25 to-primary/5 p-3">{photo('aspect-[4/5] w-full rounded-[1.6rem]')}</div>
+          </div>
+        </section>
+      )
+    }
+
+    // professional
+    return (
+      <section key="hero" className="border-b border-navy/[0.06]">
+        <div className={`mx-auto grid ${look.wide} gap-12 px-5 py-14 md:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)] md:items-center md:py-24`}>
+          <div>
+            <p className="text-[13px] font-semibold uppercase tracking-[0.18em] text-primary">{page.location || ' '}</p>
+            <h1 className="mt-3 font-display text-4xl font-bold leading-tight tracking-tight md:text-6xl">{name}</h1>
+            {headline && <p className="mt-4 text-[19px] leading-relaxed text-navy/65">{headline}</p>}
+            {buttons()}
+          </div>
+          <div className="relative mx-auto w-full max-w-sm">
+            <div className="absolute -right-3 -top-3 h-full w-full rounded-xl bg-primary/15" aria-hidden />
+            {photo('relative aspect-square w-full rounded-xl')}
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  function highlightCard(h: MemberPageHighlight, i: number) {
+    const video = h.video ? videoEmbed(h.video) : null
+    const media = video ? (
+      <div className={`mx-auto bg-navy ${video.vertical ? 'aspect-[9/16] max-h-[560px] w-full max-w-[315px]' : 'aspect-video w-full'}`}>
+        <iframe src={video.src} title={h.title} className="h-full w-full" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen loading="lazy" />
+      </div>
+    ) : h.image ? (
+      <img src={h.image} alt="" className={`w-full object-cover ${skin === 'creative' ? 'aspect-[4/3]' : 'aspect-video'}`} />
+    ) : null
+    return (
+      <div key={h.title + i} className={`overflow-hidden ${skin === 'creative' ? '' : look.card}`}>
+        {media}
+        <div className={skin === 'creative' ? 'pt-3' : 'p-5'}>
+          <p className={`font-semibold text-navy ${skin === 'creative' ? 'text-[13px] uppercase tracking-wide' : 'text-[17px]'}`}>{h.title}</p>
+          {h.description && <p className="mt-1 text-[14.5px] leading-relaxed text-navy/60">{h.description}</p>}
+          {h.url && (
+            <a {...linkProps('website', h.url, `featured:${h.title}`)} className="mt-3 inline-flex items-center gap-1.5 text-[14.5px] font-semibold text-primary hover:underline">
+              {h.cta?.trim() || t.learnMore} <ArrowRight size={16} aria-hidden />
+            </a>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  function render(block: MemberPageBlock, index: number) {
+    const d = block.data ?? {}
+    const band = index % 2 === 1
+    switch (block.type) {
+      case 'hero':
+        return hero()
+      case 'contact':
+        if (!page.links.length) return null
+        return section(
+          block.id,
+          <div className="text-center">
+            <h2 className={look.h2}>{t.contact}</h2>
+            <div className="mx-auto mt-8 flex max-w-3xl flex-wrap justify-center gap-3">{page.links.map((l, i) => button(l, i === 0 ? 'solid' : 'outline'))}</div>
+          </div>,
+          band,
+        )
+      case 'highlights':
+        if (!page.highlights.length) return null
+        return section(
+          block.id,
+          <>
+            <h2 className={look.h2}>{t.highlights}</h2>
+            <div className={`mt-8 grid gap-6 ${page.highlights.length > 1 ? 'md:grid-cols-2' : 'mx-auto max-w-2xl'}`}>{page.highlights.map(highlightCard)}</div>
+          </>,
+          band,
+        )
+      case 'services':
+        if (!page.services.length) return null
+        return section(
+          block.id,
+          <>
+            <h2 className={look.h2}>{t.services}</h2>
+            {skin === 'creative' ? (
+              <ul className="mt-8">
+                {page.services.map((s, i) => (
+                  <li key={s.title} className="grid grid-cols-[3rem_minmax(0,1fr)_auto] gap-4 border-t border-navy/15 py-5">
+                    <span className="font-display text-xl font-bold text-navy/30">{String(i + 1).padStart(2, '0')}</span>
+                    <span>
+                      <span className="block font-semibold uppercase tracking-wide">{s.title}</span>
+                      {s.description && <span className="mt-1 block text-[14px] text-navy/60">{s.description}</span>}
+                    </span>
+                    {s.price && <span className="font-semibold">{s.price}</span>}
+                  </li>
+                ))}
+              </ul>
+            ) : (
+              <div className={`mt-8 grid gap-4 ${skin === 'professional' ? 'md:grid-cols-2' : 'sm:grid-cols-2 lg:grid-cols-3'}`}>
+                {page.services.map((s, i) => (
+                  <div key={s.title} className={`${look.card} p-6 ${skin === 'personal' && i === 1 ? 'bg-gradient-to-br from-primary/20 to-primary/5' : ''}`}>
+                    {skin === 'local' && <span className="mb-4 grid h-11 w-11 place-items-center rounded-full bg-primary/10 font-display font-bold text-primary">{i + 1}</span>}
+                    <p className="text-[17px] font-semibold text-navy">{s.title}</p>
+                    {s.description && <p className="mt-2 text-[14.5px] leading-relaxed text-navy/60">{s.description}</p>}
+                    {s.price && <p className="mt-4 font-display text-lg font-bold text-primary">{s.price}</p>}
+                  </div>
+                ))}
+              </div>
+            )}
+          </>,
+          band,
+        )
+      case 'about':
+      case 'text': {
+        const title = block.type === 'about' ? d.title || t.about : d.title
+        const body = block.type === 'about' ? page.bio : d.body
+        if (!body?.trim() && !title?.trim()) return null
+        if (block.type === 'about' && !page.bio) return null
+        return section(
+          block.id,
+          <div className={`grid gap-8 ${skin === 'personal' && block.type === 'about' && page.photo_url ? 'md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] md:items-center' : 'md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]'}`}>
+            {skin === 'personal' && block.type === 'about' && page.photo_url ? photo('hidden aspect-square w-full rounded-3xl md:grid') : title ? <h2 className={look.h2}>{title}</h2> : <span />}
+            <div>
+              {skin === 'personal' && block.type === 'about' && page.photo_url && title && <h2 className={`${look.h2} mb-4`}>{title}</h2>}
+              {body && <p className="whitespace-pre-line text-[16px] leading-relaxed text-navy/70">{body}</p>}
+            </div>
+          </div>,
+          band,
+        )
+      }
+      case 'testimonials': {
+        const items = (d.items ?? []).filter((i) => i.title.trim())
+        if (!items.length) return null
+        return section(
+          block.id,
+          <>
+            {d.title && <h2 className={`${look.h2} ${skin === 'creative' ? '' : 'text-center'}`}>{d.title}</h2>}
+            <div className={`mt-8 grid gap-4 ${items.length > 1 ? 'md:grid-cols-2 lg:grid-cols-3' : 'mx-auto max-w-2xl'}`}>
+              {items.map((item, i) => (
+                <figure key={i} className={`${look.card} p-6`}>
+                  <Quote size={20} className="text-primary" aria-hidden />
+                  <blockquote className="mt-3 text-[15.5px] leading-relaxed text-navy/75">{item.title}</blockquote>
+                  {item.body && <figcaption className="mt-3 text-[13.5px] font-semibold text-navy/55">— {item.body}</figcaption>}
+                </figure>
+              ))}
+            </div>
+          </>,
+          band,
+        )
+      }
+      case 'gallery': {
+        const images = (d.images ?? []).filter(Boolean)
+        if (!images.length) return null
+        return section(
+          block.id,
+          <>
+            {d.title && <h2 className={look.h2}>{d.title}</h2>}
+            <div className={`mt-8 grid grid-cols-2 gap-3 ${skin === 'creative' ? 'md:grid-cols-2 md:gap-6' : 'md:grid-cols-3'}`}>
+              {images.map((src, i) => (
+                <img key={i} src={src} alt="" loading="lazy" className={`w-full object-cover ${skin === 'creative' ? (i % 3 === 0 ? 'col-span-2 aspect-[16/9]' : 'aspect-[4/3]') : 'aspect-square rounded-xl'}`} />
+              ))}
+            </div>
+          </>,
+          band,
+        )
+      }
+      case 'area': {
+        if (!d.title?.trim() && !d.body?.trim()) return null
+        const places = (d.body ?? '').split(/\s*[·,;\n]\s*/).filter(Boolean)
+        return section(
+          block.id,
+          <div className="text-center">
+            {d.title && <h2 className={look.h2}>{d.title}</h2>}
+            <div className="mx-auto mt-6 flex max-w-3xl flex-wrap justify-center gap-2">
+              {places.map((p) => (
+                <span key={p} className="inline-flex items-center gap-1.5 rounded-full border border-navy/10 bg-white px-4 py-2 text-[14px] font-medium text-navy/75">
+                  <MapPin size={14} className="text-primary" aria-hidden /> {p}
+                </span>
+              ))}
+            </div>
+          </div>,
+          band,
+        )
+      }
+      case 'faq': {
+        const items = (d.items ?? []).filter((i) => i.title.trim())
+        if (!items.length) return null
+        return section(
+          block.id,
+          <div className="mx-auto max-w-3xl">
+            {d.title && <h2 className={`${look.h2} text-center`}>{d.title}</h2>}
+            <div className="mt-8 divide-y divide-navy/[0.08] overflow-hidden rounded-2xl border border-navy/[0.08] bg-white">
+              {items.map((item, i) => (
+                <details key={i} className="px-5 py-4">
+                  <summary className="cursor-pointer list-none font-semibold text-navy">{item.title}</summary>
+                  {item.body && <p className="mt-2 whitespace-pre-line text-[14.5px] leading-relaxed text-navy/60">{item.body}</p>}
+                </details>
+              ))}
+            </div>
+          </div>,
+          band,
+        )
+      }
+      case 'credentials': {
+        const items = (d.items ?? []).filter((i) => i.title.trim())
+        if (!items.length) return null
+        return section(
+          block.id,
+          <>
+            <h2 className={look.h2}>{d.title || t.credentials}</h2>
+            <ul className="mt-8 grid gap-3 md:grid-cols-2">
+              {items.map((item, i) => (
+                <li key={i} className={`${look.card} flex gap-3 p-5`}>
+                  <BadgeCheck size={20} className="mt-0.5 shrink-0 text-primary" aria-hidden />
+                  <span>
+                    <span className="block font-semibold text-navy">{item.title}</span>
+                    {item.body && <span className="mt-1 block text-[14px] text-navy/60">{item.body}</span>}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="mt-4 text-[12.5px] text-navy/45">{t.credentialsNote}</p>
+          </>,
+          band,
+        )
+      }
+      case 'cta': {
+        if (!d.title?.trim() && !d.body?.trim()) return null
+        return (
+          <section key={block.id}>
+            <div className={`mx-auto ${look.wide} px-5 py-14`}>
+              <div
+                className={`px-6 py-12 text-center md:px-12 md:py-16 ${
+                  skin === 'personal'
+                    ? 'rounded-[2rem] bg-gradient-to-br from-primary/25 to-primary/5 text-navy'
+                    : skin === 'creative'
+                      ? 'border-y border-navy/20 text-navy'
+                      : `${skin === 'local' ? 'rounded-2xl' : 'rounded-xl'} bg-primary text-white`
+                }`}
+              >
+                {d.title && <h2 className={`font-display text-3xl font-bold tracking-tight md:text-4xl ${skin === 'creative' ? 'uppercase' : ''}`}>{d.title}</h2>}
+                {d.body && <p className={`mx-auto mt-3 max-w-xl text-[16px] leading-relaxed ${skin === 'personal' || skin === 'creative' ? 'text-navy/65' : 'text-white/85'}`}>{d.body}</p>}
+                {primary && <div className="mt-7 flex justify-center">{button(primary, skin === 'personal' || skin === 'creative' ? 'solid' : 'light', d.button?.trim() || undefined)}</div>}
+              </div>
+            </div>
+          </section>
+        )
+      }
+      default:
+        return null
+    }
+  }
+
+  return (
+    <div style={style} className={`min-h-full w-full ${look.page}`}>
+      {blocks.map((block, i) => render(block, i))}
+      <footer className="border-t border-navy/[0.06]">
+        <div className={`mx-auto ${look.wide} px-5 py-8 text-center`}>
+          <p className="text-[12px] text-navy/40">{t.disclaimer}</p>
+          <a href={preview ? '#' : '/'} onClick={preview ? (e) => e.preventDefault() : undefined} className="mt-2 inline-block text-[12.5px] font-medium text-navy/35 hover:text-navy/60">
+            {t.madeWith}
+          </a>
+        </div>
+      </footer>
+    </div>
+  )
+}

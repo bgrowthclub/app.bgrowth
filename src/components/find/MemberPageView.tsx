@@ -1,23 +1,16 @@
-import { ArrowRight, Globe, Instagram, Link2, Mail, MapPin, MessageCircle, Music2, Quote, Youtube } from 'lucide-react'
+import { ArrowRight, Link2, MapPin, Quote } from 'lucide-react'
+import { MEMBER_LINK_ICONS } from './memberLinkIcons'
+import MemberSiteView from './MemberSiteView'
 import type { CSSProperties } from 'react'
-import type { LucideIcon } from 'lucide-react'
 import { MEMBER_PAGE_LABELS, memberLinkHref, memberLinkLabel, videoEmbed } from '../../modules/find/memberPageService'
-import { PAGE_COLORS, pageBlocks } from '../../modules/find/memberPageTemplates'
-import type { MemberPage, MemberPageBlock, MemberPageLinkType } from '../../modules/find/types'
+import { PAGE_COLORS, pageBlocks, pageSkin } from '../../modules/find/memberPageTemplates'
+import type { MemberPage, MemberPageBlock } from '../../modules/find/types'
 
-const ICONS: Record<MemberPageLinkType, LucideIcon> = {
-  whatsapp: MessageCircle,
-  email: Mail,
-  instagram: Instagram,
-  tiktok: Music2,
-  youtube: Youtube,
-  website: Globe,
-  other: Link2,
-}
+const ICONS = MEMBER_LINK_ICONS
 
 interface Props {
   page: Pick<MemberPage, 'display_name' | 'headline' | 'bio' | 'photo_url' | 'location' | 'services' | 'highlights' | 'links' | 'language'> &
-    Partial<Pick<MemberPage, 'blocks' | 'theme'>>
+    Partial<Pick<MemberPage, 'blocks' | 'theme' | 'template'>>
   // Admin preview: links don't navigate.
   preview?: boolean
   // Called when a visitor opens a contact button or featured item, with
@@ -40,6 +33,9 @@ function initials(name: string) {
 // (hidden and empty ones skipped) in the page's color; a page without blocks
 // keeps the original layout (top, contacts, featured, services, about).
 export default function MemberPageView({ page, preview = false, onLinkClick }: Props) {
+  // The four models (Sprint 128) have their own full-width looks.
+  const skin = pageSkin(page.template)
+  if (skin) return <MemberSiteView page={page} skin={skin} preview={preview} onLinkClick={onLinkClick} />
   const t = MEMBER_PAGE_LABELS[page.language] ?? MEMBER_PAGE_LABELS.en
   const [primary, ...others] = page.links
   const linkProps = (type: string, url: string, target: string) =>
