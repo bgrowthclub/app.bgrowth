@@ -11,7 +11,13 @@ export async function getPublishedMemberPage(slug: string): Promise<MemberPage |
     if (error.code === '42P01' || error.code === 'PGRST205') return null
     throw error
   }
-  return ((data ?? [])[0] as MemberPage | undefined) ?? null
+  const page = ((data ?? [])[0] as MemberPage | undefined) ?? null
+  if (page) return page
+  // An address the page had before (Portal migration 0063): the page it
+  // moved to, so the old link keeps working.
+  const moved = await supabase.from('member_pages').select('*').contains('previous_slugs', [slug]).eq('status', 'published').limit(1)
+  if (moved.error) return null
+  return ((moved.data ?? [])[0] as MemberPage | undefined) ?? null
 }
 
 // Labels a page shows in its own language.

@@ -208,6 +208,10 @@ This repo is a **static, client-only MVP**:
   "Before you publish" note (privacy, images, real testimonials, credentials;
   publishing ≠ verified by BGrowth) and a page footer disclaimer; My Page has
   copy-link / WhatsApp / share buttons. No migration.
+  Since Sprint 130 (Portal migration 0063) a page keeps its old addresses
+  (`member_pages.previous_slugs`, up to 10): `/p/<old>` redirects to the new
+  one (`getPublishedMemberPage` + `MemberPublicPage`), link previews follow
+  it, and another page can't take an old address.
   **Since Sprint 76 member pages have numbers** (approved by the user;
   Portal migration 0045): daily totals of visits, clicks per contact
   button/featured item, course visits and course e-mails

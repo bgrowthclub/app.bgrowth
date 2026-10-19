@@ -532,6 +532,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
               <label className="block">
                 <span className={LABEL}>Address</span>
                 {free ? (
+                  <>
                   <div className="flex items-center rounded-xl border border-navy/10 bg-white pl-3.5 focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/15">
                     <span className="text-sm text-navy/40">bgrowth.app/p/</span>
                     <input
@@ -544,6 +545,10 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                       className="w-full bg-transparent py-2.5 pr-3.5 text-sm text-navy outline-none"
                     />
                   </div>
+                  {page?.slug && slug && slug !== page.slug && page.status === 'published' && (
+                    <span className="mt-1 block text-[12px] text-navy/45">bgrowth.app/p/{page.slug} will keep working and lead to the new address.</span>
+                  )}
+                  </>
                 ) : (
                   <p className="py-2.5 text-sm text-navy/60">{page?.slug ? `bgrowth.app/p/${page.slug}` : 'Made from your name when you save'}</p>
                 )}

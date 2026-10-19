@@ -2417,6 +2417,26 @@ async function ensurePageSlugFree(db: Db, slug: string, exceptId?: string) {
     throw error
   }
   if (data && data.length > 0) throw new HttpError(409, `bgrowth.app/p/${slug} is already taken — choose another address.`)
+  if (await slugUsedBefore(db, slug, exceptId)) throw new HttpError(409, `bgrowth.app/p/${slug} was another page's address and still leads there — choose another address.`)
+}
+
+// When a page's address changes, the old one is kept (Portal migration 0063)
+// so links already shared keep working; up to 10, newest last. Before 0063
+// nothing is kept.
+async function previousSlugsAfter(db: Db, id: string, oldSlug: string | null | undefined, newSlug: string): Promise<{ previous_slugs?: string[] }> {
+  if (!oldSlug || oldSlug === newSlug) return {}
+  const { data, error } = await db.from('member_pages').select('previous_slugs').eq('id', id).maybeSingle()
+  if (error) return {}
+  const list = [...new Set([...(((data as { previous_slugs?: string[] } | null)?.previous_slugs) ?? []), oldSlug])].filter((s) => s !== newSlug)
+  return { previous_slugs: list.slice(-10) }
+}
+
+// An address another page used before stays theirs (it redirects there).
+async function slugUsedBefore(db: Db, slug: string, exceptId?: string) {
+  let q = db.from('member_pages').select('id').contains('previous_slugs', [slug]).limit(1)
+  if (exceptId) q = q.neq('id', exceptId)
+  const { data, error } = await q
+  return !error && Boolean(data && data.length)
 }
 
 async function createMemberPage(req: VercelRequest, db: Db) {
@@ -2434,9 +2454,11 @@ async function updateMemberPage(req: VercelRequest, db: Db) {
   const input = readMemberPageInput(req)
   await ensurePageSlugFree(db, input.slug, id)
   const userId = await resolvePageOwner(db, req.body?.ownerEmail)
+  const { data: before } = await db.from('member_pages').select('slug').eq('id', id).maybeSingle()
+  const moved = await previousSlugsAfter(db, id, (before as { slug?: string } | null)?.slug, input.slug)
   const { data, error } = await db
     .from('member_pages')
-    .update({ ...input, user_id: userId, updated_at: new Date().toISOString() })
+    .update({ ...input, ...moved, user_id: userId, updated_at: new Date().toISOString() })
     .eq('id', id)
     .select('*')
     .maybeSingle()
