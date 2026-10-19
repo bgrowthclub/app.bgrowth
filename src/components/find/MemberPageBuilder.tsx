@@ -6,7 +6,7 @@ import { CARD, INPUT, LINK_BUTTON, SMALL_BUTTON } from '../admin/styles'
 import MemberPageView from './MemberPageView'
 import ResponsiveFrame from '../ui/ResponsiveFrame'
 import { shrinkImage } from '../../lib/shrinkImage'
-import { videoEmbed } from '../../modules/find/memberPageService'
+import { MEMBER_PAGE_LABELS, videoEmbed } from '../../modules/find/memberPageService'
 import { BLOCK_TYPES, LEGACY_BLOCKS, PAGE_COLORS, blockId, memberPageTemplates, switchTemplateBlocks, templateBlocks, templatePreview } from '../../modules/find/memberPageTemplates'
 import type {
   MemberPage,
@@ -17,6 +17,8 @@ import type {
   MemberPageHighlight,
   MemberPageLink,
   MemberPageLinkType,
+  MemberPageProduct,
+  MemberPageProductCategory,
   MemberPageService,
   MemberPageTheme,
 } from '../../modules/find/types'
@@ -68,6 +70,8 @@ function fitBlocks(templateId: string, language: MemberPage['language'], current
   const next = switchTemplateBlocks(templateId, language, current)
   return keepExtra ? next : next.slice(0, templateBlocks(templateId, language).length)
 }
+
+const PRODUCT_CATEGORY_OPTIONS: MemberPageProductCategory[] = ['car', 'work', 'home', 'tech', 'travel', 'finance', 'learning', 'other']
 
 function move<T>(list: T[], index: number, delta: number): T[] {
   const next = [...list]
@@ -139,6 +143,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
   const [error, setError] = useState<string | null>(null)
   const published = page?.status === 'published'
   const maxHighlights = free ? 8 : 1
+  const maxProducts = free ? 60 : 12
   const templates = memberPageTemplates(language)
 
   function pickImage(key: string, size: number, done: (url: string) => void) {
@@ -228,7 +233,62 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
     const d = block.data ?? {}
     switch (block.type) {
       case 'hero':
-        return <p className="text-[13px] text-navy/55">Shows your photo, name, what you do and where — edit them in “Basics” above.</p>
+        return (
+          <div className="space-y-2">
+            <p className="text-[13px] text-navy/55">Shows your photo, name, what you do and where — edit them in “Basics” above.</p>
+            {template === 'affiliate' && (
+              <>
+                <input value={d.title ?? ''} onChange={(e) => setBlockData(block.id, { title: e.target.value })} maxLength={120} className={INPUT} placeholder="Small line above the title (e.g. Tools · Products · Resources)" aria-label="Small line" />
+                <textarea value={d.body ?? ''} onChange={(e) => setBlockData(block.id, { body: e.target.value })} rows={3} maxLength={400} className={INPUT} placeholder="A sentence about what you recommend" aria-label="Intro" />
+                <input value={d.button ?? ''} onChange={(e) => setBlockData(block.id, { button: e.target.value })} maxLength={40} className={INPUT} placeholder="Button text (default: See my picks)" aria-label="Button text" />
+                <p className="text-[12.5px] text-navy/45">The big image on the right is your cover image (or your photo).</p>
+              </>
+            )}
+          </div>
+        )
+      case 'products': {
+        const products = d.products ?? []
+        const setProduct = (i: number, patch: Partial<MemberPageProduct>) => setBlockData(block.id, { products: products.map((x, j) => (j === i ? { ...x, ...patch } : x)) })
+        return (
+          <div className="space-y-2">
+            <p className="text-[12.5px] text-navy/50">
+              Add only products you recommend, with your own buy link (your affiliate code stays as you paste it). The page never shows prices, stars or reviews you didn’t write, and always shows a note that links may earn you a commission.
+            </p>
+            <input value={d.title ?? ''} onChange={(e) => setBlockData(block.id, { title: e.target.value })} maxLength={120} className={INPUT} placeholder="Section title (default: My picks)" aria-label="Section title" />
+            {products.map((p, i) => (
+              <Row key={i} index={i} total={products.length} onMove={(dd) => setBlockData(block.id, { products: move(products, i, dd) })} onRemove={() => setBlockData(block.id, { products: products.filter((_, j) => j !== i) })}>
+                <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_150px]">
+                  <input value={p.title} onChange={(e) => setProduct(i, { title: e.target.value })} maxLength={120} className={INPUT} placeholder="Product name" aria-label="Product name" />
+                  <select value={p.category ?? 'other'} onChange={(e) => setProduct(i, { category: e.target.value as MemberPageProductCategory })} className={INPUT} aria-label="Category">
+                    {PRODUCT_CATEGORY_OPTIONS.map((c) => (
+                      <option key={c} value={c}>
+                        {MEMBER_PAGE_LABELS[language].categories[c]}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <input value={p.url} onChange={(e) => setProduct(i, { url: e.target.value.trim() })} className={INPUT} placeholder="Your buy link (https://…)" aria-label="Buy link" />
+                {p.url.trim() && !/^https:\/\/\S+$/.test(p.url.trim()) && <p className="text-[12.5px] text-red-500">Use the full link, starting with https://</p>}
+                <input value={p.description ?? ''} onChange={(e) => setProduct(i, { description: e.target.value })} maxLength={300} className={INPUT} placeholder="Why you recommend it (short)" aria-label="Why you recommend it" />
+                <div className="flex flex-wrap items-center gap-3">
+                  {p.image && <img src={p.image} alt="" className="h-10 w-10 rounded-md object-cover" />}
+                  <button type="button" disabled={uploading !== null} onClick={() => pickImage(`p${block.id}${i}`, 800, (url) => setProduct(i, { image: url }))} className={`${SMALL} inline-flex items-center gap-1.5 text-primary hover:bg-bg-soft`}>
+                    <ImagePlus size={14} /> {uploading === `p${block.id}${i}` ? 'Uploading…' : p.image ? 'Change image' : 'Add image'}
+                  </button>
+                  <label className="inline-flex items-center gap-1.5 text-[13px] text-navy/70">
+                    <input type="checkbox" checked={Boolean(p.favorite)} onChange={(e) => setProduct(i, { favorite: e.target.checked })} /> Top pick
+                  </label>
+                  <input value={p.cta ?? ''} onChange={(e) => setProduct(i, { cta: e.target.value })} maxLength={30} className={`${INPUT} !w-auto flex-1`} placeholder="Button (default: See product)" aria-label="Button text" />
+                </div>
+                <p className="text-[12px] text-navy/40">Use a photo you took or one you’re allowed to use (e.g. from the store’s affiliate program).</p>
+              </Row>
+            ))}
+            <Add label="Add a product" disabled={products.length >= maxProducts} onClick={() => setBlockData(block.id, { products: [...products, { title: '', url: '', category: 'other' }] })} />
+            {!free && <p className="text-[12px] text-navy/45">Your plan shows up to {maxProducts} products.</p>}
+            <textarea value={d.body ?? ''} onChange={(e) => setBlockData(block.id, { body: e.target.value })} rows={2} maxLength={600} className={INPUT} placeholder="Your own note about these links (optional — the standard affiliate note is always shown)" aria-label="Your note" />
+          </div>
+        )
+      }
       case 'contact':
         return (
           <div>

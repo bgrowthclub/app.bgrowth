@@ -212,6 +212,19 @@ This repo is a **static, client-only MVP**:
   (`member_pages.previous_slugs`, up to 10): `/p/<old>` redirects to the new
   one (`getPublishedMemberPage` + `MemberPublicPage`), link previews follow
   it, and another page can't take an old address.
+  **Since Sprint 131 there is a fifth look, Affiliate Picks** (decided
+  19/10/2026): a personal showcase of products the member recommends —
+  block `products` (`MemberPageProduct`: name, why, image, buy link kept
+  exactly as typed, category car/work/home/tech/travel/finance/learning/
+  other, "top pick", button text) drawn by `components/find/
+  MemberProductPicks` (top picks, category chips, search, links
+  `rel="sponsored nofollow"`, the affiliate note always shown). Nothing is
+  invented: no prices, ratings or reviews. Pro up to 12 products, Enterprise
+  60. "My Business Page" now shows in everyone's menu: locked with "Upgrade"
+  (to /platform/membership) when the plan has no page (`upgrade` in
+  `platformNav`). A page sold on its own = a plan with only the `memberPage`
+  entitlement and a rank just above Free (below any plan whose included
+  products it must not open).
   **Since Sprint 76 member pages have numbers** (approved by the user;
   Portal migration 0045): daily totals of visits, clicks per contact
   button/featured item, course visits and course e-mails

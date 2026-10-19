@@ -493,14 +493,16 @@ async function includedInPlan(db: Db, userId: string, productId: string): Promis
 
 // Member page blocks and theme (Sprint 127, Portal migration 0062) — the
 // same cleaning in api/admin.ts and api/account.ts.
-const PAGE_BLOCK_TYPES = new Set(['hero', 'contact', 'highlights', 'services', 'about', 'testimonials', 'gallery', 'text', 'faq', 'area', 'cta', 'credentials'])
+const PAGE_BLOCK_TYPES = new Set(['hero', 'contact', 'highlights', 'services', 'about', 'testimonials', 'gallery', 'text', 'faq', 'area', 'cta', 'credentials', 'products'])
 const PAGE_COLORS = new Set(['blue', 'teal', 'green', 'purple', 'rose', 'orange', 'navy'])
-const PAGE_TEMPLATES = new Set(['professional', 'local', 'creative', 'personal', 'cleaning', 'notary', 'teacher', 'creator', 'blank'])
+const PAGE_TEMPLATES = new Set(['professional', 'local', 'creative', 'personal', 'affiliate', 'cleaning', 'notary', 'teacher', 'creator', 'blank'])
 const pageText = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '')
 const pageUrl = (v: unknown) => {
   const s = pageText(v, 500)
   return /^https:\/\//.test(s) ? s : ''
 }
+
+const PRODUCT_CATEGORIES = new Set(['car', 'work', 'home', 'tech', 'travel', 'finance', 'learning', 'other'])
 
 function cleanPageBlocks(value: unknown) {
   if (!Array.isArray(value)) return null
@@ -523,6 +525,19 @@ function cleanPageBlocks(value: unknown) {
         .filter((i: { title: string }) => i.title)
     }
     if (Array.isArray(d.images)) data.images = d.images.slice(0, 12).map(pageUrl).filter(Boolean)
+    // Product picks (Sprint 131): links kept exactly as typed (affiliate codes).
+    if (Array.isArray(d.products)) {
+      data.products = d.products.slice(0, 60).flatMap((x: any) => {
+        const title = pageText(x?.title, 120)
+        const url = pageText(x?.url, 1000)
+        if (!title || !/^https:\/\/\S+$/.test(url)) return []
+        const category = PRODUCT_CATEGORIES.has(x?.category) ? x.category : 'other'
+        const image = pageUrl(x?.image)
+        const description = pageText(x?.description, 300)
+        const cta = pageText(x?.cta, 30)
+        return [{ title, url, category, ...(description ? { description } : {}), ...(image ? { image } : {}), ...(cta ? { cta } : {}), ...(x?.favorite === true ? { favorite: true } : {}) }]
+      })
+    }
     return [{ id, type, ...(raw?.hidden === true ? { hidden: true } : {}), ...(Object.keys(data).length ? { data } : {}) }]
   })
   return blocks.length ? blocks : null
@@ -558,6 +573,7 @@ const TEMPLATE_SEQUENCES: Record<string, string> = {
   local: 'hero,services,highlights,area,testimonials,faq,contact,cta',
   creative: 'hero,highlights,gallery,about,services,testimonials,contact,cta',
   personal: 'hero,about,services,testimonials,highlights,faq,contact,cta',
+  affiliate: 'hero,products,about,contact',
   cleaning: 'hero,contact,services,highlights,testimonials,area,faq,cta',
   notary: 'hero,contact,services,area,about,faq,cta',
   teacher: 'hero,contact,highlights,services,text,testimonials,about,cta',
@@ -565,7 +581,7 @@ const TEMPLATE_SEQUENCES: Record<string, string> = {
   blank: 'hero,contact',
 }
 const TEMPLATE_COLORS: Record<string, string> = {
-  professional: 'navy', local: 'orange', creative: 'rose', personal: 'green',
+  professional: 'navy', local: 'orange', creative: 'rose', personal: 'green', affiliate: 'blue',
   cleaning: 'teal', notary: 'navy', teacher: 'purple', creator: 'rose', blank: 'blue',
 }
 
@@ -702,6 +718,10 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string }, re
     }) as typeof input.blocks
     input.theme = { color: TEMPLATE_COLORS[template] }
     input.highlights = input.highlights.slice(0, 1)
+    // Pro: up to 12 product picks (Enterprise: 60).
+    input.blocks = (input.blocks ?? []).map((b: any) =>
+      b.type === 'products' && b.data?.products ? { ...b, data: { ...b.data, products: b.data.products.slice(0, 12) } } : b,
+    ) as typeof input.blocks
   } else {
     const wanted = slugFrom(pageText(req.body?.slug, 40))
     if (wanted && wanted !== slug) {

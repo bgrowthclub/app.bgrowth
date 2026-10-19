@@ -34,6 +34,7 @@ export const BLOCK_TYPES: { type: MemberPageBlockType; label: string; hint: stri
   { type: 'area', label: 'Area served', hint: 'Cities or regions you cover' },
   { type: 'cta', label: 'Final call', hint: 'A closing message with a button' },
   { type: 'credentials', label: 'Licenses & credentials', hint: 'Shown as stated — not verified by BGrowth' },
+  { type: 'products', label: 'Product picks', hint: 'Products you recommend, with your buy links' },
 ]
 
 export const PAGE_COLORS: { id: MemberPageColor; label: string; rgb: string }[] = [
@@ -209,6 +210,25 @@ export function memberPageTemplates(lang: Lang): MemberPageTemplate[] {
       },
     },
     {
+      id: 'affiliate',
+      name: { en: 'Affiliate Picks', pt: 'Affiliate Picks' },
+      description: {
+        en: 'For creators who recommend products. A personal showcase of your picks by category, with your own buy links and a clear affiliate note — not a store.',
+        pt: 'Para quem indica produtos. Uma vitrine pessoal das suas indicações por categoria, com seus próprios links de compra e aviso de afiliado — não é uma loja.',
+      },
+      color: 'blue',
+      blocks: [
+        b('hero', {
+          title: L('Tools · Products · Resources', 'Ferramentas · Produtos · Recursos'),
+          body: L('The tools, products and resources I use and recommend for work, home, travel and everyday life.', 'As ferramentas, produtos e recursos que eu uso e indico para trabalho, casa, viagem e dia a dia.'),
+        }),
+        b('products', { title: L('My picks', 'Minhas indicações'), products: [] }),
+        b('about'),
+        b('contact'),
+      ],
+      example: { headline: L('Real products for a better life', 'Produtos de verdade para uma vida melhor') },
+    },
+    {
       id: 'cleaning',
       name: { en: 'Cleaning & home services', pt: 'Limpeza e serviços para casa' },
       description: { en: 'Services with prices, area served and reviews up front.', pt: 'Serviços com preço, área atendida e avaliações em destaque.' },
@@ -340,10 +360,10 @@ export function memberPageTemplates(lang: Lang): MemberPageTemplate[] {
 
 // The four full-site looks (Sprint 128). The first five models (Sprint 127:
 // cleaning, notary, teacher, creator, blank) keep the simple one-column page.
-export type MemberPageSkin = 'professional' | 'local' | 'creative' | 'personal'
+export type MemberPageSkin = 'professional' | 'local' | 'creative' | 'personal' | 'affiliate'
 export function pageSkin(template: string | null | undefined): MemberPageSkin | null {
   const id = template ?? ''
-  return id === 'professional' || id === 'local' || id === 'creative' || id === 'personal' ? id : null
+  return id === 'professional' || id === 'local' || id === 'creative' || id === 'personal' || id === 'affiliate' ? id : null
 }
 
 export const MEMBER_PAGE_TEMPLATES = memberPageTemplates('en')
@@ -385,6 +405,11 @@ export function switchTemplateBlocks(templateId: string, lang: Lang, current: Me
 
 // A complete example page for the model picker's previews.
 const SAMPLE: Record<string, { name: string; location: { en: string; pt: string }; bio: { en: string; pt: string } }> = {
+  affiliate: {
+    name: 'Bruno Santos',
+    location: { en: 'USA Lifestyle & Resources', pt: 'Vida nos EUA e recursos' },
+    bio: { en: 'I only share what I actually use.', pt: 'Só indico o que eu realmente uso.' },
+  },
   cleaning: { name: 'Sparkle Cleaning', location: { en: 'Orlando, FL', pt: 'Orlando, FL' }, bio: { en: 'Careful, on-time cleaning for homes and offices.', pt: 'Limpeza cuidadosa e pontual para casas e escritórios.' } },
   notary: { name: 'Paula Lima', location: { en: 'Tampa, FL · Mobile', pt: 'Tampa, FL · Móvel' }, bio: { en: 'Mobile notary — I come to you.', pt: 'Notary móvel — eu vou até você.' } },
   teacher: { name: 'Marina Costa', location: { en: 'Online', pt: 'Online' }, bio: { en: 'Practical classes for real life.', pt: 'Aulas práticas para a vida real.' } },
@@ -428,8 +453,23 @@ export function templatePreview(t: MemberPageTemplate, lang: Lang): MemberPageCo
       { type: 'instagram', label: '', url: 'https://instagram.com/' },
     ],
     language: lang,
-    blocks: t.blocks,
+    blocks: t.id === 'affiliate' ? t.blocks.map((block) => (block.type === 'products' ? { ...block, data: { ...block.data, products: samplePicks(lang) } } : block)) : t.blocks,
     theme: { color: t.color },
     template: t.id,
   }
+}
+
+// Example picks for the model preview only — a real page shows just what the
+// member adds.
+function samplePicks(lang: Lang): NonNullable<MemberPageBlock['data']>['products'] {
+  const L = (en: string, pt: string) => (lang === 'pt' ? pt : en)
+  const url = 'https://example.com'
+  return [
+    { title: L('Car phone mount', 'Suporte de celular para carro'), description: L('Holds steady on any road.', 'Firme em qualquer estrada.'), url, category: 'car', favorite: true },
+    { title: L('Portable jump starter', 'Auxiliar de partida portátil'), description: L('Saved me twice this winter.', 'Me salvou duas vezes neste inverno.'), url, category: 'car', favorite: true },
+    { title: L('Laptop stand', 'Suporte para notebook'), description: L('Better posture at the desk.', 'Postura melhor na mesa.'), url, category: 'work', favorite: true },
+    { title: L('Travel organizer', 'Organizador de viagem'), description: L('Everything in its place.', 'Tudo no lugar.'), url, category: 'travel', favorite: true },
+    { title: L('Budget planner', 'Planner de orçamento'), url, category: 'finance' },
+    { title: L('Smart plug', 'Tomada inteligente'), url, category: 'home' },
+  ]
 }
