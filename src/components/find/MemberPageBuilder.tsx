@@ -7,7 +7,7 @@ import MemberPageView from './MemberPageView'
 import ResponsiveFrame from '../ui/ResponsiveFrame'
 import { shrinkImage } from '../../lib/shrinkImage'
 import { videoEmbed } from '../../modules/find/memberPageService'
-import { BLOCK_TYPES, LEGACY_BLOCKS, PAGE_COLORS, blockId, memberPageTemplates, pageSkin, switchTemplateBlocks, templateBlocks, templatePreview } from '../../modules/find/memberPageTemplates'
+import { BLOCK_TYPES, LEGACY_BLOCKS, PAGE_COLORS, blockId, memberPageTemplates, switchTemplateBlocks, templateBlocks, templatePreview } from '../../modules/find/memberPageTemplates'
 import type {
   MemberPage,
   MemberPageBlock,
@@ -112,7 +112,7 @@ function Add({ label, onClick, disabled }: { label: string; onClick: () => void;
 export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel, extra }: Props) {
   const free = mode !== 'partial'
   const [language, setLanguage] = useState<MemberPage['language']>(page?.language ?? 'en')
-  const [template, setTemplate] = useState(page ? (pageSkin(page.template) ?? 'professional') : '')
+  const [template, setTemplate] = useState(page ? (page.template ?? 'blank') : '')
   const [blocks, setBlocks] = useState<MemberPageBlock[]>(() => {
     const own = page?.blocks?.length ? page.blocks : page ? LEGACY_BLOCKS.map((b) => ({ ...b, id: blockId() })) : []
     // A Pro page keeps exactly its model's sections (pages from the first
@@ -387,8 +387,8 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
               {chosen
                 ? chosen.description[language]
                 : hasContent
-                  ? 'Four looks for the same page. Switching keeps your texts, photos and contacts.'
-                  : 'Four looks for the same page. Each comes with example texts — you replace them with yours.'}
+                  ? 'Switching model keeps your texts, photos and contacts.'
+                  : 'Each comes with example texts — you replace them with yours.'}
             </p>
           </div>
           {!chosen && (
