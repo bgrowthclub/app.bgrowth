@@ -589,7 +589,26 @@ async function slugTaken(db: Db, slug: string, exceptId?: string) {
   let q = db.from('member_pages').select('id').eq('slug', slug).limit(1)
   if (exceptId) q = q.neq('id', exceptId)
   const { data } = await q
-  return Boolean(data && data.length)
+  return Boolean(data && data.length) || (await slugUsedBefore(db, slug, exceptId))
+}
+
+// When a page's address changes, the old one is kept (Portal migration 0063)
+// so links already shared keep working; up to 10, newest last. Before 0063
+// nothing is kept.
+async function previousSlugsAfter(db: Db, id: string, oldSlug: string | null | undefined, newSlug: string): Promise<{ previous_slugs?: string[] }> {
+  if (!oldSlug || oldSlug === newSlug) return {}
+  const { data, error } = await db.from('member_pages').select('previous_slugs').eq('id', id).maybeSingle()
+  if (error) return {}
+  const list = [...new Set([...(((data as { previous_slugs?: string[] } | null)?.previous_slugs) ?? []), oldSlug])].filter((s) => s !== newSlug)
+  return { previous_slugs: list.slice(-10) }
+}
+
+// An address another page used before stays theirs (it redirects there).
+async function slugUsedBefore(db: Db, slug: string, exceptId?: string) {
+  let q = db.from('member_pages').select('id').contains('previous_slugs', [slug]).limit(1)
+  if (exceptId) q = q.neq('id', exceptId)
+  const { data, error } = await q
+  return !error && Boolean(data && data.length)
 }
 
 function readMyPage(b: Record<string, any>) {
@@ -700,7 +719,8 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string }, re
     for (let n = 2; RESERVED_PAGE_SLUGS.has(slug) || (await slugTaken(db, slug)); n += 1) slug = `${base}-${n}`
   }
 
-  const row = { ...input, slug, user_id: user.id, owner_managed: true, updated_at: new Date().toISOString() }
+  const moved = existing ? await previousSlugsAfter(db, existing.id, existing.slug, slug) : {}
+  const row = { ...input, ...moved, slug, user_id: user.id, owner_managed: true, updated_at: new Date().toISOString() }
   const { data, error: saveError } = existing
     ? await db.from('member_pages').update(row).eq('id', existing.id).select('*').single()
     : await db.from('member_pages').insert(row).select('*').single()

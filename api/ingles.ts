@@ -190,7 +190,12 @@ async function linkPreview(req: VercelRequest, db: Db) {
       image = p.cover_image_url || image
     }
   } else if (member) {
-    const { data } = await db.from('member_pages').select('display_name, headline, photo_url').eq('slug', member[1]).eq('status', 'published').maybeSingle()
+    let { data } = await db.from('member_pages').select('display_name, headline, photo_url').eq('slug', member[1]).eq('status', 'published').maybeSingle()
+    if (!data) {
+      // An old address of a page that moved (Portal migration 0063).
+      const moved = await db.from('member_pages').select('display_name, headline, photo_url').contains('previous_slugs', [member[1]]).eq('status', 'published').limit(1)
+      data = moved.error ? null : ((moved.data ?? [])[0] ?? null)
+    }
     const m = data as { display_name?: string; headline?: string | null; photo_url?: string | null } | null
     if (m?.display_name) {
       title = `${m.display_name} | BGrowth`

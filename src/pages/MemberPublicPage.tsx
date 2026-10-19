@@ -19,7 +19,8 @@ export default function MemberPublicPage() {
       .then((p) => {
         if (cancelled) return
         setPage(p)
-        if (p) trackMemberPageView(p.slug)
+        // An old address redirects below; the new one counts the visit.
+        if (p && p.slug === slug.toLowerCase()) trackMemberPageView(p.slug)
       })
       .catch(() => {
         if (!cancelled) setPage(null)
@@ -31,6 +32,7 @@ export default function MemberPublicPage() {
 
   if (page === null) return <Navigate to="/" replace />
   if (page === undefined) return <div className="min-h-screen bg-bg-soft" />
+  if (page.slug !== slug.toLowerCase()) return <Navigate to={`/p/${page.slug}${window.location.search}`} replace />
 
   return (
     <div className="min-h-screen bg-bg-soft">
