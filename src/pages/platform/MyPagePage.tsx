@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
-import { ExternalLink } from 'lucide-react'
+import { Check, Copy, ExternalLink, MessageCircle, Share2 } from 'lucide-react'
 import SEO from '../../components/seo/SEO'
 import SectionHeader from '../../components/ui/SectionHeader'
 import Button from '../../components/ui/Button'
@@ -11,11 +11,45 @@ import { getMyMemberPageStats, myPageService } from '../../modules/find/memberPa
 import type { MemberPage, MemberPageLevel, MemberPageStats } from '../../modules/find/types'
 
 const TEXT = {
-  en: { title: 'My Page', description: 'Your own page to show your work — and how many people visit it.', open: 'Open my page', edit: 'Edit', numbers: 'Numbers' },
-  pt: { title: 'Minha página', description: 'Sua página para mostrar seu trabalho — e quantas pessoas a visitam.', open: 'Abrir minha página', edit: 'Editar', numbers: 'Números' },
+  en: { title: 'My Business Page', description: 'A simple professional page for your business — share it anywhere.', open: 'Open', edit: 'Edit', numbers: 'Numbers', copy: 'Copy link', copied: 'Copied', share: 'Share', whatsapp: 'WhatsApp' },
+  pt: { title: 'Minha página de negócio', description: 'Uma página profissional simples para o seu negócio — compartilhe onde quiser.', open: 'Abrir', edit: 'Editar', numbers: 'Números', copy: 'Copiar link', copied: 'Copiado', share: 'Compartilhar', whatsapp: 'WhatsApp' },
 }
 
-// /platform/my-page — the member's own public page (BGrowth Find™).
+// The page's address with copy and share buttons.
+function ShareBar({ slug, name, t }: { slug: string; name: string; t: (typeof TEXT)['en'] }) {
+  const [copied, setCopied] = useState(false)
+  const url = `${window.location.origin}/p/${encodeURIComponent(slug)}`
+  const btn = 'inline-flex items-center gap-1.5 rounded-xl border border-navy/10 bg-white px-3 py-2 text-[13px] font-semibold text-navy/70 hover:border-primary/40 hover:text-navy'
+  return (
+    <div className="mb-6 flex flex-wrap items-center gap-2 rounded-2xl border border-navy/[0.08] bg-white p-3">
+      <a href={url} target="_blank" rel="noreferrer" className="mr-auto inline-flex min-w-0 items-center gap-1.5 truncate px-1 text-[14px] font-semibold text-primary hover:underline">
+        bgrowth.app/p/{slug} <ExternalLink size={14} aria-hidden /> <span className="sr-only">{t.open}</span>
+      </a>
+      <button
+        type="button"
+        className={btn}
+        onClick={() => {
+          void navigator.clipboard?.writeText(url).then(() => {
+            setCopied(true)
+            window.setTimeout(() => setCopied(false), 2000)
+          })
+        }}
+      >
+        {copied ? <Check size={15} /> : <Copy size={15} />} {copied ? t.copied : t.copy}
+      </button>
+      <a href={`https://wa.me/?text=${encodeURIComponent(`${name} — ${url}`)}`} target="_blank" rel="noreferrer" className={btn}>
+        <MessageCircle size={15} /> {t.whatsapp}
+      </a>
+      {typeof navigator !== 'undefined' && 'share' in navigator && (
+        <button type="button" className={btn} onClick={() => void navigator.share({ title: name, url }).catch(() => undefined)}>
+          <Share2 size={15} /> {t.share}
+        </button>
+      )}
+    </div>
+  )
+}
+
+// /platform/my-page — "My Business Page", the member's own public page (BGrowth Find™).
 // Subscribers whose plan includes a page build and edit it here (Sprint 127:
 // Pro = a model as it is, Enterprise = everything + the numbers). A page the
 // team made and linked to the member shows its numbers only.
@@ -73,11 +107,7 @@ export default function MyPagePage() {
     <div className="mx-auto max-w-6xl">
       <SEO title={t.title} description={t.description} path="/platform/my-page" />
       <SectionHeader eyebrow={page?.display_name ?? linked?.displayName ?? user.displayName} title={t.title} description={t.description} className="mb-6" />
-      {slug && page?.status !== 'draft' && (
-        <a href={`/p/${encodeURIComponent(slug)}`} target="_blank" rel="noreferrer" className="mb-6 inline-flex items-center gap-1.5 text-[14px] font-semibold text-primary hover:underline">
-          bgrowth.app/p/{slug} <ExternalLink size={14} aria-hidden /> <span className="sr-only">{t.open}</span>
-        </a>
-      )}
+      {slug && page?.status !== 'draft' && <ShareBar slug={slug} name={page?.display_name ?? linked?.displayName ?? user.displayName} t={t} />}
 
       {!level && page?.owner_managed && (
         <div className="mb-6 rounded-xl bg-amber-50 px-4 py-3 text-[13.5px] text-amber-700">

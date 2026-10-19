@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
-import { ArrowDown, ArrowUp, ChevronDown, ChevronRight, Eye, EyeOff, ImagePlus, Lock, Plus, Trash2, X } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowUp, Check, ChevronDown, ChevronRight, Eye, EyeOff, ImagePlus, Lock, Monitor, Plus, Smartphone, Trash2, X } from 'lucide-react'
 import Button from '../ui/Button'
 import { CARD, INPUT, LINK_BUTTON, SMALL_BUTTON } from '../admin/styles'
 import MemberPageView from './MemberPageView'
+import ResponsiveFrame from '../ui/ResponsiveFrame'
 import { shrinkImage } from '../../lib/shrinkImage'
 import { videoEmbed } from '../../modules/find/memberPageService'
-import { BLOCK_TYPES, LEGACY_BLOCKS, PAGE_COLORS, blockId, memberPageTemplates, templateBlocks } from '../../modules/find/memberPageTemplates'
+import { BLOCK_TYPES, LEGACY_BLOCKS, PAGE_COLORS, blockId, memberPageTemplates, pageSkin, switchTemplateBlocks, templateBlocks, templatePreview } from '../../modules/find/memberPageTemplates'
 import type {
   MemberPage,
   MemberPageBlock,
@@ -41,6 +42,8 @@ const SMALL = LINK_BUTTON
 
 const LINK_TYPES: { id: MemberPageLinkType; label: string; placeholder: string }[] = [
   { id: 'whatsapp', label: 'WhatsApp', placeholder: '+1 555 123 4567' },
+  { id: 'phone', label: 'Call', placeholder: '+1 555 123 4567' },
+  { id: 'booking', label: 'Booking', placeholder: 'https://calendly.com/…' },
   { id: 'instagram', label: 'Instagram', placeholder: 'https://instagram.com/…' },
   { id: 'tiktok', label: 'TikTok', placeholder: 'https://tiktok.com/@…' },
   { id: 'youtube', label: 'YouTube', placeholder: 'https://youtube.com/@…' },
@@ -57,6 +60,13 @@ function toSlug(text: string) {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 40)
+}
+
+// Another model's sections, keeping what was written; a Pro page (keepExtra
+// false) gets exactly the model's sections.
+function fitBlocks(templateId: string, language: MemberPage['language'], current: MemberPageBlock[], keepExtra: boolean) {
+  const next = switchTemplateBlocks(templateId, language, current)
+  return keepExtra ? next : next.slice(0, templateBlocks(templateId, language).length)
 }
 
 function move<T>(list: T[], index: number, delta: number): T[] {
@@ -102,8 +112,13 @@ function Add({ label, onClick, disabled }: { label: string; onClick: () => void;
 export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel, extra }: Props) {
   const free = mode !== 'partial'
   const [language, setLanguage] = useState<MemberPage['language']>(page?.language ?? 'en')
-  const [template, setTemplate] = useState(page?.template ?? (page ? 'blank' : ''))
-  const [blocks, setBlocks] = useState<MemberPageBlock[]>(page?.blocks?.length ? page.blocks : page ? LEGACY_BLOCKS.map((b) => ({ ...b, id: blockId() })) : [])
+  const [template, setTemplate] = useState(page ? (pageSkin(page.template) ?? 'professional') : '')
+  const [blocks, setBlocks] = useState<MemberPageBlock[]>(() => {
+    const own = page?.blocks?.length ? page.blocks : page ? LEGACY_BLOCKS.map((b) => ({ ...b, id: blockId() })) : []
+    // A Pro page keeps exactly its model's sections (pages from the first
+    // models move to the closest look).
+    return page && !free && page.template !== template ? fitBlocks(template, page.language, own, false) : own
+  })
   const [theme, setTheme] = useState<MemberPageTheme>(page?.theme ?? {})
   const [displayName, setDisplayName] = useState(page?.display_name ?? '')
   const [slug, setSlug] = useState(page?.slug ?? '')
@@ -117,6 +132,8 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
   const [highlights, setHighlights] = useState<MemberPageHighlight[]>(page?.highlights ?? [])
   const [open, setOpen] = useState<string | null>(null)
   const [adding, setAdding] = useState(false)
+  const [candidate, setCandidate] = useState<string | null>(null)
+  const [device, setDevice] = useState<'desktop' | 'mobile'>('mobile')
   const [uploading, setUploading] = useState<string | null>(null)
   const [saving, setSaving] = useState<'draft' | 'published' | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -147,9 +164,10 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
   function chooseTemplate(id: string) {
     const t = templates.find((x) => x.id === id)
     if (!t) return
-    if (blocks.length && template && template !== id && !window.confirm('Use this model? Its sections replace the current ones; your name, photo, contacts, services and featured work stay.')) return
     setTemplate(id)
-    setBlocks(templateBlocks(id, language))
+    // A new page gets the model's sections; switching keeps what was written.
+    setBlocks((current) => (current.length ? fitBlocks(id, language, current, free) : templateBlocks(id, language)))
+    setCandidate(null)
     setTheme((th) => ({ ...th, color: t.color }))
     if (!headline.trim() && t.example.headline) setHeadline(t.example.headline)
     if (!services.length && t.example.services) setServices(t.example.services)
@@ -173,7 +191,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
         highlights: highlights.filter((h) => h.title.trim()).slice(0, maxHighlights),
         language,
         status,
-        template: template || 'blank',
+        template: template || 'professional',
         blocks,
         theme,
       })
@@ -190,6 +208,21 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
   const setService = (i: number, patch: Partial<MemberPageService>) => setServices((l) => l.map((x, j) => (j === i ? { ...x, ...patch } : x)))
   const setHighlight = (i: number, patch: Partial<MemberPageHighlight>) => setHighlights((l) => l.map((x, j) => (j === i ? { ...x, ...patch } : x)))
   const label = (type: MemberPageBlockType) => BLOCK_TYPES.find((t) => t.type === type)?.label ?? type
+  // The page as it would be published right now (what the previews show).
+  const current = {
+    display_name: displayName.trim() || 'Name',
+    headline: headline.trim() || null,
+    bio: bio.trim() || null,
+    photo_url: photoUrl || null,
+    location: location.trim() || null,
+    links: links.filter((l) => l.url.trim()),
+    services: services.filter((s) => s.title.trim()),
+    highlights: highlights.filter((h) => h.title.trim()).slice(0, maxHighlights),
+    language,
+    template: template || null,
+    blocks: free ? blocks : blocks.map((b) => ({ ...b, ...(b.type === 'gallery' ? { data: { ...b.data, images: [] } } : {}) })),
+    theme: free ? theme : { color: templates.find((t) => t.id === template)?.color },
+  }
 
   function blockEditor(block: MemberPageBlock) {
     const d = block.data ?? {}
@@ -270,11 +303,16 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
       case 'about':
         return <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={6} maxLength={3000} className={INPUT} placeholder="Your story, experience, what makes your work different" aria-label="About" />
       case 'testimonials':
+      case 'credentials':
       case 'faq': {
         const items = d.items ?? []
-        const [first, second] = block.type === 'faq' ? ['Question', 'Answer'] : ['What they said', 'Name']
+        const [first, second] = block.type === 'faq' ? ['Question', 'Answer'] : block.type === 'credentials' ? ['License or credential', 'Number, issuer, valid until (optional)'] : ['What they said', 'Name']
         return (
           <div className="space-y-2">
+            {block.type === 'credentials' && (
+              <p className="text-[12.5px] text-navy/50">Shown as you state them, with a note that BGrowth has not verified them. Add only what is true and current.</p>
+            )}
+            {block.type === 'testimonials' && <p className="text-[12.5px] text-navy/50">Only real words from real clients, with their permission.</p>}
             <input value={d.title ?? ''} onChange={(e) => setBlockData(block.id, { title: e.target.value })} maxLength={120} className={INPUT} placeholder="Section title" aria-label="Section title" />
             {items.map((item, i) => (
               <Row key={i} index={i} total={items.length} onRemove={() => setBlockData(block.id, { items: items.filter((_, j) => j !== i) })}>
@@ -282,7 +320,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                 <input value={item.body ?? ''} onChange={(e) => setBlockData(block.id, { items: items.map((x, j) => (j === i ? { ...x, body: e.target.value } : x)) })} maxLength={600} className={INPUT} placeholder={second} aria-label={second} />
               </Row>
             ))}
-            <Add label={block.type === 'faq' ? 'Add a question' : 'Add a testimonial'} disabled={items.length >= 12} onClick={() => setBlockData(block.id, { items: [...items, { title: '', body: '' }] })} />
+            <Add label={block.type === 'faq' ? 'Add a question' : block.type === 'credentials' ? 'Add a credential' : 'Add a testimonial'} disabled={items.length >= 12} onClick={() => setBlockData(block.id, { items: [...items, { title: '', body: '' }] })} />
           </div>
         )
       }
@@ -323,39 +361,116 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
     }
   }
 
-  // A new page starts by choosing a model.
-  if (!template) {
+  // A new page starts by choosing a model; "change" comes back here. Each
+  // model shows a full example (or the person's own content) as it looks on
+  // a computer and on a phone; choosing one asks to confirm.
+  if (!template || candidate !== null) {
+    const hasContent = Boolean(displayName.trim() || blocks.length)
+    const sample = (id: string) => {
+      const t = templates.find((x) => x.id === id) ?? templates[0]
+      const example = templatePreview(t, language)
+      if (!hasContent) return example
+      return {
+        ...current,
+        blocks: fitBlocks(t.id, language, blocks, free),
+        theme: { ...theme, color: free ? theme.color ?? t.color : t.color },
+        template: t.id,
+      }
+    }
+    const chosen = candidate ? templates.find((t) => t.id === candidate) : null
     return (
       <div className={`${CARD} p-6`}>
-        <div className="mb-5 flex items-start justify-between gap-4">
+        <div className="mb-5 flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h2 className="font-display text-lg font-bold text-navy">Choose a model</h2>
-            <p className="mt-1 text-[13.5px] text-navy/55">It comes with example texts — you replace them with yours.</p>
+            <h2 className="font-display text-lg font-bold text-navy">{chosen ? chosen.name[language] : 'Choose a model'}</h2>
+            <p className="mt-1 text-[13.5px] text-navy/55">
+              {chosen
+                ? chosen.description[language]
+                : hasContent
+                  ? 'Four looks for the same page. Switching keeps your texts, photos and contacts.'
+                  : 'Four looks for the same page. Each comes with example texts — you replace them with yours.'}
+            </p>
           </div>
-          <select value={language} onChange={(e) => setLanguage(e.target.value as MemberPage['language'])} className={`${INPUT} max-w-[160px]`} aria-label="Page language">
-            <option value="en">English</option>
-            <option value="pt">Português</option>
-          </select>
+          {!chosen && (
+            <select value={language} onChange={(e) => setLanguage(e.target.value as MemberPage['language'])} className={`${INPUT} max-w-[160px]`} aria-label="Page language">
+              <option value="en">English</option>
+              <option value="pt">Português</option>
+            </select>
+          )}
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-          {templates.map((t) => {
-            const color = PAGE_COLORS.find((c) => c.id === t.color)
-            return (
-              <button key={t.id} type="button" onClick={() => chooseTemplate(t.id)} className="rounded-xl border border-navy/10 p-4 text-left transition-colors hover:border-primary/40 hover:bg-bg-soft">
-                <span className="mb-3 block h-2 w-12 rounded-full" style={{ background: `rgb(${color?.rgb})` }} />
-                <span className="block font-semibold text-navy">{t.name[language]}</span>
-                <span className="mt-1 block text-[13px] text-navy/55">{t.description[language]}</span>
-                <span className="mt-2 block text-[12px] text-navy/40">{t.blocks.map((b) => label(b.type)).join(' · ')}</span>
+
+        {chosen ? (
+          <>
+            <div className="grid gap-5 lg:grid-cols-[minmax(0,1fr)_260px]">
+              <div className="min-w-0">
+                <p className={LABEL}>
+                  <Monitor size={13} className="mr-1 inline" /> Computer
+                </p>
+                <div className="max-h-[560px] overflow-y-auto rounded-xl border border-navy/[0.08]">
+                  <ResponsiveFrame width={1280}>
+                    <MemberPageView preview page={sample(chosen.id)} />
+                  </ResponsiveFrame>
+                </div>
+              </div>
+              <div className="mx-auto w-full max-w-[260px]">
+                <p className={LABEL}>
+                  <Smartphone size={13} className="mr-1 inline" /> Phone
+                </p>
+                <div className="max-h-[560px] overflow-y-auto rounded-[1.6rem] border-[6px] border-navy/80">
+                  <ResponsiveFrame width={390}>
+                    <MemberPageView preview page={sample(chosen.id)} />
+                  </ResponsiveFrame>
+                </div>
+              </div>
+            </div>
+            <div className="mt-6 flex flex-wrap items-center justify-between gap-2 border-t border-navy/[0.06] pt-5">
+              <button type="button" onClick={() => setCandidate(template ? '' : null)} className={`${SMALL} inline-flex items-center gap-1.5 text-navy/60 hover:bg-bg-soft`}>
+                <ArrowLeft size={14} /> See the other models
               </button>
-            )
-          })}
-        </div>
-        {onCancel && (
-          <div className="mt-5 flex justify-end">
-            <Button type="button" variant="secondary" onClick={onCancel} className={SMALL_BUTTON}>
-              Cancel
-            </Button>
-          </div>
+              <Button type="button" onClick={() => chooseTemplate(chosen.id)} className={SMALL_BUTTON}>
+                <Check size={16} /> {template === chosen.id ? 'Keep this model' : 'Use this model'}
+              </Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <div className="grid gap-4 md:grid-cols-2">
+              {templates.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => setCandidate(t.id)}
+                  className={`group overflow-hidden rounded-2xl border text-left transition-colors hover:border-primary/40 ${template === t.id ? 'border-primary/50 ring-2 ring-primary/15' : 'border-navy/10'}`}
+                >
+                  <div className="pointer-events-none relative border-b border-navy/[0.06] bg-bg-soft">
+                    <ResponsiveFrame width={1280} maxHeight={230}>
+                      <MemberPageView preview page={sample(t.id)} />
+                    </ResponsiveFrame>
+                    <div className="absolute bottom-2 right-2 w-[72px] overflow-hidden rounded-lg border-[3px] border-navy/80 bg-white shadow-softer">
+                      <ResponsiveFrame width={390} maxHeight={130}>
+                        <MemberPageView preview page={sample(t.id)} />
+                      </ResponsiveFrame>
+                    </div>
+                  </div>
+                  <div className="p-4">
+                    <span className="flex items-center gap-2 font-semibold text-navy">
+                      {t.name[language]}
+                      {template === t.id && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">Current</span>}
+                    </span>
+                    <span className="mt-1 block text-[13px] text-navy/55">{t.description[language]}</span>
+                    <span className="mt-2 inline-block text-[13px] font-semibold text-primary group-hover:underline">See it on computer and phone →</span>
+                  </div>
+                </button>
+              ))}
+            </div>
+            {(onCancel || template) && (
+              <div className="mt-5 flex justify-end">
+                <Button type="button" variant="secondary" onClick={() => (template ? setCandidate(null) : onCancel?.())} className={SMALL_BUTTON}>
+                  {template ? 'Back to the editor' : 'Cancel'}
+                </Button>
+              </div>
+            )}
+          </>
         )}
       </div>
     )
@@ -368,7 +483,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
           <h2 className="font-display text-lg font-bold text-navy">{page ? 'Edit page' : 'New page'}</h2>
           <p className="mt-1 text-[13px] text-navy/50">
             Model: {templates.find((t) => t.id === template)?.name[language] ?? template} ·{' '}
-            <button type="button" onClick={() => setTemplate('')} className="font-semibold text-primary hover:underline">
+            <button type="button" onClick={() => setCandidate('')} className="font-semibold text-primary hover:underline">
               change
             </button>
           </p>
@@ -485,7 +600,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
           )}
 
           <section>
-            <span className={LABEL}>Sections {free ? '— move, hide or add' : '— your plan keeps the model’s sections'}</span>
+            <span className={LABEL}>Sections {free ? '— move, hide or add' : '— hide the ones you don’t need'}</span>
             <div className="space-y-2">
               {blocks.map((block, i) => {
                 const isOpen = open === block.id
@@ -497,6 +612,17 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                         <span className={`truncate text-[14px] font-semibold ${block.hidden ? 'text-navy/40' : 'text-navy'}`}>{block.data?.title || label(block.type)}</span>
                         {block.data?.title && <span className="hidden text-[12px] text-navy/35 sm:inline">{label(block.type)}</span>}
                       </button>
+                      {!free && block.type !== 'hero' && (
+                        <button
+                          type="button"
+                          aria-label={block.hidden ? 'Show' : 'Hide'}
+                          title={block.hidden ? 'Show this section' : 'Hide this section'}
+                          onClick={() => setBlocks((l) => l.map((b) => (b.id === block.id ? { ...b, hidden: !b.hidden } : b)))}
+                          className={`${SMALL} !px-1.5 text-navy/50 hover:bg-bg-soft`}
+                        >
+                          {block.hidden ? <EyeOff size={14} /> : <Eye size={14} />}
+                        </button>
+                      )}
                       {free && (
                         <div className="flex shrink-0 items-center gap-0.5">
                           <button type="button" aria-label="Move up" disabled={i === 0} onClick={() => setBlocks((l) => move(l, i, -1))} className={`${SMALL} !px-1.5 text-navy/50 hover:bg-bg-soft`}>
@@ -533,7 +659,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                       type="button"
                       onClick={() => {
                         const id = blockId()
-                        setBlocks((l) => [...l, { id, type: t.type, ...(['testimonials', 'faq'].includes(t.type) ? { data: { items: [{ title: '', body: '' }] } } : {}) }])
+                        setBlocks((l) => [...l, { id, type: t.type, ...(['testimonials', 'faq', 'credentials'].includes(t.type) ? { data: { items: [{ title: '', body: '' }] } } : {}) }])
                         setOpen(id)
                         setAdding(false)
                       }}
@@ -550,27 +676,40 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
           </section>
         </div>
 
-        <aside className="lg:sticky lg:top-24 lg:self-start">
-          <span className={LABEL}>Preview</span>
-          <div className="max-h-[75vh] overflow-y-auto rounded-2xl border border-navy/[0.08] bg-bg">
-            <MemberPageView
-              preview
-              page={{
-                display_name: displayName.trim() || 'Name',
-                headline: headline.trim() || null,
-                bio: bio.trim() || null,
-                photo_url: photoUrl || null,
-                location: location.trim() || null,
-                links: links.filter((l) => l.url.trim()),
-                services: services.filter((s) => s.title.trim()),
-                highlights: highlights.filter((h) => h.title.trim()).slice(0, maxHighlights),
-                language,
-                blocks: free ? blocks : blocks.map((b) => ({ ...b, hidden: false, ...(b.type === 'gallery' ? { data: { ...b.data, images: [] } } : {}) })),
-                theme: free ? theme : { color: templates.find((t) => t.id === template)?.color },
-              }}
-            />
+        <aside className="min-w-0 lg:sticky lg:top-24 lg:self-start">
+          <div className="mb-1.5 flex items-center justify-between gap-2">
+            <span className={`${LABEL} !mb-0`}>Preview</span>
+            <div className="inline-flex rounded-lg border border-navy/10 p-0.5">
+              {(['mobile', 'desktop'] as const).map((d) => (
+                <button
+                  key={d}
+                  type="button"
+                  onClick={() => setDevice(d)}
+                  className={`inline-flex items-center gap-1 rounded-md px-2 py-1 text-[12px] font-semibold ${device === d ? 'bg-navy text-white' : 'text-navy/55 hover:bg-bg-soft'}`}
+                >
+                  {d === 'mobile' ? <Smartphone size={13} /> : <Monitor size={13} />} {d === 'mobile' ? 'Phone' : 'Computer'}
+                </button>
+              ))}
+            </div>
           </div>
+          <div className={`max-h-[75vh] overflow-y-auto bg-white ${device === 'mobile' ? 'mx-auto max-w-[340px] rounded-[1.6rem] border-[6px] border-navy/80' : 'rounded-2xl border border-navy/[0.08]'}`}>
+            <ResponsiveFrame key={device} width={device === 'mobile' ? 390 : 1280}>
+              <MemberPageView preview page={current} />
+            </ResponsiveFrame>
+          </div>
+          <p className="mt-2 text-[12px] text-navy/40">This is how visitors will see it. Nothing changes on the site until you publish.</p>
         </aside>
+      </div>
+
+      <div className="mt-6 rounded-xl bg-bg-soft px-4 py-3 text-[12.5px] leading-relaxed text-navy/55">
+        <p className="font-semibold text-navy/70">Before you publish</p>
+        <ul className="mt-1 list-disc space-y-0.5 pl-4">
+          <li>Everything here is public: share only the phone, e-mail and address you want anyone to see.</li>
+          <li>Use only photos and videos that are yours or that you have permission to use.</li>
+          <li>Testimonials must be real, from real clients, with their permission.</li>
+          <li>Licenses and credentials are shown as you state them — keep them true and current.</li>
+          <li>Publishing makes the page public. It does not mean BGrowth has checked or verified you, your work, your credentials or your reviews.</li>
+        </ul>
       </div>
 
       {error && <p className="mt-6 text-[14px] text-red-500">{error}</p>}

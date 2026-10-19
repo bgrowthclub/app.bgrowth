@@ -2,7 +2,8 @@
 // page to promote their work at /p/<slug>. Subscribers only once Plans &
 // Subscriptions exist; until then the team builds pages in Admin → Pages.
 
-export type MemberPageLinkType = 'whatsapp' | 'email' | 'instagram' | 'tiktok' | 'youtube' | 'website' | 'other'
+// 'phone' (call) and 'booking' (a scheduling link) since Sprint 128.
+export type MemberPageLinkType = 'whatsapp' | 'phone' | 'booking' | 'email' | 'instagram' | 'tiktok' | 'youtube' | 'website' | 'other'
 
 export interface MemberPageLink {
   type: MemberPageLinkType
@@ -46,6 +47,9 @@ export type MemberPageBlockType =
   | 'faq'
   | 'area'
   | 'cta'
+  // Licenses, certifications, insurance — shown as stated by the member,
+  // with a note that BGrowth hasn't verified them (Sprint 128).
+  | 'credentials'
 
 export interface MemberPageBlockData {
   title?: string

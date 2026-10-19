@@ -493,9 +493,9 @@ async function includedInPlan(db: Db, userId: string, productId: string): Promis
 
 // Member page blocks and theme (Sprint 127, Portal migration 0062) — the
 // same cleaning in api/admin.ts and api/account.ts.
-const PAGE_BLOCK_TYPES = new Set(['hero', 'contact', 'highlights', 'services', 'about', 'testimonials', 'gallery', 'text', 'faq', 'area', 'cta'])
+const PAGE_BLOCK_TYPES = new Set(['hero', 'contact', 'highlights', 'services', 'about', 'testimonials', 'gallery', 'text', 'faq', 'area', 'cta', 'credentials'])
 const PAGE_COLORS = new Set(['blue', 'teal', 'green', 'purple', 'rose', 'orange', 'navy'])
-const PAGE_TEMPLATES = new Set(['cleaning', 'notary', 'teacher', 'creator', 'blank'])
+const PAGE_TEMPLATES = new Set(['professional', 'local', 'creative', 'personal', 'cleaning', 'notary', 'teacher', 'creator', 'blank'])
 const pageText = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '')
 const pageUrl = (v: unknown) => {
   const s = pageText(v, 500)
@@ -540,27 +540,26 @@ function cleanPageTheme(value: unknown) {
 // ---------------------------------------------------------------------------
 // My Page (Sprint 127, Portal migration 0062): the subscriber edits their own
 // public page, as far as their plan allows (portal.member_page_level):
-//   'partial' (Pro) — a model's blocks as they are (no adding, hiding or
-//     reordering), the model's color, no cover, ONE featured photo/video, no
+//   'partial' (Pro) — a model's blocks in its order (no adding or reordering;
+//     hiding yes, since Sprint 128), the model's color, no cover, ONE featured photo/video, no
 //     gallery photos; the address is set once, from the name.
 //   'full' (Enterprise) — everything, including the address.
 //   GET  ?resource=my-page        → { level, page }
 //   PUT  ?resource=my-page        { …page } → { page }
 //   POST ?resource=my-page-image  { dataUrl } → { url }
 // ---------------------------------------------------------------------------
-const MEMBER_LINK_TYPES = ['whatsapp', 'email', 'instagram', 'tiktok', 'youtube', 'website', 'other']
+const MEMBER_LINK_TYPES = ['whatsapp', 'phone', 'booking', 'email', 'instagram', 'tiktok', 'youtube', 'website', 'other']
 const PAGE_SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/
 const RESERVED_PAGE_SLUGS = new Set(['admin', 'bgrowth', 'support', 'help', 'api', 'new', 'edit', 'settings'])
 const VIDEO_HOSTS = /^https:\/\/((www|m)\.)?(youtube\.com|youtu\.be|tiktok\.com|instagram\.com)\//i
 // The block order of each model — a Pro page must keep one of these.
 const TEMPLATE_SEQUENCES: Record<string, string> = {
-  cleaning: 'hero,contact,services,highlights,testimonials,area,faq,cta',
-  notary: 'hero,contact,services,area,about,faq,cta',
-  teacher: 'hero,contact,highlights,services,text,testimonials,about,cta',
-  creator: 'hero,contact,highlights,gallery,services,text,cta',
-  blank: 'hero,contact',
+  professional: 'hero,contact,services,credentials,area,about,faq,cta',
+  local: 'hero,services,highlights,area,testimonials,faq,contact,cta',
+  creative: 'hero,highlights,gallery,about,services,testimonials,contact,cta',
+  personal: 'hero,about,services,testimonials,highlights,faq,contact,cta',
 }
-const TEMPLATE_COLORS: Record<string, string> = { cleaning: 'teal', notary: 'navy', teacher: 'purple', creator: 'rose', blank: 'blue' }
+const TEMPLATE_COLORS: Record<string, string> = { professional: 'navy', local: 'orange', creative: 'rose', personal: 'green' }
 
 async function memberPageLevel(db: Db, userId: string): Promise<'partial' | 'full' | null> {
   const { data, error } = await db.rpc('member_page_level', { p_user: userId })
@@ -593,7 +592,7 @@ function readMyPage(b: Record<string, any>) {
     const url = pageText(raw?.url, 300)
     if (!url) return []
     if (type === 'email' && !/^(mailto:)?[^\s@]+@[^\s@]+\.[^\s@]+$/.test(url)) throw new HttpError(400, `“${url}” isn’t an e-mail address.`)
-    if (type === 'whatsapp' && !/^https?:\/\//.test(url) && url.replace(/\D/g, '').length < 8) {
+    if ((type === 'whatsapp' || type === 'phone') && !/^https?:\/\//.test(url) && url.replace(/\D/g, '').length < 8) {
       throw new HttpError(400, 'Write the WhatsApp number with country code (for example +1 555 123 4567).')
     }
     return [{ type, label: pageText(raw?.label, 40), url }]
@@ -620,7 +619,7 @@ function readMyPage(b: Record<string, any>) {
     highlights,
     language: b.language === 'pt' ? 'pt' : 'en',
     status: b.status === 'published' ? 'published' : 'draft',
-    template: PAGE_TEMPLATES.has(b.template) ? b.template : 'blank',
+    template: PAGE_TEMPLATES.has(b.template) ? b.template : 'professional',
     blocks: cleanPageBlocks(b.blocks),
     theme: cleanPageTheme(b.theme),
   }
@@ -667,11 +666,12 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string }, re
     // They may switch to another model; its sections then come as they are.
     const template = input.template
     const sequence = (input.blocks ?? []).map((b) => b.type).join(',')
-    if (sequence !== TEMPLATE_SEQUENCES[template]) throw new HttpError(400, 'Your plan keeps the model’s sections as they are.')
+    if (!TEMPLATE_SEQUENCES[template] || sequence !== TEMPLATE_SEQUENCES[template]) throw new HttpError(400, 'Your plan keeps the model’s sections as they are.')
     input.template = template
     input.blocks = (input.blocks ?? []).map((b) => {
-      const { hidden: _hidden, ...rest } = b as Record<string, any>
-      return b.type === 'gallery' ? { ...rest, data: { ...(rest.data ?? {}), images: [] } } : rest
+      const { hidden, ...rest } = b as Record<string, any>
+      const block = b.type === 'gallery' ? { ...rest, data: { ...(rest.data ?? {}), images: [] } } : rest
+      return hidden && b.type !== 'hero' ? { ...block, hidden: true } : block
     }) as typeof input.blocks
     input.theme = { color: TEMPLATE_COLORS[template] }
     input.highlights = input.highlights.slice(0, 1)

@@ -193,6 +193,21 @@ This repo is a **static, client-only MVP**:
   (RLS); team-made pages are unchanged and stay the team's to edit. A page
   sold on its own = a plan with only the `memberPage` entitlement and a low
   rank. Not built: an e-mail list collected by the page itself.
+  **Since Sprint 128 the page is "My Business Page" with four looks**
+  (decided 19/10/2026): the models are four skins of one page — Professional
+  (navy, credentials), Local Services (photos, areas, quote), Creative
+  Portfolio (editorial, `--color-paper`) and Personal Brand (warm, programs,
+  FAQ) — drawn by `components/find/MemberSiteView` (pages with a template;
+  older pages without one keep `MemberPageView`'s narrow layout; the first
+  models map to the closest skin, `pageSkin()`). The picker shows each look
+  on computer and phone (`components/ui/ResponsiveFrame`, an iframe with the
+  site's styles so breakpoints work) and asks to confirm; switching keeps the
+  texts (`switchTemplateBlocks`). New: block `credentials` (shown as stated,
+  "not verified by BGrowth"), contact buttons `phone` and `booking`, Pro can
+  hide sections (not reorder/add), the editor previews Phone | Computer, a
+  "Before you publish" note (privacy, images, real testimonials, credentials;
+  publishing ≠ verified by BGrowth) and a page footer disclaimer; My Page has
+  copy-link / WhatsApp / share buttons. No migration.
   **Since Sprint 76 member pages have numbers** (approved by the user;
   Portal migration 0045): daily totals of visits, clicks per contact
   button/featured item, course visits and course e-mails
