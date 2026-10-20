@@ -35,6 +35,7 @@ export const BLOCK_TYPES: { type: MemberPageBlockType; label: string; hint: stri
   { type: 'cta', label: 'Final call', hint: 'A closing message with a button' },
   { type: 'credentials', label: 'Licenses & credentials', hint: 'Shown as stated — not verified by BGrowth' },
   { type: 'products', label: 'Product picks', hint: 'Products you recommend, with your buy links' },
+  { type: 'signup', label: 'E-mail list', hint: 'Visitors leave their e-mail for you' },
 ]
 
 export const PAGE_COLORS: { id: MemberPageColor; label: string; rgb: string }[] = [

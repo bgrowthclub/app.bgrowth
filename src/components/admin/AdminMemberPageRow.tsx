@@ -6,11 +6,12 @@ interface Props {
   page: MemberPage
   onEdit: () => void
   onNumbers: () => void
+  onContacts: () => void
   onRemove: () => void
 }
 
 // One public page in Admin → Pages.
-export default function AdminMemberPageRow({ page, onEdit, onNumbers, onRemove }: Props) {
+export default function AdminMemberPageRow({ page, onEdit, onNumbers, onContacts, onRemove }: Props) {
   const published = page.status === 'published'
   return (
     <div className="flex flex-wrap items-center gap-4 px-5 py-4">
@@ -37,6 +38,9 @@ export default function AdminMemberPageRow({ page, onEdit, onNumbers, onRemove }
         )}
         <button type="button" onClick={onNumbers} className={`${LINK_BUTTON} text-navy/60 hover:bg-bg-soft`}>
           Numbers
+        </button>
+        <button type="button" onClick={onContacts} className={`${LINK_BUTTON} text-navy/60 hover:bg-bg-soft`}>
+          Contacts
         </button>
         <button type="button" onClick={onEdit} className={`${LINK_BUTTON} text-primary hover:bg-bg-soft`}>
           Edit

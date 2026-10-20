@@ -493,7 +493,7 @@ async function includedInPlan(db: Db, userId: string, productId: string): Promis
 
 // Member page blocks and theme (Sprint 127, Portal migration 0062) — the
 // same cleaning in api/admin.ts and api/account.ts.
-const PAGE_BLOCK_TYPES = new Set(['hero', 'contact', 'highlights', 'services', 'about', 'testimonials', 'gallery', 'text', 'faq', 'area', 'cta', 'credentials', 'products'])
+const PAGE_BLOCK_TYPES = new Set(['hero', 'contact', 'highlights', 'services', 'about', 'testimonials', 'gallery', 'text', 'faq', 'area', 'cta', 'credentials', 'products', 'signup'])
 const PAGE_COLORS = new Set(['blue', 'teal', 'green', 'purple', 'rose', 'orange', 'navy'])
 const PAGE_TEMPLATES = new Set(['professional', 'local', 'creative', 'personal', 'affiliate', 'cleaning', 'notary', 'teacher', 'creator', 'blank'])
 const pageText = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '')
@@ -710,6 +710,28 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string }, re
 
   const templates = level ? await memberPageTemplates(db, user.id) : null
   if (resource === 'my-page' && req.method === 'GET') return { level, templates, page: existing ?? null }
+  // The page's e-mail list (Sprint 139, Portal migration 0065) — the owner's,
+  // including a page the team made for them.
+  if (resource === 'my-page-signups') {
+    if (!existing) return { signups: [] }
+    if (req.method === 'DELETE') {
+      const id = str(req.query.id)
+      const { error: delError } = await db.from('member_page_signups').delete().eq('id', id).eq('page_id', existing.id)
+      if (delError) throw delError
+      return {}
+    }
+    const { data, error: listError } = await db
+      .from('member_page_signups')
+      .select('id, email, name, whatsapp, created_at')
+      .eq('page_id', existing.id)
+      .order('created_at', { ascending: false })
+      .limit(5000)
+    if (listError) {
+      if ((listError as { code?: string }).code === '42P01' || (listError as { code?: string }).code === 'PGRST205') return { signups: [] }
+      throw listError
+    }
+    return { signups: data ?? [] }
+  }
   if (!level) throw new HttpError(403, 'Your plan doesn’t include a page. See the plans in Account → Membership.')
   // A page the team made for this member stays the team's to edit.
   if (existing && !existing.owner_managed) throw new HttpError(403, 'Your page is managed by the BGrowth team — talk to us through Support to change it.')
@@ -735,7 +757,10 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string }, re
     // A model's blocks as they are; the model's color; one featured item.
     // They may switch to another model; its sections then come as they are.
     const template = input.template
-    const sequence = (input.blocks ?? []).map((b) => b.type).join(',')
+    // The e-mail section isn't part of a model: it's added on its own when
+    // the team switched it on for this page (signup_granted).
+    if (!existing?.signup_granted) input.blocks = (input.blocks ?? []).filter((b) => b.type !== 'signup') as typeof input.blocks
+    const sequence = (input.blocks ?? []).filter((b) => b.type !== 'signup').map((b) => b.type).join(',')
     if (!TEMPLATE_SEQUENCES[template] || sequence !== TEMPLATE_SEQUENCES[template]) throw new HttpError(400, 'Your plan keeps the model’s sections as they are.')
     input.template = template
     input.blocks = (input.blocks ?? []).map((b) => {
@@ -781,7 +806,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const resource = str(req.query.resource)
     const planResource = ['plan-checkout', 'plan-switch', 'plan-cancel', 'plan-resume', 'plan-portal'].includes(resource)
-    const pageResource = resource === 'my-page' || resource === 'my-page-image'
+    const pageResource = resource === 'my-page' || resource === 'my-page-image' || resource === 'my-page-signups'
     if (!planResource && !pageResource && resource !== 'deletion' && resource !== 'announcements-seen' && resource !== 'download' && resource !== 'profile' && resource !== 'purchases')
       throw new HttpError(404, 'Unknown action.')
     const url = process.env.SUPABASE_URL

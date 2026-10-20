@@ -244,6 +244,18 @@ This repo is a **static, client-only MVP**:
   `{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=…` and
   `SupabaseIdentityProvider` confirms it with `verifyOtp` on load (the
   Portal's `AuthContext` does the same). Old supabase.co links still work.
+  **Since Sprint 139 member pages can collect an e-mail list** (decided
+  20/10/2026; Portal migration 0065): block `signup` (`components/find/
+  MemberPageSignupForm`: e-mail, optional name and WhatsApp, consent,
+  Turnstile) posts to `api/ingles.ts?action=page-signup` →
+  `portal.member_page_signups` (service role only; counted as `signup` in the
+  page numbers). The list is the owner's — BGrowth never sends to it, and no
+  e-mail per sign-up. Open for whole-page plans, team-made pages, or a page
+  the team switched on (`member_pages.signup_granted`, Admin → Pages
+  checkbox; a "part of the page" plan then gets an "Add the e-mail list
+  section" button). Seen and exported (CSV) in My Business Page → Contacts
+  (`api/account.ts` resource `my-page-signups`) and Admin → Pages → Contacts
+  (resource `member-page-signups`), via `components/find/MemberPageSignupsList`.
   **Since Sprint 76 member pages have numbers** (approved by the user;
   Portal migration 0045): daily totals of visits, clicks per contact
   button/featured item, course visits and course e-mails

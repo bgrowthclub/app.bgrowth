@@ -53,6 +53,9 @@ export type MemberPageBlockType =
   // Affiliate Picks (Sprint 131): products the member recommends, each with
   // their own buy link (affiliate code kept as typed).
   | 'products'
+  // "Get updates": visitors leave their e-mail for the page's owner
+  // (Sprint 139, Portal migration 0065).
+  | 'signup'
 
 export type MemberPageProductCategory = 'car' | 'work' | 'home' | 'tech' | 'travel' | 'finance' | 'learning' | 'other'
 
@@ -121,6 +124,8 @@ export interface MemberPage {
   blocks?: MemberPageBlock[] | null
   theme?: MemberPageTheme | null
   owner_managed?: boolean
+  // The team switched the e-mail list on for this page (promotions etc.).
+  signup_granted?: boolean
   created_at: string
   updated_at: string
   // Admin → Pages only: the e-mail of the account linked as owner.
@@ -129,7 +134,17 @@ export interface MemberPage {
 
 // Member page numbers (Portal migration 0045): one total per day, kind and
 // target. Nothing about the visitors themselves is kept.
-export type MemberPageStatKind = 'view' | 'click' | 'course_view' | 'course_lead'
+export type MemberPageStatKind = 'view' | 'click' | 'course_view' | 'course_lead' | 'signup'
+
+// One person on a page's e-mail list (the owner's list — BGrowth never
+// sends to it).
+export interface MemberPageSignup {
+  id: string
+  email: string
+  name: string | null
+  whatsapp: string | null
+  created_at: string
+}
 
 export interface MemberPageStatRow {
   day: string

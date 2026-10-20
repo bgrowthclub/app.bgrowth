@@ -28,6 +28,7 @@ type Db = SupabaseClient<any, 'portal', any>
 
 const MOVING_WHEN = ['ja-moro', 'ate-3-meses', '3-12-meses', 'sem-data']
 const TRACK_KINDS = ['view', 'click', 'course_view']
+const SIGNUP_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/
 
 // The course lives at /p/bruno/ingles-de-mudanca and asks for the page
@@ -53,6 +54,59 @@ async function track(db: Db, slug: string, kind: string, target = '') {
   } catch (err) {
     console.warn('[pages] not counted:', err)
   }
+}
+
+// E-mail list on member pages (Sprint 139, Portal migration 0065). Kept for
+// the page's owner — BGrowth never sends to it. Open on pages with a visible
+// "signup" section whose owner's plan covers the whole page, team-made pages,
+// or pages the team switched on (signup_granted).
+//   POST page-signup { slug, email, name?, whatsapp?, consent: true, captchaToken? }
+async function captchaOk(req: VercelRequest): Promise<boolean> {
+  const secret = process.env.TURNSTILE_SECRET_KEY
+  if (!secret) return true
+  const token = str(req.body?.captchaToken, 4000)
+  if (!token) return false
+  try {
+    const ip = String(req.headers['x-forwarded-for'] ?? '').split(',')[0].trim()
+    const body = new URLSearchParams({ secret, response: token, ...(ip ? { remoteip: ip } : {}) })
+    const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', { method: 'POST', body })
+    return Boolean(((await res.json()) as { success?: boolean }).success)
+  } catch {
+    return false
+  }
+}
+
+async function pageSignup(req: VercelRequest, db: Db) {
+  const body = (req.body && typeof req.body === 'object' ? req.body : {}) as Record<string, unknown>
+  const slug = await resolveSlug(db, str(body.slug, 40).toLowerCase())
+  const email = str(body.email, 200).toLowerCase()
+  if (!SIGNUP_EMAIL.test(email)) throw new HttpError(400, 'Write a valid e-mail.')
+  if (body.consent !== true) throw new HttpError(400, 'Tick the box to agree to receive e-mails.')
+  if (!(await captchaOk(req))) throw new HttpError(400, 'Please try again.')
+  const { data: page } = await db
+    .from('member_pages')
+    .select('id, slug, user_id, owner_managed, signup_granted, blocks')
+    .eq('slug', slug)
+    .eq('status', 'published')
+    .maybeSingle()
+  const p = page as { id: string; slug: string; user_id: string | null; owner_managed: boolean; signup_granted: boolean; blocks: { type: string; hidden?: boolean }[] | null } | null
+  if (!p || !(p.blocks ?? []).some((b) => b.type === 'signup' && !b.hidden)) throw new HttpError(404, 'This page isn’t taking sign-ups.')
+  let allowed = !p.owner_managed || p.signup_granted
+  if (!allowed && p.user_id) {
+    const { data } = await db.rpc('member_page_level', { p_user: p.user_id })
+    allowed = data === 'full'
+  }
+  if (!allowed) throw new HttpError(404, 'This page isn’t taking sign-ups.')
+  const { error } = await db.from('member_page_signups').insert({
+    page_id: p.id,
+    email,
+    name: str(body.name, 120) || null,
+    whatsapp: str(body.whatsapp, 40) || null,
+  })
+  // 23505 = already on this page's list: fine.
+  if (error && (error as { code?: string }).code !== '23505') throw error
+  if (!error) await track(db, p.slug, 'signup')
+  return { ok: true }
 }
 
 class HttpError extends Error {
@@ -255,6 +309,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // replaced by the page's own ?…): still answer with the link preview.
     if (!action && req.method === 'GET' && PREVIEW_BOT.test(String(req.headers['user-agent'] ?? ''))) action = 'og'
     if (req.method === 'POST' && action === 'lead') return res.status(200).json(await saveLead(req, db))
+    if (req.method === 'POST' && action === 'page-signup') return res.status(200).json(await pageSignup(req, db))
     if (req.method === 'POST' && action === 'track') return res.status(200).json(await trackEvent(req, db))
     if (req.method === 'POST' && action === 'search') return res.status(200).json(await trackSearch(req, db))
     if (req.method === 'GET' && action === 'site') {

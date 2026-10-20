@@ -411,6 +411,17 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
           </div>
         )
       }
+      case 'signup':
+        return (
+          <div className="space-y-2">
+            <p className="text-[12.5px] text-navy/50">
+              Visitors leave their e-mail (name and WhatsApp optional) and agree to hear from you. The list is yours — see and export it in My Business Page → Contacts. BGrowth never sends to it.
+            </p>
+            <input value={d.title ?? ''} onChange={(e) => setBlockData(block.id, { title: e.target.value })} maxLength={120} className={INPUT} placeholder="Title (default: Get updates)" aria-label="Title" />
+            <textarea value={d.body ?? ''} onChange={(e) => setBlockData(block.id, { body: e.target.value })} rows={2} maxLength={600} className={INPUT} placeholder="What they'll get (e.g. weekly tips, offers, new videos)" aria-label="Text" />
+            <input value={d.button ?? ''} onChange={(e) => setBlockData(block.id, { button: e.target.value })} maxLength={40} className={INPUT} placeholder="Button text (default: Sign me up)" aria-label="Button text" />
+          </div>
+        )
       case 'text':
       case 'area':
       case 'cta':
@@ -733,6 +744,16 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                 )
               })}
             </div>
+            {!free && page?.signup_granted && !blocks.some((b) => b.type === 'signup') && (
+              <Add
+                label="Add the e-mail list section"
+                onClick={() => {
+                  const id = blockId()
+                  setBlocks((l) => [...l.slice(0, -1), { id, type: 'signup' }, ...l.slice(-1)])
+                  setOpen(id)
+                }}
+              />
+            )}
             {free &&
               (adding ? (
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">

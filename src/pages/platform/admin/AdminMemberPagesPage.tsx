@@ -13,6 +13,7 @@ import { CARD, SMALL_BUTTON } from '../../../components/admin/styles'
 import { adminService } from '../../../modules/admin/adminService'
 import type { AdminMemberPageDraft, AdminMemberPagesOverview } from '../../../modules/admin/types'
 import type { MemberPage } from '../../../modules/find/types'
+import MemberPageSignupsList from '../../../components/find/MemberPageSignupsList'
 
 // Admin → Pages: members' public pages at bgrowth.app/p/<address> (Portal
 // migration 0044). Subscribers will build their own once Plans &
@@ -23,6 +24,9 @@ export default function AdminMemberPagesPage() {
   const [editing, setEditing] = useState<MemberPage | 'new' | null>(null)
   const [removing, setRemoving] = useState<MemberPage | null>(null)
   const [numbers, setNumbers] = useState<MemberPage | null>(null)
+  const [contacts, setContacts] = useState<MemberPage | null>(null)
+  // The e-mail list switched on by the team for this page (Sprint 139).
+  const [signupGranted, setSignupGranted] = useState(false)
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   // The owner e-mail field of the page being edited (team only).
@@ -32,6 +36,7 @@ export default function AdminMemberPagesPage() {
   useEffect(() => {
     setOwnerEmail(editing && editing !== 'new' ? editing.owner_email ?? '' : '')
     setOwnerManaged(editing && editing !== 'new' ? Boolean(editing.owner_managed) : false)
+    setSignupGranted(editing && editing !== 'new' ? Boolean(editing.signup_granted) : false)
   }, [editing])
 
   useEffect(() => {
@@ -95,6 +100,22 @@ export default function AdminMemberPagesPage() {
           {error && <p className="text-[14px] text-red-500">{error}</p>}
 
           {numbers && !editing && <AdminMemberPageStats key={numbers.id} page={numbers} onClose={() => setNumbers(null)} />}
+          {contacts && !editing && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <p className="text-[13px] text-navy/55">bgrowth.app/p/{contacts.slug}</p>
+                <button type="button" onClick={() => setContacts(null)} className="text-[13px] font-semibold text-navy/50 hover:text-navy">
+                  Close
+                </button>
+              </div>
+              <MemberPageSignupsList
+                key={contacts.id}
+                load={() => adminService.listMemberPageSignups(contacts.id)}
+                remove={(id) => adminService.removeMemberPageSignup(contacts.id, id)}
+                fileName={contacts.slug}
+              />
+            </div>
+          )}
 
           {editing ? (
             <MemberPageBuilder
@@ -102,7 +123,7 @@ export default function AdminMemberPagesPage() {
               mode="team"
               page={editing === 'new' ? null : editing}
               upload={(dataUrl) => adminService.uploadMemberPageImage(dataUrl)}
-              onSave={(draft) => save({ ...draft, ownerEmail, ownerManaged: ownerManaged && Boolean(ownerEmail.trim()) })}
+              onSave={(draft) => save({ ...draft, ownerEmail, ownerManaged: ownerManaged && Boolean(ownerEmail.trim()), signupGranted })}
               onCancel={() => setEditing(null)}
               extra={
                 <label className="block">
@@ -114,6 +135,15 @@ export default function AdminMemberPagesPage() {
                       The owner edits this page in My Business Page
                       <span className="block text-[12px] text-navy/45">
                         They need a plan with a page (Pro, Enterprise or a page plan) — without one the page goes off the site. With a “part of the page” plan they keep the model’s sections. The team can still edit it here.
+                      </span>
+                    </span>
+                  </span>
+                  <span className="mt-2 flex items-start gap-2 text-[13px] text-navy/70">
+                    <input type="checkbox" className="mt-0.5 h-4 w-4 accent-primary" checked={signupGranted} onChange={(e) => setSignupGranted(e.target.checked)} />
+                    <span>
+                      E-mail list on for this page (given by the team)
+                      <span className="block text-[12px] text-navy/45">
+                        For a promotion or giveaway: the owner can add the “E-mail list” section and see the contacts even if their plan doesn’t include it.
                       </span>
                     </span>
                   </span>
@@ -149,8 +179,15 @@ export default function AdminMemberPagesPage() {
                     setEditing(p)
                     window.scrollTo({ top: 0, behavior: 'smooth' })
                   }}
+                  onContacts={() => {
+                    setEditing(null)
+                    setNumbers(null)
+                    setContacts(p)
+                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                  }}
                   onNumbers={() => {
                     setEditing(null)
+                    setContacts(null)
                     setNumbers(p)
                     window.scrollTo({ top: 0, behavior: 'smooth' })
                   }}
