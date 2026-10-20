@@ -91,6 +91,29 @@ export function SupabaseIdentityProvider({ children }: { children: ReactNode }) 
   const { pathname } = useLocation()
   useEffect(() => setError(undefined), [pathname])
 
+  // Links in our e-mails point at this site (?token_hash=…&type=…) instead
+  // of the Supabase address, so they don't look like spam (decided
+  // 19/10/2026; the e-mail templates in Supabase use {{ .RedirectTo }}).
+  // The token is confirmed here; onAuthStateChange then signs the member in
+  // (PASSWORD_RECOVERY for a reset). Old-style links keep working.
+  useEffect(() => {
+    if (!supabase) return
+    const params = new URLSearchParams(window.location.search)
+    const tokenHash = params.get('token_hash')
+    const type = params.get('type')
+    const TYPES = ['signup', 'recovery', 'email_change', 'email', 'invite', 'magiclink'] as const
+    if (!tokenHash || !TYPES.includes(type as (typeof TYPES)[number])) return
+    params.delete('token_hash')
+    params.delete('type')
+    const rest = params.toString()
+    window.history.replaceState(null, '', `${window.location.pathname}${rest ? `?${rest}` : ''}${window.location.hash}`)
+    supabase.auth
+      .verifyOtp({ token_hash: tokenHash, type: type as (typeof TYPES)[number] })
+      .then(({ error: verifyError }) => {
+        if (verifyError) setError('This link has expired or was already used. Ask for a new one below.')
+      })
+  }, [])
+
   const login = async ({ email, password }: LoginCredentials) => {
     setError(undefined)
     if (!supabase) return setError(NOT_CONFIGURED)

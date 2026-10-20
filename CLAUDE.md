@@ -239,6 +239,11 @@ This repo is a **static, client-only MVP**:
   Since Sprint 134 a contact button can be a WhatsApp group (`whatsapp_group`:
   the chat.whatsapp.com invite link, validated; default label "Join the
   WhatsApp group").
+  **Since Sprint 135 auth e-mail links point at our own domain** (decided
+  19/10/2026, against spam filters): the Supabase templates link to
+  `{{ .RedirectTo }}?token_hash={{ .TokenHash }}&type=…` and
+  `SupabaseIdentityProvider` confirms it with `verifyOtp` on load (the
+  Portal's `AuthContext` does the same). Old supabase.co links still work.
   **Since Sprint 76 member pages have numbers** (approved by the user;
   Portal migration 0045): daily totals of visits, clicks per contact
   button/featured item, course visits and course e-mails
