@@ -22,7 +22,7 @@ import type {
   AdminPlan, AdminPlanDraft, AdminPlansOverview, AdminMemberPlans, MemberPlanReason, AdminPlanSubscribers,
   AdminCouponsOverview, AdminCouponDraft, AdminPlanProducts } from './types'
 import type { PlanSettings } from '../commerce/types/membership'
-import type { MemberPage, MemberPageStats } from '../find/types'
+import type { MemberPage, MemberPageSignup, MemberPageStats } from '../find/types'
 import type { SupportHours } from '../support/types'
 
 // The browser side of the Website's Administration — every call goes to
@@ -208,6 +208,12 @@ export const adminService = {
   // `warning`: the owner edits the page but has no plan with a page yet.
   saveMemberPage(draft: AdminMemberPageDraft) {
     return call<{ page: MemberPage; warning?: string }>(draft.id ? 'PATCH' : 'POST', 'member-pages', undefined, draft)
+  },
+  async listMemberPageSignups(id: string) {
+    return (await call<{ signups: MemberPageSignup[] }>('GET', 'member-page-signups', { id })).signups
+  },
+  async removeMemberPageSignup(id: string, signup: string) {
+    await call('DELETE', 'member-page-signups', { id, signup })
   },
   getMemberPageStats(id: string, days: number) {
     return call<MemberPageStats>('GET', 'member-page-stats', { id, days: String(days) })

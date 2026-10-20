@@ -6,13 +6,14 @@ import SectionHeader from '../../components/ui/SectionHeader'
 import Button from '../../components/ui/Button'
 import MemberPageStatsView from '../../components/find/MemberPageStatsView'
 import MemberPageBuilder from '../../components/find/MemberPageBuilder'
+import MemberPageSignupsList from '../../components/find/MemberPageSignupsList'
 import { useIdentity } from '../../modules/identity/IdentityContext'
 import { getMyMemberPageStats, myPageService } from '../../modules/find/memberPageService'
 import type { MemberPage, MemberPageLevel, MemberPageStats } from '../../modules/find/types'
 
 const TEXT = {
-  en: { title: 'My Business Page', description: 'A simple professional page for your business — share it anywhere.', open: 'Open', edit: 'Edit', numbers: 'Numbers', copy: 'Copy link', copied: 'Copied', share: 'Share', whatsapp: 'WhatsApp' },
-  pt: { title: 'Minha página de negócio', description: 'Uma página profissional simples para o seu negócio — compartilhe onde quiser.', open: 'Abrir', edit: 'Editar', numbers: 'Números', copy: 'Copiar link', copied: 'Copiado', share: 'Compartilhar', whatsapp: 'WhatsApp' },
+  en: { title: 'My Business Page', description: 'A simple professional page for your business — share it anywhere.', open: 'Open', edit: 'Edit', numbers: 'Numbers', contacts: 'Contacts', copy: 'Copy link', copied: 'Copied', share: 'Share', whatsapp: 'WhatsApp' },
+  pt: { title: 'Minha página de negócio', description: 'Uma página profissional simples para o seu negócio — compartilhe onde quiser.', open: 'Abrir', edit: 'Editar', numbers: 'Números', contacts: 'Contatos', copy: 'Copiar link', copied: 'Copiado', share: 'Compartilhar', whatsapp: 'WhatsApp' },
 }
 
 // The page's address with copy and share buttons.
@@ -60,7 +61,7 @@ export default function MyPagePage() {
   const [page, setPage] = useState<MemberPage | null | undefined>(undefined)
   // The models the plan allows (null = all).
   const [templates, setTemplates] = useState<string[] | null>(null)
-  const [tab, setTab] = useState<'edit' | 'numbers'>('edit')
+  const [tab, setTab] = useState<'edit' | 'numbers' | 'contacts'>('edit')
   const [days, setDays] = useState(30)
   const [stats, setStats] = useState<MemberPageStats | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -85,7 +86,11 @@ export default function MyPagePage() {
   const statsPageId = page?.id ?? linked?.id
   const showNumbers = Boolean(statsPageId) && (teamPage || level === 'full')
   const canEdit = Boolean(level) && !teamPage
-  const activeTab = canEdit ? tab : 'numbers'
+  // The e-mail list (Sprint 139): whole-page plans, team-made pages, or a
+  // page the team switched it on for.
+  const showContacts = Boolean(page) && (teamPage || level === 'full' || Boolean(page?.signup_granted))
+  const tabs = ([canEdit && 'edit', showNumbers && 'numbers', showContacts && 'contacts'] as const).filter(Boolean) as ('edit' | 'numbers' | 'contacts')[]
+  const activeTab = tabs.includes(tab) ? tab : tabs[0]
 
   useEffect(() => {
     if (!statsPageId || !showNumbers || activeTab !== 'numbers') return
@@ -126,14 +131,14 @@ export default function MyPagePage() {
       {notice && <p className="mb-6 rounded-xl bg-emerald-50 px-4 py-3 text-[13.5px] text-emerald-700">{notice}</p>}
       {error && <p className="mb-6 text-[14px] text-red-500">{error}</p>}
 
-      {canEdit && showNumbers && (
+      {tabs.length > 1 && (
         <div className="mb-6 flex gap-2">
-          {(['edit', 'numbers'] as const).map((id) => (
+          {tabs.map((id) => (
             <button
               key={id}
               type="button"
               onClick={() => setTab(id)}
-              className={`rounded-full px-4 py-1.5 text-[13px] font-semibold transition-colors ${tab === id ? 'bg-primary text-white' : 'bg-bg-soft text-navy/60 hover:text-navy'}`}
+              className={`rounded-full px-4 py-1.5 text-[13px] font-semibold transition-colors ${activeTab === id ? 'bg-primary text-white' : 'bg-bg-soft text-navy/60 hover:text-navy'}`}
             >
               {t[id]}
             </button>
@@ -155,8 +160,10 @@ export default function MyPagePage() {
             window.scrollTo({ top: 0, behavior: 'smooth' })
           }}
         />
-      ) : showNumbers ? (
+      ) : activeTab === 'numbers' ? (
         <MemberPageStatsView stats={stats} days={days} onDays={setDays} language={language} error={null} />
+      ) : activeTab === 'contacts' ? (
+        <MemberPageSignupsList load={() => myPageService.signups()} remove={(id) => myPageService.removeSignup(id)} fileName={slug ?? 'page'} />
       ) : null}
     </div>
   )

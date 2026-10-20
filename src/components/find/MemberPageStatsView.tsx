@@ -12,13 +12,14 @@ const LABELS = {
     clicks: 'Clicks',
     courseVisits: 'Course visits',
     courseLeads: 'Course e-mails',
+    signups: 'List sign-ups',
     perDay: 'Visits per day',
     perLink: 'What people clicked',
     noClicks: 'No clicks in this period yet.',
     notReady: 'The numbers start once the database update (Portal migration 0045) runs.',
     privacy: 'Only totals are counted — nothing about who visited.',
     featured: 'Featured',
-    links: { whatsapp: 'WhatsApp', email: 'E-mail', instagram: 'Instagram', tiktok: 'TikTok', youtube: 'YouTube', website: 'Website', other: 'Link' } as Record<string, string>,
+    links: { whatsapp: 'WhatsApp', whatsapp_group: 'WhatsApp group', phone: 'Call', booking: 'Booking', email: 'E-mail', instagram: 'Instagram', tiktok: 'TikTok', youtube: 'YouTube', website: 'Website', other: 'Link' } as Record<string, string>,
   },
   pt: {
     days: (n: number) => `${n} dias`,
@@ -26,13 +27,14 @@ const LABELS = {
     clicks: 'Cliques',
     courseVisits: 'Visitas ao curso',
     courseLeads: 'E-mails do curso',
+    signups: 'Inscrições na lista',
     perDay: 'Visitas por dia',
     perLink: 'Onde as pessoas clicaram',
     noClicks: 'Ainda não houve cliques neste período.',
     notReady: 'Os números começam depois da atualização do banco (migration 0045 do Portal).',
     privacy: 'Contamos só os totais — nada sobre quem visitou.',
     featured: 'Destaque',
-    links: { whatsapp: 'WhatsApp', email: 'E-mail', instagram: 'Instagram', tiktok: 'TikTok', youtube: 'YouTube', website: 'Site', other: 'Link' } as Record<string, string>,
+    links: { whatsapp: 'WhatsApp', whatsapp_group: 'Grupo do WhatsApp', phone: 'Ligar', booking: 'Agendamento', email: 'E-mail', instagram: 'Instagram', tiktok: 'TikTok', youtube: 'YouTube', website: 'Site', other: 'Link' } as Record<string, string>,
   },
 }
 
@@ -75,6 +77,7 @@ export default function MemberPageStatsView({ stats, days, onDays, language, err
   const clicks = sum(rows, 'click')
   const courseVisits = sum(rows, 'course_view')
   const courseLeads = sum(rows, 'course_lead')
+  const signups = sum(rows, 'signup')
   const hasCourse = rows.some((r) => r.kind === 'course_view' || r.kind === 'course_lead')
 
   const perDay = new Map<string, number>()
@@ -90,6 +93,7 @@ export default function MemberPageStatsView({ stats, days, onDays, language, err
   const tiles = [
     { label: t.visits, value: visits },
     { label: t.clicks, value: clicks },
+    ...(signups > 0 ? [{ label: t.signups, value: signups }] : []),
     ...(hasCourse
       ? [
           { label: t.courseVisits, value: courseVisits },

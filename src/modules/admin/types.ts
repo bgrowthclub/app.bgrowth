@@ -421,6 +421,8 @@ export interface AdminMemberPageDraft extends MemberPageDraft {
   // The owner edits the page themselves in My Business Page (needs a plan
   // with a page — otherwise it stays off the site). Sprint 133.
   ownerManaged?: boolean
+  // The team switched the e-mail list on for this page (Sprint 139).
+  signupGranted?: boolean
 }
 
 // Admin → Site (Portal migration 0046).

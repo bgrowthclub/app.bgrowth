@@ -2,6 +2,7 @@ import { ArrowRight, Link2, MapPin, Quote } from 'lucide-react'
 import { MEMBER_LINK_ICONS } from './memberLinkIcons'
 import MemberSiteView from './MemberSiteView'
 import MemberProductPicks from './MemberProductPicks'
+import MemberPageSignupForm from './MemberPageSignupForm'
 import type { CSSProperties } from 'react'
 import { MEMBER_PAGE_LABELS, memberLinkHref, memberLinkLabel, videoEmbed } from '../../modules/find/memberPageService'
 import { PAGE_COLORS, pageBlocks, pageSkin } from '../../modules/find/memberPageTemplates'
@@ -11,7 +12,7 @@ const ICONS = MEMBER_LINK_ICONS
 
 interface Props {
   page: Pick<MemberPage, 'display_name' | 'headline' | 'bio' | 'photo_url' | 'location' | 'services' | 'highlights' | 'links' | 'language'> &
-    Partial<Pick<MemberPage, 'blocks' | 'theme' | 'template'>>
+    Partial<Pick<MemberPage, 'blocks' | 'theme' | 'template' | 'slug'>>
   // Admin preview: links don't navigate.
   preview?: boolean
   // Called when a visitor opens a contact button or featured item, with
@@ -256,6 +257,12 @@ export default function MemberPageView({ page, preview = false, onLinkClick }: P
           </section>
         )
       }
+      case 'signup':
+        return (
+          <section className="mt-10">
+            <MemberPageSignupForm slug={page.slug} ownerName={page.display_name} title={d.title} body={d.body} button={d.button} language={page.language} preview={preview} headingClass="font-display text-xl font-bold text-navy" />
+          </section>
+        )
       case 'products':
         if (!(d.products ?? []).length) return null
         return (

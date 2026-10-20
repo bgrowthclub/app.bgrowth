@@ -2304,7 +2304,7 @@ async function memberPageStats(req: VercelRequest, db: Db) {
 
 // Member page blocks and theme (Sprint 127, Portal migration 0062) — the
 // same cleaning in api/admin.ts and api/account.ts.
-const PAGE_BLOCK_TYPES = new Set(['hero', 'contact', 'highlights', 'services', 'about', 'testimonials', 'gallery', 'text', 'faq', 'area', 'cta', 'credentials', 'products'])
+const PAGE_BLOCK_TYPES = new Set(['hero', 'contact', 'highlights', 'services', 'about', 'testimonials', 'gallery', 'text', 'faq', 'area', 'cta', 'credentials', 'products', 'signup'])
 const PAGE_COLORS = new Set(['blue', 'teal', 'green', 'purple', 'rose', 'orange', 'navy'])
 const PAGE_TEMPLATES = new Set(['professional', 'local', 'creative', 'personal', 'affiliate', 'cleaning', 'notary', 'teacher', 'creator', 'blank'])
 const pageText = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '')
@@ -2470,10 +2470,37 @@ async function createMemberPage(req: VercelRequest, db: Db) {
 
 // Who edits the page (Sprint 133): the owner (owner_managed — shown only
 // while their plan includes a page) or the team. Sent only by the new editor.
-function pageManagedBy(req: VercelRequest, userId: string | null): { owner_managed?: boolean } {
+function pageManagedBy(req: VercelRequest, userId: string | null): { owner_managed?: boolean; signup_granted?: boolean } {
   const v = req.body?.ownerManaged
-  if (typeof v !== 'boolean') return {}
-  return { owner_managed: v && Boolean(userId) }
+  const out: { owner_managed?: boolean; signup_granted?: boolean } = {}
+  if (typeof v === 'boolean') out.owner_managed = v && Boolean(userId)
+  // E-mail list switched on by the team for this page (Sprint 139, 0065).
+  if (typeof req.body?.signupGranted === 'boolean') out.signup_granted = req.body.signupGranted
+  return out
+}
+
+// A page's e-mail list (Sprint 139, Portal migration 0065).
+//   GET ?resource=member-page-signups&id=<page> → { signups }
+//   DELETE ?resource=member-page-signups&id=<page>&signup=<id>
+async function memberPageSignups(req: VercelRequest, db: Db) {
+  const pageId = str(req.query.id)
+  if (!pageId) throw new HttpError(400, 'Missing page.')
+  if (req.method === 'DELETE') {
+    const { error } = await db.from('member_page_signups').delete().eq('id', str(req.query.signup)).eq('page_id', pageId)
+    if (error) throw error
+    return {}
+  }
+  const { data, error } = await db
+    .from('member_page_signups')
+    .select('id, email, name, whatsapp, created_at')
+    .eq('page_id', pageId)
+    .order('created_at', { ascending: false })
+    .limit(5000)
+  if (error) {
+    if (isMissingTable(error)) throw new HttpError(409, 'Run the database update (Portal migration 0065) first.')
+    throw error
+  }
+  return { signups: data ?? [] }
 }
 
 async function ownerPageWarning(db: Db, managed: { owner_managed?: boolean }, userId: string | null) {
@@ -3598,6 +3625,8 @@ function describe(key: string, b: Body, r: Record<string, any>): Described {
       return { area: 'pages', summary: `Created the page bgrowth.app/p/${b.slug}${b.status === 'published' ? ' and published it' : ' as a draft'}` }
     case 'PATCH member-pages':
       return { area: 'pages', summary: `Edited the page bgrowth.app/p/${r.page?.slug ?? b.slug}${b.status === 'published' ? '' : ' (draft)'}` }
+    case 'DELETE member-page-signups':
+      return { area: 'pages', summary: 'Removed a contact from a page’s e-mail list' }
     case 'DELETE member-pages':
       return { area: 'pages', summary: `Deleted the page of ${r.deleted?.display_name ?? 'a member'} (bgrowth.app/p/${r.deleted?.slug ?? ''})` }
     case 'POST tags':
@@ -3830,6 +3859,8 @@ const ROUTES: Record<string, Route> = {
   'DELETE bundles': (req, db) => archiveBundle(req, db),
   'GET member-pages': (_req, db) => listMemberPages(db),
   'GET member-page-stats': (req, db) => memberPageStats(req, db),
+  'GET member-page-signups': (req, db) => memberPageSignups(req, db),
+  'DELETE member-page-signups': (req, db) => memberPageSignups(req, db),
   'POST member-pages': (req, db) => createMemberPage(req, db),
   'PATCH member-pages': (req, db) => updateMemberPage(req, db),
   'DELETE member-pages': (req, db) => deleteMemberPage(req, db),

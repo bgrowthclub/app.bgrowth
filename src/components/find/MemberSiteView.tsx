@@ -2,6 +2,7 @@ import { ArrowRight, BadgeCheck, Link2, MapPin, Quote } from 'lucide-react'
 import type { CSSProperties, MouseEvent, ReactNode } from 'react'
 import { MEMBER_LINK_ICONS } from './memberLinkIcons'
 import MemberProductPicks from './MemberProductPicks'
+import MemberPageSignupForm from './MemberPageSignupForm'
 import { MEMBER_PAGE_LABELS, memberLinkHref, memberLinkLabel, videoEmbed } from '../../modules/find/memberPageService'
 import { PAGE_COLORS, pageBlocks } from '../../modules/find/memberPageTemplates'
 import type { MemberPageSkin } from '../../modules/find/memberPageTemplates'
@@ -9,7 +10,7 @@ import type { MemberPage, MemberPageBlock, MemberPageHighlight, MemberPageLink }
 
 interface Props {
   page: Pick<MemberPage, 'display_name' | 'headline' | 'bio' | 'photo_url' | 'location' | 'services' | 'highlights' | 'links' | 'language'> &
-    Partial<Pick<MemberPage, 'blocks' | 'theme'>>
+    Partial<Pick<MemberPage, 'blocks' | 'theme' | 'slug'>>
   skin: MemberPageSkin
   preview?: boolean
   onLinkClick?: (target: string) => void
@@ -456,6 +457,12 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
           band,
         )
       }
+      case 'signup':
+        return section(
+          block.id,
+          <MemberPageSignupForm slug={page.slug} ownerName={page.display_name} title={d.title} body={d.body} button={d.button} language={page.language} preview={preview} headingClass={look.h2} />,
+          band,
+        )
       case 'products':
         if (!(d.products ?? []).length) return null
         return section(

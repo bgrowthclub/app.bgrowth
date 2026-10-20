@@ -1,5 +1,5 @@
 import { supabase } from '../identity/supabase/supabaseClient'
-import type { MemberPage, MemberPageDraft, MemberPageLevel, MemberPageStats } from './types'
+import type { MemberPage, MemberPageDraft, MemberPageLevel, MemberPageSignup, MemberPageStats } from './types'
 
 // Reads a published member page (row-level security only returns
 // published ones). Writes go through api/admin.ts.
@@ -33,6 +33,14 @@ export const MEMBER_PAGE_LABELS = {
     credentials: 'Licenses & credentials',
     credentialsNote: 'As stated by this professional — not verified by BGrowth.',
     disclaimer: 'The information on this page is provided by its owner and isn’t verified by BGrowth.',
+    signupTitle: 'Get updates',
+    signupButton: 'Sign me up',
+    signupEmail: 'Your e-mail',
+    signupName: 'Your name (optional)',
+    signupWhatsapp: 'WhatsApp (optional)',
+    signupConsent: 'I agree to receive e-mails from',
+    signupDone: 'You’re on the list. Thank you!',
+    signupNote: 'Your contact goes only to the owner of this page. You can ask to be removed at any time.',
     picks: 'My picks',
     topPicks: 'My top picks',
     allPicks: 'All',
@@ -55,6 +63,14 @@ export const MEMBER_PAGE_LABELS = {
     credentials: 'Licenças e credenciais',
     credentialsNote: 'Informadas pelo profissional — não verificadas pela BGrowth.',
     disclaimer: 'As informações desta página são do seu responsável e não são verificadas pela BGrowth.',
+    signupTitle: 'Receba novidades',
+    signupButton: 'Quero receber',
+    signupEmail: 'Seu e-mail',
+    signupName: 'Seu nome (opcional)',
+    signupWhatsapp: 'WhatsApp (opcional)',
+    signupConsent: 'Aceito receber e-mails de',
+    signupDone: 'Pronto, você está na lista. Obrigado!',
+    signupNote: 'Seu contato vai só para o dono desta página. Você pode pedir para sair a qualquer momento.',
     picks: 'Minhas indicações',
     topPicks: 'Meus favoritos',
     allPicks: 'Todos',
@@ -202,7 +218,7 @@ export async function getMyMemberPageStats(pageId: string, days: number): Promis
 
 // The subscriber's own page (Sprint 127): read and saved through
 // api/account.ts, which applies what their plan allows.
-async function accountCall<T>(method: 'GET' | 'PUT' | 'POST', resource: string, body?: unknown): Promise<T> {
+async function accountCall<T>(method: 'GET' | 'PUT' | 'POST' | 'DELETE', resource: string, body?: unknown): Promise<T> {
   const session = supabase ? (await supabase.auth.getSession()).data.session : null
   if (!session) throw new Error('Sign in to continue.')
   const response = await fetch(`/api/account?resource=${resource}`, {
@@ -225,4 +241,21 @@ export const myPageService = {
   async uploadImage(dataUrl: string) {
     return (await accountCall<{ url: string }>('POST', 'my-page-image', { dataUrl })).url
   },
+  async signups() {
+    return (await accountCall<{ signups: MemberPageSignup[] }>('GET', 'my-page-signups')).signups
+  },
+  async removeSignup(id: string) {
+    await accountCall('DELETE', `my-page-signups&id=${encodeURIComponent(id)}`)
+  },
+}
+
+// A visitor joins a page's e-mail list (api/ingles.ts, action page-signup).
+export async function joinMemberPageList(input: { slug: string; email: string; name: string; whatsapp: string; captchaToken?: string }) {
+  const response = await fetch('/api/ingles?action=page-signup', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ ...input, consent: true }),
+  })
+  const data = (await response.json().catch(() => ({}))) as { ok?: boolean; error?: string }
+  if (!response.ok || !data.ok) throw new Error(data.error || 'Couldn’t sign you up. Try again.')
 }
