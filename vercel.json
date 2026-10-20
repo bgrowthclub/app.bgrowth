@@ -1,6 +1,11 @@
 {
   "redirects": [
     {
+      "source": "/p/bruno",
+      "destination": "/p/growwithbruno",
+      "permanent": false
+    },
+    {
       "source": "/ingles-de-mudanca",
       "destination": "/p/bruno/ingles-de-mudanca",
       "permanent": false

@@ -30,6 +30,20 @@ const MOVING_WHEN = ['ja-moro', 'ate-3-meses', '3-12-meses', 'sem-data']
 const TRACK_KINDS = ['view', 'click', 'course_view']
 const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/
 
+// The course lives at /p/bruno/ingles-de-mudanca and asks for the page
+// "bruno"; Bruno's page moved to /p/growwithbruno (19/10/2026). A slug that
+// isn't a page's own resolves through this list, then through the page's
+// old addresses (previous_slugs, Portal migration 0063).
+const SLUG_ALIASES: Record<string, string> = { bruno: 'growwithbruno' }
+
+async function resolveSlug(db: Db, slug: string): Promise<string> {
+  const { data } = await db.from('member_pages').select('slug').eq('slug', slug).limit(1)
+  if (data && data.length) return slug
+  if (SLUG_ALIASES[slug]) return SLUG_ALIASES[slug]
+  const moved = await db.from('member_pages').select('slug').contains('previous_slugs', [slug]).limit(1)
+  return !moved.error && moved.data?.length ? (moved.data[0] as { slug: string }).slug : slug
+}
+
 // Counting never breaks the page: before migration 0045 (or on any error)
 // it simply doesn't count.
 async function track(db: Db, slug: string, kind: string, target = '') {
@@ -72,7 +86,7 @@ async function saveLead(req: VercelRequest, db: Db) {
   // 23505 = this e-mail is already on the list: fine, unlock anyway.
   if (error && (error as { code?: string }).code !== '23505') throw error
   const page = str(body.page, 40).toLowerCase()
-  if (!error && SLUG.test(page)) await track(db, page, 'course_lead')
+  if (!error && SLUG.test(page)) await track(db, await resolveSlug(db, page), 'course_lead')
   return { ok: true }
 }
 
@@ -84,7 +98,7 @@ async function trackEvent(req: VercelRequest, db: Db) {
   const kind = str(body.kind, 20)
   if (!SLUG.test(slug) || !TRACK_KINDS.includes(kind)) return { ok: true }
   const target = kind === 'click' ? str(body.target, 120) : ''
-  await track(db, slug, kind, target)
+  await track(db, await resolveSlug(db, slug), kind, target)
   return { ok: true }
 }
 
@@ -119,7 +133,7 @@ async function getCreator(req: VercelRequest, db: Db) {
   const { data, error } = await db
     .from('member_pages')
     .select('display_name, headline, bio, photo_url, links')
-    .eq('slug', slug)
+    .eq('slug', await resolveSlug(db, slug))
     .eq('status', 'published')
     .maybeSingle()
   if (error) throw error
