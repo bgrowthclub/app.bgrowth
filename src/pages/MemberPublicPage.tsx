@@ -30,7 +30,19 @@ export default function MemberPublicPage() {
     }
   }, [slug])
 
-  if (page === null) return <Navigate to="/" replace />
+  // Not published (draft, removed, or the owner's plan has no page): say so
+  // here instead of sending the visitor to the home page.
+  if (page === null)
+    return (
+      <div className="grid min-h-screen place-items-center bg-bg-soft px-5 text-center">
+        <SEO title="Page not available" description="This page isn’t available." path={`/p/${slug}`} />
+        <div>
+          <p className="font-display text-xl font-bold text-navy">This page isn’t available.</p>
+          <p className="mt-2 text-[14px] text-navy/55">Esta página não está disponível.</p>
+          <a href="/" className="mt-6 inline-block text-[13px] font-medium text-navy/40 hover:text-navy/70">Made with BGrowth</a>
+        </div>
+      </div>
+    )
   if (page === undefined) return <div className="min-h-screen bg-bg-soft" />
   if (page.slug !== slug.toLowerCase()) return <Navigate to={`/p/${page.slug}${window.location.search}`} replace />
 
