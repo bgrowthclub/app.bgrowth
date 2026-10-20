@@ -21,6 +21,7 @@ const ALWAYS_OPEN = [
   '/t',
   '/p/bruno', // Bruno's page and the "Inglês de Mudança" course (decided 14/10/2026)
   '/p/growwithbruno', // Bruno's page's address since 19/10/2026 (/p/bruno leads there)
+  '/p/dicasdagigika', // decided 19/10/2026
   '/ingles-de-mudanca',
 ]
 
