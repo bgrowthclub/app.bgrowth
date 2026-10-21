@@ -411,6 +411,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       .select('id, slug, name, short_description, cover_image_url, is_free, price_cents, currency, stripe_price_id')
       .eq('slug', productSlug)
       .eq('status', 'published')
+      // Journeys (Portal migration 0066) are never bought or licensed: a
+      // member starts a free one on /journeys without any license.
+      .neq('content_type', 'journey')
       .limit(1)
     if (productError) throw productError
     const product = (productRows?.[0] ?? null) as ProductRow | null
