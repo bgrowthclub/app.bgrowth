@@ -25,6 +25,12 @@ export const SEO_PAGES: SeoPage[] = [
     description: 'Browse every BGrowth Workspace, calculator, download and bundle — buy once, keep it and use it whenever you need.',
   },
   {
+    path: '/journeys',
+    label: 'Journeys',
+    title: 'Journeys',
+    description: 'Guided Journeys that break a goal into clear stages and actions, with the right articles and tools at each step.',
+  },
+  {
     path: '/workspaces',
     label: 'Life Worlds',
     title: 'Life Worlds',

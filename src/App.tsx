@@ -12,6 +12,7 @@ import CheckoutSuccessPage from './pages/CheckoutSuccessPage'
 import SystemOverviewPage from './pages/SystemOverviewPage'
 import SystemModulePage from './pages/SystemModulePage'
 import WorkspacesPage from './pages/WorkspacesPage'
+import JourneysPage from './pages/JourneysPage'
 import CategoryPreviewPage from './pages/CategoryPreviewPage'
 import ResourcesPage from './pages/ResourcesPage'
 import AboutPage from './pages/AboutPage'
@@ -110,6 +111,8 @@ export default function App() {
         <Route path="/system/:slug" element={<SystemOverviewPage />} />
         <Route path="/system/:slug/module/:moduleSlug" element={<SystemModulePage />} />
         <Route path="/workspaces" element={<WorkspacesPage />} />
+        {/* BGrowth Journeys (Portal migration 0066) — this site only. */}
+        <Route path="/journeys" element={<JourneysPage />} />
         <Route path="/preview/:category" element={<CategoryPreviewPage />} />
         <Route path="/resources" element={RESOURCES_LIVE ? <ResourcesPage /> : <KnowledgeComingSoonPage />} />
 
