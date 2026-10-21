@@ -13,6 +13,7 @@ import SystemOverviewPage from './pages/SystemOverviewPage'
 import SystemModulePage from './pages/SystemModulePage'
 import WorkspacesPage from './pages/WorkspacesPage'
 import JourneysPage from './pages/JourneysPage'
+import JourneyPage from './pages/JourneyPage'
 import CategoryPreviewPage from './pages/CategoryPreviewPage'
 import ResourcesPage from './pages/ResourcesPage'
 import AboutPage from './pages/AboutPage'
@@ -113,6 +114,7 @@ export default function App() {
         <Route path="/workspaces" element={<WorkspacesPage />} />
         {/* BGrowth Journeys (Portal migration 0066) — this site only. */}
         <Route path="/journeys" element={<JourneysPage />} />
+        <Route path="/journeys/:slug" element={<JourneyPage />} />
         <Route path="/preview/:category" element={<CategoryPreviewPage />} />
         <Route path="/resources" element={RESOURCES_LIVE ? <ResourcesPage /> : <KnowledgeComingSoonPage />} />
 

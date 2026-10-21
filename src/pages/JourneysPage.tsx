@@ -93,9 +93,13 @@ export default function JourneysPage() {
               )}
               <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 {shown.map(({ journey, world: w }, i) => (
-                  // The Journey page (/journeys/:slug) comes in the next step;
-                  // until then the card has no link.
-                  <JourneyCard key={journey.id} journey={journey} world={w ? { name: w.name, icon: w.icon } : undefined} index={i} />
+                  <JourneyCard
+                    key={journey.id}
+                    journey={journey}
+                    world={w ? { name: w.name, icon: w.icon } : undefined}
+                    to={`/journeys/${journey.slug}`}
+                    index={i}
+                  />
                 ))}
               </div>
             </>
