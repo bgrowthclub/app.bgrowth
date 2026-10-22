@@ -112,7 +112,7 @@ export default function JourneyPage() {
 
             {/* On phones the start box comes right here, before the stages. */}
             <div className="mt-7 lg:hidden">
-              <JourneyStartPanel path={path} stageCount={journey.stages.length} actionCount={actionCount} isFree={journey.isFree} />
+              <JourneyStartPanel path={path} stageCount={journey.stages.length} actionCount={actionCount} isFree={journey.isFree} memberPath={`/platform/journeys/${journey.slug}`} />
             </div>
 
             <h2 className="mt-12 font-display text-2xl font-bold tracking-tight text-navy">The stages</h2>
@@ -122,7 +122,7 @@ export default function JourneyPage() {
           </div>
 
           <aside className="hidden lg:sticky lg:top-28 lg:block lg:self-start">
-            <JourneyStartPanel path={path} stageCount={journey.stages.length} actionCount={actionCount} isFree={journey.isFree} />
+            <JourneyStartPanel path={path} stageCount={journey.stages.length} actionCount={actionCount} isFree={journey.isFree} memberPath={`/platform/journeys/${journey.slug}`} />
           </aside>
         </div>
       </div>

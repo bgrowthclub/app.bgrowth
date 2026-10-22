@@ -8,13 +8,15 @@ interface Props {
   stageCount: number
   actionCount: number
   isFree: boolean
+  /** The member's own page for this Journey (start / continue). */
+  memberPath: string
 }
 
 // The "start" box on a Journey's public page. A visitor can only read the
 // overview: starting and saving progress need a (free) account — enforced by
-// the database, not by this box. Signed-in members start it from their own
-// Journey page (next step of the build).
-export default function JourneyStartPanel({ path, stageCount, actionCount, isFree }: Props) {
+// the database, not by this box. Signed-in members start or continue it on
+// their own Journey page (/platform/journeys/:slug).
+export default function JourneyStartPanel({ path, stageCount, actionCount, isFree, memberPath }: Props) {
   const { user, status } = useIdentity()
   const next = encodeURIComponent(path)
   return (
@@ -33,9 +35,12 @@ export default function JourneyStartPanel({ path, stageCount, actionCount, isFre
       {status === 'loading' ? (
         <div className="mt-5 h-11 animate-pulse rounded-xl bg-bg-soft" />
       ) : user ? (
-        <p className="mt-5 rounded-xl bg-bg-soft px-4 py-3 text-[13.5px] text-navy/60">
-          You’re signed in. Starting this Journey and saving your progress opens here very soon.
-        </p>
+        <>
+          <p className="mt-4 text-[13.5px] leading-relaxed text-navy/60">Check off each step and pick up where you left off — your progress is saved to your account.</p>
+          <Button to={memberPath} className="mt-5 w-full" icon={<Route size={16} />}>
+            Open my Journey
+          </Button>
+        </>
       ) : (
         <>
           <p className="mt-4 text-[13.5px] leading-relaxed text-navy/60">Sign in to start this Journey, check off each step and pick up where you left off.</p>

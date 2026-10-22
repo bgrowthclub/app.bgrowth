@@ -14,6 +14,7 @@ import SystemModulePage from './pages/SystemModulePage'
 import WorkspacesPage from './pages/WorkspacesPage'
 import JourneysPage from './pages/JourneysPage'
 import JourneyPage from './pages/JourneyPage'
+import JourneyMemberPage from './pages/platform/JourneyMemberPage'
 import CategoryPreviewPage from './pages/CategoryPreviewPage'
 import ResourcesPage from './pages/ResourcesPage'
 import AboutPage from './pages/AboutPage'
@@ -206,6 +207,8 @@ export default function App() {
         <Route path="purchases" element={<PurchasesPage />} />
         <Route path="my-page" element={<MyPagePage />} />
         <Route path="support" element={<SupportPage />} />
+        {/* A member's own Journey (BGrowth Journeys, Portal migration 0066). */}
+        <Route path="journeys/:slug" element={<JourneyMemberPage />} />
         {/* Admin — BGrowth administrators only (portal.website_admins),
             re-checked by api/admin.ts on every request. Pages marked
             `support` are open to the Support role too; the rest are for
