@@ -16,6 +16,12 @@ export interface MemberPageService {
   title: string
   description?: string
   price?: string
+  // Since Sprint 145: each service can have its own picture and button — the
+  // button opens this service's own address (https).
+  image?: string
+  url?: string
+  // Button text (default: "Learn more"/"Saiba mais").
+  cta?: string
 }
 
 // Featured work — a product, a course, a portfolio piece.

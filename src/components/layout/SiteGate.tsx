@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { useLocation } from 'react-router-dom'
 import { useIdentity } from '../../modules/identity/IdentityContext'
-import { getSiteOpen } from '../../modules/site/siteService'
+import { getSiteAccess } from '../../modules/site/siteService'
 import ComingSoonPage from '../../pages/ComingSoonPage'
 
 // Before launch the site is closed (Admin → Site): visitors and members see
@@ -29,11 +29,15 @@ export default function SiteGate({ children }: { children: ReactNode }) {
   const { pathname } = useLocation()
   const { status, user } = useIdentity()
   const [open, setOpen] = useState<boolean | null>(null)
+  // Member pages the team released before launch (Admin → Pages).
+  const [openPages, setOpenPages] = useState<string[]>([])
 
   useEffect(() => {
     let cancelled = false
-    void getSiteOpen().then((value) => {
-      if (!cancelled) setOpen(value)
+    void getSiteAccess().then((value) => {
+      if (cancelled) return
+      setOpenPages(value.pages)
+      setOpen(value.open)
     })
     return () => {
       cancelled = true
@@ -43,5 +47,7 @@ export default function SiteGate({ children }: { children: ReactNode }) {
   if (ALWAYS_OPEN.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return <>{children}</>
   if (open === null || status === 'loading') return null
   if (open || user?.isAdmin) return <>{children}</>
+  const pageSlug = /^\/p\/([^/]+)\/?$/.exec(pathname)?.[1]?.toLowerCase()
+  if (pageSlug && openPages.includes(pageSlug)) return <>{children}</>
   return <ComingSoonPage />
 }

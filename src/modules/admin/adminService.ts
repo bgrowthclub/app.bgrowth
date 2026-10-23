@@ -218,6 +218,10 @@ export const adminService = {
   getMemberPageStats(id: string, days: number) {
     return call<MemberPageStats>('GET', 'member-page-stats', { id, days: String(days) })
   },
+  // Open (or close again) one published page while the site is closed.
+  setMemberPageOpen(id: string, open: boolean) {
+    return call<{ id: string; open: boolean }>('PUT', 'page-open', undefined, { id, open })
+  },
   async removeMemberPage(id: string) {
     await call('DELETE', 'member-pages', undefined, { id })
   },

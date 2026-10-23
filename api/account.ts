@@ -671,7 +671,12 @@ function readMyPage(b: Record<string, any>) {
   })
   const services = (Array.isArray(b.services) ? b.services : []).slice(0, 12).flatMap((raw: any) => {
     const title = pageText(raw?.title, 100)
-    return title ? [{ title, description: pageText(raw?.description, 400), price: pageText(raw?.price, 40) }] : []
+    if (!title) return []
+    // Its own picture and button (Sprint 145): the button opens this service's address.
+    const url = pageUrl(raw?.url)
+    const image = pageUrl(raw?.image)
+    const cta = pageText(raw?.cta, 40)
+    return [{ title, description: pageText(raw?.description, 400), price: pageText(raw?.price, 40), ...(url ? { url } : {}), ...(image ? { image } : {}), ...(url && cta ? { cta } : {}) }]
   })
   const highlights = (Array.isArray(b.highlights) ? b.highlights : []).slice(0, 8).flatMap((raw: any) => {
     const title = pageText(raw?.title, 100)

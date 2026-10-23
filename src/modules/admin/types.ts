@@ -411,6 +411,8 @@ export interface AdminMemberPagesOverview {
   pages: MemberPage[]
   // false until the database update (migration 0044) runs.
   ready: boolean
+  // Pages released before launch (open while the site is closed).
+  openPageIds?: string[]
 }
 
 // The team's page editor sends the shared draft plus the owner.

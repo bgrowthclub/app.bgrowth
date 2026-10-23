@@ -8,10 +8,15 @@ interface Props {
   onNumbers: () => void
   onContacts: () => void
   onRemove: () => void
+  // Released before launch: open at its own address while the site is closed.
+  releasedEarly: boolean
+  siteOpen?: boolean
+  onToggleRelease: () => void
+  releasing?: boolean
 }
 
 // One public page in Admin → Pages.
-export default function AdminMemberPageRow({ page, onEdit, onNumbers, onContacts, onRemove }: Props) {
+export default function AdminMemberPageRow({ page, onEdit, onNumbers, onContacts, onRemove, releasedEarly, onToggleRelease, releasing }: Props) {
   const published = page.status === 'published'
   return (
     <div className="flex flex-wrap items-center gap-4 px-5 py-4">
@@ -30,12 +35,22 @@ export default function AdminMemberPageRow({ page, onEdit, onNumbers, onContacts
         </p>
       </div>
       <span className={pillClass(published ? 'green' : 'gray')}>{published ? 'Published' : 'Draft'}</span>
+      {releasedEarly && <span className={pillClass(published ? 'blue' : 'gray')}>{published ? 'Public before launch' : 'Public before launch · publish it to open'}</span>}
       <div className="flex items-center gap-1">
         {published && (
           <a href={`/p/${encodeURIComponent(page.slug)}`} target="_blank" rel="noreferrer" className={`${LINK_BUTTON} inline-flex items-center gap-1 text-navy/60 hover:bg-bg-soft`}>
             View <ExternalLink size={13} />
           </a>
         )}
+        <button
+          type="button"
+          onClick={onToggleRelease}
+          disabled={releasing}
+          title={releasedEarly ? 'Back behind “Coming soon” while the site is closed' : 'Anyone with the link can open this page while the rest of the site is closed'}
+          className={`${LINK_BUTTON} ${releasedEarly ? 'text-navy/60' : 'text-primary'} hover:bg-bg-soft disabled:opacity-50`}
+        >
+          {releasing ? '…' : releasedEarly ? 'Remove public access' : 'Make page public'}
+        </button>
         <button type="button" onClick={onNumbers} className={`${LINK_BUTTON} text-navy/60 hover:bg-bg-soft`}>
           Numbers
         </button>

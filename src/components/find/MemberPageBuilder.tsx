@@ -362,6 +362,20 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                     <input value={s.price ?? ''} onChange={(e) => setService(i, { price: e.target.value })} maxLength={40} className={INPUT} placeholder="Price (optional)" aria-label="Price" />
                   </div>
                   <input value={s.description ?? ''} onChange={(e) => setService(i, { description: e.target.value })} maxLength={400} className={INPUT} placeholder="Short description (optional)" aria-label="Description" />
+                  <input value={s.url ?? ''} onChange={(e) => setService(i, { url: e.target.value })} className={INPUT} placeholder="Button link for this service (https://…, optional)" aria-label="Service link" />
+                  {s.url?.trim() && !/^https:\/\/\S+$/i.test(s.url.trim()) && <p className="text-[12.5px] text-red-500">Use a full address starting with https://</p>}
+                  {s.url?.trim() && <input value={s.cta ?? ''} onChange={(e) => setService(i, { cta: e.target.value })} maxLength={40} className={INPUT} placeholder="Button text (default: Learn more)" aria-label="Service button text" />}
+                  <div className="flex items-center gap-3">
+                    {s.image && <img src={s.image} alt="" className="h-10 w-16 rounded-md object-cover" />}
+                    <button type="button" disabled={uploading !== null} onClick={() => pickImage(`s${i}`, 1200, (url) => setService(i, { image: url }))} className={`${SMALL} inline-flex items-center gap-1.5 text-primary hover:bg-bg-soft`}>
+                      <ImagePlus size={14} /> {uploading === `s${i}` ? 'Uploading…' : s.image ? 'Change image' : 'Add image'}
+                    </button>
+                    {s.image && (
+                      <button type="button" onClick={() => setService(i, { image: '' })} className={`${SMALL} text-navy/50 hover:bg-bg-soft`}>
+                        Remove image
+                      </button>
+                    )}
+                  </div>
                 </Row>
               ))}
             </div>

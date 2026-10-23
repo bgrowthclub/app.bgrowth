@@ -371,8 +371,14 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
                   <li key={s.title} className="grid grid-cols-[3rem_minmax(0,1fr)_auto] gap-4 border-t border-navy/15 py-5">
                     <span className="font-display text-xl font-bold text-navy/30">{String(i + 1).padStart(2, '0')}</span>
                     <span>
+                      {s.image && <img src={s.image} alt="" className="mb-3 aspect-video w-full max-w-xs rounded-lg object-cover" />}
                       <span className="block font-semibold uppercase tracking-wide">{s.title}</span>
                       {s.description && <span className="mt-1 block text-[14px] text-navy/60">{s.description}</span>}
+                      {s.url && (
+                        <a {...linkProps('website', s.url, `service:${s.title}`)} className="mt-2 inline-flex items-center gap-1.5 text-[13px] font-semibold uppercase tracking-wide text-primary hover:underline">
+                          {s.cta?.trim() || t.learnMore} <ArrowRight size={14} aria-hidden />
+                        </a>
+                      )}
                     </span>
                     {s.price && <span className="font-semibold">{s.price}</span>}
                   </li>
@@ -381,11 +387,26 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
             ) : (
               <div className={`mt-8 grid gap-4 ${skin === 'professional' ? 'md:grid-cols-2' : 'sm:grid-cols-2 lg:grid-cols-3'}`}>
                 {page.services.map((s, i) => (
-                  <div key={s.title} className={`${look.card} p-6 ${skin === 'personal' && i === 1 ? 'bg-gradient-to-br from-primary/20 to-primary/5' : ''}`}>
-                    {skin === 'local' && <span className="mb-4 grid h-11 w-11 place-items-center rounded-full bg-primary/10 font-display font-bold text-primary">{i + 1}</span>}
-                    <p className="text-[17px] font-semibold text-navy">{s.title}</p>
-                    {s.description && <p className="mt-2 text-[14.5px] leading-relaxed text-navy/60">{s.description}</p>}
-                    {s.price && <p className="mt-4 font-display text-lg font-bold text-primary">{s.price}</p>}
+                  // Same height in a row; each card's own button sits at the bottom
+                  // and opens that service's own address.
+                  <div key={s.title + i} className={`flex h-full flex-col overflow-hidden ${look.card} ${skin === 'personal' && i === 1 ? 'bg-gradient-to-br from-primary/20 to-primary/5' : ''}`}>
+                    {s.image && <img src={s.image} alt="" className="aspect-video w-full object-cover" />}
+                    <div className="flex flex-1 flex-col p-6">
+                      {skin === 'local' && <span className="mb-4 grid h-11 w-11 place-items-center rounded-full bg-primary/10 font-display font-bold text-primary">{i + 1}</span>}
+                      <p className="text-[17px] font-semibold text-navy">{s.title}</p>
+                      {s.description && <p className="mt-2 text-[14.5px] leading-relaxed text-navy/60">{s.description}</p>}
+                      {s.price && <p className="mt-4 font-display text-lg font-bold text-primary">{s.price}</p>}
+                      {s.url && (
+                        <div className="mt-auto pt-5">
+                          <a
+                            {...linkProps('website', s.url, `service:${s.title}`)}
+                            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-[14.5px] font-semibold text-white transition-colors hover:bg-primary/90"
+                          >
+                            {s.cta?.trim() || t.learnMore} <ArrowRight size={16} aria-hidden />
+                          </a>
+                        </div>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>

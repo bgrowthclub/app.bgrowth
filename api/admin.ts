@@ -2265,10 +2265,41 @@ async function withOwnerEmails(db: Db, rows: Record<string, any>[]) {
 async function listMemberPages(db: Db) {
   const { data, error } = await db.from('member_pages').select('*').order('updated_at', { ascending: false })
   if (error) {
-    if (isMissingTable(error)) return { pages: [], ready: false }
+    if (isMissingTable(error)) return { pages: [], ready: false, openPageIds: [] }
     throw error
   }
-  return { pages: await withOwnerEmails(db, data ?? []), ready: true }
+  return { pages: await withOwnerEmails(db, data ?? []), ready: true, openPageIds: await openPageIds(db) }
+}
+
+// Pages released before launch (Sprint 145): while the site is closed
+// (site_open), the published pages listed here open to everyone at their
+// own address — the rest of the site stays "Coming soon". Kept in
+// portal.site_settings key 'open_pages' ({ ids }), read by the public
+// function (api/ingles.ts ?action=site). Admin-only.
+const OPEN_PAGES_KEY = 'open_pages'
+
+async function openPageIds(db: Db): Promise<string[]> {
+  const { data, error } = await db.from('site_settings').select('value').eq('key', OPEN_PAGES_KEY).maybeSingle()
+  if (error) return []
+  const ids = (data?.value as { ids?: unknown } | null)?.ids
+  return Array.isArray(ids) ? ids.filter((id): id is string => isUuid(id)) : []
+}
+
+async function setPageOpen(req: VercelRequest, db: Db, admin: Admin) {
+  const id = str(req.body?.id)
+  if (!isUuid(id)) throw new HttpError(400, 'Missing page.')
+  const open = req.body?.open === true
+  const { data: page, error } = await db.from('member_pages').select('id, slug, display_name, status').eq('id', id).maybeSingle()
+  if (error) throw error
+  if (!page) throw new HttpError(404, 'Page not found.')
+  const ids = new Set(await openPageIds(db))
+  if (open) ids.add(id)
+  else ids.delete(id)
+  const { error: saveError } = await db
+    .from('site_settings')
+    .upsert({ key: OPEN_PAGES_KEY, value: { ids: [...ids] }, updated_at: new Date().toISOString(), updated_by: admin.email })
+  if (saveError) throw saveError
+  return { id, open, page }
 }
 
 // The owner is a BGrowth account, found by its e-mail; empty = no owner.
@@ -2394,7 +2425,11 @@ function readMemberPageInput(req: VercelRequest) {
   const services = (Array.isArray(b.services) ? b.services : []).slice(0, 12).flatMap((raw: any) => {
     const title = cleanText(raw?.title, 100)
     if (!title) return []
-    return [{ title, description: cleanText(raw?.description, 400), price: cleanText(raw?.price, 40) }]
+    // Its own picture and button (Sprint 145): the button opens this service's address.
+    const url = cleanUrl(raw?.url, `The link of “${title}”`)
+    const image = cleanUrl(raw?.image, `The image of “${title}”`)
+    const cta = cleanText(raw?.cta, 40)
+    return [{ title, description: cleanText(raw?.description, 400), price: cleanText(raw?.price, 40), ...(url ? { url } : {}), ...(image ? { image } : {}), ...(url && cta ? { cta } : {}) }]
   })
   const highlights = (Array.isArray(b.highlights) ? b.highlights : []).slice(0, 8).flatMap((raw: any) => {
     const title = cleanText(raw?.title, 100)
@@ -3642,6 +3677,11 @@ function describe(key: string, b: Body, r: Record<string, any>): Described {
       return { area: 'catalog', summary: `Merged the tag “${r.merged?.from}” into “${r.merged?.into}”` }
     case 'PUT product-tags':
       return { area: 'catalog', summary: `Set the tags of “${r.productName || 'a product'}”` }
+    case 'PUT page-open':
+      return {
+        area: 'pages',
+        summary: r.open ? `Made bgrowth.app/p/${r.page?.slug} public before launch` : `Took bgrowth.app/p/${r.page?.slug} back behind "Coming soon"`,
+      }
     case 'PUT site-open':
       return { area: 'site', summary: r.open ? 'Opened the site to everyone' : 'Closed the site (Coming soon for visitors)' }
     case 'POST announcements':
@@ -3875,6 +3915,7 @@ const ROUTES: Record<string, Route> = {
   'PUT product-tags': (req, db) => setProductTags(req, db),
   'GET site': (_req, db) => siteOverview(db),
   'PUT site-open': (req, db, admin) => setSiteOpen(req, db, admin),
+  'PUT page-open': (req, db, admin) => setPageOpen(req, db, admin),
   'POST announcements': (req, db, admin) => createAnnouncement(req, db, admin),
   'PATCH announcements': (req, db) => updateAnnouncement(req, db),
   'DELETE announcements': (req, db) => deleteAnnouncement(req, db),

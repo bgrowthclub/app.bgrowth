@@ -178,11 +178,17 @@ export default function MemberPageView({ page, preview = false, onLinkClick }: P
         <section className="mt-10">
           <h2 className="font-display text-lg font-bold text-navy">{t.services}</h2>
           <ul className="mt-3 divide-y divide-navy/[0.06] overflow-hidden rounded-2xl border border-navy/[0.08] bg-white">
-            {page.services.map((s) => (
-              <li key={s.title} className="flex items-start justify-between gap-4 px-4 py-3.5">
-                <span>
+            {page.services.map((s, i) => (
+              <li key={s.title + i} className="flex items-start gap-3 px-4 py-3.5">
+                {s.image && <img src={s.image} alt="" className="h-14 w-14 shrink-0 rounded-xl object-cover" />}
+                <span className="min-w-0 flex-1">
                   <span className="block font-semibold text-navy">{s.title}</span>
                   {s.description && <span className="block text-[14px] text-navy/55">{s.description}</span>}
+                  {s.url && (
+                    <a {...linkProps('website', s.url, `service:${s.title}`)} className="mt-1.5 inline-flex items-center gap-1 text-[13.5px] font-semibold text-primary hover:underline">
+                      {s.cta?.trim() || t.learnMore} <ArrowRight size={14} aria-hidden />
+                    </a>
+                  )}
                 </span>
                 {s.price && <span className="shrink-0 font-semibold text-navy">{s.price}</span>}
               </li>

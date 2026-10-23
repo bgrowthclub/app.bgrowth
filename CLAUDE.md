@@ -267,6 +267,17 @@ This repo is a **static, client-only MVP**:
   not shown in editor previews). One-per-page sections (`SINGLE_BLOCK_TYPES`:
   top, contact, featured, services, about, products, e-mail list) can't be
   added twice, and a page saved with two copies shows one.
+  **Since Sprint 145 the team can release one member page before launch,
+  and services have their own button** (approved by the owner 22/10/2026;
+  no migration): Admin → Pages → "Make page public" / "Remove public
+  access" (resource `page-open`, admin-only, logged in Activity) keeps the
+  page ids in `site_settings` key `open_pages`; `api/ingles.ts?action=site`
+  returns their addresses (current + old, published pages only) as `pages`
+  and `SiteGate` lets exactly `/p/<slug>` through while the site is closed.
+  The closed site is still a front-end gate (published pages were already
+  readable through RLS). Each service (`MemberPageService`) can have an
+  image, a link (https) and a button text (default "Learn more"); the
+  buttons line up at the bottom of the cards.
   **Since Sprint 76 member pages have numbers** (approved by the user;
   Portal migration 0045): daily totals of visits, clicks per contact
   button/featured item, course visits and course e-mails

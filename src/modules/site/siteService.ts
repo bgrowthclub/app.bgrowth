@@ -67,13 +67,20 @@ export function announcementDate(a: SiteAnnouncement) {
 // (Admin → Site; read through api/ingles.ts, the public function.) If the
 // check fails, the site stays open rather than hiding everything.
 export async function getSiteOpen(): Promise<boolean> {
+  return (await getSiteAccess()).open
+}
+
+// The same, plus the member page addresses the team released before launch
+// (Admin → Pages, Sprint 145).
+export async function getSiteAccess(): Promise<{ open: boolean; pages: string[] }> {
   try {
     const res = await fetch('/api/ingles?action=site')
-    if (!res.ok) return true
-    const data = (await res.json()) as { open?: boolean }
-    return data.open === true
+    if (!res.ok) return { open: true, pages: [] }
+    const data = (await res.json()) as { open?: boolean; pages?: unknown }
+    const pages = Array.isArray(data.pages) ? data.pages.filter((s): s is string => typeof s === 'string').map((s) => s.toLowerCase()) : []
+    return { open: data.open === true, pages }
   } catch {
-    return true
+    return { open: true, pages: [] }
   }
 }
 

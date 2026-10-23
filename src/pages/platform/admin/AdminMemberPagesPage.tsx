@@ -60,6 +60,30 @@ export default function AdminMemberPagesPage() {
     )
   }
 
+  // Released before launch (Sprint 145): this one page opens at its own
+  // address while the rest of the site stays "Coming soon".
+  const [releasing, setReleasing] = useState<string | null>(null)
+  async function toggleRelease(p: MemberPage) {
+    const open = !(data?.openPageIds ?? []).includes(p.id)
+    setReleasing(p.id)
+    setError(null)
+    try {
+      await adminService.setMemberPageOpen(p.id, open)
+      setData((d) => (d ? { ...d, openPageIds: open ? [...(d.openPageIds ?? []), p.id] : (d.openPageIds ?? []).filter((id) => id !== p.id) } : d))
+      setNotice(
+        open
+          ? p.status === 'published'
+            ? `bgrowth.app/p/${p.slug} is open to anyone with the link (the rest of the site stays closed). It can take up to a minute.`
+            : `${p.display_name}’s page will open to anyone with the link once you publish it.`
+          : `bgrowth.app/p/${p.slug} is back behind “Coming soon” while the site is closed.`,
+      )
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Couldn’t change it.')
+    } finally {
+      setReleasing(null)
+    }
+  }
+
   async function confirmRemove() {
     if (!removing) return
     setBusy(true)
@@ -192,6 +216,9 @@ export default function AdminMemberPagesPage() {
                     window.scrollTo({ top: 0, behavior: 'smooth' })
                   }}
                   onRemove={() => setRemoving(p)}
+                  releasedEarly={(data.openPageIds ?? []).includes(p.id)}
+                  releasing={releasing === p.id}
+                  onToggleRelease={() => void toggleRelease(p)}
                 />
               ))}
             </div>

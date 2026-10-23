@@ -199,7 +199,24 @@ async function getCreator(req: VercelRequest, db: Db) {
 async function getSiteOpen(db: Db) {
   const { data, error } = await db.from('site_settings').select('value').eq('key', 'site_open').maybeSingle()
   if (error) throw error
-  return { open: data?.value === true }
+  return { open: data?.value === true, pages: await openPageSlugs(db) }
+}
+
+// Member pages the team released before launch (Admin → Pages, key
+// 'open_pages', Sprint 145): their addresses (current and old ones) open to
+// everyone while the rest of the site is closed — published pages only.
+async function openPageSlugs(db: Db): Promise<string[]> {
+  try {
+    const { data } = await db.from('site_settings').select('value').eq('key', 'open_pages').maybeSingle()
+    const ids = (data?.value as { ids?: unknown } | null)?.ids
+    const list = Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string' && /^[0-9a-f-]{36}$/i.test(id)).slice(0, 500) : []
+    if (!list.length) return []
+    const { data: pages, error } = await db.from('member_pages').select('*').in('id', list).eq('status', 'published')
+    if (error) return []
+    return (pages ?? []).flatMap((p: { slug: string; previous_slugs?: string[] | null }) => [p.slug, ...(p.previous_slugs ?? [])])
+  } catch {
+    return []
+  }
 }
 
 // Link previews (Website Sprint 102): WhatsApp, Facebook/Instagram,
