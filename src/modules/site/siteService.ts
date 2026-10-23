@@ -65,7 +65,8 @@ export function announcementDate(a: SiteAnnouncement) {
 
 // Is the site open to everyone, or "Coming soon" for all but the team?
 // (Admin → Site; read through api/ingles.ts, the public function.) If the
-// check fails, the site stays open rather than hiding everything.
+// check fails, the site counts as closed (decided 23/10/2026, pre-launch).
+// Revisit after launch: an outage would then show "Coming soon" to all.
 export async function getSiteOpen(): Promise<boolean> {
   return (await getSiteAccess()).open
 }
@@ -75,12 +76,12 @@ export async function getSiteOpen(): Promise<boolean> {
 export async function getSiteAccess(): Promise<{ open: boolean; pages: string[] }> {
   try {
     const res = await fetch('/api/ingles?action=site')
-    if (!res.ok) return { open: true, pages: [] }
+    if (!res.ok) return { open: false, pages: [] }
     const data = (await res.json()) as { open?: boolean; pages?: unknown }
     const pages = Array.isArray(data.pages) ? data.pages.filter((s): s is string => typeof s === 'string').map((s) => s.toLowerCase()) : []
     return { open: data.open === true, pages }
   } catch {
-    return { open: true, pages: [] }
+    return { open: false, pages: [] }
   }
 }
 

@@ -296,6 +296,19 @@ This repo is a **static, client-only MVP**:
   My Business Page shows the editor read-only (`MemberPageBuilder readOnly`).
   Admin → Pages is unchanged. Turning it on restores the Sprint 127+
   subscriber behaviour as it was.
+  **Since Sprint 148 the closed site is also respected by the public
+  function** (Layer A, approved 23/10/2026; no migration, no middleware):
+  what stays open lives in `src/lib/siteAccess.ts` (used by `SiteGate`; a
+  copy of the rule in `api/ingles.ts` — change both). While closed,
+  `api/ingles.ts` gives link previews only for open addresses (others get a
+  generic "Coming soon", noindex), and page sign-ups, visit counts and
+  "Quem criou" only for open pages; any error reading the state = closed.
+  `getSiteAccess()` now fails closed ("Coming soon" if the state can't be
+  read — revisit after launch). `/register` stays closed. NOT data
+  protection: until Layer B (a `member_pages` RLS change, proposed, not
+  applied) published member pages — and products, catalog, articles' public
+  fields, site texts, announcements — stay readable straight from Supabase
+  with the public key.
   **Since Sprint 76 member pages have numbers** (approved by the user;
   Portal migration 0045): daily totals of visits, clicks per contact
   button/featured item, course visits and course e-mails
