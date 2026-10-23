@@ -7,7 +7,7 @@ import type { MemberPage } from '../modules/find/types'
 
 // /p/:slug — a member's public page (BGrowth Find™, Portal migration 0044).
 // Rendered "bare" by AppLayout: the member's page, not BGrowth's, so no
-// site menu or footer — only a small "Made with BGrowth" at the bottom.
+// site menu or footer — only a small "Powered by BGrowth" at the bottom.
 export default function MemberPublicPage() {
   const { slug = '' } = useParams()
   const [page, setPage] = useState<MemberPage | null | undefined>(undefined)
@@ -39,7 +39,9 @@ export default function MemberPublicPage() {
         <div>
           <p className="font-display text-xl font-bold text-navy">This page isn’t available.</p>
           <p className="mt-2 text-[14px] text-navy/55">Esta página não está disponível.</p>
-          <a href="/" className="mt-6 inline-block text-[13px] font-medium text-navy/40 hover:text-navy/70">Made with BGrowth</a>
+          <a href="/" translate="no" className="notranslate mt-6 inline-block text-[13px] font-medium text-navy/40 hover:text-navy/70">
+            Powered by BGrowth
+          </a>
         </div>
       </div>
     )

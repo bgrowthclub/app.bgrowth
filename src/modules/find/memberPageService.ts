@@ -28,7 +28,8 @@ export const MEMBER_PAGE_LABELS = {
     about: 'About',
     contact: 'Get in touch',
     learnMore: 'Learn more',
-    madeWith: 'Made with BGrowth',
+    // Brand line: the same in every language (shown with translate="no").
+    madeWith: 'Powered by BGrowth',
     notFound: 'This page isn’t available.',
     credentials: 'Licenses & credentials',
     credentialsNote: 'As stated by this professional — not verified by BGrowth.',
@@ -58,7 +59,7 @@ export const MEMBER_PAGE_LABELS = {
     about: 'Sobre',
     contact: 'Fale comigo',
     learnMore: 'Saiba mais',
-    madeWith: 'Feito com BGrowth',
+    madeWith: 'Powered by BGrowth',
     notFound: 'Esta página não está disponível.',
     credentials: 'Licenças e credenciais',
     credentialsNote: 'Informadas pelo profissional — não verificadas pela BGrowth.',

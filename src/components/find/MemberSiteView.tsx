@@ -268,13 +268,14 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
       <img src={h.image} alt="" className={`w-full object-cover ${skin === 'creative' ? 'aspect-[4/3]' : 'aspect-video'}`} />
     ) : null
     return (
-      <div key={h.title + i} className={`overflow-hidden ${skin === 'creative' ? '' : look.card}`}>
+      <div key={h.title + i} className={`flex h-full flex-col overflow-hidden ${skin === 'creative' ? '' : look.card}`}>
         {media}
-        <div className={skin === 'creative' ? 'pt-3' : 'p-5'}>
+        <div className={`flex flex-1 flex-col ${skin === 'creative' ? 'pt-3' : 'p-5'}`}>
           <p className={`font-semibold text-navy ${skin === 'creative' ? 'text-[13px] uppercase tracking-wide' : 'text-[17px]'}`}>{h.title}</p>
           {h.description && <p className="mt-1 text-[14.5px] leading-relaxed text-navy/60">{h.description}</p>}
           {h.url && (
-            <a {...linkProps('website', h.url, `featured:${h.title}`)} className="mt-3 inline-flex items-center gap-1.5 text-[14.5px] font-semibold text-primary hover:underline">
+            // mt-auto: in a row of cards, every button lines up at the bottom.
+            <a {...linkProps('website', h.url, `featured:${h.title}`)} className="mt-auto inline-flex items-center gap-1.5 self-start pt-3 text-[14.5px] font-semibold text-primary hover:underline">
               {h.cta?.trim() || t.learnMore} <ArrowRight size={16} aria-hidden />
             </a>
           )}
@@ -502,7 +503,12 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
       <footer className="border-t border-navy/[0.06]">
         <div className={`mx-auto ${look.wide} px-5 py-8 text-center`}>
           <p className="text-[12px] text-navy/40">{t.disclaimer}</p>
-          <a href={preview ? '#' : '/'} onClick={preview ? (e) => e.preventDefault() : undefined} className="mt-2 inline-block text-[12.5px] font-medium text-navy/35 hover:text-navy/60">
+          <a
+            href={preview ? '#' : '/'}
+            onClick={preview ? (e) => e.preventDefault() : undefined}
+            translate="no"
+            className="notranslate mt-2 inline-block text-[12.5px] font-medium text-navy/35 hover:text-navy/60"
+          >
             {t.madeWith}
           </a>
         </div>
