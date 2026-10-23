@@ -7,7 +7,7 @@ import MemberPageView from './MemberPageView'
 import ResponsiveFrame from '../ui/ResponsiveFrame'
 import { shrinkImage } from '../../lib/shrinkImage'
 import { MEMBER_PAGE_LABELS, videoEmbed } from '../../modules/find/memberPageService'
-import { BLOCK_TYPES, LEGACY_BLOCKS, PAGE_COLORS, blockId, memberPageTemplates, switchTemplateBlocks, templateBlocks, templatePreview } from '../../modules/find/memberPageTemplates'
+import { BLOCK_TYPES, LEGACY_BLOCKS, PAGE_BACKGROUNDS, PAGE_COLORS, SINGLE_BLOCK_TYPES, blockId, memberPageTemplates, switchTemplateBlocks, templateBlocks, templatePreview } from '../../modules/find/memberPageTemplates'
 import type {
   MemberPage,
   MemberPageBlock,
@@ -230,7 +230,8 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
     language,
     template: template || null,
     blocks: free ? blocks : blocks.map((b) => ({ ...b, ...(b.type === 'gallery' ? { data: { ...b.data, images: [] } } : {}) })),
-    theme: free ? theme : { color: templates.find((t) => t.id === template)?.color },
+    // The background tint is open to every plan; the color follows the model on Pro.
+    theme: free ? theme : { color: templates.find((t) => t.id === template)?.color, background: theme.background },
   }
 
   function blockEditor(block: MemberPageBlock) {
@@ -663,6 +664,34 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
             {extra}
           </section>
 
+          <section className="space-y-3">
+            <span className={LABEL}>Background</span>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                title="Default"
+                aria-label="Default background"
+                aria-pressed={!theme.background}
+                onClick={() => setTheme((t) => ({ ...t, background: undefined }))}
+                className={`h-8 rounded-full border border-navy/15 bg-white px-3 text-[12px] font-semibold text-navy/60 ring-offset-2 transition ${!theme.background ? 'ring-2 ring-navy' : ''}`}
+              >
+                Default
+              </button>
+              {PAGE_BACKGROUNDS.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  title={c.label}
+                  aria-label={`${c.label} background`}
+                  aria-pressed={theme.background === c.id}
+                  onClick={() => setTheme((t) => ({ ...t, background: c.id }))}
+                  className={`h-8 w-8 rounded-full border border-navy/15 ring-offset-2 transition ${theme.background === c.id ? 'ring-2 ring-navy' : ''}`}
+                  style={{ background: c.hex }}
+                />
+              ))}
+            </div>
+          </section>
+
           {free && (
             <section className="space-y-3">
               <span className={LABEL}>Look</span>
@@ -757,22 +786,29 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
             {free &&
               (adding ? (
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  {BLOCK_TYPES.map((t) => (
+                  {BLOCK_TYPES.map((t) => {
+                    // Name, buttons, services, featured work… belong to the
+                    // page: a second copy would only show the same items again.
+                    const taken = SINGLE_BLOCK_TYPES.includes(t.type) && blocks.some((b) => b.type === t.type)
+                    return (
                     <button
                       key={t.type}
                       type="button"
+                      disabled={taken}
+                      title={taken ? 'Already on the page' : undefined}
                       onClick={() => {
                         const id = blockId()
                         setBlocks((l) => [...l, { id, type: t.type, ...(['testimonials', 'faq', 'credentials'].includes(t.type) ? { data: { items: [{ title: '', body: '' }] } } : {}) }])
                         setOpen(id)
                         setAdding(false)
                       }}
-                      className="rounded-xl border border-navy/10 px-3 py-2.5 text-left transition-colors hover:border-primary/40 hover:bg-bg-soft"
+                      className="rounded-xl border border-navy/10 px-3 py-2.5 text-left transition-colors hover:border-primary/40 hover:bg-bg-soft disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:border-navy/10 disabled:hover:bg-transparent"
                     >
                       <span className="block text-[13.5px] font-semibold text-navy">{t.label}</span>
-                      <span className="block text-[12px] text-navy/45">{t.hint}</span>
+                      <span className="block text-[12px] text-navy/45">{taken ? 'Already on the page' : t.hint}</span>
                     </button>
-                  ))}
+                    )
+                  })}
                 </div>
               ) : (
                 <Add label="Add a section" disabled={blocks.length >= 30} onClick={() => setAdding(true)} />

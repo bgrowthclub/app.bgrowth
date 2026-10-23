@@ -256,6 +256,17 @@ This repo is a **static, client-only MVP**:
   section" button). Seen and exported (CSV) in My Business Page → Contacts
   (`api/account.ts` resource `my-page-signups`) and Admin → Pages → Contacts
   (resource `member-page-signups`), via `components/find/MemberPageSignupsList`.
+  **Since Sprint 144 member pages have a Link Page model, a background tint
+  and an invitation** (approved by the owner 22/10/2026): an 11th model
+  `links` (Link Page: logo, name, one full-width button per link — skin
+  `links` in `MemberSiteView`); `theme.background` (light tints in
+  `PAGE_BACKGROUNDS`, open to every plan, Pro included; none = the look's
+  default); "Powered by BGrowth" (translate="no") under an invitation edited in
+  Admin → Site → Page texts → Member pages (`components/find/MemberPagePromo`,
+  keys `pages.promo.*`, EN/PT, link default /register?next=/platform/my-page;
+  not shown in editor previews). One-per-page sections (`SINGLE_BLOCK_TYPES`:
+  top, contact, featured, services, about, products, e-mail list) can't be
+  added twice, and a page saved with two copies shows one.
   **Since Sprint 76 member pages have numbers** (approved by the user;
   Portal migration 0045): daily totals of visits, clicks per contact
   button/featured item, course visits and course e-mails

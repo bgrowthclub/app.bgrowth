@@ -3,9 +3,10 @@ import { MEMBER_LINK_ICONS } from './memberLinkIcons'
 import MemberSiteView from './MemberSiteView'
 import MemberProductPicks from './MemberProductPicks'
 import MemberPageSignupForm from './MemberPageSignupForm'
+import MemberPagePromo from './MemberPagePromo'
 import type { CSSProperties } from 'react'
 import { MEMBER_PAGE_LABELS, memberLinkHref, memberLinkLabel, videoEmbed } from '../../modules/find/memberPageService'
-import { PAGE_COLORS, pageBlocks, pageSkin } from '../../modules/find/memberPageTemplates'
+import { PAGE_BACKGROUNDS, PAGE_COLORS, pageBlocks, pageSkin } from '../../modules/find/memberPageTemplates'
 import type { MemberPage, MemberPageBlock } from '../../modules/find/types'
 
 const ICONS = MEMBER_LINK_ICONS
@@ -46,9 +47,11 @@ export default function MemberPageView({ page, preview = false, onLinkClick }: P
       : { href: memberLinkHref(type, url), target: '_blank', rel: 'noreferrer', onClick: () => onLinkClick?.(target) }
 
   const color = PAGE_COLORS.find((c) => c.id === page.theme?.color)
-  const style = color
-    ? ({ '--color-primary-rgb': color.rgb, '--color-primary-accent-rgb': color.rgb, '--color-primary': `rgb(${color.rgb})`, '--color-primary-accent': `rgb(${color.rgb})` } as CSSProperties)
-    : undefined
+  const background = PAGE_BACKGROUNDS.find((c) => c.id === page.theme?.background)
+  const style = {
+    ...(color ? { '--color-primary-rgb': color.rgb, '--color-primary-accent-rgb': color.rgb, '--color-primary': `rgb(${color.rgb})`, '--color-primary-accent': `rgb(${color.rgb})` } : {}),
+    ...(background ? { backgroundColor: background.hex } : {}),
+  } as CSSProperties
   const cover = page.theme?.cover
 
   function renderBlock(block: MemberPageBlock) {
@@ -308,6 +311,11 @@ export default function MemberPageView({ page, preview = false, onLinkClick }: P
           })}
 
       <footer className="mt-14 text-center">
+        {!preview && (
+          <div className="mb-5">
+            <MemberPagePromo language={page.language} />
+          </div>
+        )}
         <a
           href={preview ? '#' : '/'}
           onClick={preview ? (e) => e.preventDefault() : undefined}

@@ -1,4 +1,4 @@
-import type { MemberPage, MemberPageBlock, MemberPageBlockType, MemberPageColor } from './types'
+import type { MemberPage, MemberPageBackground, MemberPageBlock, MemberPageBlockType, MemberPageColor } from './types'
 
 // Ready-made member pages ("My Business Page"): four models — four looks of
 // the same page system. Each is a set of blocks already filled with example
@@ -47,6 +47,22 @@ export const PAGE_COLORS: { id: MemberPageColor; label: string; rgb: string }[] 
   { id: 'orange', label: 'Orange', rgb: '234 88 12' },
   { id: 'navy', label: 'Navy', rgb: '15 23 42' },
 ]
+
+// Background tints any page can use (all light: navy text keeps a contrast
+// above 12:1 on each). Saved as theme.background; none = the look's default.
+export const PAGE_BACKGROUNDS: { id: MemberPageBackground; label: string; hex: string }[] = [
+  { id: 'cream', label: 'Cream', hex: '#FBF7F0' },
+  { id: 'sand', label: 'Sand', hex: '#F5EFE4' },
+  { id: 'mist', label: 'Mist', hex: '#F2F5F9' },
+  { id: 'sky', label: 'Sky', hex: '#EDF4FD' },
+  { id: 'mint', label: 'Mint', hex: '#ECF7F1' },
+  { id: 'blush', label: 'Blush', hex: '#FCF0F1' },
+  { id: 'lavender', label: 'Lavender', hex: '#F3F0FB' },
+]
+
+// Sections whose content is the page's own (name, buttons, services…):
+// one of each per page — a second copy would only repeat the same items.
+export const SINGLE_BLOCK_TYPES: MemberPageBlockType[] = ['hero', 'contact', 'highlights', 'services', 'about', 'products', 'signup']
 
 let seq = 0
 export function blockId() {
@@ -230,6 +246,19 @@ export function memberPageTemplates(lang: Lang): MemberPageTemplate[] {
       example: { headline: L('Real products for a better life', 'Produtos de verdade para uma vida melhor') },
     },
     {
+      // Link Page (11th model): a simple business landing page — logo, name,
+      // one line about the business and one button per link, phone first.
+      id: 'links',
+      name: { en: 'Link Page', pt: 'Página de links' },
+      description: {
+        en: 'For shops and small businesses that sell through WhatsApp and social media. Your logo, a short line and one big button for each link.',
+        pt: 'Para lojas e pequenos negócios que vendem pelo WhatsApp e redes sociais. Seu logo, uma frase curta e um botão grande para cada link.',
+      },
+      color: 'teal',
+      blocks: [b('hero'), b('contact'), b('about')],
+      example: { headline: L('Quality products at fair prices', 'Produtos de qualidade com preço justo') },
+    },
+    {
       id: 'cleaning',
       name: { en: 'Cleaning & home services', pt: 'Limpeza e serviços para casa' },
       description: { en: 'Services with prices, area served and reviews up front.', pt: 'Serviços com preço, área atendida e avaliações em destaque.' },
@@ -361,10 +390,13 @@ export function memberPageTemplates(lang: Lang): MemberPageTemplate[] {
 
 // The four full-site looks (Sprint 128). The first five models (Sprint 127:
 // cleaning, notary, teacher, creator, blank) keep the simple one-column page.
-export type MemberPageSkin = 'professional' | 'local' | 'creative' | 'personal' | 'affiliate'
+// 'links' (Link Page) since the 11th model: a short, phone-first page of
+// stacked buttons — logo, name, a line about the business and its links.
+export type MemberPageSkin = 'professional' | 'local' | 'creative' | 'personal' | 'affiliate' | 'links'
+const SKINS: MemberPageSkin[] = ['professional', 'local', 'creative', 'personal', 'affiliate', 'links']
 export function pageSkin(template: string | null | undefined): MemberPageSkin | null {
-  const id = template ?? ''
-  return id === 'professional' || id === 'local' || id === 'creative' || id === 'personal' || id === 'affiliate' ? id : null
+  const id = (template ?? '') as MemberPageSkin
+  return SKINS.includes(id) ? id : null
 }
 
 export const MEMBER_PAGE_TEMPLATES = memberPageTemplates('en')
@@ -380,7 +412,15 @@ export const LEGACY_BLOCKS: MemberPageBlock[] = [
 ]
 
 export function pageBlocks(page: { blocks?: MemberPageBlock[] | null }): MemberPageBlock[] {
-  return page.blocks && page.blocks.length ? page.blocks : LEGACY_BLOCKS
+  if (!page.blocks || !page.blocks.length) return LEGACY_BLOCKS
+  // A page saved with two copies of a one-per-page section shows it once.
+  const seen = new Set<string>()
+  return page.blocks.filter((b) => {
+    if (!SINGLE_BLOCK_TYPES.includes(b.type)) return true
+    if (seen.has(b.type)) return false
+    seen.add(b.type)
+    return true
+  })
 }
 
 // A fresh copy of a model's blocks (new ids, so two pages never share them).
@@ -411,6 +451,7 @@ const SAMPLE: Record<string, { name: string; location: { en: string; pt: string 
     location: { en: 'USA Lifestyle & Resources', pt: 'Vida nos EUA e recursos' },
     bio: { en: 'I only share what I actually use.', pt: 'Só indico o que eu realmente uso.' },
   },
+  links: { name: 'Sunny Imports', location: { en: 'Orlando, FL', pt: 'Orlando, FL' }, bio: { en: 'Electronics and accessories, delivered fast.', pt: 'Eletrônicos e acessórios, com entrega rápida.' } },
   cleaning: { name: 'Sparkle Cleaning', location: { en: 'Orlando, FL', pt: 'Orlando, FL' }, bio: { en: 'Careful, on-time cleaning for homes and offices.', pt: 'Limpeza cuidadosa e pontual para casas e escritórios.' } },
   notary: { name: 'Paula Lima', location: { en: 'Tampa, FL · Mobile', pt: 'Tampa, FL · Móvel' }, bio: { en: 'Mobile notary — I come to you.', pt: 'Notary móvel — eu vou até você.' } },
   teacher: { name: 'Marina Costa', location: { en: 'Online', pt: 'Online' }, bio: { en: 'Practical classes for real life.', pt: 'Aulas práticas para a vida real.' } },

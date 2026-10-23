@@ -4,6 +4,7 @@ import SEO from '../components/seo/SEO'
 import MemberPageView from '../components/find/MemberPageView'
 import { getPublishedMemberPage, trackMemberPageClick, trackMemberPageView } from '../modules/find/memberPageService'
 import type { MemberPage } from '../modules/find/types'
+import { PAGE_BACKGROUNDS } from '../modules/find/memberPageTemplates'
 
 // /p/:slug — a member's public page (BGrowth Find™, Portal migration 0044).
 // Rendered "bare" by AppLayout: the member's page, not BGrowth's, so no
@@ -48,8 +49,10 @@ export default function MemberPublicPage() {
   if (page === undefined) return <div className="min-h-screen bg-bg-soft" />
   if (page.slug !== slug.toLowerCase()) return <Navigate to={`/p/${page.slug}${window.location.search}`} replace />
 
+  // The page's own background tint fills the whole window (default: soft grey).
+  const background = PAGE_BACKGROUNDS.find((c) => c.id === page.theme?.background)
   return (
-    <div className="min-h-screen bg-bg-soft">
+    <div className="min-h-screen bg-bg-soft" style={background ? { backgroundColor: background.hex } : undefined}>
       <SEO
         title={page.display_name}
         description={page.headline ?? `${page.display_name} on BGrowth`}

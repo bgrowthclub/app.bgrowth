@@ -97,10 +97,15 @@ export interface MemberPageBlock {
 
 export type MemberPageColor = 'blue' | 'teal' | 'green' | 'purple' | 'rose' | 'orange' | 'navy'
 
+// Page background (light tints only, so dark text stays readable). Open to
+// every page, whatever the plan. None = the look's own background.
+export type MemberPageBackground = 'cream' | 'mist' | 'sky' | 'mint' | 'blush' | 'lavender' | 'sand'
+
 export interface MemberPageTheme {
   color?: MemberPageColor
   // A wide image behind the top of the page.
   cover?: string
+  background?: MemberPageBackground
 }
 
 // What the subscriber's plan lets them do with their page.

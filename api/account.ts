@@ -495,7 +495,9 @@ async function includedInPlan(db: Db, userId: string, productId: string): Promis
 // same cleaning in api/admin.ts and api/account.ts.
 const PAGE_BLOCK_TYPES = new Set(['hero', 'contact', 'highlights', 'services', 'about', 'testimonials', 'gallery', 'text', 'faq', 'area', 'cta', 'credentials', 'products', 'signup'])
 const PAGE_COLORS = new Set(['blue', 'teal', 'green', 'purple', 'rose', 'orange', 'navy'])
-const PAGE_TEMPLATES = new Set(['professional', 'local', 'creative', 'personal', 'affiliate', 'cleaning', 'notary', 'teacher', 'creator', 'blank'])
+const PAGE_TEMPLATES = new Set(['professional', 'local', 'creative', 'personal', 'affiliate', 'links', 'cleaning', 'notary', 'teacher', 'creator', 'blank'])
+// Background tints (light only — dark text stays readable), open to every plan.
+const PAGE_BACKGROUNDS = new Set(['cream', 'sand', 'mist', 'sky', 'mint', 'blush', 'lavender'])
 const pageText = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '')
 const pageUrl = (v: unknown) => {
   const s = pageText(v, 500)
@@ -549,6 +551,7 @@ function cleanPageTheme(value: unknown) {
   if (typeof v.color === 'string' && PAGE_COLORS.has(v.color)) theme.color = v.color
   const cover = pageUrl(v.cover)
   if (cover) theme.cover = cover
+  if (typeof v.background === 'string' && PAGE_BACKGROUNDS.has(v.background)) theme.background = v.background
   return theme
 }
 
@@ -556,7 +559,7 @@ function cleanPageTheme(value: unknown) {
 // My Page (Sprint 127, Portal migration 0062): the subscriber edits their own
 // public page, as far as their plan allows (portal.member_page_level):
 //   'partial' (Pro) — a model's blocks in its order (no adding or reordering;
-//     hiding yes, since Sprint 128), the model's color, no cover, ONE featured photo/video, no
+//     hiding yes, since Sprint 128), the model's color (any background tint), no cover, ONE featured photo/video, no
 //     gallery photos; the address is set once, from the name.
 //   'full' (Enterprise) — everything, including the address.
 //   GET  ?resource=my-page        → { level, page }
@@ -574,6 +577,7 @@ const TEMPLATE_SEQUENCES: Record<string, string> = {
   creative: 'hero,highlights,gallery,about,services,testimonials,contact,cta',
   personal: 'hero,about,services,testimonials,highlights,faq,contact,cta',
   affiliate: 'hero,products,about,contact',
+  links: 'hero,contact,about',
   cleaning: 'hero,contact,services,highlights,testimonials,area,faq,cta',
   notary: 'hero,contact,services,area,about,faq,cta',
   teacher: 'hero,contact,highlights,services,text,testimonials,about,cta',
@@ -581,7 +585,7 @@ const TEMPLATE_SEQUENCES: Record<string, string> = {
   blank: 'hero,contact',
 }
 const TEMPLATE_COLORS: Record<string, string> = {
-  professional: 'navy', local: 'orange', creative: 'rose', personal: 'green', affiliate: 'blue',
+  professional: 'navy', local: 'orange', creative: 'rose', personal: 'green', affiliate: 'blue', links: 'teal',
   cleaning: 'teal', notary: 'navy', teacher: 'purple', creator: 'rose', blank: 'blue',
 }
 
@@ -768,7 +772,8 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string }, re
       const block = b.type === 'gallery' ? { ...rest, data: { ...(rest.data ?? {}), images: [] } } : rest
       return hidden && b.type !== 'hero' ? { ...block, hidden: true } : block
     }) as typeof input.blocks
-    input.theme = { color: TEMPLATE_COLORS[template] }
+    // The model's color; the background tint is open to every plan.
+    input.theme = { color: TEMPLATE_COLORS[template], ...(input.theme.background ? { background: input.theme.background } : {}) }
     input.highlights = input.highlights.slice(0, 1)
     // Pro: up to 12 product picks (Enterprise: 60).
     input.blocks = (input.blocks ?? []).map((b: any) =>

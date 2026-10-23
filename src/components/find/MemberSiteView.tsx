@@ -3,8 +3,9 @@ import type { CSSProperties, MouseEvent, ReactNode } from 'react'
 import { MEMBER_LINK_ICONS } from './memberLinkIcons'
 import MemberProductPicks from './MemberProductPicks'
 import MemberPageSignupForm from './MemberPageSignupForm'
+import MemberPagePromo from './MemberPagePromo'
 import { MEMBER_PAGE_LABELS, memberLinkHref, memberLinkLabel, videoEmbed } from '../../modules/find/memberPageService'
-import { PAGE_COLORS, pageBlocks } from '../../modules/find/memberPageTemplates'
+import { PAGE_BACKGROUNDS, PAGE_COLORS, pageBlocks } from '../../modules/find/memberPageTemplates'
 import type { MemberPageSkin } from '../../modules/find/memberPageTemplates'
 import type { MemberPage, MemberPageBlock, MemberPageHighlight, MemberPageLink } from '../../modules/find/types'
 
@@ -53,6 +54,14 @@ const LOOK: Record<MemberPageSkin, { page: string; band: string; h2: string; car
     card: 'rounded-3xl bg-white shadow-softer',
     wide: 'max-w-5xl',
   },
+  // Link Page: one narrow column, phone first.
+  links: {
+    page: 'bg-bg-soft text-navy',
+    band: '',
+    h2: 'text-center font-display text-xl font-bold tracking-tight text-navy',
+    card: 'rounded-2xl bg-white shadow-softer',
+    wide: 'max-w-xl',
+  },
 }
 
 function initials(name: string) {
@@ -71,9 +80,12 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
   const t = MEMBER_PAGE_LABELS[page.language] ?? MEMBER_PAGE_LABELS.en
   const look = LOOK[skin]
   const color = PAGE_COLORS.find((c) => c.id === page.theme?.color)
-  const style = color
-    ? ({ '--color-primary-rgb': color.rgb, '--color-primary-accent-rgb': color.rgb, '--color-primary': `rgb(${color.rgb})`, '--color-primary-accent': `rgb(${color.rgb})` } as CSSProperties)
-    : undefined
+  // The page's own background tint (any plan); none = the look's default.
+  const background = PAGE_BACKGROUNDS.find((c) => c.id === page.theme?.background)
+  const style = {
+    ...(color ? { '--color-primary-rgb': color.rgb, '--color-primary-accent-rgb': color.rgb, '--color-primary': `rgb(${color.rgb})`, '--color-primary-accent': `rgb(${color.rgb})` } : {}),
+    ...(background ? { backgroundColor: background.hex } : {}),
+  } as CSSProperties
   const [primary, secondary] = page.links
   const blocks = pageBlocks(page).filter((b) => !b.hidden)
 
@@ -103,9 +115,11 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
     )
   }
 
+  // With a chosen background the alternate bands become a light shade of it.
+  const bandClass = background ? 'bg-navy/[0.025]' : look.band
   const section = (key: string, children: ReactNode, band = false) => (
-    <section key={key} className={band ? look.band : undefined}>
-      <div className={`mx-auto ${look.wide} px-5 py-14 md:py-20`}>{children}</div>
+    <section key={key} className={band && bandClass ? bandClass : undefined}>
+      <div className={`mx-auto ${look.wide} px-5 ${skin === 'links' ? 'py-6' : 'py-14 md:py-20'}`}>{children}</div>
     </section>
   )
 
@@ -223,6 +237,19 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
       )
     }
 
+    if (skin === 'links') {
+      return (
+        <section key="hero">
+          <div className={`mx-auto ${look.wide} px-5 pb-2 pt-12 text-center md:pt-16`}>
+            {photo('mx-auto h-28 w-28 rounded-full border-4 border-white shadow-softer !text-3xl')}
+            <h1 className="mt-5 font-display text-3xl font-bold tracking-tight md:text-4xl">{name}</h1>
+            {headline && <p className="mt-2 text-[16.5px] leading-relaxed text-navy/65">{headline}</p>}
+            {page.location && <div className="mt-2 flex justify-center">{location}</div>}
+          </div>
+        </section>
+      )
+    }
+
     if (skin === 'personal') {
       return (
         <section key="hero">
@@ -292,6 +319,28 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
         return hero()
       case 'contact':
         if (!page.links.length) return null
+        // Link Page: one full-width button per link, in the order chosen.
+        if (skin === 'links') {
+          return section(
+            block.id,
+            <div className="flex flex-col gap-3">
+              {page.links.map((l) => {
+                const Icon = MEMBER_LINK_ICONS[l.type] ?? Link2
+                return (
+                  <a
+                    key={l.type + l.url}
+                    {...linkProps(l.type, l.url, `link:${l.type}`)}
+                    className="flex min-h-[52px] items-center gap-3 rounded-2xl bg-primary px-5 py-3 text-[15.5px] font-semibold text-white shadow-softer transition-colors hover:bg-primary/90"
+                  >
+                    <Icon size={19} className="shrink-0" aria-hidden />
+                    <span className="flex-1 text-center">{memberLinkLabel(l, page.language)}</span>
+                    <span className="w-[19px] shrink-0" aria-hidden />
+                  </a>
+                )
+              })}
+            </div>,
+          )
+        }
         return section(
           block.id,
           <div className="text-center">
@@ -352,7 +401,13 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
         if (block.type === 'about' && !page.bio) return null
         return section(
           block.id,
-          <div className={`grid gap-8 ${skin === 'personal' && block.type === 'about' && page.photo_url ? 'md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] md:items-center' : 'md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]'}`}>
+          <div
+            className={`grid ${
+              skin === 'links'
+                ? 'gap-3 rounded-2xl bg-white p-6 text-center shadow-softer'
+                : `gap-8 ${skin === 'personal' && block.type === 'about' && page.photo_url ? 'md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] md:items-center' : 'md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]'}`
+            }`}
+          >
             {skin === 'personal' && block.type === 'about' && page.photo_url ? photo('hidden aspect-square w-full rounded-3xl md:grid') : title ? <h2 className={look.h2}>{title}</h2> : <span />}
             <div>
               {skin === 'personal' && block.type === 'about' && page.photo_url && title && <h2 className={`${look.h2} mb-4`}>{title}</h2>}
@@ -503,6 +558,7 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
       <footer className="border-t border-navy/[0.06]">
         <div className={`mx-auto ${look.wide} px-5 py-8 text-center`}>
           <p className="text-[12px] text-navy/40">{t.disclaimer}</p>
+          {!preview && <MemberPagePromo language={page.language} />}
           <a
             href={preview ? '#' : '/'}
             onClick={preview ? (e) => e.preventDefault() : undefined}

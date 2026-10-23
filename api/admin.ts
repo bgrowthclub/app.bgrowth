@@ -2306,7 +2306,9 @@ async function memberPageStats(req: VercelRequest, db: Db) {
 // same cleaning in api/admin.ts and api/account.ts.
 const PAGE_BLOCK_TYPES = new Set(['hero', 'contact', 'highlights', 'services', 'about', 'testimonials', 'gallery', 'text', 'faq', 'area', 'cta', 'credentials', 'products', 'signup'])
 const PAGE_COLORS = new Set(['blue', 'teal', 'green', 'purple', 'rose', 'orange', 'navy'])
-const PAGE_TEMPLATES = new Set(['professional', 'local', 'creative', 'personal', 'affiliate', 'cleaning', 'notary', 'teacher', 'creator', 'blank'])
+const PAGE_TEMPLATES = new Set(['professional', 'local', 'creative', 'personal', 'affiliate', 'links', 'cleaning', 'notary', 'teacher', 'creator', 'blank'])
+// Background tints (light only — dark text stays readable), open to every plan.
+const PAGE_BACKGROUNDS = new Set(['cream', 'sand', 'mist', 'sky', 'mint', 'blush', 'lavender'])
 const pageText = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '')
 const pageUrl = (v: unknown) => {
   const s = pageText(v, 500)
@@ -2360,6 +2362,7 @@ function cleanPageTheme(value: unknown) {
   if (typeof v.color === 'string' && PAGE_COLORS.has(v.color)) theme.color = v.color
   const cover = pageUrl(v.cover)
   if (cover) theme.cover = cover
+  if (typeof v.background === 'string' && PAGE_BACKGROUNDS.has(v.background)) theme.background = v.background
   return theme
 }
 
