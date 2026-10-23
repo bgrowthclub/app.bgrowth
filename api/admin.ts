@@ -2265,10 +2265,10 @@ async function withOwnerEmails(db: Db, rows: Record<string, any>[]) {
 async function listMemberPages(db: Db) {
   const { data, error } = await db.from('member_pages').select('*').order('updated_at', { ascending: false })
   if (error) {
-    if (isMissingTable(error)) return { pages: [], ready: false, openPageIds: [] }
+    if (isMissingTable(error)) return { pages: [], ready: false, openPageIds: [], alwaysOpenPageIds: [] }
     throw error
   }
-  return { pages: await withOwnerEmails(db, data ?? []), ready: true, openPageIds: await openPageIds(db) }
+  return { pages: await withOwnerEmails(db, data ?? []), ready: true, openPageIds: await openPageIds(db), alwaysOpenPageIds: await alwaysOpenPageIds(db) }
 }
 
 // Pages released before launch (Sprint 145): while the site is closed
@@ -2277,6 +2277,16 @@ async function listMemberPages(db: Db) {
 // portal.site_settings key 'open_pages' ({ ids }), read by the public
 // function (api/ingles.ts ?action=site). Admin-only.
 const OPEN_PAGES_KEY = 'open_pages'
+// Always public (Bruno's and Gika's pages), set only in SQL (Portal
+// migration 0067). The "Remove public access" button never changes it.
+const ALWAYS_OPEN_PAGES_KEY = 'always_open_pages'
+
+async function alwaysOpenPageIds(db: Db): Promise<string[]> {
+  const { data, error } = await db.from('site_settings').select('value').eq('key', ALWAYS_OPEN_PAGES_KEY).maybeSingle()
+  if (error) return []
+  const ids = (data?.value as { ids?: unknown } | null)?.ids
+  return Array.isArray(ids) ? ids.filter((id): id is string => isUuid(id)) : []
+}
 
 async function openPageIds(db: Db): Promise<string[]> {
   const { data, error } = await db.from('site_settings').select('value').eq('key', OPEN_PAGES_KEY).maybeSingle()
@@ -2292,6 +2302,9 @@ async function setPageOpen(req: VercelRequest, db: Db, admin: Admin) {
   const { data: page, error } = await db.from('member_pages').select('id, slug, display_name, status').eq('id', id).maybeSingle()
   if (error) throw error
   if (!page) throw new HttpError(404, 'Page not found.')
+  if (!open && (await alwaysOpenPageIds(db)).includes(id)) {
+    throw new HttpError(409, 'This page is always public before launch (set in the database, not here).')
+  }
   const ids = new Set(await openPageIds(db))
   if (open) ids.add(id)
   else ids.delete(id)

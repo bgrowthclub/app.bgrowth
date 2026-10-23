@@ -309,6 +309,14 @@ This repo is a **static, client-only MVP**:
   applied) published member pages — and products, catalog, articles' public
   fields, site texts, announcements — stay readable straight from Supabase
   with the public key.
+  **Since Sprint 149 Bruno's and Gika's pages are always public** (approved
+  23/10/2026): `site_settings` key `always_open_pages` (ids, set only in SQL
+  by Portal migration 0067 — proposed on Portal branch
+  `feature/0067-member-pages-closed-site`, not applied) is listed with the
+  released pages by `api/ingles.ts?action=site`; Admin → Pages shows those
+  pages as "Always public" with no release button, and `page-open` refuses
+  to remove them (409). Until 0067 is applied the key is absent and nothing
+  changes (their addresses stay open through `siteAccess.ts`).
   **Since Sprint 76 member pages have numbers** (approved by the user;
   Portal migration 0045): daily totals of visits, clicks per contact
   button/featured item, course visits and course e-mails

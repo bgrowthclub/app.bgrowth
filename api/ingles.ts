@@ -278,9 +278,11 @@ async function pageOpenToVisitors(db: Db, asked: string, resolved: string) {
 // everyone while the rest of the site is closed — published pages only.
 async function openPageSlugs(db: Db): Promise<string[]> {
   try {
-    const { data } = await db.from('site_settings').select('value').eq('key', 'open_pages').maybeSingle()
-    const ids = (data?.value as { ids?: unknown } | null)?.ids
-    const list = Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string' && /^[0-9a-f-]{36}$/i.test(id)).slice(0, 500) : []
+    // 'open_pages' = released in Admin → Pages; 'always_open_pages' = always
+    // public (Bruno's and Gika's, Portal migration 0067; set only in SQL).
+    const { data } = await db.from('site_settings').select('key, value').in('key', ['open_pages', 'always_open_pages'])
+    const ids = ((data ?? []) as { value?: { ids?: unknown } | null }[]).flatMap((row) => (Array.isArray(row.value?.ids) ? row.value.ids : []))
+    const list = [...new Set(ids.filter((id): id is string => typeof id === 'string' && /^[0-9a-f-]{36}$/i.test(id)))].slice(0, 500)
     if (!list.length) return []
     const { data: pages, error } = await db.from('member_pages').select('*').in('id', list).eq('status', 'published')
     if (error) return []

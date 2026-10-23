@@ -10,13 +10,15 @@ interface Props {
   onRemove: () => void
   // Released before launch: open at its own address while the site is closed.
   releasedEarly: boolean
+  // Always public before launch (set in the database): no button.
+  alwaysOpen?: boolean
   siteOpen?: boolean
   onToggleRelease: () => void
   releasing?: boolean
 }
 
 // One public page in Admin → Pages.
-export default function AdminMemberPageRow({ page, onEdit, onNumbers, onContacts, onRemove, releasedEarly, onToggleRelease, releasing }: Props) {
+export default function AdminMemberPageRow({ page, onEdit, onNumbers, onContacts, onRemove, releasedEarly, alwaysOpen = false, onToggleRelease, releasing }: Props) {
   const published = page.status === 'published'
   return (
     <div className="flex flex-wrap items-center gap-4 px-5 py-4">
@@ -35,13 +37,15 @@ export default function AdminMemberPageRow({ page, onEdit, onNumbers, onContacts
         </p>
       </div>
       <span className={pillClass(published ? 'green' : 'gray')}>{published ? 'Published' : 'Draft'}</span>
-      {releasedEarly && <span className={pillClass(published ? 'blue' : 'gray')}>{published ? 'Public before launch' : 'Public before launch · publish it to open'}</span>}
+      {alwaysOpen && <span className={pillClass('blue')} title="Set in the database (Portal migration 0067); not changed from here">Always public</span>}
+      {releasedEarly && !alwaysOpen && <span className={pillClass(published ? 'blue' : 'gray')}>{published ? 'Public before launch' : 'Public before launch · publish it to open'}</span>}
       <div className="flex items-center gap-1">
         {published && (
           <a href={`/p/${encodeURIComponent(page.slug)}`} target="_blank" rel="noreferrer" className={`${LINK_BUTTON} inline-flex items-center gap-1 text-navy/60 hover:bg-bg-soft`}>
             View <ExternalLink size={13} />
           </a>
         )}
+        {!alwaysOpen && (
         <button
           type="button"
           onClick={onToggleRelease}
@@ -51,6 +55,7 @@ export default function AdminMemberPageRow({ page, onEdit, onNumbers, onContacts
         >
           {releasing ? '…' : releasedEarly ? 'Remove public access' : 'Make page public'}
         </button>
+        )}
         <button type="button" onClick={onNumbers} className={`${LINK_BUTTON} text-navy/60 hover:bg-bg-soft`}>
           Numbers
         </button>

@@ -9,7 +9,10 @@
 
 // These addresses (and everything under them) stay open: signing in, legal
 // pages, newsletter links, public tool links, Bruno's and Gika's pages and
-// Bruno's course. /register stays closed (decided 23/10/2026).
+// Bruno's course. /register stays closed (decided 23/10/2026). Bruno's and
+// Gika's pages are also always public in the database, by id (site_settings
+// 'always_open_pages', Portal migration 0067), so a released-page change in
+// Admin → Pages can't hide them.
 export const ALWAYS_OPEN_PATHS = [
   '/login',
   '/forgot-password',

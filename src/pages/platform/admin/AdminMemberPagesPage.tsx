@@ -217,6 +217,7 @@ export default function AdminMemberPagesPage() {
                   }}
                   onRemove={() => setRemoving(p)}
                   releasedEarly={(data.openPageIds ?? []).includes(p.id)}
+                  alwaysOpen={(data.alwaysOpenPageIds ?? []).includes(p.id)}
                   releasing={releasing === p.id}
                   onToggleRelease={() => void toggleRelease(p)}
                 />
