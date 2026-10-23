@@ -257,7 +257,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
         return (
           <div className="space-y-2">
             <p className="text-[12.5px] text-navy/50">
-              Add only products you recommend, with your own buy link (your affiliate code stays as you paste it). The page never shows prices, stars or reviews you didn’t write, and always shows a note that links may earn you a commission.
+              Add only products you recommend, with your own buy link (your affiliate code stays as you paste it). The page never shows prices, stars or reviews you didn’t write, and shows a standard note that links may earn you a commission (you can switch it off below).
             </p>
             <input value={d.title ?? ''} onChange={(e) => setBlockData(block.id, { title: e.target.value })} maxLength={120} className={INPUT} placeholder="Section title (default: My picks)" aria-label="Section title" />
             {products.map((p, i) => (
@@ -290,7 +290,14 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
             ))}
             <Add label="Add a product" disabled={products.length >= maxProducts} onClick={() => setBlockData(block.id, { products: [...products, { title: '', url: '', category: 'other' }] })} />
             {!free && <p className="text-[12px] text-navy/45">Your plan shows up to {maxProducts} products.</p>}
-            <textarea value={d.body ?? ''} onChange={(e) => setBlockData(block.id, { body: e.target.value })} rows={2} maxLength={600} className={INPUT} placeholder="Your own note about these links (optional — the standard affiliate note is always shown)" aria-label="Your note" />
+            <textarea value={d.body ?? ''} onChange={(e) => setBlockData(block.id, { body: e.target.value })} rows={2} maxLength={600} className={INPUT} placeholder="Your own note about these links (optional)" aria-label="Your note" />
+            <label className="flex items-start gap-2 text-[13px] text-navy/70">
+              <input type="checkbox" className="mt-0.5" checked={d.hideNote !== true} onChange={(e) => setBlockData(block.id, { hideNote: e.target.checked ? undefined : true })} aria-label="Show earnings statement" />
+              <span>
+                Show the standard affiliate (earnings) note
+                <span className="block text-[12px] text-navy/45">Hiding it only changes what the page shows. If you earn from these links, you are still responsible for telling visitors — e.g. in your own note above.</span>
+              </span>
+            </label>
           </div>
         )
       }

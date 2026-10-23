@@ -49,8 +49,6 @@ export const MEMBER_PAGE_LABELS = {
     seeProduct: 'See product',
     seePicks: 'See my picks',
     noPicks: 'Nothing here yet.',
-    affiliateNote:
-      'Some links on this page are affiliate links: if you buy through them, I may earn a commission at no extra cost to you. Prices and availability are set by each store.',
     categories: { car: 'Car & Driving', work: 'Work & Business', home: 'Home & Living', tech: 'Tech & Gadgets', travel: 'Travel', finance: 'Money & Finance', learning: 'Learning', other: 'Other' },
   },
   pt: {
@@ -79,8 +77,6 @@ export const MEMBER_PAGE_LABELS = {
     seeProduct: 'Ver produto',
     seePicks: 'Ver minhas indicações',
     noPicks: 'Nada aqui ainda.',
-    affiliateNote:
-      'Alguns links desta página são de afiliado: se você comprar por eles, posso receber uma comissão, sem custo extra para você. Preços e disponibilidade são definidos por cada loja.',
     categories: { car: 'Carro', work: 'Trabalho e negócios', home: 'Casa', tech: 'Tecnologia', travel: 'Viagem', finance: 'Finanças', learning: 'Aprendizado', other: 'Outros' },
   },
 } as const

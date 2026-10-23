@@ -111,7 +111,7 @@ export default function PageTextsEditor() {
         <summary className="cursor-pointer font-semibold text-navy">How it works</summary>
         <ul className="mt-3 list-disc space-y-1.5 pl-5">
           <li>Pick a page (Home, About, Coming soon or Member pages). Each box is one part of the page, in the order it appears.</li>
-          <li>Member pages: the invitation shown at the bottom of every public member page, above “Powered by BGrowth” — each page shows the English or Portuguese version, in its own language.</li>
+          <li>Member pages: the invitation shown at the bottom of every public member page, above “Powered by BGrowth”, and the standard affiliate (earnings) note of Affiliate Picks pages — each page shows the English or Portuguese version, in its own language.</li>
           <li>Every field starts with the text the site shows today. Change only what you want; the layout and images stay the same.</li>
           <li>
             Fields marked <strong>one per line</strong> are lists (for example the rotating examples and the popular goals at the top of the

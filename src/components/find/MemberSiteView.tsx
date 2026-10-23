@@ -544,7 +544,7 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
         if (!(d.products ?? []).length) return null
         return section(
           block.id,
-          <MemberProductPicks products={d.products ?? []} title={d.title} note={d.body} language={page.language} preview={preview} onLinkClick={onLinkClick} headingClass={look.h2} />,
+          <MemberProductPicks products={d.products ?? []} title={d.title} note={d.body} hideNote={d.hideNote === true} language={page.language} preview={preview} onLinkClick={onLinkClick} headingClass={look.h2} />,
         )
       case 'cta': {
         if (!d.title?.trim() && !d.body?.trim()) return null

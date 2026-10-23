@@ -276,7 +276,7 @@ export default function MemberPageView({ page, preview = false, onLinkClick }: P
         if (!(d.products ?? []).length) return null
         return (
           <section className="mt-10">
-            <MemberProductPicks products={d.products ?? []} title={d.title} note={d.body} language={page.language} preview={preview} onLinkClick={onLinkClick} headingClass="font-display text-xl font-bold text-navy" />
+            <MemberProductPicks products={d.products ?? []} title={d.title} note={d.body} hideNote={d.hideNote === true} language={page.language} preview={preview} onLinkClick={onLinkClick} headingClass="font-display text-xl font-bold text-navy" />
           </section>
         )
       case 'cta': {

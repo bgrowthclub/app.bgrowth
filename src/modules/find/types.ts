@@ -92,6 +92,9 @@ export interface MemberPageBlockData {
   // products: the recommendations; body = the member's own disclosure
   // (a standard one is always shown too)
   products?: MemberPageProduct[]
+  // products: true = don't show the standard affiliate note (Admin → Site →
+  // Page texts) on this page. Absent = shown, as before (Sprint 146).
+  hideNote?: boolean
 }
 
 export interface MemberPageBlock {

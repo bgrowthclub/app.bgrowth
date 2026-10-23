@@ -250,6 +250,18 @@ export const PAGE_TEXT_BLOCKS: PageTextBlock[] = [
     title: 'Where the button leads',
     fields: [line('pages.promo.link', 'Link (a page of this site like /register, or an https:// address)', '/register?next=/platform/my-page')],
   },
+  // The standard affiliate (earnings) note under the products of an
+  // Affiliate Picks page (components/find/MemberProductPicks, Sprint 146).
+  // Each page shows the version in its own language; the member can switch
+  // it off for their page ("Show the standard affiliate note").
+  {
+    page: 'Member pages',
+    title: 'Affiliate note — Affiliate Picks pages',
+    fields: [
+      para('pages.affiliate.en.note', 'English pages', 'Some links on this page are affiliate links: if you buy through them, I may earn a commission at no extra cost to you. Prices and availability are set by each store.'),
+      para('pages.affiliate.pt.note', 'Portuguese pages', 'Alguns links desta página são de afiliado: se você comprar por eles, posso receber uma comissão, sem custo extra para você. Preços e disponibilidade são definidos por cada loja.'),
+    ],
+  },
 ]
 
 export const PAGE_TEXT_DEFAULTS: Record<string, string | string[]> = Object.fromEntries(

@@ -278,6 +278,14 @@ This repo is a **static, client-only MVP**:
   readable through RLS). Each service (`MemberPageService`) can have an
   image, a link (https) and a button text (default "Learn more"); the
   buttons line up at the bottom of the cards.
+  **Since Sprint 146 the affiliate note is optional per page** (approved by
+  the owner 23/10/2026; no migration): the standard note under an Affiliate
+  Picks page's products is edited in Admin → Site → Page texts → Member pages
+  (`pages.affiliate.en.note` / `.pt.note`, the only place it lives) and shown
+  unless the member unticks "Show the standard affiliate note" in the
+  products section (`MemberPageBlockData.hideNote`, kept only on a `products`
+  block; absent = shown). The member's own note is unaffected. Hiding it is
+  presentation only — it does not remove a member's duty to disclose.
   **Since Sprint 76 member pages have numbers** (approved by the user;
   Portal migration 0045): daily totals of visits, clicks per contact
   button/featured item, course visits and course e-mails

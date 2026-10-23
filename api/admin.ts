@@ -2362,6 +2362,8 @@ function cleanPageBlocks(value: unknown) {
     if (pageText(d.title, 120)) data.title = pageText(d.title, 120)
     if (pageText(d.body, 2000)) data.body = pageText(d.body, 2000)
     if (pageText(d.button, 40)) data.button = pageText(d.button, 40)
+    // products: the member switched the standard affiliate note off (Sprint 146).
+    if (type === 'products' && d.hideNote === true) data.hideNote = true
     if (Array.isArray(d.items)) {
       data.items = d.items
         .slice(0, 12)
