@@ -24,6 +24,8 @@ import Stripe from 'stripe'
 //          team grants), each with where it came from. Nothing is invented:
 //          an access with no payment or team record says so.
 //
+//   (PUT/POST wait for Admin → Site "Subscribers build their own page", off
+//   before launch — GET says selfService.)
 //   GET/PUT ?resource=my-page, POST my-page-image → the subscriber's own
 //          public page (Sprint 127, see the My Page section below)
 //   POST   ?resource=plan-checkout | plan-switch | plan-cancel | plan-resume |
@@ -591,6 +593,16 @@ const TEMPLATE_COLORS: Record<string, string> = {
   cleaning: 'teal', notary: 'navy', teacher: 'purple', creator: 'rose', blank: 'blue',
 }
 
+// Before launch only the team builds and publishes member pages (decided
+// 23/10/2026): subscribers may edit/publish their own page only once the
+// team switches it on in Admin → Site (site_settings key
+// 'member_pages_self_service'). No row, or anything but true = off.
+async function memberPagesSelfService(db: Db): Promise<boolean> {
+  const { data, error } = await db.from('site_settings').select('value').eq('key', 'member_pages_self_service').maybeSingle()
+  if (error) return false
+  return data?.value === true
+}
+
 async function memberPageLevel(db: Db, userId: string): Promise<'partial' | 'full' | null> {
   const { data, error } = await db.rpc('member_page_level', { p_user: userId })
   if (error) return null
@@ -720,7 +732,8 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string }, re
   }
 
   const templates = level ? await memberPageTemplates(db, user.id) : null
-  if (resource === 'my-page' && req.method === 'GET') return { level, templates, page: existing ?? null }
+  const selfService = await memberPagesSelfService(db)
+  if (resource === 'my-page' && req.method === 'GET') return { level, templates, selfService, page: existing ?? null }
   // The page's e-mail list (Sprint 139, Portal migration 0065) — the owner's,
   // including a page the team made for them.
   if (resource === 'my-page-signups') {
@@ -746,6 +759,8 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string }, re
   if (!level) throw new HttpError(403, 'Your plan doesn’t include a page. See the plans in Account → Membership.')
   // A page the team made for this member stays the team's to edit.
   if (existing && !existing.owner_managed) throw new HttpError(403, 'Your page is managed by the BGrowth team — talk to us through Support to change it.')
+  // Pre-launch: saving, publishing and uploading wait for the team's switch.
+  if (!selfService) throw new HttpError(403, 'Building your own page is coming soon — for now the BGrowth team builds pages. Talk to us through Support.')
 
   if (resource === 'my-page-image') {
     if (req.method !== 'POST') throw new HttpError(405, 'Use POST.')

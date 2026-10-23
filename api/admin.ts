@@ -2708,8 +2708,9 @@ async function siteOverview(db: Db) {
     db.from('site_settings').select('value').eq('key', 'site_open').maybeSingle(),
   ])
   const open = openRow.data?.value === true
+  const selfService = await pageSelfService(db)
   if (announcements.error) {
-    if (isMissingTable(announcements.error)) return { announcements: [], featured: [], products: [], ready: false, open }
+    if (isMissingTable(announcements.error)) return { announcements: [], featured: [], products: [], ready: false, open, selfService }
     throw announcements.error
   }
   if (featured.error) throw featured.error
@@ -2720,7 +2721,28 @@ async function siteOverview(db: Db) {
     featured: ((featured.data ?? []) as { product_id: string }[]).map((f) => f.product_id),
     ready: true,
     open,
+    selfService,
   }
+}
+
+// Subscribers building and publishing their own member page (My Business
+// Page). Off until the team switches it on (decided 23/10/2026: before
+// launch only the team builds pages); enforced in api/account.ts.
+const PAGE_SELF_SERVICE_KEY = 'member_pages_self_service'
+
+async function pageSelfService(db: Db): Promise<boolean> {
+  const { data, error } = await db.from('site_settings').select('value').eq('key', PAGE_SELF_SERVICE_KEY).maybeSingle()
+  if (error) return false
+  return data?.value === true
+}
+
+async function setPageSelfService(req: VercelRequest, db: Db, admin: Admin) {
+  const on = req.body?.on === true
+  const { error } = await db
+    .from('site_settings')
+    .upsert({ key: PAGE_SELF_SERVICE_KEY, value: on, updated_at: new Date().toISOString(), updated_by: admin.email })
+  if (error) throw error
+  return { on }
 }
 
 // Open the site to everyone, or show "Coming soon" to all but the team.
@@ -3686,6 +3708,8 @@ function describe(key: string, b: Body, r: Record<string, any>): Described {
       }
     case 'PUT site-open':
       return { area: 'site', summary: r.open ? 'Opened the site to everyone' : 'Closed the site (Coming soon for visitors)' }
+    case 'PUT page-self-service':
+      return { area: 'pages', summary: r.on ? 'Let subscribers build and publish their own page' : 'Stopped subscribers from editing their own page (team only)' }
     case 'POST announcements':
       return { area: 'site', summary: `Created the announcement “${b.title}”` }
     case 'PATCH announcements':
@@ -3917,6 +3941,7 @@ const ROUTES: Record<string, Route> = {
   'PUT product-tags': (req, db) => setProductTags(req, db),
   'GET site': (_req, db) => siteOverview(db),
   'PUT site-open': (req, db, admin) => setSiteOpen(req, db, admin),
+  'PUT page-self-service': (req, db, admin) => setPageSelfService(req, db, admin),
   'PUT page-open': (req, db, admin) => setPageOpen(req, db, admin),
   'POST announcements': (req, db, admin) => createAnnouncement(req, db, admin),
   'PATCH announcements': (req, db) => updateAnnouncement(req, db),

@@ -442,6 +442,8 @@ export interface AdminSiteOverview {
   ready: boolean
   /** false = visitors see "Coming soon"; only the team sees the site. */
   open: boolean
+  /** Subscribers may build/publish their own page (off before launch). */
+  selfService?: boolean
 }
 
 export interface AdminAnnouncementDraft {

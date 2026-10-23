@@ -230,7 +230,7 @@ async function accountCall<T>(method: 'GET' | 'PUT' | 'POST' | 'DELETE', resourc
 
 export const myPageService = {
   get() {
-    return accountCall<{ level: MemberPageLevel | null; templates?: string[] | null; page: MemberPage | null }>('GET', 'my-page')
+    return accountCall<{ level: MemberPageLevel | null; templates?: string[] | null; selfService?: boolean; page: MemberPage | null }>('GET', 'my-page')
   },
   async save(draft: MemberPageDraft) {
     return (await accountCall<{ page: MemberPage }>('PUT', 'my-page', draft)).page

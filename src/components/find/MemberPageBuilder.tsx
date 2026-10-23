@@ -39,6 +39,8 @@ interface Props {
   extra?: ReactNode
   // The models the member's plan allows (null/undefined = all).
   allowedTemplates?: string[] | null
+  // Look only: nothing can be changed or saved (subscribers before launch).
+  readOnly?: boolean
 }
 
 const LABEL = 'mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-navy/40'
@@ -116,7 +118,7 @@ function Add({ label, onClick, disabled }: { label: string; onClick: () => void;
 
 // The page editor with a live preview: model, basics, look and the page's
 // sections (blocks). Shared by Admin → Pages and the subscriber's My Page.
-export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel, extra, allowedTemplates }: Props) {
+export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel, extra, allowedTemplates, readOnly = false }: Props) {
   const allowed = (id: string) => !allowedTemplates || allowedTemplates.includes(id)
   const free = mode !== 'partial'
   const [language, setLanguage] = useState<MemberPage['language']>(page?.language ?? 'en')
@@ -527,7 +529,9 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
               <button type="button" onClick={() => setCandidate(template ? '' : null)} className={`${SMALL} inline-flex items-center gap-1.5 text-navy/60 hover:bg-bg-soft`}>
                 <ArrowLeft size={14} /> See the other models
               </button>
-              {allowed(chosen.id) ? (
+              {readOnly ? (
+                <span className="text-[13px] font-semibold text-navy/45">Coming soon</span>
+              ) : allowed(chosen.id) ? (
                 <Button type="button" onClick={() => chooseTemplate(chosen.id)} className={SMALL_BUTTON}>
                   <Check size={16} /> {template === chosen.id ? 'Keep this model' : 'Use this model'}
                 </Button>
@@ -607,7 +611,8 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
       </div>
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)]">
-        <div className="min-w-0 space-y-7">
+        {/* Read-only: every field and button on this side is disabled. */}
+        <fieldset disabled={readOnly} className={`min-w-0 space-y-7 ${readOnly ? 'opacity-70' : ''}`}>
           <section className="space-y-4">
             <span className={LABEL}>Basics</span>
             <div className="flex items-center gap-4">
@@ -835,7 +840,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                 <Add label="Add a section" disabled={blocks.length >= 30} onClick={() => setAdding(true)} />
               ))}
           </section>
-        </div>
+        </fieldset>
 
         <aside className="min-w-0 lg:sticky lg:top-24 lg:self-start">
           <div className="mb-1.5 flex items-center justify-between gap-2">
@@ -875,6 +880,9 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
 
       {error && <p className="mt-6 text-[14px] text-red-500">{error}</p>}
 
+      {readOnly ? (
+        <p className="mt-6 border-t border-navy/[0.06] pt-5 text-right text-[13px] font-semibold text-navy/45">Coming soon — saving and publishing are not open yet.</p>
+      ) : (
       <div className="mt-6 flex flex-wrap items-center justify-end gap-2 border-t border-navy/[0.06] pt-5">
         <Button type="button" variant="secondary" onClick={() => void save('draft')} disabled={saving !== null || uploading !== null} className={SMALL_BUTTON}>
           {saving === 'draft' ? 'Saving…' : published ? 'Unpublish' : 'Save as draft'}
@@ -883,6 +891,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
           {saving === 'published' ? 'Publishing…' : published ? 'Save changes' : 'Publish'}
         </Button>
       </div>
+      )}
     </div>
   )
 }

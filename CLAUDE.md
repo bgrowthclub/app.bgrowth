@@ -286,6 +286,16 @@ This repo is a **static, client-only MVP**:
   products section (`MemberPageBlockData.hideNote`, kept only on a `products`
   block; absent = shown). The member's own note is unaffected. Hiding it is
   presentation only — it does not remove a member's duty to disclose.
+  **Since Sprint 147 only the team builds member pages before launch**
+  (decided 23/10/2026; no migration): Admin → Site → "Subscribers build their
+  own page" (resource `page-self-service`, admin-only, logged in Activity)
+  saves `site_settings` key `member_pages_self_service`; no row or anything
+  but true = off. While off, `api/account.ts` refuses the subscriber's save,
+  publish and image upload (`my-page` PUT, `my-page-image`) with "coming
+  soon"; GET (`selfService: false`), numbers and contacts keep working, and
+  My Business Page shows the editor read-only (`MemberPageBuilder readOnly`).
+  Admin → Pages is unchanged. Turning it on restores the Sprint 127+
+  subscriber behaviour as it was.
   **Since Sprint 76 member pages have numbers** (approved by the user;
   Portal migration 0045): daily totals of visits, clicks per contact
   button/featured item, course visits and course e-mails

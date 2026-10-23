@@ -252,6 +252,9 @@ export const adminService = {
   async setSiteOpen(open: boolean) {
     return (await call<{ open: boolean }>('PUT', 'site-open', undefined, { open })).open
   },
+  async setPageSelfService(on: boolean) {
+    return (await call<{ on: boolean }>('PUT', 'page-self-service', undefined, { on })).on
+  },
   async saveAnnouncement(draft: AdminAnnouncementDraft) {
     return (await call<{ announcement: SiteAnnouncement }>(draft.id ? 'PATCH' : 'POST', 'announcements', undefined, draft)).announcement
   },
