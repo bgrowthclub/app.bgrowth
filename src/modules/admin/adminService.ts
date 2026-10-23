@@ -222,6 +222,10 @@ export const adminService = {
   setMemberPageOpen(id: string, open: boolean) {
     return call<{ id: string; open: boolean }>('PUT', 'page-open', undefined, { id, open })
   },
+  // BGrowth Demo (Portal migration 0067): admins only.
+  async setMemberPageDemo(id: string, demo: boolean) {
+    return (await call<{ demo: boolean }>('PUT', 'page-demo', undefined, { id, demo })).demo
+  },
   async removeMemberPage(id: string) {
     await call('DELETE', 'member-pages', undefined, { id })
   },

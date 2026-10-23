@@ -9,10 +9,12 @@
 
 // These addresses (and everything under them) stay open: signing in, legal
 // pages, newsletter links, public tool links, Bruno's and Gika's pages and
-// Bruno's course. /register stays closed (decided 23/10/2026). Bruno's and
-// Gika's pages are also always public in the database, by id (site_settings
-// 'always_open_pages', Portal migration 0067), so a released-page change in
-// Admin → Pages can't hide them.
+// Bruno's course. /register stays closed (decided 23/10/2026).
+// Released pages and BGrowth Demos (member_pages.is_demo, Portal migration
+// 0067, set in Admin → Pages) come from api/ingles.ts?action=site. The
+// Bruno/Gika entries below are a TEMPORARY fallback: remove them (here and
+// in api/ingles.ts) in a separate, reviewed commit only after 0067 is
+// applied and verified (decided 23/10/2026).
 export const ALWAYS_OPEN_PATHS = [
   '/login',
   '/forgot-password',

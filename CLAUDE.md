@@ -309,14 +309,23 @@ This repo is a **static, client-only MVP**:
   applied) published member pages — and products, catalog, articles' public
   fields, site texts, announcements — stay readable straight from Supabase
   with the public key.
-  **Since Sprint 149 Bruno's and Gika's pages are always public** (approved
-  23/10/2026): `site_settings` key `always_open_pages` (ids, set only in SQL
-  by Portal migration 0067 — proposed on Portal branch
-  `feature/0067-member-pages-closed-site`, not applied) is listed with the
-  released pages by `api/ingles.ts?action=site`; Admin → Pages shows those
-  pages as "Always public" with no release button, and `page-open` refuses
-  to remove them (409). Until 0067 is applied the key is absent and nothing
-  changes (their addresses stay open through `siteAccess.ts`).
+  **Since Sprint 150 any page can be a BGrowth Demo** (approved 23/10/2026;
+  replaces Sprint 149's `always_open_pages` list, which never shipped):
+  `member_pages.is_demo` (Portal migration 0067 — on Portal branch
+  `feature/0067-member-pages-closed-site`, NOT applied; it also makes the
+  database follow the closed site: published + plan-allowed pages readable
+  while closed only if demo, released or read by the team). Admin → Pages
+  "Mark as BGrowth Demo" / "Remove BGrowth Demo status" (resource
+  `page-demo`, admins only — not in `SUPPORT_ACTIONS` — logged in Activity);
+  a demo shows the "BGrowth Demo" badge and no release button, and
+  `page-open` refuses "Remove public access" on it (409). Team or subscriber
+  pages may be demos; the flag never skips publication or plan checks
+  (`api/ingles.ts` lists demos + released pages with the same plan check as
+  the database). Before 0067 the column is missing: demos count as none and
+  `page-demo` answers that the database update is needed. Bruno's and Gika's
+  hardcoded addresses in `siteAccess.ts`/`api/ingles.ts` stay as a temporary
+  fallback until 0067 is applied and verified, then go in a separate commit;
+  0067 must be applied before the site drops them.
   **Since Sprint 76 member pages have numbers** (approved by the user;
   Portal migration 0045): daily totals of visits, clicks per contact
   button/featured item, course visits and course e-mails

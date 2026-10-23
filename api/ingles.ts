@@ -227,6 +227,8 @@ const ALWAYS_OPEN_PATHS = [
   '/terms',
   '/refund-policy',
   '/t',
+  // TEMPORARY fallback until Portal migration 0067 (BGrowth Demos) is applied
+  // and verified — then removed in a separate, reviewed commit.
   '/p/bruno',
   '/p/growwithbruno',
   '/p/dicasdagigika',
@@ -278,15 +280,27 @@ async function pageOpenToVisitors(db: Db, asked: string, resolved: string) {
 // everyone while the rest of the site is closed — published pages only.
 async function openPageSlugs(db: Db): Promise<string[]> {
   try {
-    // 'open_pages' = released in Admin → Pages; 'always_open_pages' = always
-    // public (Bruno's and Gika's, Portal migration 0067; set only in SQL).
-    const { data } = await db.from('site_settings').select('key, value').in('key', ['open_pages', 'always_open_pages'])
-    const ids = ((data ?? []) as { value?: { ids?: unknown } | null }[]).flatMap((row) => (Array.isArray(row.value?.ids) ? row.value.ids : []))
-    const list = [...new Set(ids.filter((id): id is string => typeof id === 'string' && /^[0-9a-f-]{36}$/i.test(id)))].slice(0, 500)
-    if (!list.length) return []
-    const { data: pages, error } = await db.from('member_pages').select('*').in('id', list).eq('status', 'published')
-    if (error) return []
-    return (pages ?? []).flatMap((p: { slug: string; previous_slugs?: string[] | null }) => [p.slug, ...(p.previous_slugs ?? [])])
+    // Released in Admin → Pages ('open_pages')…
+    const { data } = await db.from('site_settings').select('value').eq('key', 'open_pages').maybeSingle()
+    const ids = (data?.value as { ids?: unknown } | null)?.ids
+    const list = Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string' && /^[0-9a-f-]{36}$/i.test(id)).slice(0, 500) : []
+    type Row = { slug: string; previous_slugs?: string[] | null; owner_managed?: boolean; user_id?: string | null }
+    const released = list.length ? await db.from('member_pages').select('*').in('id', list).eq('status', 'published') : { data: [], error: null }
+    // …and BGrowth Demos (member_pages.is_demo, Portal migration 0067). Before
+    // 0067 the column is missing: the query errors and counts as none.
+    const demos = await db.from('member_pages').select('*').eq('is_demo', true).eq('status', 'published')
+    const rows = [...((released.error ? [] : released.data ?? []) as Row[]), ...((demos.error ? [] : demos.data ?? []) as Row[])]
+    // Same as the database rule (0062/0067): a subscriber's page counts only
+    // while their plan includes a page — so the site never opens an address
+    // whose data the database would hide.
+    const levels = new Map<string, boolean>()
+    for (const r of rows) {
+      if (!r.owner_managed || !r.user_id || levels.has(r.user_id)) continue
+      const { data: level, error } = await db.rpc('member_page_level', { p_user: r.user_id })
+      levels.set(r.user_id, !error && (level === 'partial' || level === 'full'))
+    }
+    const visible = rows.filter((r) => !r.owner_managed || (r.user_id ? levels.get(r.user_id) === true : false))
+    return [...new Set(visible.flatMap((p) => [p.slug, ...(p.previous_slugs ?? [])]))]
   } catch {
     return []
   }

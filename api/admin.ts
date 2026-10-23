@@ -2265,10 +2265,10 @@ async function withOwnerEmails(db: Db, rows: Record<string, any>[]) {
 async function listMemberPages(db: Db) {
   const { data, error } = await db.from('member_pages').select('*').order('updated_at', { ascending: false })
   if (error) {
-    if (isMissingTable(error)) return { pages: [], ready: false, openPageIds: [], alwaysOpenPageIds: [] }
+    if (isMissingTable(error)) return { pages: [], ready: false, openPageIds: [] }
     throw error
   }
-  return { pages: await withOwnerEmails(db, data ?? []), ready: true, openPageIds: await openPageIds(db), alwaysOpenPageIds: await alwaysOpenPageIds(db) }
+  return { pages: await withOwnerEmails(db, data ?? []), ready: true, openPageIds: await openPageIds(db) }
 }
 
 // Pages released before launch (Sprint 145): while the site is closed
@@ -2277,16 +2277,6 @@ async function listMemberPages(db: Db) {
 // portal.site_settings key 'open_pages' ({ ids }), read by the public
 // function (api/ingles.ts ?action=site). Admin-only.
 const OPEN_PAGES_KEY = 'open_pages'
-// Always public (Bruno's and Gika's pages), set only in SQL (Portal
-// migration 0067). The "Remove public access" button never changes it.
-const ALWAYS_OPEN_PAGES_KEY = 'always_open_pages'
-
-async function alwaysOpenPageIds(db: Db): Promise<string[]> {
-  const { data, error } = await db.from('site_settings').select('value').eq('key', ALWAYS_OPEN_PAGES_KEY).maybeSingle()
-  if (error) return []
-  const ids = (data?.value as { ids?: unknown } | null)?.ids
-  return Array.isArray(ids) ? ids.filter((id): id is string => isUuid(id)) : []
-}
 
 async function openPageIds(db: Db): Promise<string[]> {
   const { data, error } = await db.from('site_settings').select('value').eq('key', OPEN_PAGES_KEY).maybeSingle()
@@ -2299,11 +2289,14 @@ async function setPageOpen(req: VercelRequest, db: Db, admin: Admin) {
   const id = str(req.body?.id)
   if (!isUuid(id)) throw new HttpError(400, 'Missing page.')
   const open = req.body?.open === true
-  const { data: page, error } = await db.from('member_pages').select('id, slug, display_name, status').eq('id', id).maybeSingle()
+  // '*' so it works before Portal migration 0067 adds is_demo too.
+  const { data: row, error } = await db.from('member_pages').select('*').eq('id', id).maybeSingle()
   if (error) throw error
-  if (!page) throw new HttpError(404, 'Page not found.')
-  if (!open && (await alwaysOpenPageIds(db)).includes(id)) {
-    throw new HttpError(409, 'This page is always public before launch (set in the database, not here).')
+  if (!row) throw new HttpError(404, 'Page not found.')
+  const page = { id: row.id as string, slug: row.slug as string, display_name: row.display_name as string, status: row.status as string }
+  // A BGrowth Demo stays public: "Remove public access" can't take it away.
+  if (!open && row.is_demo === true) {
+    throw new HttpError(409, 'This page is a BGrowth Demo, so it stays public. Use “Remove BGrowth Demo status” first.')
   }
   const ids = new Set(await openPageIds(db))
   if (open) ids.add(id)
@@ -2313,6 +2306,24 @@ async function setPageOpen(req: VercelRequest, db: Db, admin: Admin) {
     .upsert({ key: OPEN_PAGES_KEY, value: { ids: [...ids] }, updated_at: new Date().toISOString(), updated_by: admin.email })
   if (saveError) throw saveError
   return { id, open, page }
+}
+
+// BGrowth Demo pages (Portal migration 0067, decided 23/10/2026): public
+// while the site is closed, whoever owns them — publication and plan rules
+// still apply (RLS). Only admins (not in SUPPORT_ACTIONS); logged in Activity.
+async function setPageDemo(req: VercelRequest, db: Db) {
+  const id = str(req.body?.id)
+  if (!isUuid(id)) throw new HttpError(400, 'Missing page.')
+  const demo = req.body?.demo === true
+  const { data, error } = await db.from('member_pages').update({ is_demo: demo }).eq('id', id).select('id, slug, display_name, status, is_demo').maybeSingle()
+  if (error) {
+    if ((error as { code?: string }).code === '42703' || /is_demo/.test(error.message ?? '')) {
+      throw new HttpError(409, 'BGrowth Demo pages need a database update first (Portal migration 0067).')
+    }
+    throw error
+  }
+  if (!data) throw new HttpError(404, 'Page not found.')
+  return { id, demo: data.is_demo === true, page: { id: data.id, slug: data.slug, display_name: data.display_name, status: data.status } }
 }
 
 // The owner is a BGrowth account, found by its e-mail; empty = no owner.
@@ -3719,6 +3730,11 @@ function describe(key: string, b: Body, r: Record<string, any>): Described {
         area: 'pages',
         summary: r.open ? `Made bgrowth.app/p/${r.page?.slug} public before launch` : `Took bgrowth.app/p/${r.page?.slug} back behind "Coming soon"`,
       }
+    case 'PUT page-demo':
+      return {
+        area: 'pages',
+        summary: r.demo ? `Marked bgrowth.app/p/${r.page?.slug} as a BGrowth Demo` : `Removed BGrowth Demo status from bgrowth.app/p/${r.page?.slug}`,
+      }
     case 'PUT site-open':
       return { area: 'site', summary: r.open ? 'Opened the site to everyone' : 'Closed the site (Coming soon for visitors)' }
     case 'PUT page-self-service':
@@ -3956,6 +3972,7 @@ const ROUTES: Record<string, Route> = {
   'PUT site-open': (req, db, admin) => setSiteOpen(req, db, admin),
   'PUT page-self-service': (req, db, admin) => setPageSelfService(req, db, admin),
   'PUT page-open': (req, db, admin) => setPageOpen(req, db, admin),
+  'PUT page-demo': (req, db) => setPageDemo(req, db),
   'POST announcements': (req, db, admin) => createAnnouncement(req, db, admin),
   'PATCH announcements': (req, db) => updateAnnouncement(req, db),
   'DELETE announcements': (req, db) => deleteAnnouncement(req, db),

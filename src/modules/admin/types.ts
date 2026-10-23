@@ -413,8 +413,6 @@ export interface AdminMemberPagesOverview {
   ready: boolean
   // Pages released before launch (open while the site is closed).
   openPageIds?: string[]
-  /** Always public before launch (Bruno's, Gika's — Portal migration 0067). */
-  alwaysOpenPageIds?: string[]
 }
 
 // The team's page editor sends the shared draft plus the owner.

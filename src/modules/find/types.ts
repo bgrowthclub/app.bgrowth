@@ -140,6 +140,10 @@ export interface MemberPage {
   owner_managed?: boolean
   // The team switched the e-mail list on for this page (promotions etc.).
   signup_granted?: boolean
+  // A BGrowth Demo (Portal migration 0067): public while the site is closed,
+  // set only by a website admin in Admin → Pages. Never skips publication
+  // or plan checks. Absent before 0067.
+  is_demo?: boolean
   created_at: string
   updated_at: string
   // Admin → Pages only: the e-mail of the account linked as owner.
