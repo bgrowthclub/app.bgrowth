@@ -3,6 +3,7 @@ import type { MouseEvent } from 'react'
 import { BookOpen, Briefcase, Car, ExternalLink, Home, Laptop, Package, Plane, Search, Star, Wallet } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import { MEMBER_PAGE_LABELS } from '../../modules/find/memberPageService'
+import { usePageTexts } from '../../lib/usePageTexts'
 import type { MemberPage, MemberPageProduct, MemberPageProductCategory } from '../../modules/find/types'
 
 export const PRODUCT_CATEGORY_ICONS: Record<MemberPageProductCategory, LucideIcon> = {
@@ -21,6 +22,8 @@ interface Props {
   title?: string
   // The member's own words about their links (shown above the standard note).
   note?: string
+  // The member switched the standard affiliate note off for their page.
+  hideNote?: boolean
   language: MemberPage['language']
   preview?: boolean
   onLinkClick?: (target: string) => void
@@ -31,9 +34,13 @@ interface Props {
 // Affiliate Picks (Sprint 131): the member's recommended products — favorites
 // first, then all of them with category filters and a search. Only what the
 // member entered is shown (no prices, ratings or reviews); buy links open as
-// typed, marked sponsored, and the affiliate note is always shown.
-export default function MemberProductPicks({ products, title, note, language, preview = false, onLinkClick, headingClass }: Props) {
+// typed, marked sponsored. The standard affiliate note shows unless the
+// member switched it off (Sprint 146).
+export default function MemberProductPicks({ products, title, note, hideNote = false, language, preview = false, onLinkClick, headingClass }: Props) {
   const t = MEMBER_PAGE_LABELS[language] ?? MEMBER_PAGE_LABELS.en
+  // The standard note, edited in Admin → Site → Page texts → Member pages.
+  const standardNote = usePageTexts().text(`pages.affiliate.${language === 'pt' ? 'pt' : 'en'}.note`)
+  const showStandard = !hideNote && Boolean(standardNote.trim())
   const [category, setCategory] = useState<MemberPageProductCategory | 'all'>('all')
   const [query, setQuery] = useState('')
   const items = products.filter((p) => p.title.trim() && p.url.trim())
@@ -131,10 +138,12 @@ export default function MemberProductPicks({ products, title, note, language, pr
         <p className="mt-6 text-[14px] text-navy/50">{t.noPicks}</p>
       )}
 
-      <div className="mt-8 rounded-2xl bg-bg-soft px-5 py-4 text-[12.5px] leading-relaxed text-navy/55">
-        {note?.trim() && <p className="mb-1.5 whitespace-pre-line text-navy/70">{note}</p>}
-        <p>{t.affiliateNote}</p>
-      </div>
+      {(showStandard || note?.trim()) && (
+        <div className="mt-8 rounded-2xl bg-bg-soft px-5 py-4 text-[12.5px] leading-relaxed text-navy/55">
+          {note?.trim() && <p className={`whitespace-pre-line text-navy/70 ${showStandard ? 'mb-1.5' : ''}`}>{note}</p>}
+          {showStandard && <p>{standardNote}</p>}
+        </div>
+      )}
     </div>
   )
 }

@@ -256,6 +256,85 @@ This repo is a **static, client-only MVP**:
   section" button). Seen and exported (CSV) in My Business Page → Contacts
   (`api/account.ts` resource `my-page-signups`) and Admin → Pages → Contacts
   (resource `member-page-signups`), via `components/find/MemberPageSignupsList`.
+  **Since Sprint 144 member pages have a Link Page model, a background tint
+  and an invitation** (approved by the owner 22/10/2026): an 11th model
+  `links` (Link Page: logo, name, one full-width button per link — skin
+  `links` in `MemberSiteView`); `theme.background` (light tints in
+  `PAGE_BACKGROUNDS`, open to every plan, Pro included; none = the look's
+  default); "Powered by BGrowth" (translate="no") under an invitation edited in
+  Admin → Site → Page texts → Member pages (`components/find/MemberPagePromo`,
+  keys `pages.promo.*`, EN/PT, link default /register?next=/platform/my-page;
+  not shown in editor previews). One-per-page sections (`SINGLE_BLOCK_TYPES`:
+  top, contact, featured, services, about, products, e-mail list) can't be
+  added twice, and a page saved with two copies shows one.
+  **Since Sprint 145 the team can release one member page before launch,
+  and services have their own button** (approved by the owner 22/10/2026;
+  no migration): Admin → Pages → "Make page public" / "Remove public
+  access" (resource `page-open`, admin-only, logged in Activity) keeps the
+  page ids in `site_settings` key `open_pages`; `api/ingles.ts?action=site`
+  returns their addresses (current + old, published pages only) as `pages`
+  and `SiteGate` lets exactly `/p/<slug>` through while the site is closed.
+  The closed site is still a front-end gate (published pages were already
+  readable through RLS). Each service (`MemberPageService`) can have an
+  image, a link (https) and a button text (default "Learn more"); the
+  buttons line up at the bottom of the cards.
+  **Since Sprint 146 the affiliate note is optional per page** (approved by
+  the owner 23/10/2026; no migration): the standard note under an Affiliate
+  Picks page's products is edited in Admin → Site → Page texts → Member pages
+  (`pages.affiliate.en.note` / `.pt.note`, the only place it lives) and shown
+  unless the member unticks "Show the standard affiliate note" in the
+  products section (`MemberPageBlockData.hideNote`, kept only on a `products`
+  block; absent = shown). The member's own note is unaffected. Hiding it is
+  presentation only — it does not remove a member's duty to disclose.
+  **Since Sprint 147 only the team builds member pages before launch**
+  (decided 23/10/2026; no migration): Admin → Site → "Subscribers build their
+  own page" (resource `page-self-service`, admin-only, logged in Activity)
+  saves `site_settings` key `member_pages_self_service`; no row or anything
+  but true = off. While off, `api/account.ts` refuses the subscriber's save,
+  publish and image upload (`my-page` PUT, `my-page-image`) with "coming
+  soon"; GET (`selfService: false`), numbers and contacts keep working, and
+  My Business Page shows the editor read-only (`MemberPageBuilder readOnly`).
+  Admin → Pages is unchanged. Turning it on restores the Sprint 127+
+  subscriber behaviour as it was.
+  **Since Sprint 148 the closed site is also respected by the public
+  function** (Layer A, approved 23/10/2026; no migration, no middleware):
+  what stays open lives in `src/lib/siteAccess.ts` (used by `SiteGate`; a
+  copy of the rule in `api/ingles.ts` — change both). While closed,
+  `api/ingles.ts` gives link previews only for open addresses (others get a
+  generic "Coming soon", noindex), and page sign-ups, visit counts and
+  "Quem criou" only for open pages; any error reading the state = closed.
+  `getSiteAccess()` now fails closed ("Coming soon" if the state can't be
+  read — revisit after launch). `/register` stays closed. NOT data
+  protection: until Layer B (a `member_pages` RLS change, proposed, not
+  applied) published member pages — and products, catalog, articles' public
+  fields, site texts, announcements — stay readable straight from Supabase
+  with the public key.
+  **Since Sprint 150 any page can be a BGrowth Demo** (approved 23/10/2026;
+  replaces Sprint 149's `always_open_pages` list, which never shipped):
+  `member_pages.is_demo` (Portal migration 0067 — on Portal branch
+  `feature/0067-member-pages-closed-site`, NOT applied; it also makes the
+  database follow the closed site: published + plan-allowed pages readable
+  while closed only if demo, released or read by the team). Admin → Pages
+  "Mark as BGrowth Demo" / "Remove BGrowth Demo status" (resource
+  `page-demo`, admins only — not in `SUPPORT_ACTIONS` — logged in Activity);
+  a demo shows the "BGrowth Demo" badge and no release button, and
+  `page-open` refuses "Remove public access" on it (409). Team or subscriber
+  pages may be demos; the flag never skips publication or plan checks
+  (`api/ingles.ts` lists demos + released pages with the same plan check as
+  the database). Before 0067 the column is missing: demos count as none and
+  `page-demo` answers that the database update is needed. Bruno's and Gika's
+  hardcoded addresses in `siteAccess.ts`/`api/ingles.ts` stay as a temporary
+  fallback until 0067 is applied and verified, then go in a separate commit;
+  0067 must be applied before the site drops them.
+  **Since Sprint 151 the editor tidies duplicate one-per-page sections
+  safely** (approved 23/10/2026; no migration): opening a page saved with
+  two copies of a `SINGLE_BLOCK_TYPES` section, `mergeDuplicateSections()`
+  (memberPageTemplates.ts) removes only copies that are empty or identical
+  to the first (the public page, which shows the first copy, looks the
+  same); a copy with anything of its own (title, list, visibility…) is kept
+  unchanged and the editor asks the person to review it ("Please review…",
+  also next to Save). Nothing hidden becomes visible and nothing with
+  content is deleted without the person doing it.
   **Since Sprint 76 member pages have numbers** (approved by the user;
   Portal migration 0045): daily totals of visits, clicks per contact
   button/featured item, course visits and course e-mails

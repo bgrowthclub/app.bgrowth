@@ -6,8 +6,8 @@ import type { PageTextBlock, PageTexts } from '../../data/pageTexts'
 import { adminService } from '../../modules/admin/adminService'
 
 const KEY = 'page-texts'
-const PAGES: PageTextBlock['page'][] = ['Home', 'About', 'Coming soon']
-const PAGE_PATHS: Record<PageTextBlock['page'], string> = { Home: '/', About: '/about', 'Coming soon': '/' }
+const PAGES: PageTextBlock['page'][] = ['Home', 'About', 'Coming soon', 'Member pages']
+const PAGE_PATHS: Record<PageTextBlock['page'], string> = { Home: '/', About: '/about', 'Coming soon': '/', 'Member pages': '/' }
 
 // Lists are edited one item per line.
 function toDraft(saved: PageTexts): Record<string, string> {
@@ -110,7 +110,8 @@ export default function PageTextsEditor() {
       <details className={`${CARD} px-5 py-3 text-[13.5px] text-navy/70`}>
         <summary className="cursor-pointer font-semibold text-navy">How it works</summary>
         <ul className="mt-3 list-disc space-y-1.5 pl-5">
-          <li>Pick a page (Home, About or Coming soon). Each box is one part of the page, in the order it appears.</li>
+          <li>Pick a page (Home, About, Coming soon or Member pages). Each box is one part of the page, in the order it appears.</li>
+          <li>Member pages: the invitation shown at the bottom of every public member page, above “Powered by BGrowth”, and the standard affiliate (earnings) note of Affiliate Picks pages — each page shows the English or Portuguese version, in its own language.</li>
           <li>Every field starts with the text the site shows today. Change only what you want; the layout and images stay the same.</li>
           <li>
             Fields marked <strong>one per line</strong> are lists (for example the rotating examples and the popular goals at the top of the
@@ -154,7 +155,7 @@ export default function PageTextsEditor() {
             </span>
           </div>
 
-          {page !== 'Coming soon' && (
+          {page !== 'Coming soon' && page !== 'Member pages' && (
             <a href={PAGE_PATHS[page]} target="_blank" rel="noreferrer" className="inline-block text-[12.5px] text-primary hover:underline">
               Open the {page} page in a new tab
             </a>

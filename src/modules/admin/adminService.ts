@@ -218,6 +218,14 @@ export const adminService = {
   getMemberPageStats(id: string, days: number) {
     return call<MemberPageStats>('GET', 'member-page-stats', { id, days: String(days) })
   },
+  // Open (or close again) one published page while the site is closed.
+  setMemberPageOpen(id: string, open: boolean) {
+    return call<{ id: string; open: boolean }>('PUT', 'page-open', undefined, { id, open })
+  },
+  // BGrowth Demo (Portal migration 0067): admins only.
+  async setMemberPageDemo(id: string, demo: boolean) {
+    return (await call<{ demo: boolean }>('PUT', 'page-demo', undefined, { id, demo })).demo
+  },
   async removeMemberPage(id: string) {
     await call('DELETE', 'member-pages', undefined, { id })
   },
@@ -247,6 +255,9 @@ export const adminService = {
   },
   async setSiteOpen(open: boolean) {
     return (await call<{ open: boolean }>('PUT', 'site-open', undefined, { open })).open
+  },
+  async setPageSelfService(on: boolean) {
+    return (await call<{ on: boolean }>('PUT', 'page-self-service', undefined, { on })).on
   },
   async saveAnnouncement(draft: AdminAnnouncementDraft) {
     return (await call<{ announcement: SiteAnnouncement }>(draft.id ? 'PATCH' : 'POST', 'announcements', undefined, draft)).announcement

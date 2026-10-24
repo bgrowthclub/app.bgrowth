@@ -2265,10 +2265,65 @@ async function withOwnerEmails(db: Db, rows: Record<string, any>[]) {
 async function listMemberPages(db: Db) {
   const { data, error } = await db.from('member_pages').select('*').order('updated_at', { ascending: false })
   if (error) {
-    if (isMissingTable(error)) return { pages: [], ready: false }
+    if (isMissingTable(error)) return { pages: [], ready: false, openPageIds: [] }
     throw error
   }
-  return { pages: await withOwnerEmails(db, data ?? []), ready: true }
+  return { pages: await withOwnerEmails(db, data ?? []), ready: true, openPageIds: await openPageIds(db) }
+}
+
+// Pages released before launch (Sprint 145): while the site is closed
+// (site_open), the published pages listed here open to everyone at their
+// own address — the rest of the site stays "Coming soon". Kept in
+// portal.site_settings key 'open_pages' ({ ids }), read by the public
+// function (api/ingles.ts ?action=site). Admin-only.
+const OPEN_PAGES_KEY = 'open_pages'
+
+async function openPageIds(db: Db): Promise<string[]> {
+  const { data, error } = await db.from('site_settings').select('value').eq('key', OPEN_PAGES_KEY).maybeSingle()
+  if (error) return []
+  const ids = (data?.value as { ids?: unknown } | null)?.ids
+  return Array.isArray(ids) ? ids.filter((id): id is string => isUuid(id)) : []
+}
+
+async function setPageOpen(req: VercelRequest, db: Db, admin: Admin) {
+  const id = str(req.body?.id)
+  if (!isUuid(id)) throw new HttpError(400, 'Missing page.')
+  const open = req.body?.open === true
+  // '*' so it works before Portal migration 0067 adds is_demo too.
+  const { data: row, error } = await db.from('member_pages').select('*').eq('id', id).maybeSingle()
+  if (error) throw error
+  if (!row) throw new HttpError(404, 'Page not found.')
+  const page = { id: row.id as string, slug: row.slug as string, display_name: row.display_name as string, status: row.status as string }
+  // A BGrowth Demo stays public: "Remove public access" can't take it away.
+  if (!open && row.is_demo === true) {
+    throw new HttpError(409, 'This page is a BGrowth Demo, so it stays public. Use “Remove BGrowth Demo status” first.')
+  }
+  const ids = new Set(await openPageIds(db))
+  if (open) ids.add(id)
+  else ids.delete(id)
+  const { error: saveError } = await db
+    .from('site_settings')
+    .upsert({ key: OPEN_PAGES_KEY, value: { ids: [...ids] }, updated_at: new Date().toISOString(), updated_by: admin.email })
+  if (saveError) throw saveError
+  return { id, open, page }
+}
+
+// BGrowth Demo pages (Portal migration 0067, decided 23/10/2026): public
+// while the site is closed, whoever owns them — publication and plan rules
+// still apply (RLS). Only admins (not in SUPPORT_ACTIONS); logged in Activity.
+async function setPageDemo(req: VercelRequest, db: Db) {
+  const id = str(req.body?.id)
+  if (!isUuid(id)) throw new HttpError(400, 'Missing page.')
+  const demo = req.body?.demo === true
+  const { data, error } = await db.from('member_pages').update({ is_demo: demo }).eq('id', id).select('id, slug, display_name, status, is_demo').maybeSingle()
+  if (error) {
+    if ((error as { code?: string }).code === '42703' || /is_demo/.test(error.message ?? '')) {
+      throw new HttpError(409, 'BGrowth Demo pages need a database update first (Portal migration 0067).')
+    }
+    throw error
+  }
+  if (!data) throw new HttpError(404, 'Page not found.')
+  return { id, demo: data.is_demo === true, page: { id: data.id, slug: data.slug, display_name: data.display_name, status: data.status } }
 }
 
 // The owner is a BGrowth account, found by its e-mail; empty = no owner.
@@ -2306,7 +2361,9 @@ async function memberPageStats(req: VercelRequest, db: Db) {
 // same cleaning in api/admin.ts and api/account.ts.
 const PAGE_BLOCK_TYPES = new Set(['hero', 'contact', 'highlights', 'services', 'about', 'testimonials', 'gallery', 'text', 'faq', 'area', 'cta', 'credentials', 'products', 'signup'])
 const PAGE_COLORS = new Set(['blue', 'teal', 'green', 'purple', 'rose', 'orange', 'navy'])
-const PAGE_TEMPLATES = new Set(['professional', 'local', 'creative', 'personal', 'affiliate', 'cleaning', 'notary', 'teacher', 'creator', 'blank'])
+const PAGE_TEMPLATES = new Set(['professional', 'local', 'creative', 'personal', 'affiliate', 'links', 'cleaning', 'notary', 'teacher', 'creator', 'blank'])
+// Background tints (light only — dark text stays readable), open to every plan.
+const PAGE_BACKGROUNDS = new Set(['cream', 'sand', 'mist', 'sky', 'mint', 'blush', 'lavender'])
 const pageText = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '')
 const pageUrl = (v: unknown) => {
   const s = pageText(v, 500)
@@ -2329,6 +2386,8 @@ function cleanPageBlocks(value: unknown) {
     if (pageText(d.title, 120)) data.title = pageText(d.title, 120)
     if (pageText(d.body, 2000)) data.body = pageText(d.body, 2000)
     if (pageText(d.button, 40)) data.button = pageText(d.button, 40)
+    // products: the member switched the standard affiliate note off (Sprint 146).
+    if (type === 'products' && d.hideNote === true) data.hideNote = true
     if (Array.isArray(d.items)) {
       data.items = d.items
         .slice(0, 12)
@@ -2360,6 +2419,7 @@ function cleanPageTheme(value: unknown) {
   if (typeof v.color === 'string' && PAGE_COLORS.has(v.color)) theme.color = v.color
   const cover = pageUrl(v.cover)
   if (cover) theme.cover = cover
+  if (typeof v.background === 'string' && PAGE_BACKGROUNDS.has(v.background)) theme.background = v.background
   return theme
 }
 
@@ -2391,7 +2451,11 @@ function readMemberPageInput(req: VercelRequest) {
   const services = (Array.isArray(b.services) ? b.services : []).slice(0, 12).flatMap((raw: any) => {
     const title = cleanText(raw?.title, 100)
     if (!title) return []
-    return [{ title, description: cleanText(raw?.description, 400), price: cleanText(raw?.price, 40) }]
+    // Its own picture and button (Sprint 145): the button opens this service's address.
+    const url = cleanUrl(raw?.url, `The link of “${title}”`)
+    const image = cleanUrl(raw?.image, `The image of “${title}”`)
+    const cta = cleanText(raw?.cta, 40)
+    return [{ title, description: cleanText(raw?.description, 400), price: cleanText(raw?.price, 40), ...(url ? { url } : {}), ...(image ? { image } : {}), ...(url && cta ? { cta } : {}) }]
   })
   const highlights = (Array.isArray(b.highlights) ? b.highlights : []).slice(0, 8).flatMap((raw: any) => {
     const title = cleanText(raw?.title, 100)
@@ -2668,8 +2732,9 @@ async function siteOverview(db: Db) {
     db.from('site_settings').select('value').eq('key', 'site_open').maybeSingle(),
   ])
   const open = openRow.data?.value === true
+  const selfService = await pageSelfService(db)
   if (announcements.error) {
-    if (isMissingTable(announcements.error)) return { announcements: [], featured: [], products: [], ready: false, open }
+    if (isMissingTable(announcements.error)) return { announcements: [], featured: [], products: [], ready: false, open, selfService }
     throw announcements.error
   }
   if (featured.error) throw featured.error
@@ -2680,7 +2745,28 @@ async function siteOverview(db: Db) {
     featured: ((featured.data ?? []) as { product_id: string }[]).map((f) => f.product_id),
     ready: true,
     open,
+    selfService,
   }
+}
+
+// Subscribers building and publishing their own member page (My Business
+// Page). Off until the team switches it on (decided 23/10/2026: before
+// launch only the team builds pages); enforced in api/account.ts.
+const PAGE_SELF_SERVICE_KEY = 'member_pages_self_service'
+
+async function pageSelfService(db: Db): Promise<boolean> {
+  const { data, error } = await db.from('site_settings').select('value').eq('key', PAGE_SELF_SERVICE_KEY).maybeSingle()
+  if (error) return false
+  return data?.value === true
+}
+
+async function setPageSelfService(req: VercelRequest, db: Db, admin: Admin) {
+  const on = req.body?.on === true
+  const { error } = await db
+    .from('site_settings')
+    .upsert({ key: PAGE_SELF_SERVICE_KEY, value: on, updated_at: new Date().toISOString(), updated_by: admin.email })
+  if (error) throw error
+  return { on }
 }
 
 // Open the site to everyone, or show "Coming soon" to all but the team.
@@ -3639,8 +3725,20 @@ function describe(key: string, b: Body, r: Record<string, any>): Described {
       return { area: 'catalog', summary: `Merged the tag “${r.merged?.from}” into “${r.merged?.into}”` }
     case 'PUT product-tags':
       return { area: 'catalog', summary: `Set the tags of “${r.productName || 'a product'}”` }
+    case 'PUT page-open':
+      return {
+        area: 'pages',
+        summary: r.open ? `Made bgrowth.app/p/${r.page?.slug} public before launch` : `Took bgrowth.app/p/${r.page?.slug} back behind "Coming soon"`,
+      }
+    case 'PUT page-demo':
+      return {
+        area: 'pages',
+        summary: r.demo ? `Marked bgrowth.app/p/${r.page?.slug} as a BGrowth Demo` : `Removed BGrowth Demo status from bgrowth.app/p/${r.page?.slug}`,
+      }
     case 'PUT site-open':
       return { area: 'site', summary: r.open ? 'Opened the site to everyone' : 'Closed the site (Coming soon for visitors)' }
+    case 'PUT page-self-service':
+      return { area: 'pages', summary: r.on ? 'Let subscribers build and publish their own page' : 'Stopped subscribers from editing their own page (team only)' }
     case 'POST announcements':
       return { area: 'site', summary: `Created the announcement “${b.title}”` }
     case 'PATCH announcements':
@@ -3872,6 +3970,9 @@ const ROUTES: Record<string, Route> = {
   'PUT product-tags': (req, db) => setProductTags(req, db),
   'GET site': (_req, db) => siteOverview(db),
   'PUT site-open': (req, db, admin) => setSiteOpen(req, db, admin),
+  'PUT page-self-service': (req, db, admin) => setPageSelfService(req, db, admin),
+  'PUT page-open': (req, db, admin) => setPageOpen(req, db, admin),
+  'PUT page-demo': (req, db) => setPageDemo(req, db),
   'POST announcements': (req, db, admin) => createAnnouncement(req, db, admin),
   'PATCH announcements': (req, db) => updateAnnouncement(req, db),
   'DELETE announcements': (req, db) => deleteAnnouncement(req, db),

@@ -61,6 +61,8 @@ export default function MyPagePage() {
   const [page, setPage] = useState<MemberPage | null | undefined>(undefined)
   // The models the plan allows (null = all).
   const [templates, setTemplates] = useState<string[] | null>(null)
+  // Off before launch: the editor is shown read-only with "Coming soon".
+  const [selfService, setSelfService] = useState(false)
   const [tab, setTab] = useState<'edit' | 'numbers' | 'contacts'>('edit')
   const [days, setDays] = useState(30)
   const [stats, setStats] = useState<MemberPageStats | null>(null)
@@ -74,6 +76,7 @@ export default function MyPagePage() {
       .then((r) => {
         setLevel(r.level)
         setTemplates(r.templates ?? null)
+        setSelfService(r.selfService === true)
         setPage(r.page)
       })
       .catch((err) => {
@@ -128,6 +131,11 @@ export default function MyPagePage() {
       {teamPage && level && (
         <p className="mb-6 rounded-xl bg-bg-soft px-4 py-3 text-[13.5px] text-navy/60">Your page is managed by the BGrowth team — talk to us through Support to change it.</p>
       )}
+      {canEdit && !selfService && (
+        <p className="mb-6 rounded-xl bg-amber-50 px-4 py-3 text-[13.5px] text-amber-700">
+          <strong>Coming soon:</strong> building and publishing your own page opens at launch. For now the BGrowth team builds pages — talk to us through Support. You can look around the editor; nothing here can be changed or saved yet.
+        </p>
+      )}
       {notice && <p className="mb-6 rounded-xl bg-emerald-50 px-4 py-3 text-[13.5px] text-emerald-700">{notice}</p>}
       {error && <p className="mb-6 text-[14px] text-red-500">{error}</p>}
 
@@ -152,6 +160,7 @@ export default function MyPagePage() {
           mode={level}
           page={page}
           allowedTemplates={templates}
+          readOnly={!selfService}
           upload={(dataUrl) => myPageService.uploadImage(dataUrl)}
           onSave={async (draft) => {
             const saved = await myPageService.save(draft)

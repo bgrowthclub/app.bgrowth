@@ -78,6 +78,27 @@ export default function AdminSitePage() {
     }
   }
 
+  // Subscribers building their own page (off before launch, 23/10/2026).
+  async function toggleSelfService() {
+    if (!data) return
+    const next = !data.selfService
+    const question = next
+      ? 'Let subscribers whose plan includes a page build, edit and publish it themselves in My Business Page?'
+      : 'Stop subscribers from editing their own page? Their pages stay as they are; only the team can change them.'
+    if (!window.confirm(question)) return
+    setBusy(true)
+    setError(null)
+    try {
+      const on = await adminService.setPageSelfService(next)
+      setData((d) => (d ? { ...d, selfService: on } : d))
+      setNotice(on ? 'Subscribers can now build and publish their own page.' : 'Only the team can create, edit and publish member pages.')
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Couldn’t change it.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
   async function toggleOpen() {
     if (!data) return
     const next = !data.open
@@ -163,6 +184,23 @@ export default function AdminSitePage() {
             </div>
             <Button type="button" variant={data.open ? 'secondary' : 'primary'} disabled={busy} onClick={() => void toggleOpen()} className={SMALL_BUTTON}>
               {data.open ? 'Close the site' : 'Open the site'}
+            </Button>
+          </section>
+
+          <section className={`${CARD} flex flex-wrap items-center justify-between gap-4 px-5 py-4`}>
+            <div className="min-w-0">
+              <p className="font-display text-[15px] font-bold text-navy">
+                Subscribers build their own page{' '}
+                <span className={pillClass(data.selfService ? 'green' : 'amber')}>{data.selfService ? 'On' : 'Team only'}</span>
+              </p>
+              <p className="mt-1 text-[13px] text-navy/50">
+                {data.selfService
+                  ? 'Subscribers whose plan includes a page create, edit and publish it in My Business Page.'
+                  : 'Only the team creates, edits and publishes member pages (Admin → Pages). Subscribers see their page and contacts, and the editor read-only with “Coming soon”.'}
+              </p>
+            </div>
+            <Button type="button" variant={data.selfService ? 'secondary' : 'primary'} disabled={busy} onClick={() => void toggleSelfService()} className={SMALL_BUTTON}>
+              {data.selfService ? 'Turn off' : 'Turn on'}
             </Button>
           </section>
 
