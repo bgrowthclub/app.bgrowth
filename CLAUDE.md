@@ -304,28 +304,35 @@ This repo is a **static, client-only MVP**:
   generic "Coming soon", noindex), and page sign-ups, visit counts and
   "Quem criou" only for open pages; any error reading the state = closed.
   `getSiteAccess()` now fails closed ("Coming soon" if the state can't be
-  read — revisit after launch). `/register` stays closed. NOT data
-  protection: until Layer B (a `member_pages` RLS change, proposed, not
-  applied) published member pages — and products, catalog, articles' public
-  fields, site texts, announcements — stay readable straight from Supabase
-  with the public key.
+  read — revisit after launch). `/register` stays closed. Layer A alone is
+  NOT data protection; for member pages that is Layer B (Portal migration
+  0067, applied 24/10/2026 — see Sprint 150). Products, catalog, articles'
+  public fields, site texts and announcements stay readable straight from
+  Supabase with the public key (by design: the Portal sells publicly).
   **Since Sprint 150 any page can be a BGrowth Demo** (approved 23/10/2026;
   replaces Sprint 149's `always_open_pages` list, which never shipped):
-  `member_pages.is_demo` (Portal migration 0067 — on Portal branch
-  `feature/0067-member-pages-closed-site`, NOT applied; it also makes the
-  database follow the closed site: published + plan-allowed pages readable
-  while closed only if demo, released or read by the team). Admin → Pages
+  `member_pages.is_demo` (Portal migration 0067 — applied in production
+  24/10/2026 after a SQL, real-API and Website Preview test against a
+  separate test project; it also makes the database follow the closed site:
+  published + plan-allowed pages readable while closed only if demo,
+  released or read by the team; it seeded Bruno's `growwithbruno` and
+  Gika's `garimposdagio` — old address `dicasdagigika` — as demos). Admin → Pages
   "Mark as BGrowth Demo" / "Remove BGrowth Demo status" (resource
   `page-demo`, admins only — not in `SUPPORT_ACTIONS` — logged in Activity);
   a demo shows the "BGrowth Demo" badge and no release button, and
   `page-open` refuses "Remove public access" on it (409). Team or subscriber
   pages may be demos; the flag never skips publication or plan checks
   (`api/ingles.ts` lists demos + released pages with the same plan check as
-  the database). Before 0067 the column is missing: demos count as none and
-  `page-demo` answers that the database update is needed. Bruno's and Gika's
-  hardcoded addresses in `siteAccess.ts`/`api/ingles.ts` stay as a temporary
-  fallback until 0067 is applied and verified, then go in a separate commit;
-  0067 must be applied before the site drops them.
+  the database). Without the column (a database before 0067) demos count as
+  none and `page-demo` answers that the database update is needed. Since
+  Sprint 152 (24/10/2026) Bruno's and Gika's page addresses are no longer
+  fixed in `siteAccess.ts`/`api/ingles.ts`: they open only as demos, like
+  any other page (removing their demo status, or a lapsed page plan, closes
+  them). `/p/bruno` and `/ingles-de-mudanca` stay in the list for Bruno's
+  course; `SLUG_ALIASES` (bruno → growwithbruno) still serves "Quem criou".
+  Retiring a release or a demo shows "This page isn't available" for up to
+  ~90 s (the `action=site` cache) before "Coming soon"; the data is hidden
+  at once.
   **Since Sprint 151 the editor tidies duplicate one-per-page sections
   safely** (approved 23/10/2026; no migration): opening a page saved with
   two copies of a `SINGLE_BLOCK_TYPES` section, `mergeDuplicateSections()`
