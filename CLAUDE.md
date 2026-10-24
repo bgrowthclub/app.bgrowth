@@ -326,6 +326,15 @@ This repo is a **static, client-only MVP**:
   hardcoded addresses in `siteAccess.ts`/`api/ingles.ts` stay as a temporary
   fallback until 0067 is applied and verified, then go in a separate commit;
   0067 must be applied before the site drops them.
+  **Since Sprint 151 the editor tidies duplicate one-per-page sections
+  safely** (approved 23/10/2026; no migration): opening a page saved with
+  two copies of a `SINGLE_BLOCK_TYPES` section, `mergeDuplicateSections()`
+  (memberPageTemplates.ts) removes only copies that are empty or identical
+  to the first (the public page, which shows the first copy, looks the
+  same); a copy with anything of its own (title, list, visibility…) is kept
+  unchanged and the editor asks the person to review it ("Please review…",
+  also next to Save). Nothing hidden becomes visible and nothing with
+  content is deleted without the person doing it.
   **Since Sprint 76 member pages have numbers** (approved by the user;
   Portal migration 0045): daily totals of visits, clicks per contact
   button/featured item, course visits and course e-mails

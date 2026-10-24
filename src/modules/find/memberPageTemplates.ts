@@ -423,6 +423,64 @@ export function pageBlocks(page: { blocks?: MemberPageBlock[] | null }): MemberP
   })
 }
 
+// Opening a page in the editor that was saved with two copies of a
+// one-per-page section (Sprint 151). The public page shows only the FIRST
+// copy (pageBlocks above). The editor never silently drops or moves content:
+//   • a copy with nothing of its own (empty, or exactly the same as the
+//     first) is folded away — the public page looks exactly the same;
+//   • a copy with anything of its own (a title, a list, other visibility…)
+//     is KEPT where it is and reported, so the person decides which one to
+//     delete before saving. Nothing hidden is made visible on its own.
+export interface DuplicateSectionsResult {
+  blocks: MemberPageBlock[]
+  // Types whose extra copies were empty or identical, and were folded away.
+  merged: MemberPageBlockType[]
+  // Types that still have a copy with content of its own.
+  conflicts: MemberPageBlockType[]
+}
+
+function isEmptyValue(v: unknown): boolean {
+  if (v === undefined || v === null || v === false) return true
+  if (typeof v === 'string') return !v.trim()
+  if (Array.isArray(v)) return v.length === 0
+  if (typeof v === 'object') return Object.values(v as Record<string, unknown>).every(isEmptyValue)
+  return false
+}
+
+export function mergeDuplicateSections(blocks: MemberPageBlock[]): DuplicateSectionsResult {
+  const firstOf = new Map<MemberPageBlockType, MemberPageBlock>()
+  const merged = new Set<MemberPageBlockType>()
+  const conflicts = new Set<MemberPageBlockType>()
+  const out: MemberPageBlock[] = []
+  for (const block of blocks) {
+    if (!SINGLE_BLOCK_TYPES.includes(block.type)) {
+      out.push(block)
+      continue
+    }
+    const first = firstOf.get(block.type)
+    if (!first) {
+      firstOf.set(block.type, block)
+      out.push(block)
+      continue
+    }
+    const extra = (block.data ?? {}) as Record<string, unknown>
+    const base = (first.data ?? {}) as Record<string, unknown>
+    let ownContent = Boolean(block.hidden) !== Boolean(first.hidden)
+    for (const [key, value] of Object.entries(extra)) {
+      if (!isEmptyValue(value) && JSON.stringify(base[key]) !== JSON.stringify(value)) ownContent = true
+    }
+    if (ownContent) {
+      out.push(block)
+      conflicts.add(block.type)
+      continue
+    }
+    merged.add(block.type)
+  }
+  // A type that kept a conflicting copy is reported as a conflict only.
+  for (const t of conflicts) merged.delete(t)
+  return { blocks: out, merged: [...merged], conflicts: [...conflicts] }
+}
+
 // A fresh copy of a model's blocks (new ids, so two pages never share them).
 export function templateBlocks(templateId: string, lang: Lang = 'en'): MemberPageBlock[] {
   const all = memberPageTemplates(lang)

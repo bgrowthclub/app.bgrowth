@@ -7,7 +7,7 @@ import MemberPageView from './MemberPageView'
 import ResponsiveFrame from '../ui/ResponsiveFrame'
 import { shrinkImage } from '../../lib/shrinkImage'
 import { MEMBER_PAGE_LABELS, videoEmbed } from '../../modules/find/memberPageService'
-import { BLOCK_TYPES, LEGACY_BLOCKS, PAGE_BACKGROUNDS, PAGE_COLORS, SINGLE_BLOCK_TYPES, blockId, memberPageTemplates, switchTemplateBlocks, templateBlocks, templatePreview } from '../../modules/find/memberPageTemplates'
+import { BLOCK_TYPES, LEGACY_BLOCKS, PAGE_BACKGROUNDS, PAGE_COLORS, SINGLE_BLOCK_TYPES, blockId, memberPageTemplates, mergeDuplicateSections, switchTemplateBlocks, templateBlocks, templatePreview } from '../../modules/find/memberPageTemplates'
 import type {
   MemberPage,
   MemberPageBlock,
@@ -44,6 +44,12 @@ interface Props {
 }
 
 const LABEL = 'mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-navy/40'
+
+// "Contact buttons" / "Contact buttons and About" — section names as the editor shows them.
+function sectionNames(types: MemberPageBlockType[]) {
+  const names = types.map((t) => `“${BLOCK_TYPES.find((b) => b.type === t)?.label ?? t}”`)
+  return names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0]
+}
 const SMALL = LINK_BUTTON
 
 const LINK_TYPES: { id: MemberPageLinkType; label: string; placeholder: string }[] = [
@@ -123,12 +129,18 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
   const free = mode !== 'partial'
   const [language, setLanguage] = useState<MemberPage['language']>(page?.language ?? 'en')
   const [template, setTemplate] = useState(page ? (page.template ?? 'blank') : '')
+  // A page saved with two copies of a one-per-page section (Sprint 151):
+  // folded on opening without losing anything; disagreeing copies are kept
+  // and reported (see mergeDuplicateSections).
+  const [duplicates] = useState(() => mergeDuplicateSections(page?.blocks ?? []))
   const [blocks, setBlocks] = useState<MemberPageBlock[]>(() => {
-    const own = page?.blocks?.length ? page.blocks : page ? LEGACY_BLOCKS.map((b) => ({ ...b, id: blockId() })) : []
+    const own = page?.blocks?.length ? duplicates.blocks : page ? LEGACY_BLOCKS.map((b) => ({ ...b, id: blockId() })) : []
     // A Pro page keeps exactly its model's sections (pages from the first
     // models move to the closest look).
     return page && !free && page.template !== template ? fitBlocks(template, page.language, own, false) : own
   })
+  // Still-disagreeing copies, live (the warning goes away once one is deleted).
+  const conflictsLeft = duplicates.conflicts.filter((t) => blocks.filter((x) => x.type === t).length > 1)
   const [theme, setTheme] = useState<MemberPageTheme>(page?.theme ?? {})
   const [displayName, setDisplayName] = useState(page?.display_name ?? '')
   const [slug, setSlug] = useState(page?.slug ?? '')
@@ -610,6 +622,19 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
         )}
       </div>
 
+      {duplicates.merged.length > 0 && (
+        <p className="mb-5 rounded-xl bg-bg-soft px-4 py-3 text-[13px] text-navy/65">
+          This page had an extra, empty copy of the {sectionNames(duplicates.merged)} section (it never showed on the page). It was removed here — nothing
+          else changed. Saving keeps one.
+        </p>
+      )}
+      {conflictsLeft.length > 0 && (
+        <p className="mb-5 rounded-xl bg-amber-50 px-4 py-3 text-[13px] text-amber-800">
+          <strong>Please review:</strong> this page has more than one {sectionNames(conflictsLeft)} section, and the extra copy has content of its own. Only
+          the first one shows on the page. All copies are kept below, unchanged — delete the one you don’t want. Saving now keeps them all, as they are.
+        </p>
+      )}
+
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)]">
         {/* Read-only: every field and button on this side is disabled. */}
         <fieldset disabled={readOnly} className={`min-w-0 space-y-7 ${readOnly ? 'opacity-70' : ''}`}>
@@ -879,6 +904,9 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
       </div>
 
       {error && <p className="mt-6 text-[14px] text-red-500">{error}</p>}
+      {!readOnly && conflictsLeft.length > 0 && (
+        <p className="mt-6 text-right text-[12.5px] font-semibold text-amber-700">{sectionNames(conflictsLeft)} still has more than one copy — saving keeps them all.</p>
+      )}
 
       {readOnly ? (
         <p className="mt-6 border-t border-navy/[0.06] pt-5 text-right text-[13px] font-semibold text-navy/45">Coming soon — saving and publishing are not open yet.</p>
