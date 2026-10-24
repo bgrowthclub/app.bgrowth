@@ -2,6 +2,7 @@ import { motion } from 'framer-motion'
 import { Link } from 'react-router-dom'
 import { ArrowRight, Route } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import { formatMinutes } from '../../modules/journeys/estimate'
 import type { JourneySummary } from '../../modules/journeys/types'
 
 interface Props {
@@ -16,7 +17,7 @@ interface Props {
 const CARD = 'group flex h-full flex-col overflow-hidden rounded-xl2 border border-navy/[0.06] bg-white shadow-softer transition-all duration-[250ms] ease-out'
 
 // One published Journey in the list: cover, Life World, name, what it's
-// about and how many stages it has.
+// about, how many stages it has and its estimated time.
 export default function JourneyCard({ journey, world, to, index = 0 }: Props) {
   const WorldIcon = world?.icon
   const body = (
@@ -44,6 +45,7 @@ export default function JourneyCard({ journey, world, to, index = 0 }: Props) {
         <div className="mt-auto flex items-center justify-between border-t border-navy/[0.06] pt-3 [&:not(:first-child)]:mt-5">
           <span className="text-[12px] font-medium text-navy/40">
             {journey.stageCount} {journey.stageCount === 1 ? 'stage' : 'stages'}
+            {journey.estimatedMinutes > 0 && <> · about {formatMinutes(journey.estimatedMinutes)}</>}
           </span>
           {to && (
             <span className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-primary">

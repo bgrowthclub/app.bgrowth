@@ -6,6 +6,7 @@ import EmptyState from '../../components/ui/EmptyState'
 import Button from '../../components/ui/Button'
 import JourneyNotice from '../../components/journeys/JourneyNotice'
 import JourneyActionCard from '../../components/journeys/JourneyActionCard'
+import JourneyStageMeta from '../../components/journeys/JourneyStageMeta'
 import { useIdentity } from '../../modules/identity/IdentityContext'
 import { journeyService } from '../../modules/journeys/journeyService'
 import { canMark } from '../../modules/journeys/progress'
@@ -22,7 +23,7 @@ const NO_ACCESS: MemberAccess = { licenses: [], grants: [], includedPlan: {} }
 // /platform/journeys/:slug — the signed-in member's Journey: start it once,
 // tick and untick actions, see progress overall and per stage, pick up where
 // they left off, and the completion screen. Progress is their own
-// workspace_instances row (Portal migration 0066). Each resource shows what
+// workspace_instances row (Portal migration 0068). Each resource shows what
 // THIS member can do with it — the Journey itself opens nothing.
 export default function JourneyMemberPage() {
   const { slug = '' } = useParams()
@@ -214,6 +215,7 @@ export default function JourneyMemberPage() {
 
         <section aria-label={stage.title} className="min-w-0">
           <h2 className="font-display text-xl font-bold text-navy">{stage.title}</h2>
+          <JourneyStageMeta stage={stage} className="mt-1.5" />
           {stage.summary && <p className="mt-1 whitespace-pre-line text-[14.5px] leading-relaxed text-navy/60">{stage.summary}</p>}
           <ul className="mt-5 space-y-3">
             {stage.actions.map((action) => (

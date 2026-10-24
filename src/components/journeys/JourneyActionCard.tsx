@@ -1,3 +1,4 @@
+import { formatMinutes } from '../../modules/journeys/estimate'
 import { Link } from 'react-router-dom'
 import { Check, Clock, ExternalLink, Lock, Sparkles } from 'lucide-react'
 import { ACTION_KIND } from './JourneyStagePreview'
@@ -124,6 +125,7 @@ export default function JourneyActionCard({ action, access, done, markable, onTo
             <span className="inline-flex items-center gap-1 text-[11.5px] font-semibold uppercase tracking-wide text-primary/80">
               <Icon size={13} aria-hidden /> {kind.label}
             </span>
+            {action.estimatedMinutes != null && <span className="text-[11.5px] font-medium text-navy/40">{formatMinutes(action.estimatedMinutes)}</span>}
             {action.optional && <span className="text-[11.5px] font-medium text-navy/40">Optional</span>}
             {action.states.length > 0 && <span className="text-[11.5px] font-medium text-navy/45">{action.states.join(', ')} only</span>}
             {highlight && !done && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">Next</span>}

@@ -1,7 +1,7 @@
 import type { JourneyAction, JourneyOutline } from './types'
 
 // A member's progress in one Journey — kept in their own portal.
-// workspace_instances row (data.kind = 'journey', Portal migration 0066:
+// workspace_instances row (data.kind = 'journey', Portal migration 0068:
 // one row per member and Journey, readable and writable only by them).
 // Pure functions only: no network, no React.
 

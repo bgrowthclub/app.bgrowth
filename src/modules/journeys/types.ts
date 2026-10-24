@@ -1,4 +1,4 @@
-// BGrowth Journeys (Portal migration 0066) — guided paths to a goal, shown
+// BGrowth Journeys (Portal migration 0068) — guided paths to a goal, shown
 // only on this site. A Journey is a portal.products row (content_type
 // 'journey') that browsers can't read directly: the site gets published
 // Journeys only through two database functions, which resolve every
@@ -16,7 +16,14 @@ export interface JourneySummary {
   isFree: boolean
   publishedAt: string | null
   stageCount: number
+  /** Sum of the shown actions' estimated minutes (0 = no times given). */
+  estimatedMinutes: number
+  /** Who the Journey is for ('' = not said). */
+  audience: string
 }
+
+/** Where a stage sits: getting started, good practices, or growing. */
+export type JourneyStageLevel = 'beginner' | 'best_practices' | 'expansion'
 
 /** How a referenced resource is for members right now (resolved by the database). */
 export type JourneyResourceState = 'available' | 'coming_soon' | 'unavailable'
@@ -35,6 +42,8 @@ export interface JourneyAction {
   title: string
   instructions: string
   optional: boolean
+  /** Estimated whole minutes, or null when not given. */
+  estimatedMinutes: number | null
   kind: JourneyActionKind
   state: JourneyResourceState
   ref: JourneyActionRef
@@ -46,6 +55,9 @@ export interface JourneyStage {
   id: string
   title: string
   summary: string
+  level: JourneyStageLevel | null
+  /** Sum of this stage's actions' minutes (0 = no times given). */
+  estimatedMinutes: number
   actions: JourneyAction[]
 }
 
@@ -63,6 +75,11 @@ export interface JourneyOutline {
   intro: string
   completionMessage: string
   notice: string
+  audience: string
+  /** What the member should have at the end. */
+  outcomes: string[]
+  /** Sum of every shown action's minutes (0 = no times given). */
+  estimatedMinutes: number
   validatedStates: string[]
   stages: JourneyStage[]
 }

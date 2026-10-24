@@ -14,7 +14,7 @@ import type { PortalCategoryRow } from '../modules/workspace/types/portal'
 type Load = { state: 'loading' } | { state: 'error' } | { state: 'ready'; journeys: JourneySummary[]; categories: PortalCategoryRow[] }
 
 // /journeys — every published Journey (BGrowth Journeys, Portal migration
-// 0066), from the database's list_journeys() only: drafts never show. Any
+// 0068), from the database's list_journeys() only: drafts never show. Any
 // number of Journeys; grouped by Life World when there is more than one.
 export default function JourneysPage() {
   const [load, setLoad] = useState<Load>({ state: 'loading' })

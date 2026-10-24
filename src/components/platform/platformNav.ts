@@ -28,6 +28,7 @@ import {
   History,
   Megaphone,
   Tag,
+  Route,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -105,6 +106,9 @@ export const PLATFORM_NAV_GROUPS: PlatformNavGroup[] = [
     items: [
       // The Knowledge hub (articles published from Studio), Sprint 114.
       { label: 'Knowledge', to: '/knowledge', icon: Newspaper },
+      // BGrowth Journeys™, its own product (decided 24/10/2026): the list
+      // is public (/journeys); a member's own Journey keeps this row lit.
+      { label: 'Journeys', to: '/journeys', icon: Route, alsoActiveOn: ['/platform/journeys'] },
       { label: 'Academy', to: '/platform/academy', icon: GraduationCap, locked: true },
       // Renamed from "Community" — this is the sidebar entry for what
       // VISION.md calls BGrowth Club™ (see CLAUDE.md's naming-gap note).

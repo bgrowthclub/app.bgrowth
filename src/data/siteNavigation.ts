@@ -45,12 +45,14 @@ export const DEFAULT_NAVIGATION: SiteNavigation = {
   menu: [
     { label: 'Home', to: '/' },
     { label: 'Solutions', to: '/#life-worlds' },
+    { label: 'Journeys', to: '/journeys' },
     { label: 'Knowledge', to: '/knowledge' },
     { label: 'About', to: '/about' },
   ],
   footerLinks: [
     { label: 'Business Systems', to: '/systems' },
     { label: 'Life Worlds', to: '/workspaces' },
+    { label: 'Journeys', to: '/journeys' },
     { label: 'Resources', to: '/resources' },
     { label: 'About', to: '/about' },
   ],

@@ -64,6 +64,7 @@ feature belongs somewhere it doesn't:
 | 🤝 Partners | Partner | Not built as its own product. Exists only as `AffiliatePartner` data |
 | 🎁 Rewards | Earn | Not built |
 | 💎 Benefits | Save | Not built. Closest today is the free-resources/discount messaging on the marketing site |
+| 🧭 **Journeys** (11th, decided 24/10/2026) | Follow | Built, not live yet: `/journeys`, `/journeys/:slug`, `/platform/journeys/:slug` (Sprints 140–143, 153; Portal migration 0068). Not in VISION.md yet |
 
 And here is what each **Growth Category** (PRODUCT_CATALOG.md) actually is
 in this repository today:
@@ -342,6 +343,31 @@ This repo is a **static, client-only MVP**:
   unchanged and the editor asks the person to review it ("Please review…",
   also next to Save). Nothing hidden becomes visible and nothing with
   content is deleted without the person doing it.
+  **BGrowth Journeys™ is its own product, the 11th** (decided 24/10/2026;
+  Sprints 140–143, 153; Portal migration 0068 — written as 0066, renamed
+  because it needs 0067; NOT applied yet): a guided path to a goal, stages →
+  actions, built in Studio → Journeys and shown ONLY on this site. A Journey
+  is a `portal.products` row with content_type `journey` that browsers never
+  read directly: the site gets it only through `portal.list_journeys()` and
+  `portal.get_journey_outline(slug)` (`modules/journeys/journeyService.ts`),
+  which resolve each referenced product/article on the server — an
+  unpublished one comes back "coming soon"/"unavailable" with no name, link
+  or price. Content: goal, intro, notice, who it's for (`audience`), expected
+  outcomes (up to 10), stages with an optional level (`beginner` /
+  `best_practices` / `expansion`, shown "Getting started" / "Good practices"
+  / "Growing", `modules/journeys/estimate.ts`) and actions with optional
+  minutes (1–1440; the database adds them up per stage and Journey).
+  Free Journeys only for now: a visitor reads the outline, any account
+  starts it and checks steps off (`workspace_instances`, data.kind
+  `journey`, one per member; no license, no checkout — `api/studio-checkout.ts`
+  refuses a Journey). Premium Journeys come after the "Become a Mobile
+  Notary" pilot. **Journeys appear only when the site opens:** while it is
+  closed the three database functions answer only the website team
+  (`portal.journeys_visible()` = `site_is_open() or is_website_team()`) —
+  no demo or release switch like member pages. "Journeys" is in the members'
+  menu (Grow) and in the default public menu and footer
+  (`DEFAULT_NAVIGATION`; a menu already saved in Admin → Site → Menu &
+  footer needs it added there).
   **Since Sprint 76 member pages have numbers** (approved by the user;
   Portal migration 0045): daily totals of visits, clicks per contact
   button/featured item, course visits and course e-mails
@@ -975,7 +1001,8 @@ extension costs every existing caller.
 - Every ecosystem product carries a trademark symbol: *BGrowth Academy™*,
   *BGrowth Workspace™*, *BGrowth Club™*, *BGrowth Find™*, *BGrowth
   Marketplace™*, *BGrowth App™*, *BGrowth AI™*, *BGrowth Partners™*,
-  *BGrowth Rewards™*, *BGrowth Benefits™*. Use the current names — "BGrowth
+  *BGrowth Rewards™*, *BGrowth Benefits™*, and since 24/10/2026 *BGrowth
+  Journeys™* (the 11th). Use the current names — "BGrowth
   Library" and "BGrowth Services" are retired; the former is now Workspace,
   the latter's done-for-you concept folds into Workspace/App over time (see
   VISION.md). Don't reintroduce either name in new copy.

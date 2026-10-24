@@ -1,5 +1,7 @@
+import { formatMinutes } from '../../modules/journeys/estimate'
 import { BookOpen, CheckSquare, ExternalLink, Package, PlayCircle } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
+import JourneyStageMeta from './JourneyStageMeta'
 import type { JourneyAction, JourneyActionKind, JourneyStage } from '../../modules/journeys/types'
 
 export const ACTION_KIND: Record<JourneyActionKind, { label: string; icon: LucideIcon }> = {
@@ -28,6 +30,7 @@ export default function JourneyStagePreview({ stages }: { stages: JourneyStage[]
             <span className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-primary/10 font-display text-[15px] font-bold text-primary">{i + 1}</span>
             <div className="min-w-0 flex-1">
               <h3 className="font-display text-[17px] font-semibold text-navy">{stage.title || `Stage ${i + 1}`}</h3>
+              <JourneyStageMeta stage={stage} className="mt-1.5" />
               {stage.summary && <p className="mt-1 whitespace-pre-line text-[14px] leading-relaxed text-navy/55">{stage.summary}</p>}
               <ul className="mt-4 space-y-2">
                 {stage.actions.map((action) => {
@@ -37,6 +40,7 @@ export default function JourneyStagePreview({ stages }: { stages: JourneyStage[]
                     <li key={action.id} className="flex flex-wrap items-center gap-x-2.5 gap-y-1 text-[14px] text-navy/75">
                       <Icon size={16} className="shrink-0 text-primary/70" aria-label={kind.label} />
                       <span className="min-w-0">{action.title}</span>
+                      {action.estimatedMinutes != null && <span className="text-[11.5px] font-medium text-navy/35">{formatMinutes(action.estimatedMinutes)}</span>}
                       {action.optional && <span className="text-[11.5px] font-medium text-navy/35">Optional</span>}
                       {action.states.length > 0 && <span className="text-[11.5px] font-medium text-navy/40">{action.states.join(', ')} only</span>}
                       <StateTag action={action} />

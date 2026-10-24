@@ -1,9 +1,9 @@
 import { supabase } from '../identity/supabase/supabaseClient'
 import { emptyProgress } from './progress'
 import type { JourneyProgressData } from './progress'
-import type { JourneyAction, JourneyActionKind, JourneyActionRef, JourneyOutline, JourneyResourceState, JourneyStage, JourneySummary } from './types'
+import type { JourneyAction, JourneyActionKind, JourneyActionRef, JourneyOutline, JourneyResourceState, JourneyStage, JourneyStageLevel, JourneySummary } from './types'
 
-// Every read this site makes of BGrowth Journeys (Portal migration 0066).
+// Every read this site makes of BGrowth Journeys (Portal migration 0068).
 // Journey rows themselves are hidden from browsers by row-level security;
 // the only way in is these two security-definer functions, which return
 // PUBLISHED Journeys only and never the name, slug, id or price of a
@@ -18,7 +18,7 @@ function client() {
   return supabase
 }
 
-// The functions aren't there yet (migration 0066 not run): no Journeys,
+// The functions aren't there yet (migration 0068 not run): no Journeys,
 // rather than an error page.
 function isMissingFunction(error: { code?: string } | null): boolean {
   return error?.code === 'PGRST202' || error?.code === '42883'
@@ -39,6 +39,13 @@ export function safeHttpsUrl(value: unknown): string | null {
 
 const KINDS: JourneyActionKind[] = ['product', 'article', 'video', 'link', 'manual']
 const STATES: JourneyResourceState[] = ['available', 'coming_soon', 'unavailable']
+const LEVELS: JourneyStageLevel[] = ['beginner', 'best_practices', 'expansion']
+
+/** Whole minutes ≥ 0 from the database (anything else = 0). */
+function minutes(v: unknown): number {
+  const n = typeof v === 'number' ? v : typeof v === 'string' ? Number(v) : NaN
+  return Number.isFinite(n) && n > 0 ? Math.round(n) : 0
+}
 
 interface SummaryRow {
   id: string
@@ -50,6 +57,9 @@ interface SummaryRow {
   is_free: boolean
   published_at: string | null
   stage_count: number | null
+  // Added by Portal migration 0068; absent from an older database.
+  estimated_minutes?: number | null
+  audience?: string | null
 }
 
 export function toSummary(row: SummaryRow): JourneySummary {
@@ -63,6 +73,8 @@ export function toSummary(row: SummaryRow): JourneySummary {
     isFree: row.is_free === true,
     publishedAt: row.published_at ?? null,
     stageCount: Number(row.stage_count ?? 0),
+    estimatedMinutes: minutes(row.estimated_minutes),
+    audience: row.audience ?? '',
   }
 }
 
@@ -104,6 +116,7 @@ function toAction(raw: unknown): JourneyAction | null {
     title: str(a.title),
     instructions: str(a.instructions),
     optional: a.optional === true,
+    estimatedMinutes: minutes(a.estimatedMinutes) || null,
     kind,
     state,
     ref,
@@ -120,7 +133,15 @@ export function toOutline(raw: unknown): JourneyOutline | null {
       if (!s || typeof s !== 'object') return null
       const st = s as Record<string, unknown>
       const actions = (Array.isArray(st.actions) ? st.actions : []).map(toAction).filter((a): a is JourneyAction => a !== null)
-      return str(st.id) ? { id: str(st.id), title: str(st.title), summary: str(st.summary), actions } : null
+      if (!str(st.id)) return null
+      return {
+        id: str(st.id),
+        title: str(st.title),
+        summary: str(st.summary),
+        level: LEVELS.includes(st.level as JourneyStageLevel) ? (st.level as JourneyStageLevel) : null,
+        estimatedMinutes: minutes(st.estimatedMinutes),
+        actions,
+      }
     })
     .filter((s): s is JourneyStage => s !== null && s.actions.length > 0)
   return {
@@ -136,6 +157,9 @@ export function toOutline(raw: unknown): JourneyOutline | null {
     intro: str(j.intro),
     completionMessage: str(j.completionMessage),
     notice: str(j.notice),
+    audience: str(j.audience),
+    outcomes: Array.isArray(j.outcomes) ? j.outcomes.filter((o): o is string => typeof o === 'string' && o.trim() !== '').slice(0, 10) : [],
+    estimatedMinutes: minutes(j.estimatedMinutes),
     validatedStates: Array.isArray(j.validatedStates) ? j.validatedStates.filter((s): s is string => typeof s === 'string') : [],
     stages,
   }
@@ -167,7 +191,7 @@ export const journeyService = {
   // --- A member's progress (portal.workspace_instances, data.kind 'journey') ---
   // The database allows: reading/updating only your own rows; creating one
   // only for a published, free Journey, marked 'journey', and only one per
-  // member and Journey (Portal migration 0066). No license is involved.
+  // member and Journey (Portal migration 0068). No license is involved.
 
   /** The member's progress record for this Journey, or null (not started). */
   async getProgress(userId: string, journeyId: string): Promise<JourneyProgressRecord | null> {

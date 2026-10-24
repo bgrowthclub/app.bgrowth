@@ -113,7 +113,7 @@ export default function App() {
         <Route path="/system/:slug" element={<SystemOverviewPage />} />
         <Route path="/system/:slug/module/:moduleSlug" element={<SystemModulePage />} />
         <Route path="/workspaces" element={<WorkspacesPage />} />
-        {/* BGrowth Journeys (Portal migration 0066) — this site only. */}
+        {/* BGrowth Journeys (Portal migration 0068) — this site only. */}
         <Route path="/journeys" element={<JourneysPage />} />
         <Route path="/journeys/:slug" element={<JourneyPage />} />
         <Route path="/preview/:category" element={<CategoryPreviewPage />} />
@@ -207,7 +207,7 @@ export default function App() {
         <Route path="purchases" element={<PurchasesPage />} />
         <Route path="my-page" element={<MyPagePage />} />
         <Route path="support" element={<SupportPage />} />
-        {/* A member's own Journey (BGrowth Journeys, Portal migration 0066). */}
+        {/* A member's own Journey (BGrowth Journeys, Portal migration 0068). */}
         <Route path="journeys/:slug" element={<JourneyMemberPage />} />
         {/* Admin — BGrowth administrators only (portal.website_admins),
             re-checked by api/admin.ts on every request. Pages marked

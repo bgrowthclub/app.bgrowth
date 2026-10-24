@@ -1,5 +1,6 @@
 import { Route, UserPlus } from 'lucide-react'
 import Button from '../ui/Button'
+import { formatMinutes } from '../../modules/journeys/estimate'
 import { useIdentity } from '../../modules/identity/IdentityContext'
 
 interface Props {
@@ -7,6 +8,8 @@ interface Props {
   path: string
   stageCount: number
   actionCount: number
+  /** Estimated total minutes; 0 = not given. */
+  estimatedMinutes?: number
   isFree: boolean
   /** The member's own page for this Journey (start / continue). */
   memberPath: string
@@ -16,7 +19,7 @@ interface Props {
 // overview: starting and saving progress need a (free) account — enforced by
 // the database, not by this box. Signed-in members start or continue it on
 // their own Journey page (/platform/journeys/:slug).
-export default function JourneyStartPanel({ path, stageCount, actionCount, isFree, memberPath }: Props) {
+export default function JourneyStartPanel({ path, stageCount, actionCount, estimatedMinutes = 0, isFree, memberPath }: Props) {
   const { user, status } = useIdentity()
   const next = encodeURIComponent(path)
   return (
@@ -29,6 +32,7 @@ export default function JourneyStartPanel({ path, stageCount, actionCount, isFre
           <p className="font-display text-[15px] font-semibold text-navy">{isFree ? 'Free with a BGrowth account' : 'BGrowth Journey'}</p>
           <p className="text-[12.5px] text-navy/45">
             {stageCount} {stageCount === 1 ? 'stage' : 'stages'} · {actionCount} {actionCount === 1 ? 'action' : 'actions'}
+            {estimatedMinutes > 0 && <> · about {formatMinutes(estimatedMinutes)}</>}
           </p>
         </div>
       </div>

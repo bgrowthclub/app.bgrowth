@@ -4,6 +4,7 @@ import { AlertCircle, ArrowLeft, Flag, Route } from 'lucide-react'
 import SEO from '../components/seo/SEO'
 import EmptyState from '../components/ui/EmptyState'
 import Button from '../components/ui/Button'
+import JourneyAudience from '../components/journeys/JourneyAudience'
 import JourneyNotice from '../components/journeys/JourneyNotice'
 import JourneyStagePreview from '../components/journeys/JourneyStagePreview'
 import JourneyStartPanel from '../components/journeys/JourneyStartPanel'
@@ -16,7 +17,8 @@ import type { PortalCategoryRow } from '../modules/workspace/types/portal'
 type Load = { state: 'loading' } | { state: 'missing' } | { state: 'error' } | { state: 'ready'; journey: JourneyOutline; categories: PortalCategoryRow[] }
 
 // /journeys/:slug — a published Journey's public overview: goal,
-// introduction, the general notice and its stages in order. Read only: the
+// introduction, who it's for and what you'll have at the end, the general
+// notice and its stages in order (with level and estimated time when set). Read only: the
 // database returns published Journeys only, with unpublished resources
 // reduced to "coming soon"/"unavailable" (no names, links or prices).
 // Starting it and saving progress need a signed-in member (enforced by the
@@ -106,13 +108,19 @@ export default function JourneyPage() {
 
             {journey.intro && <p className="mt-7 whitespace-pre-line text-[15px] leading-relaxed text-navy/70">{journey.intro}</p>}
 
+            {(journey.audience || journey.outcomes.length > 0) && (
+              <div className="mt-7">
+                <JourneyAudience audience={journey.audience} outcomes={journey.outcomes} />
+              </div>
+            )}
+
             <div className="mt-7">
               <JourneyNotice text={journey.notice} validatedStates={journey.validatedStates} />
             </div>
 
             {/* On phones the start box comes right here, before the stages. */}
             <div className="mt-7 lg:hidden">
-              <JourneyStartPanel path={path} stageCount={journey.stages.length} actionCount={actionCount} isFree={journey.isFree} memberPath={`/platform/journeys/${journey.slug}`} />
+              <JourneyStartPanel path={path} stageCount={journey.stages.length} actionCount={actionCount} estimatedMinutes={journey.estimatedMinutes} isFree={journey.isFree} memberPath={`/platform/journeys/${journey.slug}`} />
             </div>
 
             <h2 className="mt-12 font-display text-2xl font-bold tracking-tight text-navy">The stages</h2>
@@ -122,7 +130,7 @@ export default function JourneyPage() {
           </div>
 
           <aside className="hidden lg:sticky lg:top-28 lg:block lg:self-start">
-            <JourneyStartPanel path={path} stageCount={journey.stages.length} actionCount={actionCount} isFree={journey.isFree} memberPath={`/platform/journeys/${journey.slug}`} />
+            <JourneyStartPanel path={path} stageCount={journey.stages.length} actionCount={actionCount} estimatedMinutes={journey.estimatedMinutes} isFree={journey.isFree} memberPath={`/platform/journeys/${journey.slug}`} />
           </aside>
         </div>
       </div>
