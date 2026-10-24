@@ -8,13 +8,12 @@
 // Supabase with the public key until the database rules change (Layer B).
 
 // These addresses (and everything under them) stay open: signing in, legal
-// pages, newsletter links, public tool links, Bruno's and Gika's pages and
-// Bruno's course. /register stays closed (decided 23/10/2026).
-// Released pages and BGrowth Demos (member_pages.is_demo, Portal migration
-// 0067, set in Admin → Pages) come from api/ingles.ts?action=site. The
-// Bruno/Gika entries below are a TEMPORARY fallback: remove them (here and
-// in api/ingles.ts) in a separate, reviewed commit only after 0067 is
-// applied and verified (decided 23/10/2026).
+// pages, newsletter links, public tool links and Bruno's course. /register
+// stays closed (decided 23/10/2026).
+// Member pages open while closed — released pages and BGrowth Demos
+// (member_pages.is_demo, Portal migration 0067, applied 24/10/2026; Bruno's
+// and Gika's pages are demos) — come from api/ingles.ts?action=site, never
+// from this list (their fixed addresses were removed on 24/10/2026).
 export const ALWAYS_OPEN_PATHS = [
   '/login',
   '/forgot-password',
@@ -26,9 +25,9 @@ export const ALWAYS_OPEN_PATHS = [
   '/refund-policy',
   // Public tool links shared on Etsy, Pinterest… (Sprint 120) must keep working.
   '/t',
-  '/p/bruno', // Bruno's page and the "Inglês de Mudança" course (decided 14/10/2026)
-  '/p/growwithbruno', // Bruno's page's address since 19/10/2026 (/p/bruno leads there)
-  '/p/dicasdagigika', // decided 19/10/2026
+  // The "Inglês de Mudança" course lives under /p/bruno/ingles-de-mudanca
+  // (decided 14/10/2026); /p/bruno itself redirects to Bruno's page.
+  '/p/bruno',
   '/ingles-de-mudanca',
 ]
 

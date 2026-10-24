@@ -227,11 +227,10 @@ const ALWAYS_OPEN_PATHS = [
   '/terms',
   '/refund-policy',
   '/t',
-  // TEMPORARY fallback until Portal migration 0067 (BGrowth Demos) is applied
-  // and verified — then removed in a separate, reviewed commit.
+  // Bruno's course (/p/bruno/ingles-de-mudanca). Member pages — Bruno's and
+  // Gika's included — open through openPageSlugs() (released + BGrowth Demos,
+  // Portal migration 0067, applied 24/10/2026), not through this list.
   '/p/bruno',
-  '/p/growwithbruno',
-  '/p/dicasdagigika',
   '/ingles-de-mudanca',
 ]
 
