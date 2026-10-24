@@ -411,6 +411,8 @@ export interface AdminMemberPagesOverview {
   pages: MemberPage[]
   // false until the database update (migration 0044) runs.
   ready: boolean
+  // Pages released before launch (open while the site is closed).
+  openPageIds?: string[]
 }
 
 // The team's page editor sends the shared draft plus the owner.
@@ -440,6 +442,8 @@ export interface AdminSiteOverview {
   ready: boolean
   /** false = visitors see "Coming soon"; only the team sees the site. */
   open: boolean
+  /** Subscribers may build/publish their own page (off before launch). */
+  selfService?: boolean
 }
 
 export interface AdminAnnouncementDraft {

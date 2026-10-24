@@ -60,6 +60,52 @@ export default function AdminMemberPagesPage() {
     )
   }
 
+  // Released before launch (Sprint 145): this one page opens at its own
+  // address while the rest of the site stays "Coming soon".
+  const [releasing, setReleasing] = useState<string | null>(null)
+  async function toggleRelease(p: MemberPage) {
+    const open = !(data?.openPageIds ?? []).includes(p.id)
+    setReleasing(p.id)
+    setError(null)
+    try {
+      await adminService.setMemberPageOpen(p.id, open)
+      setData((d) => (d ? { ...d, openPageIds: open ? [...(d.openPageIds ?? []), p.id] : (d.openPageIds ?? []).filter((id) => id !== p.id) } : d))
+      setNotice(
+        open
+          ? p.status === 'published'
+            ? `bgrowth.app/p/${p.slug} is open to anyone with the link (the rest of the site stays closed). It can take up to a minute.`
+            : `${p.display_name}’s page will open to anyone with the link once you publish it.`
+          : `bgrowth.app/p/${p.slug} is back behind “Coming soon” while the site is closed.`,
+      )
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Couldn’t change it.')
+    } finally {
+      setReleasing(null)
+    }
+  }
+
+  // BGrowth Demo (Portal migration 0067): public while the site is closed,
+  // and "Remove public access" can't take it away. Admins only.
+  const [demoBusy, setDemoBusy] = useState<string | null>(null)
+  async function toggleDemo(p: MemberPage) {
+    const demo = p.is_demo !== true
+    const question = demo
+      ? `Mark bgrowth.app/p/${p.slug} as a BGrowth Demo? It stays public while the site is closed (only while it's published and allowed by its plan).`
+      : `Remove BGrowth Demo status from bgrowth.app/p/${p.slug}? It then follows the normal rules: hidden while the site is closed unless you make it public.`
+    if (!window.confirm(question)) return
+    setDemoBusy(p.id)
+    setError(null)
+    try {
+      const saved = await adminService.setMemberPageDemo(p.id, demo)
+      setData((d) => (d ? { ...d, pages: d.pages.map((x) => (x.id === p.id ? { ...x, is_demo: saved } : x)) } : d))
+      setNotice(saved ? `bgrowth.app/p/${p.slug} is a BGrowth Demo. It can take up to a minute.` : `bgrowth.app/p/${p.slug} is no longer a BGrowth Demo.`)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Couldn’t change it.')
+    } finally {
+      setDemoBusy(null)
+    }
+  }
+
   async function confirmRemove() {
     if (!removing) return
     setBusy(true)
@@ -192,6 +238,11 @@ export default function AdminMemberPagesPage() {
                     window.scrollTo({ top: 0, behavior: 'smooth' })
                   }}
                   onRemove={() => setRemoving(p)}
+                  releasedEarly={(data.openPageIds ?? []).includes(p.id)}
+                  demoBusy={demoBusy === p.id}
+                  onToggleDemo={() => void toggleDemo(p)}
+                  releasing={releasing === p.id}
+                  onToggleRelease={() => void toggleRelease(p)}
                 />
               ))}
             </div>

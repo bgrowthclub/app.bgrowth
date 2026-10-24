@@ -1,4 +1,5 @@
-// The editable texts of the Home, About and Coming Soon pages: each field's
+// The editable texts of the Home, About and Coming Soon pages (and the
+// invitation at the bottom of member pages): each field's
 // built-in text, grouped as Admin → Site → Page texts shows them. A saved
 // version lives in portal.site_content key "page-texts" ({ fieldId: text })
 // and is read through lib/usePageTexts.ts; a field left out shows the text
@@ -14,7 +15,7 @@ export interface PageTextField {
 }
 
 export interface PageTextBlock {
-  page: 'Home' | 'About' | 'Coming soon'
+  page: 'Home' | 'About' | 'Coming soon' | 'Member pages'
   title: string
   fields: PageTextField[]
 }
@@ -221,6 +222,44 @@ export const PAGE_TEXT_BLOCKS: PageTextBlock[] = [
         'Interactive Workspaces™, ready-to-use documents and tools to help you organize, learn and grow. Leave your e-mail and we’ll let you know the day we open.',
       ),
       line('soon.button', 'Button', 'Notify me'),
+    ],
+  },
+  // The invitation above "Powered by BGrowth" on every public member page
+  // (components/find/MemberPagePromo). A page shows the version in its own
+  // language. The link: a page of this site (/…) or an https:// address.
+  {
+    page: 'Member pages',
+    title: 'Invitation — English pages',
+    fields: [
+      line('pages.promo.en.title', 'Title', 'Your business deserves a page of its own.'),
+      para('pages.promo.en.text', 'Sentence', 'Bring your links and contact information together in one simple page.'),
+      line('pages.promo.en.button', 'Button', 'Create your page with BGrowth'),
+    ],
+  },
+  {
+    page: 'Member pages',
+    title: 'Invitation — Portuguese pages',
+    fields: [
+      line('pages.promo.pt.title', 'Title', 'Seu negócio merece uma página só dele.'),
+      para('pages.promo.pt.text', 'Sentence', 'Reúna seus links e contatos em uma página simples.'),
+      line('pages.promo.pt.button', 'Button', 'Crie sua página com a BGrowth'),
+    ],
+  },
+  {
+    page: 'Member pages',
+    title: 'Where the button leads',
+    fields: [line('pages.promo.link', 'Link (a page of this site like /register, or an https:// address)', '/register?next=/platform/my-page')],
+  },
+  // The standard affiliate (earnings) note under the products of an
+  // Affiliate Picks page (components/find/MemberProductPicks, Sprint 146).
+  // Each page shows the version in its own language; the member can switch
+  // it off for their page ("Show the standard affiliate note").
+  {
+    page: 'Member pages',
+    title: 'Affiliate note — Affiliate Picks pages',
+    fields: [
+      para('pages.affiliate.en.note', 'English pages', 'Some links on this page are affiliate links: if you buy through them, I may earn a commission at no extra cost to you. Prices and availability are set by each store.'),
+      para('pages.affiliate.pt.note', 'Portuguese pages', 'Alguns links desta página são de afiliado: se você comprar por eles, posso receber uma comissão, sem custo extra para você. Preços e disponibilidade são definidos por cada loja.'),
     ],
   },
 ]

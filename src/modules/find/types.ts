@@ -16,6 +16,12 @@ export interface MemberPageService {
   title: string
   description?: string
   price?: string
+  // Since Sprint 145: each service can have its own picture and button — the
+  // button opens this service's own address (https).
+  image?: string
+  url?: string
+  // Button text (default: "Learn more"/"Saiba mais").
+  cta?: string
 }
 
 // Featured work — a product, a course, a portfolio piece.
@@ -86,6 +92,9 @@ export interface MemberPageBlockData {
   // products: the recommendations; body = the member's own disclosure
   // (a standard one is always shown too)
   products?: MemberPageProduct[]
+  // products: true = don't show the standard affiliate note (Admin → Site →
+  // Page texts) on this page. Absent = shown, as before (Sprint 146).
+  hideNote?: boolean
 }
 
 export interface MemberPageBlock {
@@ -97,10 +106,15 @@ export interface MemberPageBlock {
 
 export type MemberPageColor = 'blue' | 'teal' | 'green' | 'purple' | 'rose' | 'orange' | 'navy'
 
+// Page background (light tints only, so dark text stays readable). Open to
+// every page, whatever the plan. None = the look's own background.
+export type MemberPageBackground = 'cream' | 'mist' | 'sky' | 'mint' | 'blush' | 'lavender' | 'sand'
+
 export interface MemberPageTheme {
   color?: MemberPageColor
   // A wide image behind the top of the page.
   cover?: string
+  background?: MemberPageBackground
 }
 
 // What the subscriber's plan lets them do with their page.
@@ -126,6 +140,10 @@ export interface MemberPage {
   owner_managed?: boolean
   // The team switched the e-mail list on for this page (promotions etc.).
   signup_granted?: boolean
+  // A BGrowth Demo (Portal migration 0067): public while the site is closed,
+  // set only by a website admin in Admin → Pages. Never skips publication
+  // or plan checks. Absent before 0067.
+  is_demo?: boolean
   created_at: string
   updated_at: string
   // Admin → Pages only: the e-mail of the account linked as owner.

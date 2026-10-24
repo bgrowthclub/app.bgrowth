@@ -78,7 +78,10 @@ async function captchaOk(req: VercelRequest): Promise<boolean> {
 
 async function pageSignup(req: VercelRequest, db: Db) {
   const body = (req.body && typeof req.body === 'object' ? req.body : {}) as Record<string, unknown>
-  const slug = await resolveSlug(db, str(body.slug, 40).toLowerCase())
+  const asked = str(body.slug, 40).toLowerCase()
+  const slug = await resolveSlug(db, asked)
+  // Site closed: only pages open to visitors take sign-ups.
+  if (!(await pageOpenToVisitors(db, asked, slug))) throw new HttpError(404, 'This page isn’t taking sign-ups.')
   const email = str(body.email, 200).toLowerCase()
   if (!SIGNUP_EMAIL.test(email)) throw new HttpError(400, 'Write a valid e-mail.')
   if (body.consent !== true) throw new HttpError(400, 'Tick the box to agree to receive e-mails.')
@@ -152,7 +155,10 @@ async function trackEvent(req: VercelRequest, db: Db) {
   const kind = str(body.kind, 20)
   if (!SLUG.test(slug) || !TRACK_KINDS.includes(kind)) return { ok: true }
   const target = kind === 'click' ? str(body.target, 120) : ''
-  await track(db, await resolveSlug(db, slug), kind, target)
+  const resolved = await resolveSlug(db, slug)
+  // Site closed: visits to pages visitors can't see aren't counted.
+  if (!(await pageOpenToVisitors(db, slug, resolved))) return { ok: true }
+  await track(db, resolved, kind, target)
   return { ok: true }
 }
 
@@ -184,10 +190,13 @@ function safeJson(text: string): unknown {
 async function getCreator(req: VercelRequest, db: Db) {
   const slug = str(req.query.slug, 40).toLowerCase()
   if (!SLUG.test(slug)) throw new HttpError(400, 'Missing page.')
+  const resolved = await resolveSlug(db, slug)
+  // Site closed: only pages open to visitors (the course asks for "bruno").
+  if (!(await pageOpenToVisitors(db, slug, resolved))) return { creator: null }
   const { data, error } = await db
     .from('member_pages')
     .select('display_name, headline, bio, photo_url, links')
-    .eq('slug', await resolveSlug(db, slug))
+    .eq('slug', resolved)
     .eq('status', 'published')
     .maybeSingle()
   if (error) throw error
@@ -199,7 +208,101 @@ async function getCreator(req: VercelRequest, db: Db) {
 async function getSiteOpen(db: Db) {
   const { data, error } = await db.from('site_settings').select('value').eq('key', 'site_open').maybeSingle()
   if (error) throw error
-  return { open: data?.value === true }
+  return { open: data?.value === true, pages: await openPageSlugs(db) }
+}
+
+// ---------------------------------------------------------------------------
+// What visitors may reach while the site is closed — the same rule as the
+// browser's src/lib/siteAccess.ts (keep both in step). Used here so link
+// previews, page sign-ups, visit counts and "Quem criou" don't show or take
+// anything for pages visitors can't see. Not data protection: published
+// rows are still readable from Supabase with the public key (Layer B).
+const ALWAYS_OPEN_PATHS = [
+  '/login',
+  '/forgot-password',
+  '/reset-password',
+  '/verify-email',
+  '/newsletter',
+  '/privacy',
+  '/terms',
+  '/refund-policy',
+  '/t',
+  // Bruno's course (/p/bruno/ingles-de-mudanca). Member pages — Bruno's and
+  // Gika's included — open through openPageSlugs() (released + BGrowth Demos,
+  // Portal migration 0067, applied 24/10/2026), not through this list.
+  '/p/bruno',
+  '/ingles-de-mudanca',
+]
+
+function isAlwaysOpenPath(path: string) {
+  return ALWAYS_OPEN_PATHS.some((p) => path === p || path.startsWith(`${p}/`))
+}
+
+// The site's state for this request: open, plus the released pages'
+// addresses. Any error counts as closed with nothing released.
+async function siteState(db: Db): Promise<{ open: boolean; pages: string[] }> {
+  try {
+    const { data, error } = await db.from('site_settings').select('value').eq('key', 'site_open').maybeSingle()
+    if (error) return { open: false, pages: [] }
+    if (data?.value === true) return { open: true, pages: [] }
+    return { open: false, pages: await openPageSlugs(db) }
+  } catch {
+    return { open: false, pages: [] }
+  }
+}
+
+// A visitor's address, cleaned: one leading slash, no query/hash, no
+// trailing slash. Anything odd ("..", "//", backslashes) → null = closed.
+function cleanPath(asked: string): string | null {
+  const raw = '/' + asked.replace(/^\/+/, '').split(/[?#]/)[0]
+  if (/(^|\/)\.\.?(\/|$)|\/\/|\\/.test(raw)) return null
+  return raw.length > 1 ? raw.replace(/\/+$/, '') : raw
+}
+
+function pathOpenToVisitors(path: string | null, state: { open: boolean; pages: string[] }) {
+  if (state.open) return true
+  if (!path) return false
+  if (isAlwaysOpenPath(path)) return true
+  const slug = /^\/p\/([^/]+)$/.exec(path)?.[1]?.toLowerCase()
+  return Boolean(slug && state.pages.includes(slug))
+}
+
+// A member page asked for by slug (asked = as typed, resolved = its current
+// address): open when the site is, or when either address is open.
+async function pageOpenToVisitors(db: Db, asked: string, resolved: string) {
+  const state = await siteState(db)
+  return pathOpenToVisitors(`/p/${asked}`, state) || pathOpenToVisitors(`/p/${resolved}`, state)
+}
+
+// Member pages the team released before launch (Admin → Pages, key
+// 'open_pages', Sprint 145): their addresses (current and old ones) open to
+// everyone while the rest of the site is closed — published pages only.
+async function openPageSlugs(db: Db): Promise<string[]> {
+  try {
+    // Released in Admin → Pages ('open_pages')…
+    const { data } = await db.from('site_settings').select('value').eq('key', 'open_pages').maybeSingle()
+    const ids = (data?.value as { ids?: unknown } | null)?.ids
+    const list = Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string' && /^[0-9a-f-]{36}$/i.test(id)).slice(0, 500) : []
+    type Row = { slug: string; previous_slugs?: string[] | null; owner_managed?: boolean; user_id?: string | null }
+    const released = list.length ? await db.from('member_pages').select('*').in('id', list).eq('status', 'published') : { data: [], error: null }
+    // …and BGrowth Demos (member_pages.is_demo, Portal migration 0067). Before
+    // 0067 the column is missing: the query errors and counts as none.
+    const demos = await db.from('member_pages').select('*').eq('is_demo', true).eq('status', 'published')
+    const rows = [...((released.error ? [] : released.data ?? []) as Row[]), ...((demos.error ? [] : demos.data ?? []) as Row[])]
+    // Same as the database rule (0062/0067): a subscriber's page counts only
+    // while their plan includes a page — so the site never opens an address
+    // whose data the database would hide.
+    const levels = new Map<string, boolean>()
+    for (const r of rows) {
+      if (!r.owner_managed || !r.user_id || levels.has(r.user_id)) continue
+      const { data: level, error } = await db.rpc('member_page_level', { p_user: r.user_id })
+      levels.set(r.user_id, !error && (level === 'partial' || level === 'full'))
+    }
+    const visible = rows.filter((r) => !r.owner_managed || (r.user_id ? levels.get(r.user_id) === true : false))
+    return [...new Set(visible.flatMap((p) => [p.slug, ...(p.previous_slugs ?? [])]))]
+  } catch {
+    return []
+  }
 }
 
 // Link previews (Website Sprint 102): WhatsApp, Facebook/Instagram,
@@ -222,8 +325,12 @@ type SeoRow = { defaultImage?: string; pages?: Record<string, { title?: string; 
 async function linkPreview(req: VercelRequest, db: Db) {
   // The page address: ?path= from the rewrite, else the address the bot asked for.
   const asked = str(req.query.path, 300) || (req.url && !req.url.startsWith('/api/') ? req.url : '')
-  let path = '/' + asked.replace(/^\/+/, '').split(/[?#]/)[0]
-  if (path.length > 1) path = path.replace(/\/+$/, '')
+  const cleaned = cleanPath(asked)
+  const path = cleaned ?? '/'
+
+  // Site closed: an address visitors can't see gets the generic "Coming
+  // soon" preview — no product, page or article details (Layer A, 23/10/2026).
+  if (!pathOpenToVisitors(cleaned, await siteState(db))) return comingSoonPreview()
 
   const { data: seoRow } = await db.from('site_content').select('value').eq('key', 'seo').eq('locale', 'en').maybeSingle()
   const seo = ((seoRow as { value?: SeoRow } | null)?.value ?? {}) as SeoRow
@@ -291,6 +398,13 @@ async function linkPreview(req: VercelRequest, db: Db) {
     image ? `<meta name="twitter:image" content="${escapeHtml(image)}">` : '',
   ].filter(Boolean)
   return `<!doctype html><html lang="en"><head><meta charset="utf-8">${tags.join('')}</head><body><h1>${t}</h1><p>${d}</p><p><a href="${escapeHtml(url)}">${escapeHtml(url)}</a></p></body></html>`
+}
+
+// The preview for addresses visitors can't see while the site is closed.
+function comingSoonPreview() {
+  const t = escapeHtml('BGrowth — Coming soon')
+  const d = escapeHtml('BGrowth is getting ready. Leave your e-mail at bgrowth.app to know the day we open.')
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${t}</title><meta name="robots" content="noindex, nofollow"><meta name="description" content="${d}"><meta property="og:type" content="website"><meta property="og:site_name" content="BGrowth"><meta property="og:title" content="${t}"><meta property="og:description" content="${d}"><meta property="og:url" content="${OG_SITE}"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="${t}"><meta name="twitter:description" content="${d}"></head><body><h1>${t}</h1><p>${d}</p></body></html>`
 }
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {

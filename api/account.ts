@@ -24,6 +24,8 @@ import Stripe from 'stripe'
 //          team grants), each with where it came from. Nothing is invented:
 //          an access with no payment or team record says so.
 //
+//   (PUT/POST wait for Admin → Site "Subscribers build their own page", off
+//   before launch — GET says selfService.)
 //   GET/PUT ?resource=my-page, POST my-page-image → the subscriber's own
 //          public page (Sprint 127, see the My Page section below)
 //   POST   ?resource=plan-checkout | plan-switch | plan-cancel | plan-resume |
@@ -495,7 +497,9 @@ async function includedInPlan(db: Db, userId: string, productId: string): Promis
 // same cleaning in api/admin.ts and api/account.ts.
 const PAGE_BLOCK_TYPES = new Set(['hero', 'contact', 'highlights', 'services', 'about', 'testimonials', 'gallery', 'text', 'faq', 'area', 'cta', 'credentials', 'products', 'signup'])
 const PAGE_COLORS = new Set(['blue', 'teal', 'green', 'purple', 'rose', 'orange', 'navy'])
-const PAGE_TEMPLATES = new Set(['professional', 'local', 'creative', 'personal', 'affiliate', 'cleaning', 'notary', 'teacher', 'creator', 'blank'])
+const PAGE_TEMPLATES = new Set(['professional', 'local', 'creative', 'personal', 'affiliate', 'links', 'cleaning', 'notary', 'teacher', 'creator', 'blank'])
+// Background tints (light only — dark text stays readable), open to every plan.
+const PAGE_BACKGROUNDS = new Set(['cream', 'sand', 'mist', 'sky', 'mint', 'blush', 'lavender'])
 const pageText = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '')
 const pageUrl = (v: unknown) => {
   const s = pageText(v, 500)
@@ -518,6 +522,8 @@ function cleanPageBlocks(value: unknown) {
     if (pageText(d.title, 120)) data.title = pageText(d.title, 120)
     if (pageText(d.body, 2000)) data.body = pageText(d.body, 2000)
     if (pageText(d.button, 40)) data.button = pageText(d.button, 40)
+    // products: the member switched the standard affiliate note off (Sprint 146).
+    if (type === 'products' && d.hideNote === true) data.hideNote = true
     if (Array.isArray(d.items)) {
       data.items = d.items
         .slice(0, 12)
@@ -549,6 +555,7 @@ function cleanPageTheme(value: unknown) {
   if (typeof v.color === 'string' && PAGE_COLORS.has(v.color)) theme.color = v.color
   const cover = pageUrl(v.cover)
   if (cover) theme.cover = cover
+  if (typeof v.background === 'string' && PAGE_BACKGROUNDS.has(v.background)) theme.background = v.background
   return theme
 }
 
@@ -556,7 +563,7 @@ function cleanPageTheme(value: unknown) {
 // My Page (Sprint 127, Portal migration 0062): the subscriber edits their own
 // public page, as far as their plan allows (portal.member_page_level):
 //   'partial' (Pro) — a model's blocks in its order (no adding or reordering;
-//     hiding yes, since Sprint 128), the model's color, no cover, ONE featured photo/video, no
+//     hiding yes, since Sprint 128), the model's color (any background tint), no cover, ONE featured photo/video, no
 //     gallery photos; the address is set once, from the name.
 //   'full' (Enterprise) — everything, including the address.
 //   GET  ?resource=my-page        → { level, page }
@@ -574,6 +581,7 @@ const TEMPLATE_SEQUENCES: Record<string, string> = {
   creative: 'hero,highlights,gallery,about,services,testimonials,contact,cta',
   personal: 'hero,about,services,testimonials,highlights,faq,contact,cta',
   affiliate: 'hero,products,about,contact',
+  links: 'hero,contact,about',
   cleaning: 'hero,contact,services,highlights,testimonials,area,faq,cta',
   notary: 'hero,contact,services,area,about,faq,cta',
   teacher: 'hero,contact,highlights,services,text,testimonials,about,cta',
@@ -581,8 +589,18 @@ const TEMPLATE_SEQUENCES: Record<string, string> = {
   blank: 'hero,contact',
 }
 const TEMPLATE_COLORS: Record<string, string> = {
-  professional: 'navy', local: 'orange', creative: 'rose', personal: 'green', affiliate: 'blue',
+  professional: 'navy', local: 'orange', creative: 'rose', personal: 'green', affiliate: 'blue', links: 'teal',
   cleaning: 'teal', notary: 'navy', teacher: 'purple', creator: 'rose', blank: 'blue',
+}
+
+// Before launch only the team builds and publishes member pages (decided
+// 23/10/2026): subscribers may edit/publish their own page only once the
+// team switches it on in Admin → Site (site_settings key
+// 'member_pages_self_service'). No row, or anything but true = off.
+async function memberPagesSelfService(db: Db): Promise<boolean> {
+  const { data, error } = await db.from('site_settings').select('value').eq('key', 'member_pages_self_service').maybeSingle()
+  if (error) return false
+  return data?.value === true
 }
 
 async function memberPageLevel(db: Db, userId: string): Promise<'partial' | 'full' | null> {
@@ -667,7 +685,12 @@ function readMyPage(b: Record<string, any>) {
   })
   const services = (Array.isArray(b.services) ? b.services : []).slice(0, 12).flatMap((raw: any) => {
     const title = pageText(raw?.title, 100)
-    return title ? [{ title, description: pageText(raw?.description, 400), price: pageText(raw?.price, 40) }] : []
+    if (!title) return []
+    // Its own picture and button (Sprint 145): the button opens this service's address.
+    const url = pageUrl(raw?.url)
+    const image = pageUrl(raw?.image)
+    const cta = pageText(raw?.cta, 40)
+    return [{ title, description: pageText(raw?.description, 400), price: pageText(raw?.price, 40), ...(url ? { url } : {}), ...(image ? { image } : {}), ...(url && cta ? { cta } : {}) }]
   })
   const highlights = (Array.isArray(b.highlights) ? b.highlights : []).slice(0, 8).flatMap((raw: any) => {
     const title = pageText(raw?.title, 100)
@@ -709,7 +732,8 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string }, re
   }
 
   const templates = level ? await memberPageTemplates(db, user.id) : null
-  if (resource === 'my-page' && req.method === 'GET') return { level, templates, page: existing ?? null }
+  const selfService = await memberPagesSelfService(db)
+  if (resource === 'my-page' && req.method === 'GET') return { level, templates, selfService, page: existing ?? null }
   // The page's e-mail list (Sprint 139, Portal migration 0065) — the owner's,
   // including a page the team made for them.
   if (resource === 'my-page-signups') {
@@ -735,6 +759,8 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string }, re
   if (!level) throw new HttpError(403, 'Your plan doesn’t include a page. See the plans in Account → Membership.')
   // A page the team made for this member stays the team's to edit.
   if (existing && !existing.owner_managed) throw new HttpError(403, 'Your page is managed by the BGrowth team — talk to us through Support to change it.')
+  // Pre-launch: saving, publishing and uploading wait for the team's switch.
+  if (!selfService) throw new HttpError(403, 'Building your own page is coming soon — for now the BGrowth team builds pages. Talk to us through Support.')
 
   if (resource === 'my-page-image') {
     if (req.method !== 'POST') throw new HttpError(405, 'Use POST.')
@@ -768,7 +794,8 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string }, re
       const block = b.type === 'gallery' ? { ...rest, data: { ...(rest.data ?? {}), images: [] } } : rest
       return hidden && b.type !== 'hero' ? { ...block, hidden: true } : block
     }) as typeof input.blocks
-    input.theme = { color: TEMPLATE_COLORS[template] }
+    // The model's color; the background tint is open to every plan.
+    input.theme = { color: TEMPLATE_COLORS[template], ...(input.theme.background ? { background: input.theme.background } : {}) }
     input.highlights = input.highlights.slice(0, 1)
     // Pro: up to 12 product picks (Enterprise: 60).
     input.blocks = (input.blocks ?? []).map((b: any) =>

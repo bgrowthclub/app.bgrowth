@@ -7,7 +7,7 @@ import MemberPageView from './MemberPageView'
 import ResponsiveFrame from '../ui/ResponsiveFrame'
 import { shrinkImage } from '../../lib/shrinkImage'
 import { MEMBER_PAGE_LABELS, videoEmbed } from '../../modules/find/memberPageService'
-import { BLOCK_TYPES, LEGACY_BLOCKS, PAGE_COLORS, blockId, memberPageTemplates, switchTemplateBlocks, templateBlocks, templatePreview } from '../../modules/find/memberPageTemplates'
+import { BLOCK_TYPES, LEGACY_BLOCKS, PAGE_BACKGROUNDS, PAGE_COLORS, SINGLE_BLOCK_TYPES, blockId, memberPageTemplates, mergeDuplicateSections, switchTemplateBlocks, templateBlocks, templatePreview } from '../../modules/find/memberPageTemplates'
 import type {
   MemberPage,
   MemberPageBlock,
@@ -39,9 +39,17 @@ interface Props {
   extra?: ReactNode
   // The models the member's plan allows (null/undefined = all).
   allowedTemplates?: string[] | null
+  // Look only: nothing can be changed or saved (subscribers before launch).
+  readOnly?: boolean
 }
 
 const LABEL = 'mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-navy/40'
+
+// "Contact buttons" / "Contact buttons and About" — section names as the editor shows them.
+function sectionNames(types: MemberPageBlockType[]) {
+  const names = types.map((t) => `“${BLOCK_TYPES.find((b) => b.type === t)?.label ?? t}”`)
+  return names.length > 1 ? `${names.slice(0, -1).join(', ')} and ${names[names.length - 1]}` : names[0]
+}
 const SMALL = LINK_BUTTON
 
 const LINK_TYPES: { id: MemberPageLinkType; label: string; placeholder: string }[] = [
@@ -116,17 +124,23 @@ function Add({ label, onClick, disabled }: { label: string; onClick: () => void;
 
 // The page editor with a live preview: model, basics, look and the page's
 // sections (blocks). Shared by Admin → Pages and the subscriber's My Page.
-export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel, extra, allowedTemplates }: Props) {
+export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel, extra, allowedTemplates, readOnly = false }: Props) {
   const allowed = (id: string) => !allowedTemplates || allowedTemplates.includes(id)
   const free = mode !== 'partial'
   const [language, setLanguage] = useState<MemberPage['language']>(page?.language ?? 'en')
   const [template, setTemplate] = useState(page ? (page.template ?? 'blank') : '')
+  // A page saved with two copies of a one-per-page section (Sprint 151):
+  // folded on opening without losing anything; disagreeing copies are kept
+  // and reported (see mergeDuplicateSections).
+  const [duplicates] = useState(() => mergeDuplicateSections(page?.blocks ?? []))
   const [blocks, setBlocks] = useState<MemberPageBlock[]>(() => {
-    const own = page?.blocks?.length ? page.blocks : page ? LEGACY_BLOCKS.map((b) => ({ ...b, id: blockId() })) : []
+    const own = page?.blocks?.length ? duplicates.blocks : page ? LEGACY_BLOCKS.map((b) => ({ ...b, id: blockId() })) : []
     // A Pro page keeps exactly its model's sections (pages from the first
     // models move to the closest look).
     return page && !free && page.template !== template ? fitBlocks(template, page.language, own, false) : own
   })
+  // Still-disagreeing copies, live (the warning goes away once one is deleted).
+  const conflictsLeft = duplicates.conflicts.filter((t) => blocks.filter((x) => x.type === t).length > 1)
   const [theme, setTheme] = useState<MemberPageTheme>(page?.theme ?? {})
   const [displayName, setDisplayName] = useState(page?.display_name ?? '')
   const [slug, setSlug] = useState(page?.slug ?? '')
@@ -230,7 +244,8 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
     language,
     template: template || null,
     blocks: free ? blocks : blocks.map((b) => ({ ...b, ...(b.type === 'gallery' ? { data: { ...b.data, images: [] } } : {}) })),
-    theme: free ? theme : { color: templates.find((t) => t.id === template)?.color },
+    // The background tint is open to every plan; the color follows the model on Pro.
+    theme: free ? theme : { color: templates.find((t) => t.id === template)?.color, background: theme.background },
   }
 
   function blockEditor(block: MemberPageBlock) {
@@ -256,7 +271,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
         return (
           <div className="space-y-2">
             <p className="text-[12.5px] text-navy/50">
-              Add only products you recommend, with your own buy link (your affiliate code stays as you paste it). The page never shows prices, stars or reviews you didn’t write, and always shows a note that links may earn you a commission.
+              Add only products you recommend, with your own buy link (your affiliate code stays as you paste it). The page never shows prices, stars or reviews you didn’t write, and shows a standard note that links may earn you a commission (you can switch it off below).
             </p>
             <input value={d.title ?? ''} onChange={(e) => setBlockData(block.id, { title: e.target.value })} maxLength={120} className={INPUT} placeholder="Section title (default: My picks)" aria-label="Section title" />
             {products.map((p, i) => (
@@ -289,7 +304,14 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
             ))}
             <Add label="Add a product" disabled={products.length >= maxProducts} onClick={() => setBlockData(block.id, { products: [...products, { title: '', url: '', category: 'other' }] })} />
             {!free && <p className="text-[12px] text-navy/45">Your plan shows up to {maxProducts} products.</p>}
-            <textarea value={d.body ?? ''} onChange={(e) => setBlockData(block.id, { body: e.target.value })} rows={2} maxLength={600} className={INPUT} placeholder="Your own note about these links (optional — the standard affiliate note is always shown)" aria-label="Your note" />
+            <textarea value={d.body ?? ''} onChange={(e) => setBlockData(block.id, { body: e.target.value })} rows={2} maxLength={600} className={INPUT} placeholder="Your own note about these links (optional)" aria-label="Your note" />
+            <label className="flex items-start gap-2 text-[13px] text-navy/70">
+              <input type="checkbox" className="mt-0.5" checked={d.hideNote !== true} onChange={(e) => setBlockData(block.id, { hideNote: e.target.checked ? undefined : true })} aria-label="Show earnings statement" />
+              <span>
+                Show the standard affiliate (earnings) note
+                <span className="block text-[12px] text-navy/45">Hiding it only changes what the page shows. If you earn from these links, you are still responsible for telling visitors — e.g. in your own note above.</span>
+              </span>
+            </label>
           </div>
         )
       }
@@ -361,6 +383,20 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                     <input value={s.price ?? ''} onChange={(e) => setService(i, { price: e.target.value })} maxLength={40} className={INPUT} placeholder="Price (optional)" aria-label="Price" />
                   </div>
                   <input value={s.description ?? ''} onChange={(e) => setService(i, { description: e.target.value })} maxLength={400} className={INPUT} placeholder="Short description (optional)" aria-label="Description" />
+                  <input value={s.url ?? ''} onChange={(e) => setService(i, { url: e.target.value })} className={INPUT} placeholder="Button link for this service (https://…, optional)" aria-label="Service link" />
+                  {s.url?.trim() && !/^https:\/\/\S+$/i.test(s.url.trim()) && <p className="text-[12.5px] text-red-500">Use a full address starting with https://</p>}
+                  {s.url?.trim() && <input value={s.cta ?? ''} onChange={(e) => setService(i, { cta: e.target.value })} maxLength={40} className={INPUT} placeholder="Button text (default: Learn more)" aria-label="Service button text" />}
+                  <div className="flex items-center gap-3">
+                    {s.image && <img src={s.image} alt="" className="h-10 w-16 rounded-md object-cover" />}
+                    <button type="button" disabled={uploading !== null} onClick={() => pickImage(`s${i}`, 1200, (url) => setService(i, { image: url }))} className={`${SMALL} inline-flex items-center gap-1.5 text-primary hover:bg-bg-soft`}>
+                      <ImagePlus size={14} /> {uploading === `s${i}` ? 'Uploading…' : s.image ? 'Change image' : 'Add image'}
+                    </button>
+                    {s.image && (
+                      <button type="button" onClick={() => setService(i, { image: '' })} className={`${SMALL} text-navy/50 hover:bg-bg-soft`}>
+                        Remove image
+                      </button>
+                    )}
+                  </div>
                 </Row>
               ))}
             </div>
@@ -505,7 +541,9 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
               <button type="button" onClick={() => setCandidate(template ? '' : null)} className={`${SMALL} inline-flex items-center gap-1.5 text-navy/60 hover:bg-bg-soft`}>
                 <ArrowLeft size={14} /> See the other models
               </button>
-              {allowed(chosen.id) ? (
+              {readOnly ? (
+                <span className="text-[13px] font-semibold text-navy/45">Coming soon</span>
+              ) : allowed(chosen.id) ? (
                 <Button type="button" onClick={() => chooseTemplate(chosen.id)} className={SMALL_BUTTON}>
                   <Check size={16} /> {template === chosen.id ? 'Keep this model' : 'Use this model'}
                 </Button>
@@ -584,8 +622,22 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
         )}
       </div>
 
+      {duplicates.merged.length > 0 && (
+        <p className="mb-5 rounded-xl bg-bg-soft px-4 py-3 text-[13px] text-navy/65">
+          This page had an extra, empty copy of the {sectionNames(duplicates.merged)} section (it never showed on the page). It was removed here — nothing
+          else changed. Saving keeps one.
+        </p>
+      )}
+      {conflictsLeft.length > 0 && (
+        <p className="mb-5 rounded-xl bg-amber-50 px-4 py-3 text-[13px] text-amber-800">
+          <strong>Please review:</strong> this page has more than one {sectionNames(conflictsLeft)} section, and the extra copy has content of its own. Only
+          the first one shows on the page. All copies are kept below, unchanged — delete the one you don’t want. Saving now keeps them all, as they are.
+        </p>
+      )}
+
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)]">
-        <div className="min-w-0 space-y-7">
+        {/* Read-only: every field and button on this side is disabled. */}
+        <fieldset disabled={readOnly} className={`min-w-0 space-y-7 ${readOnly ? 'opacity-70' : ''}`}>
           <section className="space-y-4">
             <span className={LABEL}>Basics</span>
             <div className="flex items-center gap-4">
@@ -661,6 +713,34 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
               </label>
             </div>
             {extra}
+          </section>
+
+          <section className="space-y-3">
+            <span className={LABEL}>Background</span>
+            <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                title="Default"
+                aria-label="Default background"
+                aria-pressed={!theme.background}
+                onClick={() => setTheme((t) => ({ ...t, background: undefined }))}
+                className={`h-8 rounded-full border border-navy/15 bg-white px-3 text-[12px] font-semibold text-navy/60 ring-offset-2 transition ${!theme.background ? 'ring-2 ring-navy' : ''}`}
+              >
+                Default
+              </button>
+              {PAGE_BACKGROUNDS.map((c) => (
+                <button
+                  key={c.id}
+                  type="button"
+                  title={c.label}
+                  aria-label={`${c.label} background`}
+                  aria-pressed={theme.background === c.id}
+                  onClick={() => setTheme((t) => ({ ...t, background: c.id }))}
+                  className={`h-8 w-8 rounded-full border border-navy/15 ring-offset-2 transition ${theme.background === c.id ? 'ring-2 ring-navy' : ''}`}
+                  style={{ background: c.hex }}
+                />
+              ))}
+            </div>
           </section>
 
           {free && (
@@ -757,28 +837,35 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
             {free &&
               (adding ? (
                 <div className="mt-3 grid gap-2 sm:grid-cols-2">
-                  {BLOCK_TYPES.map((t) => (
+                  {BLOCK_TYPES.map((t) => {
+                    // Name, buttons, services, featured work… belong to the
+                    // page: a second copy would only show the same items again.
+                    const taken = SINGLE_BLOCK_TYPES.includes(t.type) && blocks.some((b) => b.type === t.type)
+                    return (
                     <button
                       key={t.type}
                       type="button"
+                      disabled={taken}
+                      title={taken ? 'Already on the page' : undefined}
                       onClick={() => {
                         const id = blockId()
                         setBlocks((l) => [...l, { id, type: t.type, ...(['testimonials', 'faq', 'credentials'].includes(t.type) ? { data: { items: [{ title: '', body: '' }] } } : {}) }])
                         setOpen(id)
                         setAdding(false)
                       }}
-                      className="rounded-xl border border-navy/10 px-3 py-2.5 text-left transition-colors hover:border-primary/40 hover:bg-bg-soft"
+                      className="rounded-xl border border-navy/10 px-3 py-2.5 text-left transition-colors hover:border-primary/40 hover:bg-bg-soft disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:border-navy/10 disabled:hover:bg-transparent"
                     >
                       <span className="block text-[13.5px] font-semibold text-navy">{t.label}</span>
-                      <span className="block text-[12px] text-navy/45">{t.hint}</span>
+                      <span className="block text-[12px] text-navy/45">{taken ? 'Already on the page' : t.hint}</span>
                     </button>
-                  ))}
+                    )
+                  })}
                 </div>
               ) : (
                 <Add label="Add a section" disabled={blocks.length >= 30} onClick={() => setAdding(true)} />
               ))}
           </section>
-        </div>
+        </fieldset>
 
         <aside className="min-w-0 lg:sticky lg:top-24 lg:self-start">
           <div className="mb-1.5 flex items-center justify-between gap-2">
@@ -817,7 +904,13 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
       </div>
 
       {error && <p className="mt-6 text-[14px] text-red-500">{error}</p>}
+      {!readOnly && conflictsLeft.length > 0 && (
+        <p className="mt-6 text-right text-[12.5px] font-semibold text-amber-700">{sectionNames(conflictsLeft)} still has more than one copy — saving keeps them all.</p>
+      )}
 
+      {readOnly ? (
+        <p className="mt-6 border-t border-navy/[0.06] pt-5 text-right text-[13px] font-semibold text-navy/45">Coming soon — saving and publishing are not open yet.</p>
+      ) : (
       <div className="mt-6 flex flex-wrap items-center justify-end gap-2 border-t border-navy/[0.06] pt-5">
         <Button type="button" variant="secondary" onClick={() => void save('draft')} disabled={saving !== null || uploading !== null} className={SMALL_BUTTON}>
           {saving === 'draft' ? 'Saving…' : published ? 'Unpublish' : 'Save as draft'}
@@ -826,6 +919,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
           {saving === 'published' ? 'Publishing…' : published ? 'Save changes' : 'Publish'}
         </Button>
       </div>
+      )}
     </div>
   )
 }

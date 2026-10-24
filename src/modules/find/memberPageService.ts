@@ -28,7 +28,8 @@ export const MEMBER_PAGE_LABELS = {
     about: 'About',
     contact: 'Get in touch',
     learnMore: 'Learn more',
-    madeWith: 'Made with BGrowth',
+    // Brand line: the same in every language (shown with translate="no").
+    madeWith: 'Powered by BGrowth',
     notFound: 'This page isn’t available.',
     credentials: 'Licenses & credentials',
     credentialsNote: 'As stated by this professional — not verified by BGrowth.',
@@ -48,8 +49,6 @@ export const MEMBER_PAGE_LABELS = {
     seeProduct: 'See product',
     seePicks: 'See my picks',
     noPicks: 'Nothing here yet.',
-    affiliateNote:
-      'Some links on this page are affiliate links: if you buy through them, I may earn a commission at no extra cost to you. Prices and availability are set by each store.',
     categories: { car: 'Car & Driving', work: 'Work & Business', home: 'Home & Living', tech: 'Tech & Gadgets', travel: 'Travel', finance: 'Money & Finance', learning: 'Learning', other: 'Other' },
   },
   pt: {
@@ -58,7 +57,7 @@ export const MEMBER_PAGE_LABELS = {
     about: 'Sobre',
     contact: 'Fale comigo',
     learnMore: 'Saiba mais',
-    madeWith: 'Feito com BGrowth',
+    madeWith: 'Powered by BGrowth',
     notFound: 'Esta página não está disponível.',
     credentials: 'Licenças e credenciais',
     credentialsNote: 'Informadas pelo profissional — não verificadas pela BGrowth.',
@@ -78,8 +77,6 @@ export const MEMBER_PAGE_LABELS = {
     seeProduct: 'Ver produto',
     seePicks: 'Ver minhas indicações',
     noPicks: 'Nada aqui ainda.',
-    affiliateNote:
-      'Alguns links desta página são de afiliado: se você comprar por eles, posso receber uma comissão, sem custo extra para você. Preços e disponibilidade são definidos por cada loja.',
     categories: { car: 'Carro', work: 'Trabalho e negócios', home: 'Casa', tech: 'Tecnologia', travel: 'Viagem', finance: 'Finanças', learning: 'Aprendizado', other: 'Outros' },
   },
 } as const
@@ -233,7 +230,7 @@ async function accountCall<T>(method: 'GET' | 'PUT' | 'POST' | 'DELETE', resourc
 
 export const myPageService = {
   get() {
-    return accountCall<{ level: MemberPageLevel | null; templates?: string[] | null; page: MemberPage | null }>('GET', 'my-page')
+    return accountCall<{ level: MemberPageLevel | null; templates?: string[] | null; selfService?: boolean; page: MemberPage | null }>('GET', 'my-page')
   },
   async save(draft: MemberPageDraft) {
     return (await accountCall<{ page: MemberPage }>('PUT', 'my-page', draft)).page

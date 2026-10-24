@@ -3,9 +3,10 @@ import { MEMBER_LINK_ICONS } from './memberLinkIcons'
 import MemberSiteView from './MemberSiteView'
 import MemberProductPicks from './MemberProductPicks'
 import MemberPageSignupForm from './MemberPageSignupForm'
+import MemberPagePromo from './MemberPagePromo'
 import type { CSSProperties } from 'react'
 import { MEMBER_PAGE_LABELS, memberLinkHref, memberLinkLabel, videoEmbed } from '../../modules/find/memberPageService'
-import { PAGE_COLORS, pageBlocks, pageSkin } from '../../modules/find/memberPageTemplates'
+import { PAGE_BACKGROUNDS, PAGE_COLORS, pageBlocks, pageSkin } from '../../modules/find/memberPageTemplates'
 import type { MemberPage, MemberPageBlock } from '../../modules/find/types'
 
 const ICONS = MEMBER_LINK_ICONS
@@ -46,9 +47,11 @@ export default function MemberPageView({ page, preview = false, onLinkClick }: P
       : { href: memberLinkHref(type, url), target: '_blank', rel: 'noreferrer', onClick: () => onLinkClick?.(target) }
 
   const color = PAGE_COLORS.find((c) => c.id === page.theme?.color)
-  const style = color
-    ? ({ '--color-primary-rgb': color.rgb, '--color-primary-accent-rgb': color.rgb, '--color-primary': `rgb(${color.rgb})`, '--color-primary-accent': `rgb(${color.rgb})` } as CSSProperties)
-    : undefined
+  const background = PAGE_BACKGROUNDS.find((c) => c.id === page.theme?.background)
+  const style = {
+    ...(color ? { '--color-primary-rgb': color.rgb, '--color-primary-accent-rgb': color.rgb, '--color-primary': `rgb(${color.rgb})`, '--color-primary-accent': `rgb(${color.rgb})` } : {}),
+    ...(background ? { backgroundColor: background.hex } : {}),
+  } as CSSProperties
   const cover = page.theme?.cover
 
   function renderBlock(block: MemberPageBlock) {
@@ -175,11 +178,17 @@ export default function MemberPageView({ page, preview = false, onLinkClick }: P
         <section className="mt-10">
           <h2 className="font-display text-lg font-bold text-navy">{t.services}</h2>
           <ul className="mt-3 divide-y divide-navy/[0.06] overflow-hidden rounded-2xl border border-navy/[0.08] bg-white">
-            {page.services.map((s) => (
-              <li key={s.title} className="flex items-start justify-between gap-4 px-4 py-3.5">
-                <span>
+            {page.services.map((s, i) => (
+              <li key={s.title + i} className="flex items-start gap-3 px-4 py-3.5">
+                {s.image && <img src={s.image} alt="" className="h-14 w-14 shrink-0 rounded-xl object-cover" />}
+                <span className="min-w-0 flex-1">
                   <span className="block font-semibold text-navy">{s.title}</span>
                   {s.description && <span className="block text-[14px] text-navy/55">{s.description}</span>}
+                  {s.url && (
+                    <a {...linkProps('website', s.url, `service:${s.title}`)} className="mt-1.5 inline-flex items-center gap-1 text-[13.5px] font-semibold text-primary hover:underline">
+                      {s.cta?.trim() || t.learnMore} <ArrowRight size={14} aria-hidden />
+                    </a>
+                  )}
                 </span>
                 {s.price && <span className="shrink-0 font-semibold text-navy">{s.price}</span>}
               </li>
@@ -267,7 +276,7 @@ export default function MemberPageView({ page, preview = false, onLinkClick }: P
         if (!(d.products ?? []).length) return null
         return (
           <section className="mt-10">
-            <MemberProductPicks products={d.products ?? []} title={d.title} note={d.body} language={page.language} preview={preview} onLinkClick={onLinkClick} headingClass="font-display text-xl font-bold text-navy" />
+            <MemberProductPicks products={d.products ?? []} title={d.title} note={d.body} hideNote={d.hideNote === true} language={page.language} preview={preview} onLinkClick={onLinkClick} headingClass="font-display text-xl font-bold text-navy" />
           </section>
         )
       case 'cta': {
@@ -308,7 +317,17 @@ export default function MemberPageView({ page, preview = false, onLinkClick }: P
           })}
 
       <footer className="mt-14 text-center">
-        <a href={preview ? '#' : '/'} onClick={preview ? (e) => e.preventDefault() : undefined} className="text-[12.5px] font-medium text-navy/35 hover:text-navy/60">
+        {!preview && (
+          <div className="mb-5">
+            <MemberPagePromo language={page.language} />
+          </div>
+        )}
+        <a
+          href={preview ? '#' : '/'}
+          onClick={preview ? (e) => e.preventDefault() : undefined}
+          translate="no"
+          className="notranslate text-[12.5px] font-medium text-navy/35 hover:text-navy/60"
+        >
           {t.madeWith}
         </a>
       </footer>
