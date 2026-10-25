@@ -12,6 +12,9 @@ import CheckoutSuccessPage from './pages/CheckoutSuccessPage'
 import SystemOverviewPage from './pages/SystemOverviewPage'
 import SystemModulePage from './pages/SystemModulePage'
 import WorkspacesPage from './pages/WorkspacesPage'
+import JourneysPage from './pages/JourneysPage'
+import JourneyPage from './pages/JourneyPage'
+import JourneyMemberPage from './pages/platform/JourneyMemberPage'
 import CategoryPreviewPage from './pages/CategoryPreviewPage'
 import ResourcesPage from './pages/ResourcesPage'
 import AboutPage from './pages/AboutPage'
@@ -110,6 +113,9 @@ export default function App() {
         <Route path="/system/:slug" element={<SystemOverviewPage />} />
         <Route path="/system/:slug/module/:moduleSlug" element={<SystemModulePage />} />
         <Route path="/workspaces" element={<WorkspacesPage />} />
+        {/* BGrowth Journeys (Portal migration 0068) — this site only. */}
+        <Route path="/journeys" element={<JourneysPage />} />
+        <Route path="/journeys/:slug" element={<JourneyPage />} />
         <Route path="/preview/:category" element={<CategoryPreviewPage />} />
         <Route path="/resources" element={RESOURCES_LIVE ? <ResourcesPage /> : <KnowledgeComingSoonPage />} />
 
@@ -201,6 +207,8 @@ export default function App() {
         <Route path="purchases" element={<PurchasesPage />} />
         <Route path="my-page" element={<MyPagePage />} />
         <Route path="support" element={<SupportPage />} />
+        {/* A member's own Journey (BGrowth Journeys, Portal migration 0068). */}
+        <Route path="journeys/:slug" element={<JourneyMemberPage />} />
         {/* Admin — BGrowth administrators only (portal.website_admins),
             re-checked by api/admin.ts on every request. Pages marked
             `support` are open to the Support role too; the rest are for
