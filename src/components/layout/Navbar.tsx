@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import { Link, NavLink } from 'react-router-dom'
-import { Menu, X, LogOut } from 'lucide-react'
+import { Menu, X, LogOut, LayoutDashboard } from 'lucide-react'
 import logo from '../../assets/logo.png'
 import Button from '../ui/Button'
 import { useSiteNavigation } from '../../lib/useSiteNavigation'
@@ -152,6 +152,21 @@ export default function Navbar({ mode = 'public', banner }: { mode?: NavMode; ba
               </button>
             )}
           </div>
+
+          {/* On phones the "My Dashboard" button above is inside the menu
+              sheet, so a signed-in member had to open the menu just to get
+              back to their area (reported 25/10/2026). This icon puts that
+              one tap back in the header, next to the menu button. */}
+          {mode === 'public' && user && (
+            <Link
+              to="/platform/dashboard"
+              className="grid h-9 w-9 place-items-center rounded-full text-primary transition-colors hover:bg-primary/[0.08] lg:hidden"
+              aria-label="My Dashboard"
+              title="My Dashboard"
+            >
+              <LayoutDashboard size={19} />
+            </Link>
+          )}
 
           <button
             className="grid h-9 w-9 place-items-center rounded-full text-navy lg:hidden"
