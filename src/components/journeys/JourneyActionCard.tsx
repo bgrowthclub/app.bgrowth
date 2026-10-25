@@ -2,8 +2,31 @@ import { formatMinutes } from '../../modules/journeys/estimate'
 import { Link } from 'react-router-dom'
 import { Check, Clock, ExternalLink, Lock, Sparkles } from 'lucide-react'
 import { ACTION_KIND } from './JourneyStagePreview'
+import { videoEmbed } from '../../modules/find/memberPageService'
+import type { VideoEmbed } from '../../modules/find/memberPageService'
 import type { ActionAccess } from '../../modules/journeys/resourceAccess'
 import type { JourneyAction } from '../../modules/journeys/types'
+
+// The player for a video action. Same frame the articles use, so a vertical
+// video (Shorts, Reels, TikTok) gets a taller, narrower box.
+function JourneyVideo({ embed, title }: { embed: VideoEmbed; title: string }) {
+  return (
+    <div
+      className={`mt-3 overflow-hidden rounded-xl2 bg-navy ${
+        embed.vertical ? 'aspect-[9/16] max-h-[460px] max-w-[260px]' : 'aspect-video w-full'
+      }`}
+    >
+      <iframe
+        src={embed.src}
+        title={title}
+        className="h-full w-full"
+        allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+        allowFullScreen
+        loading="lazy"
+      />
+    </div>
+  )
+}
 
 interface Props {
   action: JourneyAction
@@ -132,6 +155,14 @@ export default function JourneyActionCard({ action, access, done, markable, onTo
           </div>
           <p className={`mt-1 font-semibold leading-snug ${done ? 'text-navy/50 line-through decoration-navy/20' : 'text-navy'}`}>{action.title}</p>
           {action.instructions && <p className="mt-1.5 whitespace-pre-line text-[14px] leading-relaxed text-navy/65">{action.instructions}</p>}
+          {/* A video action plays here, on the member's own Journey page, so
+              they don't lose their place (decided 25/10/2026). BGrowth hosts
+              nothing: the file stays on YouTube/TikTok/Instagram and this is
+              their own player, the same one articles and member pages use.
+              A link we can't recognise keeps the plain button below. */}
+          {action.kind === 'video' && access.kind === 'external' && videoEmbed(access.href) && (
+            <JourneyVideo embed={videoEmbed(access.href)!} title={action.title} />
+          )}
           {access.kind !== 'task' && (
             <div className="mt-3">
               <ResourceButton access={access} />
