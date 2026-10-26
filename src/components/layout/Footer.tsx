@@ -1,6 +1,5 @@
 import { Link } from 'react-router-dom'
 import { Instagram, Facebook, Youtube, Linkedin, ArrowRight, MessageCircle, AtSign, Twitter, Send, Ghost, Podcast } from 'lucide-react'
-import logo from '../../assets/logo.png'
 import Button from '../ui/Button'
 import { useNewsletterSignup } from '../../modules/newsletter/useNewsletterSignup'
 import SignupInterests from '../newsletter/SignupInterests'
@@ -57,8 +56,11 @@ export default function Footer() {
       <div className="container-px mx-auto max-w-page py-16">
         <div className="grid gap-12 lg:grid-cols-[1.1fr_1fr_1.2fr]">
           <div>
-            <Link to="/" className="flex items-center gap-2.5">
-              <img src={logo} alt="BGrowth" className="h-8 w-8 object-contain" />
+            {/* No logo mark here: the Navbar is fixed, so on a phone the
+                two sat one above the other when the page was scrolled to
+                the footer and read as a duplicate (reported 26/10/2026).
+                The wordmark alone still identifies the footer. */}
+            <Link to="/" className="inline-flex items-center">
               <span className="font-display text-[17px] font-bold tracking-tight text-navy">
                 BGrowth
               </span>
