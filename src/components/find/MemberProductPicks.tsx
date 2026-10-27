@@ -24,6 +24,10 @@ interface Props {
   note?: string
   // The member switched the standard affiliate note off for their page.
   hideNote?: boolean
+  // 'own' = the member's own catalog (Empresas): the standard affiliate note
+  // never shows and the links aren't marked sponsored, because nobody else
+  // is paying them. Default stays the affiliate showcase.
+  kind?: 'affiliate' | 'own'
   language: MemberPage['language']
   preview?: boolean
   onLinkClick?: (target: string) => void
@@ -31,16 +35,18 @@ interface Props {
   headingClass?: string
 }
 
-// Affiliate Picks (Sprint 131): the member's recommended products — favorites
-// first, then all of them with category filters and a search. Only what the
-// member entered is shown (no prices, ratings or reviews); buy links open as
-// typed, marked sponsored. The standard affiliate note shows unless the
-// member switched it off (Sprint 146).
-export default function MemberProductPicks({ products, title, note, hideNote = false, language, preview = false, onLinkClick, headingClass }: Props) {
+// The product showcase, used by two models: Affiliate Picks (products the
+// member recommends) and Empresas (the member's own catalog) — same cards,
+// one difference, `kind`. Favorites first, then all of them with category
+// filters and a search. Only what the member entered is shown (no prices,
+// ratings or reviews); links open as typed. On an affiliate page they are
+// marked sponsored and the standard note shows unless the member switched it
+// off (Sprint 146); on an Empresas page neither applies.
+export default function MemberProductPicks({ products, title, note, hideNote = false, kind = 'affiliate', language, preview = false, onLinkClick, headingClass }: Props) {
   const t = MEMBER_PAGE_LABELS[language] ?? MEMBER_PAGE_LABELS.en
   // The standard note, edited in Admin → Site → Page texts → Member pages.
   const standardNote = usePageTexts().text(`pages.affiliate.${language === 'pt' ? 'pt' : 'en'}.note`)
-  const showStandard = !hideNote && Boolean(standardNote.trim())
+  const showStandard = kind === 'affiliate' && !hideNote && Boolean(standardNote.trim())
   const [category, setCategory] = useState<MemberPageProductCategory | 'all'>('all')
   const [query, setQuery] = useState('')
   const items = products.filter((p) => p.title.trim() && p.url.trim())
@@ -58,7 +64,7 @@ export default function MemberProductPicks({ products, title, note, hideNote = f
   const open = (p: MemberPageProduct) =>
     preview
       ? { href: '#', onClick: (e: MouseEvent) => e.preventDefault() }
-      : { href: p.url.trim(), target: '_blank', rel: 'sponsored nofollow noopener noreferrer', onClick: () => onLinkClick?.(`featured:${p.title}`) }
+      : { href: p.url.trim(), target: '_blank', rel: kind === 'own' ? 'noopener noreferrer' : 'sponsored nofollow noopener noreferrer', onClick: () => onLinkClick?.(`featured:${p.title}`) }
 
   const card = (p: MemberPageProduct, i: number, wide = false) => {
     const Icon = PRODUCT_CATEGORY_ICONS[p.category ?? 'other']

@@ -239,7 +239,14 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
     setBlocks((list) => list.map((b) => (b.id === id ? { ...b, data: { ...(b.data ?? {}), ...patch } } : b)))
   const setService = (i: number, patch: Partial<MemberPageService>) => setServices((l) => l.map((x, j) => (j === i ? { ...x, ...patch } : x)))
   const setHighlight = (i: number, patch: Partial<MemberPageHighlight>) => setHighlights((l) => l.map((x, j) => (j === i ? { ...x, ...patch } : x)))
-  const label = (type: MemberPageBlockType) => BLOCK_TYPES.find((t) => t.type === type)?.label ?? type
+  // The products section is the member's own catalog on an Empresas page and
+  // their recommendations on an affiliate one, so it is named for each.
+  const ownCatalog = template === 'business'
+  const sectionLabel = (type: MemberPageBlockType) =>
+    type === 'products' && ownCatalog ? 'Products' : BLOCK_TYPES.find((t) => t.type === type)?.label ?? type
+  const sectionHint = (type: MemberPageBlockType) =>
+    type === 'products' && ownCatalog ? 'What you sell, with a buy or quote button' : BLOCK_TYPES.find((t) => t.type === type)?.hint
+  const label = sectionLabel
   // The page as it would be published right now (what the previews show).
   const current = {
     display_name: displayName.trim() || 'Name',
@@ -264,11 +271,11 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
         return (
           <div className="space-y-2">
             <p className="text-[13px] text-navy/55">Shows your photo, name, what you do and where — edit them in “Basics” above.</p>
-            {template === 'affiliate' && (
+            {(template === 'affiliate' || ownCatalog) && (
               <>
-                <input value={d.title ?? ''} onChange={(e) => setBlockData(block.id, { title: e.target.value })} maxLength={120} className={INPUT} placeholder="Small line above the title (e.g. Tools · Products · Resources)" aria-label="Small line" />
-                <textarea value={d.body ?? ''} onChange={(e) => setBlockData(block.id, { body: e.target.value })} rows={3} maxLength={400} className={INPUT} placeholder="A sentence about what you recommend" aria-label="Intro" />
-                <input value={d.button ?? ''} onChange={(e) => setBlockData(block.id, { button: e.target.value })} maxLength={40} className={INPUT} placeholder="Button text (default: See my picks)" aria-label="Button text" />
+                <input value={d.title ?? ''} onChange={(e) => setBlockData(block.id, { title: e.target.value })} maxLength={120} className={INPUT} placeholder={ownCatalog ? 'Small line above the title (e.g. Products · Services)' : 'Small line above the title (e.g. Tools · Products · Resources)'} aria-label="Small line" />
+                <textarea value={d.body ?? ''} onChange={(e) => setBlockData(block.id, { body: e.target.value })} rows={3} maxLength={400} className={INPUT} placeholder={ownCatalog ? 'A sentence about what you sell' : 'A sentence about what you recommend'} aria-label="Intro" />
+                <input value={d.button ?? ''} onChange={(e) => setBlockData(block.id, { button: e.target.value })} maxLength={40} className={INPUT} placeholder={ownCatalog ? 'Button text (e.g. See our products)' : 'Button text (default: See my picks)'} aria-label="Button text" />
                 <p className="text-[12.5px] text-navy/45">The big image on the right is your cover image (or your photo).</p>
               </>
             )}
@@ -276,13 +283,19 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
         )
       case 'products': {
         const products = d.products ?? []
+        // Empresas: the member's own catalog, so nothing here talks about
+        // affiliate links or commission, and there is no standard note to
+        // switch off.
+        const own = template === 'business'
         const setProduct = (i: number, patch: Partial<MemberPageProduct>) => setBlockData(block.id, { products: products.map((x, j) => (j === i ? { ...x, ...patch } : x)) })
         return (
           <div className="space-y-2">
             <p className="text-[12.5px] text-navy/50">
-              Add only products you recommend, with your own buy link (your affiliate code stays as you paste it). The page never shows prices, stars or reviews you didn’t write, and shows a standard note that links may earn you a commission (you can switch it off below).
+              {own
+                ? 'Add what you sell, with the link that takes the visitor to buy it or ask for a quote — your store, your WhatsApp, your order form. The page never shows prices, stars or reviews you didn’t write.'
+                : 'Add only products you recommend, with your own buy link (your affiliate code stays as you paste it). The page never shows prices, stars or reviews you didn’t write, and shows a standard note that links may earn you a commission (you can switch it off below).'}
             </p>
-            <input value={d.title ?? ''} onChange={(e) => setBlockData(block.id, { title: e.target.value })} maxLength={120} className={INPUT} placeholder="Section title (default: My picks)" aria-label="Section title" />
+            <input value={d.title ?? ''} onChange={(e) => setBlockData(block.id, { title: e.target.value })} maxLength={120} className={INPUT} placeholder={own ? 'Section title (default: My products)' : 'Section title (default: My picks)'} aria-label="Section title" />
             {products.map((p, i) => (
               <Row key={i} index={i} total={products.length} onMove={(dd) => setBlockData(block.id, { products: move(products, i, dd) })} onRemove={() => setBlockData(block.id, { products: products.filter((_, j) => j !== i) })}>
                 <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_150px]">
@@ -295,9 +308,9 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                     ))}
                   </select>
                 </div>
-                <input value={p.url} onChange={(e) => setProduct(i, { url: e.target.value.trim() })} className={INPUT} placeholder="Your buy link (https://…)" aria-label="Buy link" />
+                <input value={p.url} onChange={(e) => setProduct(i, { url: e.target.value.trim() })} className={INPUT} placeholder={own ? 'Where to buy it or ask for a quote (https://…)' : 'Your buy link (https://…)'} aria-label="Buy link" />
                 {p.url.trim() && !/^https:\/\/\S+$/.test(p.url.trim()) && <p className="text-[12.5px] text-red-500">Use the full link, starting with https://</p>}
-                <input value={p.description ?? ''} onChange={(e) => setProduct(i, { description: e.target.value })} maxLength={300} className={INPUT} placeholder="Why you recommend it (short)" aria-label="Why you recommend it" />
+                <input value={p.description ?? ''} onChange={(e) => setProduct(i, { description: e.target.value })} maxLength={300} className={INPUT} placeholder={own ? 'What it is, in a line or two' : 'Why you recommend it (short)'} aria-label="Description" />
                 <div className="flex flex-wrap items-center gap-3">
                   {p.image && <img src={p.image} alt="" className="h-10 w-10 rounded-md object-cover" />}
                   <button type="button" disabled={uploading !== null} onClick={() => pickImage(`p${block.id}${i}`, 800, (url) => setProduct(i, { image: url }))} className={`${SMALL} inline-flex items-center gap-1.5 text-primary hover:bg-bg-soft`}>
@@ -306,21 +319,23 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                   <label className="inline-flex items-center gap-1.5 text-[13px] text-navy/70">
                     <input type="checkbox" checked={Boolean(p.favorite)} onChange={(e) => setProduct(i, { favorite: e.target.checked })} /> Top pick
                   </label>
-                  <input value={p.cta ?? ''} onChange={(e) => setProduct(i, { cta: e.target.value })} maxLength={30} className={`${INPUT} !w-auto flex-1`} placeholder="Button (default: See product)" aria-label="Button text" />
+                  <input value={p.cta ?? ''} onChange={(e) => setProduct(i, { cta: e.target.value })} maxLength={30} className={`${INPUT} !w-auto flex-1`} placeholder={own ? 'Button, e.g. Buy or Get a quote' : 'Button (default: See product)'} aria-label="Button text" />
                 </div>
-                <p className="text-[12px] text-navy/40">Use a photo you took or one you’re allowed to use (e.g. from the store’s affiliate program).</p>
+                <p className="text-[12px] text-navy/40">{own ? 'Use your own photo of the product, or one you’re allowed to use.' : 'Use a photo you took or one you’re allowed to use (e.g. from the store’s affiliate program).'}</p>
               </Row>
             ))}
             <Add label="Add a product" disabled={products.length >= maxProducts} onClick={() => setBlockData(block.id, { products: [...products, { title: '', url: '', category: 'other' }] })} />
             {!free && <p className="text-[12px] text-navy/45">Your plan shows up to {maxProducts} products.</p>}
-            <textarea value={d.body ?? ''} onChange={(e) => setBlockData(block.id, { body: e.target.value })} rows={2} maxLength={600} className={INPUT} placeholder="Your own note about these links (optional)" aria-label="Your note" />
-            <label className="flex items-start gap-2 text-[13px] text-navy/70">
-              <input type="checkbox" className="mt-0.5" checked={d.hideNote !== true} onChange={(e) => setBlockData(block.id, { hideNote: e.target.checked ? undefined : true })} aria-label="Show earnings statement" />
-              <span>
-                Show the standard affiliate (earnings) note
-                <span className="block text-[12px] text-navy/45">Hiding it only changes what the page shows. If you earn from these links, you are still responsible for telling visitors — e.g. in your own note above.</span>
-              </span>
-            </label>
+            <textarea value={d.body ?? ''} onChange={(e) => setBlockData(block.id, { body: e.target.value })} rows={2} maxLength={600} className={INPUT} placeholder={own ? 'A note about your products (optional)' : 'Your own note about these links (optional)'} aria-label="Your note" />
+            {!own && (
+              <label className="flex items-start gap-2 text-[13px] text-navy/70">
+                <input type="checkbox" className="mt-0.5" checked={d.hideNote !== true} onChange={(e) => setBlockData(block.id, { hideNote: e.target.checked ? undefined : true })} aria-label="Show earnings statement" />
+                <span>
+                  Show the standard affiliate (earnings) note
+                  <span className="block text-[12px] text-navy/45">Hiding it only changes what the page shows. If you earn from these links, you are still responsible for telling visitors — e.g. in your own note above.</span>
+                </span>
+              </label>
+            )}
           </div>
         )
       }
@@ -882,8 +897,8 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                       }}
                       className="rounded-xl border border-navy/10 px-3 py-2.5 text-left transition-colors hover:border-primary/40 hover:bg-bg-soft disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:border-navy/10 disabled:hover:bg-transparent"
                     >
-                      <span className="block text-[13.5px] font-semibold text-navy">{t.label}</span>
-                      <span className="block text-[12px] text-navy/45">{taken ? 'Already on the page' : t.hint}</span>
+                      <span className="block text-[13.5px] font-semibold text-navy">{sectionLabel(t.type)}</span>
+                      <span className="block text-[12px] text-navy/45">{taken ? 'Already on the page' : sectionHint(t.type)}</span>
                     </button>
                     )
                   })}

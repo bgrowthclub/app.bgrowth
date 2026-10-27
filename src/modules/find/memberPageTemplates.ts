@@ -232,11 +232,13 @@ export function memberPageTemplates(lang: Lang): MemberPageTemplate[] {
       },
     },
     {
+      // Afiliados: produtos DE OUTROS que a pessoa indica. Os links saem
+      // marcados como patrocinados e a nota de afiliado é mostrada.
       id: 'affiliate',
-      name: { en: 'Affiliate Picks', pt: 'Affiliate Picks' },
+      name: { en: 'Affiliate Picks', pt: 'Indicações de afiliado' },
       description: {
-        en: 'For creators who recommend products. A personal showcase of your picks by category, with your own buy links and a clear affiliate note — not a store.',
-        pt: 'Para quem indica produtos. Uma vitrine pessoal das suas indicações por categoria, com seus próprios links de compra e aviso de afiliado — não é uma loja.',
+        en: 'For creators who recommend other people’s products. A personal showcase of your picks by category, with your own affiliate links and a clear affiliate note — not a store. No prices, ratings or reviews you didn’t write.',
+        pt: 'Para quem indica produtos de outras pessoas. Uma vitrine pessoal das suas indicações por categoria, com seus links de afiliado e o aviso de afiliado — não é uma loja. Sem preços, notas ou avaliações que você não escreveu.',
       },
       color: 'blue',
       blocks: [
@@ -249,6 +251,30 @@ export function memberPageTemplates(lang: Lang): MemberPageTemplate[] {
         b('contact'),
       ],
       example: { headline: L('Real products for a better life', 'Produtos de verdade para uma vida melhor') },
+    },
+    {
+      // Empresas: o catálogo da própria pessoa — produtos e serviços que ela
+      // mesma vende. Sem nota de afiliado e sem link patrocinado: o botão
+      // leva para comprar ou pedir orçamento no canal dela.
+      id: 'business',
+      name: { en: 'Business', pt: 'Empresas' },
+      description: {
+        en: 'For a business selling its own products and services. A catalog of what you sell, with a buy or get-a-quote button on each one, plus your services and how to reach you.',
+        pt: 'Para quem vende os próprios produtos e serviços. Um catálogo do que você vende, com botão de comprar ou pedir orçamento em cada item, mais os seus serviços e como falar com você.',
+      },
+      color: 'navy',
+      blocks: [
+        b('hero', {
+          title: L('Products · Services', 'Produtos · Serviços'),
+          body: L('What we make, what we sell and how we can help you.', 'O que fazemos, o que vendemos e como podemos ajudar você.'),
+          button: L('See our products', 'Ver nossos produtos'),
+        }),
+        b('products', { title: L('Our products', 'Nossos produtos'), products: [] }),
+        b('services'),
+        b('about'),
+        b('contact'),
+      ],
+      example: { headline: L('Made for you, with care', 'Feito para você, com cuidado') },
     },
     {
       // Link Page (11th model): a simple business landing page — logo, name,
@@ -397,8 +423,8 @@ export function memberPageTemplates(lang: Lang): MemberPageTemplate[] {
 // cleaning, notary, teacher, creator, blank) keep the simple one-column page.
 // 'links' (Link Page) since the 11th model: a short, phone-first page of
 // stacked buttons — logo, name, a line about the business and its links.
-export type MemberPageSkin = 'professional' | 'local' | 'creative' | 'personal' | 'affiliate' | 'links'
-const SKINS: MemberPageSkin[] = ['professional', 'local', 'creative', 'personal', 'affiliate', 'links']
+export type MemberPageSkin = 'professional' | 'local' | 'creative' | 'personal' | 'affiliate' | 'business' | 'links'
+const SKINS: MemberPageSkin[] = ['professional', 'local', 'creative', 'personal', 'affiliate', 'business', 'links']
 export function pageSkin(template: string | null | undefined): MemberPageSkin | null {
   const id = (template ?? '') as MemberPageSkin
   return SKINS.includes(id) ? id : null
@@ -558,7 +584,7 @@ export function templatePreview(t: MemberPageTemplate, lang: Lang): MemberPageCo
       { type: 'instagram', label: '', url: 'https://instagram.com/' },
     ],
     language: lang,
-    blocks: t.id === 'affiliate' ? t.blocks.map((block) => (block.type === 'products' ? { ...block, data: { ...block.data, products: samplePicks(lang) } } : block)) : t.blocks,
+    blocks: t.id === 'affiliate' || t.id === 'business' ? t.blocks.map((block) => (block.type === 'products' ? { ...block, data: { ...block.data, products: samplePicks(lang) } } : block)) : t.blocks,
     theme: { color: t.color },
     template: t.id,
   }

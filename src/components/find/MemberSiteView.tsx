@@ -47,6 +47,14 @@ const LOOK: Record<MemberPageSkin, { page: string; band: string; h2: string; car
     card: 'rounded-2xl border border-navy/[0.08] bg-white shadow-softer',
     wide: 'max-w-6xl',
   },
+  // Empresas: the same card-first look as the affiliate showcase.
+  business: {
+    page: 'bg-white text-navy',
+    band: 'bg-bg-soft',
+    h2: 'font-display text-2xl font-bold tracking-tight text-navy md:text-3xl',
+    card: 'rounded-2xl border border-navy/[0.08] bg-white shadow-softer',
+    wide: 'max-w-6xl',
+  },
   personal: {
     page: 'bg-white text-navy',
     band: 'bg-primary/[0.06]',
@@ -188,7 +196,7 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
       )
     }
 
-    if (skin === 'affiliate') {
+    if (skin === 'affiliate' || skin === 'business') {
       const heroData = blocks.find((b) => b.type === 'hero')?.data ?? {}
       const art = page.theme?.cover || page.photo_url
       return (
@@ -548,7 +556,7 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
         if (!(d.products ?? []).length) return null
         return section(
           block.id,
-          <MemberProductPicks products={d.products ?? []} title={d.title} note={d.body} hideNote={d.hideNote === true} language={page.language} preview={preview} onLinkClick={onLinkClick} headingClass={look.h2} />,
+          <MemberProductPicks products={d.products ?? []} title={d.title} note={d.body} hideNote={d.hideNote === true} kind={skin === 'business' ? 'own' : 'affiliate'} language={page.language} preview={preview} onLinkClick={onLinkClick} headingClass={look.h2} />,
         )
       case 'cta': {
         if (!d.title?.trim() && !d.body?.trim()) return null
