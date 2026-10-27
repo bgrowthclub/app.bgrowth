@@ -4,6 +4,7 @@ import { MEMBER_LINK_ICONS } from './memberLinkIcons'
 import MemberProductPicks from './MemberProductPicks'
 import MemberPageSignupForm from './MemberPageSignupForm'
 import MemberPagePromo from './MemberPagePromo'
+import { usePageTexts } from '../../lib/usePageTexts'
 import { MEMBER_PAGE_LABELS, memberLinkHref, memberLinkLabel, videoEmbed } from '../../modules/find/memberPageService'
 import { PAGE_BACKGROUNDS, PAGE_COLORS, blockLinks, pageBlocks } from '../../modules/find/memberPageTemplates'
 import type { MemberPageSkin } from '../../modules/find/memberPageTemplates'
@@ -47,13 +48,14 @@ const LOOK: Record<MemberPageSkin, { page: string; band: string; h2: string; car
     card: 'rounded-2xl border border-navy/[0.08] bg-white shadow-softer',
     wide: 'max-w-6xl',
   },
-  // Empresas: the same card-first look as the affiliate showcase.
-  business: {
+  // Affiliate Picks: a person recommending, not a shop. One narrower column
+  // than the business catalog, warm bands, and the person in the hero.
+  picks: {
     page: 'bg-white text-navy',
-    band: 'bg-bg-soft',
+    band: 'bg-primary/[0.05]',
     h2: 'font-display text-2xl font-bold tracking-tight text-navy md:text-3xl',
     card: 'rounded-2xl border border-navy/[0.08] bg-white shadow-softer',
-    wide: 'max-w-6xl',
+    wide: 'max-w-5xl',
   },
   personal: {
     page: 'bg-white text-navy',
@@ -95,6 +97,14 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
     ...(background ? { backgroundColor: background.hex } : {}),
   } as CSSProperties
   const [primary, secondary] = page.links
+  // Affiliate Picks shows the standard affiliate note in the hero, before the
+  // picks — unless the member switched it off in the products section.
+  const siteText = usePageTexts()
+  const noteBlock = pageBlocks(page).find((b) => b.type === 'products')
+  const heroNote =
+    skin === 'picks' && noteBlock?.data?.hideNote !== true
+      ? siteText.text(`pages.affiliate.${page.language === 'pt' ? 'pt' : 'en'}.note`).trim()
+      : ''
   const blocks = pageBlocks(page).filter((b) => !b.hidden)
 
   const linkProps = (type: string, url: string, target: string) =>
@@ -196,7 +206,36 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
       )
     }
 
-    if (skin === 'affiliate' || skin === 'business') {
+    if (skin === 'picks') {
+      const heroData = blocks.find((b) => b.type === 'hero')?.data ?? {}
+      return (
+        <section key="hero" className={bandClass}>
+          <div className={`mx-auto ${look.wide} px-5 py-14 text-center md:py-20`}>
+            {photo('mx-auto h-24 w-24 rounded-full shadow-softer md:h-28 md:w-28 !text-3xl')}
+            <p className="mt-5 font-display text-[15px] font-bold text-navy">{name}</p>
+            {heroData.title && <p className="mt-1 text-[12.5px] font-bold uppercase tracking-[0.18em] text-primary">{heroData.title}</p>}
+            <h1 className="mx-auto mt-4 max-w-2xl font-display text-3xl font-bold leading-tight tracking-tight md:text-5xl">{headline || name}</h1>
+            {heroData.body && <p className="mx-auto mt-4 max-w-xl text-[16.5px] leading-relaxed text-navy/70">{heroData.body}</p>}
+            {location && <p className="mt-4">{location}</p>}
+            <a
+              href="#picks"
+              onClick={(e) => {
+                e.preventDefault()
+                ;(e.currentTarget.ownerDocument.getElementById('picks') ?? null)?.scrollIntoView({ behavior: 'smooth' })
+              }}
+              className="mt-7 inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-[15px] font-semibold text-white hover:bg-primary/90"
+            >
+              {heroData.button || t.seePicks} <ArrowRight size={17} aria-hidden />
+            </a>
+            {heroNote && (
+              <p className="mx-auto mt-8 max-w-xl rounded-2xl border border-navy/[0.08] bg-white px-5 py-3.5 text-[12.5px] leading-relaxed text-navy/55">{heroNote}</p>
+            )}
+          </div>
+        </section>
+      )
+    }
+
+    if (skin === 'affiliate') {
       const heroData = blocks.find((b) => b.type === 'hero')?.data ?? {}
       const art = page.theme?.cover || page.photo_url
       return (
@@ -556,7 +595,7 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
         if (!(d.products ?? []).length) return null
         return section(
           block.id,
-          <MemberProductPicks products={d.products ?? []} title={d.title} note={d.body} hideNote={d.hideNote === true} kind={skin === 'business' ? 'own' : 'affiliate'} language={page.language} preview={preview} onLinkClick={onLinkClick} headingClass={look.h2} />,
+          <MemberProductPicks products={d.products ?? []} title={d.title} note={d.body} hideNote={d.hideNote === true} kind={skin === 'affiliate' ? 'own' : 'affiliate'} hideStandardNote={skin === 'picks'} language={page.language} preview={preview} onLinkClick={onLinkClick} headingClass={look.h2} />,
         )
       case 'cta': {
         if (!d.title?.trim() && !d.body?.trim()) return null

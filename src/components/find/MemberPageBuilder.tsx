@@ -241,7 +241,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
   const setHighlight = (i: number, patch: Partial<MemberPageHighlight>) => setHighlights((l) => l.map((x, j) => (j === i ? { ...x, ...patch } : x)))
   // The products section is the member's own catalog on an Empresas page and
   // their recommendations on an affiliate one, so it is named for each.
-  const ownCatalog = template === 'business'
+  const ownCatalog = template === 'affiliate'
   const sectionLabel = (type: MemberPageBlockType) =>
     type === 'products' && ownCatalog ? 'Products' : BLOCK_TYPES.find((t) => t.type === type)?.label ?? type
   const sectionHint = (type: MemberPageBlockType) =>
@@ -271,7 +271,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
         return (
           <div className="space-y-2">
             <p className="text-[13px] text-navy/55">Shows your photo, name, what you do and where — edit them in “Basics” above.</p>
-            {(template === 'affiliate' || ownCatalog) && (
+            {(template === 'picks' || ownCatalog) && (
               <>
                 <input value={d.title ?? ''} onChange={(e) => setBlockData(block.id, { title: e.target.value })} maxLength={120} className={INPUT} placeholder={ownCatalog ? 'Small line above the title (e.g. Products · Services)' : 'Small line above the title (e.g. Tools · Products · Resources)'} aria-label="Small line" />
                 <textarea value={d.body ?? ''} onChange={(e) => setBlockData(block.id, { body: e.target.value })} rows={3} maxLength={400} className={INPUT} placeholder={ownCatalog ? 'A sentence about what you sell' : 'A sentence about what you recommend'} aria-label="Intro" />
@@ -286,7 +286,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
         // Empresas: the member's own catalog, so nothing here talks about
         // affiliate links or commission, and there is no standard note to
         // switch off.
-        const own = template === 'business'
+        const own = template === 'affiliate'
         const setProduct = (i: number, patch: Partial<MemberPageProduct>) => setBlockData(block.id, { products: products.map((x, j) => (j === i ? { ...x, ...patch } : x)) })
         return (
           <div className="space-y-2">

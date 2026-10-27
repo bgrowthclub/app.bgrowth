@@ -28,6 +28,9 @@ interface Props {
   // never shows and the links aren't marked sponsored, because nobody else
   // is paying them. Default stays the affiliate showcase.
   kind?: 'affiliate' | 'own'
+  // The page already shows the standard affiliate note somewhere else (the
+  // Affiliate Picks hero), so it isn't repeated under the products.
+  hideStandardNote?: boolean
   language: MemberPage['language']
   preview?: boolean
   onLinkClick?: (target: string) => void
@@ -42,11 +45,11 @@ interface Props {
 // ratings or reviews); links open as typed. On an affiliate page they are
 // marked sponsored and the standard note shows unless the member switched it
 // off (Sprint 146); on an Empresas page neither applies.
-export default function MemberProductPicks({ products, title, note, hideNote = false, kind = 'affiliate', language, preview = false, onLinkClick, headingClass }: Props) {
+export default function MemberProductPicks({ products, title, note, hideNote = false, kind = 'affiliate', hideStandardNote = false, language, preview = false, onLinkClick, headingClass }: Props) {
   const t = MEMBER_PAGE_LABELS[language] ?? MEMBER_PAGE_LABELS.en
   // The standard note, edited in Admin → Site → Page texts → Member pages.
   const standardNote = usePageTexts().text(`pages.affiliate.${language === 'pt' ? 'pt' : 'en'}.note`)
-  const showStandard = kind === 'affiliate' && !hideNote && Boolean(standardNote.trim())
+  const showStandard = kind === 'affiliate' && !hideNote && !hideStandardNote && Boolean(standardNote.trim())
   const [category, setCategory] = useState<MemberPageProductCategory | 'all'>('all')
   const [query, setQuery] = useState('')
   const items = products.filter((p) => p.title.trim() && p.url.trim())

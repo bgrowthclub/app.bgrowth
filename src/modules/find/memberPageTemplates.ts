@@ -232,37 +232,18 @@ export function memberPageTemplates(lang: Lang): MemberPageTemplate[] {
       },
     },
     {
-      // Afiliados: produtos DE OUTROS que a pessoa indica. Os links saem
-      // marcados como patrocinados e a nota de afiliado é mostrada.
+      // Empresas (27/10/2026): este modelo já tinha cara de empresa, então
+      // ficou com ela e com o id. O que saiu daqui foram as marcações de
+      // afiliado — link patrocinado e aviso de ganho —, que passaram para o
+      // modelo 'picks' abaixo. Uma página salva como 'affiliate' continua
+      // abrindo neste modelo, agora sem as marcações.
       id: 'affiliate',
-      name: { en: 'Affiliate Picks', pt: 'Indicações de afiliado' },
-      description: {
-        en: 'For creators who recommend other people’s products. A personal showcase of your picks by category, with your own affiliate links and a clear affiliate note — not a store. No prices, ratings or reviews you didn’t write.',
-        pt: 'Para quem indica produtos de outras pessoas. Uma vitrine pessoal das suas indicações por categoria, com seus links de afiliado e o aviso de afiliado — não é uma loja. Sem preços, notas ou avaliações que você não escreveu.',
-      },
-      color: 'blue',
-      blocks: [
-        b('hero', {
-          title: L('Tools · Products · Resources', 'Ferramentas · Produtos · Recursos'),
-          body: L('The tools, products and resources I use and recommend for work, home, travel and everyday life.', 'As ferramentas, produtos e recursos que eu uso e indico para trabalho, casa, viagem e dia a dia.'),
-        }),
-        b('products', { title: L('My picks', 'Minhas indicações'), products: [] }),
-        b('about'),
-        b('contact'),
-      ],
-      example: { headline: L('Real products for a better life', 'Produtos de verdade para uma vida melhor') },
-    },
-    {
-      // Empresas: o catálogo da própria pessoa — produtos e serviços que ela
-      // mesma vende. Sem nota de afiliado e sem link patrocinado: o botão
-      // leva para comprar ou pedir orçamento no canal dela.
-      id: 'business',
       name: { en: 'Business', pt: 'Empresas' },
       description: {
-        en: 'For a business selling its own products and services. A catalog of what you sell, with a buy or get-a-quote button on each one, plus your services and how to reach you.',
-        pt: 'Para quem vende os próprios produtos e serviços. Um catálogo do que você vende, com botão de comprar ou pedir orçamento em cada item, mais os seus serviços e como falar com você.',
+        en: 'For a business selling its own products and services. A catalog of what you sell, with a buy or get-a-quote button on each one, plus your services and how to reach you. No prices, ratings or reviews you didn’t write.',
+        pt: 'Para quem vende os próprios produtos e serviços. Um catálogo do que você vende, com botão de comprar ou pedir orçamento em cada item, mais os seus serviços e como falar com você. Sem preços, notas ou avaliações que você não escreveu.',
       },
-      color: 'navy',
+      color: 'blue',
       blocks: [
         b('hero', {
           title: L('Products · Services', 'Produtos · Serviços'),
@@ -275,6 +256,31 @@ export function memberPageTemplates(lang: Lang): MemberPageTemplate[] {
         b('contact'),
       ],
       example: { headline: L('Made for you, with care', 'Feito para você, com cuidado') },
+    },
+    {
+      // Afiliados (27/10/2026): produtos DE OUTRAS PESSOAS que o membro
+      // indica. Look próprio, de indicação e não de loja: uma coluna
+      // estreita, a pessoa em primeiro plano e o aviso de afiliado logo no
+      // começo, antes das indicações. Os links saem marcados como
+      // patrocinados.
+      id: 'picks',
+      name: { en: 'Affiliate Picks', pt: 'Indicações de afiliado' },
+      description: {
+        en: 'For creators who recommend other people’s products. Your picks in your own words, by category, with your affiliate links and the affiliate note up front — it says plainly you recommend, you don’t sell. No prices, ratings or reviews you didn’t write.',
+        pt: 'Para quem indica produtos de outras pessoas. Suas indicações nas suas palavras, por categoria, com seus links de afiliado e o aviso de afiliado já no começo — deixa claro que você indica, não vende. Sem preços, notas ou avaliações que você não escreveu.',
+      },
+      color: 'orange',
+      blocks: [
+        b('hero', {
+          title: L('What I use · What I recommend', 'O que eu uso · O que eu indico'),
+          body: L('The tools, products and resources I use myself and recommend for work, home, travel and everyday life.', 'As ferramentas, produtos e recursos que eu mesma uso e indico para trabalho, casa, viagem e dia a dia.'),
+          button: L('See my picks', 'Ver minhas indicações'),
+        }),
+        b('products', { title: L('My picks', 'Minhas indicações'), products: [] }),
+        b('about'),
+        b('contact'),
+      ],
+      example: { headline: L('Things I actually use', 'Coisas que eu uso de verdade') },
     },
     {
       // Link Page (11th model): a simple business landing page — logo, name,
@@ -423,8 +429,8 @@ export function memberPageTemplates(lang: Lang): MemberPageTemplate[] {
 // cleaning, notary, teacher, creator, blank) keep the simple one-column page.
 // 'links' (Link Page) since the 11th model: a short, phone-first page of
 // stacked buttons — logo, name, a line about the business and its links.
-export type MemberPageSkin = 'professional' | 'local' | 'creative' | 'personal' | 'affiliate' | 'business' | 'links'
-const SKINS: MemberPageSkin[] = ['professional', 'local', 'creative', 'personal', 'affiliate', 'business', 'links']
+export type MemberPageSkin = 'professional' | 'local' | 'creative' | 'personal' | 'affiliate' | 'picks' | 'links'
+const SKINS: MemberPageSkin[] = ['professional', 'local', 'creative', 'personal', 'affiliate', 'picks', 'links']
 export function pageSkin(template: string | null | undefined): MemberPageSkin | null {
   const id = (template ?? '') as MemberPageSkin
   return SKINS.includes(id) ? id : null
@@ -584,7 +590,7 @@ export function templatePreview(t: MemberPageTemplate, lang: Lang): MemberPageCo
       { type: 'instagram', label: '', url: 'https://instagram.com/' },
     ],
     language: lang,
-    blocks: t.id === 'affiliate' || t.id === 'business' ? t.blocks.map((block) => (block.type === 'products' ? { ...block, data: { ...block.data, products: samplePicks(lang) } } : block)) : t.blocks,
+    blocks: t.id === 'affiliate' || t.id === 'picks' ? t.blocks.map((block) => (block.type === 'products' ? { ...block, data: { ...block.data, products: samplePicks(lang) } } : block)) : t.blocks,
     theme: { color: t.color },
     template: t.id,
   }
