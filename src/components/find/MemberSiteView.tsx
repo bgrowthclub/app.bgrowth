@@ -5,7 +5,7 @@ import MemberProductPicks from './MemberProductPicks'
 import MemberPageSignupForm from './MemberPageSignupForm'
 import MemberPagePromo from './MemberPagePromo'
 import { MEMBER_PAGE_LABELS, memberLinkHref, memberLinkLabel, videoEmbed } from '../../modules/find/memberPageService'
-import { PAGE_BACKGROUNDS, PAGE_COLORS, pageBlocks } from '../../modules/find/memberPageTemplates'
+import { PAGE_BACKGROUNDS, PAGE_COLORS, blockLinks, pageBlocks } from '../../modules/find/memberPageTemplates'
 import type { MemberPageSkin } from '../../modules/find/memberPageTemplates'
 import type { MemberPage, MemberPageBlock, MemberPageHighlight, MemberPageLink } from '../../modules/find/types'
 
@@ -317,14 +317,17 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
     switch (block.type) {
       case 'hero':
         return hero()
-      case 'contact':
-        if (!page.links.length) return null
+      case 'contact': {
+        // This block's own buttons, so a page can carry several blocks of
+        // them, wherever the member put them (27/10/2026).
+        const links = blockLinks(page, block)
+        if (!links.length) return null
         // Link Page: one full-width button per link, in the order chosen.
         if (skin === 'links') {
           return section(
             block.id,
             <div className="flex flex-col gap-3">
-              {page.links.map((l) => {
+              {links.map((l) => {
                 const Icon = MEMBER_LINK_ICONS[l.type] ?? Link2
                 return (
                   <a
@@ -345,10 +348,11 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
           block.id,
           <div className="text-center">
             <h2 className={look.h2}>{t.contact}</h2>
-            <div className="mx-auto mt-8 flex max-w-3xl flex-wrap justify-center gap-3">{page.links.map((l, i) => button(l, i === 0 ? 'solid' : 'outline'))}</div>
+            <div className="mx-auto mt-8 flex max-w-3xl flex-wrap justify-center gap-3">{links.map((l, i) => button(l, i === 0 ? 'solid' : 'outline'))}</div>
           </div>,
           band,
         )
+      }
       case 'highlights':
         if (!page.highlights.length) return null
         return section(

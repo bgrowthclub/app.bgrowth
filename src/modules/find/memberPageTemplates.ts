@@ -1,4 +1,4 @@
-import type { MemberPage, MemberPageBackground, MemberPageBlock, MemberPageBlockType, MemberPageColor } from './types'
+import type { MemberPage, MemberPageBackground, MemberPageBlock, MemberPageBlockType, MemberPageColor, MemberPageLink } from './types'
 
 // Ready-made member pages ("My Business Page"): four models — four looks of
 // the same page system. Each is a set of blocks already filled with example
@@ -62,7 +62,12 @@ export const PAGE_BACKGROUNDS: { id: MemberPageBackground; label: string; hex: s
 
 // Sections whose content is the page's own (name, buttons, services…):
 // one of each per page — a second copy would only repeat the same items.
-export const SINGLE_BLOCK_TYPES: MemberPageBlockType[] = ['hero', 'contact', 'highlights', 'services', 'about', 'products', 'signup']
+export const SINGLE_BLOCK_TYPES: MemberPageBlockType[] = ['hero', 'highlights', 'services', 'about', 'products', 'signup']
+
+/** The buttons one contact block shows: its own, or the page's (older pages). */
+export function blockLinks(page: { links: MemberPageLink[] }, block: MemberPageBlock): MemberPageLink[] {
+  return block.data?.links ?? page.links
+}
 
 let seq = 0
 export function blockId() {

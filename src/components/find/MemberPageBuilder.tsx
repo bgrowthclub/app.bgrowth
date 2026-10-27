@@ -149,7 +149,9 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
   const [location, setLocation] = useState(page?.location ?? '')
   const [bio, setBio] = useState(page?.bio ?? '')
   const [photoUrl, setPhotoUrl] = useState(page?.photo_url ?? '')
-  const [links, setLinks] = useState<MemberPageLink[]>(page?.links ?? [])
+  // Read-only now: each contact block keeps its own buttons (27/10/2026)
+  // and this is the fallback for a page saved before that.
+  const [links] = useState<MemberPageLink[]>(page?.links ?? [])
   const [services, setServices] = useState<MemberPageService[]>(page?.services ?? [])
   const [highlights, setHighlights] = useState<MemberPageHighlight[]>(page?.highlights ?? [])
   const [open, setOpen] = useState<string | null>(null)
@@ -209,7 +211,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
         bio,
         photoUrl,
         location,
-        links: links.filter((l) => l.url.trim()),
+        links: pageLinks(),
         services: services.filter((s) => s.title.trim()),
         highlights: highlights.filter((h) => h.title.trim()).slice(0, maxHighlights),
         language,
@@ -225,9 +227,16 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
     }
   }
 
+  // The page's own button list, kept for the header and the "cta" block
+  // (which opens "the page's first contact button"): the first contact
+  // block's buttons, or the old page-level list while no block has its own.
+  const pageLinks = (): MemberPageLink[] => {
+    const first = blocks.find((b) => b.type === 'contact' && b.data?.links)
+    return (first?.data?.links ?? links).filter((l) => l.url.trim())
+  }
+
   const setBlockData = (id: string, patch: Partial<MemberPageBlockData>) =>
     setBlocks((list) => list.map((b) => (b.id === id ? { ...b, data: { ...(b.data ?? {}), ...patch } } : b)))
-  const setLink = (i: number, patch: Partial<MemberPageLink>) => setLinks((l) => l.map((x, j) => (j === i ? { ...x, ...patch } : x)))
   const setService = (i: number, patch: Partial<MemberPageService>) => setServices((l) => l.map((x, j) => (j === i ? { ...x, ...patch } : x)))
   const setHighlight = (i: number, patch: Partial<MemberPageHighlight>) => setHighlights((l) => l.map((x, j) => (j === i ? { ...x, ...patch } : x)))
   const label = (type: MemberPageBlockType) => BLOCK_TYPES.find((t) => t.type === type)?.label ?? type
@@ -238,7 +247,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
     bio: bio.trim() || null,
     photo_url: photoUrl || null,
     location: location.trim() || null,
-    links: links.filter((l) => l.url.trim()),
+    links: pageLinks(),
     services: services.filter((s) => s.title.trim()),
     highlights: highlights.filter((h) => h.title.trim()).slice(0, maxHighlights),
     language,
@@ -315,33 +324,40 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
           </div>
         )
       }
-      case 'contact':
+      case 'contact': {
+        // Each block of buttons holds its own (27/10/2026), so they can be
+        // spread around the page. A block saved before that has none of its
+        // own and shows the page's — nothing is lost.
+        const mine = d.links ?? links
+        const setMine = (next: MemberPageLink[]) => setBlockData(block.id, { links: next })
+        const patch = (i: number, p: Partial<MemberPageLink>) => setMine(mine.map((x, j) => (j === i ? { ...x, ...p } : x)))
         return (
           <div>
-            <p className="mb-2 text-[12.5px] text-navy/45">The first button is the big one.</p>
+            <p className="mb-2 text-[12.5px] text-navy/45">The first button is the big one. Add another block of buttons wherever you want them on the page.</p>
             <div className="space-y-2">
-              {links.map((link, i) => (
-                <Row key={i} index={i} total={links.length} onMove={(dd) => setLinks((l) => move(l, i, dd))} onRemove={() => setLinks((l) => l.filter((_, j) => j !== i))}>
+              {mine.map((link, i) => (
+                <Row key={i} index={i} total={mine.length} onMove={(dd) => setMine(move(mine, i, dd))} onRemove={() => setMine(mine.filter((_, j) => j !== i))}>
                   <div className="grid gap-2 sm:grid-cols-[130px_minmax(0,1fr)]">
-                    <select value={link.type} onChange={(e) => setLink(i, { type: e.target.value as MemberPageLinkType })} className={INPUT} aria-label="Type">
+                    <select value={link.type} onChange={(e) => patch(i, { type: e.target.value as MemberPageLinkType })} className={INPUT} aria-label="Type">
                       {LINK_TYPES.map((t) => (
                         <option key={t.id} value={t.id}>
                           {t.label}
                         </option>
                       ))}
                     </select>
-                    <input value={link.url} onChange={(e) => setLink(i, { url: e.target.value })} className={INPUT} placeholder={LINK_TYPES.find((t) => t.id === link.type)?.placeholder} aria-label="Address" />
+                    <input value={link.url} onChange={(e) => patch(i, { url: e.target.value })} className={INPUT} placeholder={LINK_TYPES.find((t) => t.id === link.type)?.placeholder} aria-label="Address" />
                   </div>
                   {link.type === 'whatsapp_group' && link.url.trim() && !/^https:\/\/chat\.whatsapp\.com\/\S+$/i.test(link.url.trim()) && (
                     <p className="text-[12.5px] text-red-500">Paste the full invite link: in WhatsApp, Group info → Invite via link → Copy link.</p>
                   )}
-                  <input value={link.label} onChange={(e) => setLink(i, { label: e.target.value })} maxLength={40} className={INPUT} placeholder="Button text (optional)" aria-label="Button text" />
+                  <input value={link.label} onChange={(e) => patch(i, { label: e.target.value })} maxLength={40} className={INPUT} placeholder="Button text (optional)" aria-label="Button text" />
                 </Row>
               ))}
             </div>
-            <Add label="Add a button" disabled={links.length >= 12} onClick={() => setLinks((l) => [...l, { type: l.length === 0 ? 'whatsapp' : 'instagram', label: '', url: '' }])} />
+            <Add label="Add a button" disabled={mine.length >= 12} onClick={() => setMine([...mine, { type: mine.length === 0 ? 'whatsapp' : 'instagram', label: '', url: '' }])} />
           </div>
         )
+      }
       case 'highlights':
         return (
           <div>
@@ -849,7 +865,18 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                       title={taken ? 'Already on the page' : undefined}
                       onClick={() => {
                         const id = blockId()
-                        setBlocks((l) => [...l, { id, type: t.type, ...(['testimonials', 'faq', 'credentials'].includes(t.type) ? { data: { items: [{ title: '', body: '' }] } } : {}) }])
+                        // A second block of buttons starts empty, with its
+                        // own list, so it never repeats the first one's
+                        // buttons (reported 26/10/2026).
+                        setBlocks((l) => [
+                          ...l,
+                          {
+                            id,
+                            type: t.type,
+                            ...(['testimonials', 'faq', 'credentials'].includes(t.type) ? { data: { items: [{ title: '', body: '' }] } } : {}),
+                            ...(t.type === 'contact' && l.some((b) => b.type === 'contact') ? { data: { links: [] } } : {}),
+                          },
+                        ])
                         setOpen(id)
                         setAdding(false)
                       }}
