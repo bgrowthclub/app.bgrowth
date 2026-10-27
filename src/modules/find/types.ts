@@ -95,6 +95,10 @@ export interface MemberPageBlockData {
   // products: true = don't show the standard affiliate note (Admin → Site →
   // Page texts) on this page. Absent = shown, as before (Sprint 146).
   hideNote?: boolean
+  // contact: this block's own buttons. Absent = it shows the page's links,
+  // which is every page saved before 27/10/2026. A page can now have several
+  // contact blocks, each with its own buttons, anywhere in the order.
+  links?: MemberPageLink[]
 }
 
 export interface MemberPageBlock {

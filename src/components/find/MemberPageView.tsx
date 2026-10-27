@@ -6,7 +6,7 @@ import MemberPageSignupForm from './MemberPageSignupForm'
 import MemberPagePromo from './MemberPagePromo'
 import type { CSSProperties } from 'react'
 import { MEMBER_PAGE_LABELS, memberLinkHref, memberLinkLabel, videoEmbed } from '../../modules/find/memberPageService'
-import { PAGE_BACKGROUNDS, PAGE_COLORS, pageBlocks, pageSkin } from '../../modules/find/memberPageTemplates'
+import { PAGE_BACKGROUNDS, PAGE_COLORS, blockLinks, pageBlocks, pageSkin } from '../../modules/find/memberPageTemplates'
 import type { MemberPage, MemberPageBlock } from '../../modules/find/types'
 
 const ICONS = MEMBER_LINK_ICONS
@@ -40,7 +40,9 @@ export default function MemberPageView({ page, preview = false, onLinkClick }: P
   const skin = pageSkin(page.template)
   if (skin) return <MemberSiteView page={page} skin={skin} preview={preview} onLinkClick={onLinkClick} />
   const t = MEMBER_PAGE_LABELS[page.language] ?? MEMBER_PAGE_LABELS.en
-  const [primary, ...others] = page.links
+  // The page's own first button — what the "cta" block opens. A contact
+  // block has its own buttons (27/10/2026) and reads them below.
+  const [pagePrimary] = page.links
   const linkProps = (type: string, url: string, target: string) =>
     preview
       ? { href: '#', onClick: (e: React.MouseEvent) => e.preventDefault() }
@@ -76,8 +78,9 @@ export default function MemberPageView({ page, preview = false, onLinkClick }: P
         )}
       </header>
         )
-      case 'contact':
-        return page.links.length > 0 ? (
+      case 'contact': {
+        const [primary, ...others] = blockLinks(page, block)
+        return primary ? (
         <section aria-label={t.contact} className="mt-8 space-y-3">
           {primary && (
             <a
@@ -108,7 +111,8 @@ export default function MemberPageView({ page, preview = false, onLinkClick }: P
             </div>
           )}
         </section>
-      ) : null
+        ) : null
+      }
       case 'highlights':
         return page.highlights.length > 0 ? (
         <section className="mt-10">
@@ -285,12 +289,12 @@ export default function MemberPageView({ page, preview = false, onLinkClick }: P
           <section className="mt-10 rounded-2xl bg-primary px-6 py-8 text-center text-white">
             {d.title && <h2 className="font-display text-xl font-bold">{d.title}</h2>}
             {d.body && <p className="mt-2 text-[15px] leading-relaxed text-white/85">{d.body}</p>}
-            {primary && (
+            {pagePrimary && (
               <a
-                {...linkProps(primary.type, primary.url, `link:${primary.type}`)}
+                {...linkProps(pagePrimary.type, pagePrimary.url, `link:${pagePrimary.type}`)}
                 className="mt-5 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-[15px] font-semibold text-primary transition-opacity hover:opacity-90"
               >
-                {d.button?.trim() || memberLinkLabel(primary, page.language)} <ArrowRight size={16} aria-hidden />
+                {d.button?.trim() || memberLinkLabel(pagePrimary, page.language)} <ArrowRight size={16} aria-hidden />
               </a>
             )}
           </section>

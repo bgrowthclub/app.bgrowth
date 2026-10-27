@@ -149,7 +149,9 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
   const [location, setLocation] = useState(page?.location ?? '')
   const [bio, setBio] = useState(page?.bio ?? '')
   const [photoUrl, setPhotoUrl] = useState(page?.photo_url ?? '')
-  const [links, setLinks] = useState<MemberPageLink[]>(page?.links ?? [])
+  // Read-only now: each contact block keeps its own buttons (27/10/2026)
+  // and this is the fallback for a page saved before that.
+  const [links] = useState<MemberPageLink[]>(page?.links ?? [])
   const [services, setServices] = useState<MemberPageService[]>(page?.services ?? [])
   const [highlights, setHighlights] = useState<MemberPageHighlight[]>(page?.highlights ?? [])
   const [open, setOpen] = useState<string | null>(null)
@@ -209,7 +211,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
         bio,
         photoUrl,
         location,
-        links: links.filter((l) => l.url.trim()),
+        links: pageLinks(),
         services: services.filter((s) => s.title.trim()),
         highlights: highlights.filter((h) => h.title.trim()).slice(0, maxHighlights),
         language,
@@ -225,12 +227,26 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
     }
   }
 
+  // The page's own button list, kept for the header and the "cta" block
+  // (which opens "the page's first contact button"): the first contact
+  // block's buttons, or the old page-level list while no block has its own.
+  const pageLinks = (): MemberPageLink[] => {
+    const first = blocks.find((b) => b.type === 'contact' && b.data?.links)
+    return (first?.data?.links ?? links).filter((l) => l.url.trim())
+  }
+
   const setBlockData = (id: string, patch: Partial<MemberPageBlockData>) =>
     setBlocks((list) => list.map((b) => (b.id === id ? { ...b, data: { ...(b.data ?? {}), ...patch } } : b)))
-  const setLink = (i: number, patch: Partial<MemberPageLink>) => setLinks((l) => l.map((x, j) => (j === i ? { ...x, ...patch } : x)))
   const setService = (i: number, patch: Partial<MemberPageService>) => setServices((l) => l.map((x, j) => (j === i ? { ...x, ...patch } : x)))
   const setHighlight = (i: number, patch: Partial<MemberPageHighlight>) => setHighlights((l) => l.map((x, j) => (j === i ? { ...x, ...patch } : x)))
-  const label = (type: MemberPageBlockType) => BLOCK_TYPES.find((t) => t.type === type)?.label ?? type
+  // The products section is the member's own catalog on an Empresas page and
+  // their recommendations on an affiliate one, so it is named for each.
+  const ownCatalog = template === 'affiliate'
+  const sectionLabel = (type: MemberPageBlockType) =>
+    type === 'products' && ownCatalog ? 'Products' : BLOCK_TYPES.find((t) => t.type === type)?.label ?? type
+  const sectionHint = (type: MemberPageBlockType) =>
+    type === 'products' && ownCatalog ? 'What you sell, with a buy or quote button' : BLOCK_TYPES.find((t) => t.type === type)?.hint
+  const label = sectionLabel
   // The page as it would be published right now (what the previews show).
   const current = {
     display_name: displayName.trim() || 'Name',
@@ -238,7 +254,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
     bio: bio.trim() || null,
     photo_url: photoUrl || null,
     location: location.trim() || null,
-    links: links.filter((l) => l.url.trim()),
+    links: pageLinks(),
     services: services.filter((s) => s.title.trim()),
     highlights: highlights.filter((h) => h.title.trim()).slice(0, maxHighlights),
     language,
@@ -255,11 +271,11 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
         return (
           <div className="space-y-2">
             <p className="text-[13px] text-navy/55">Shows your photo, name, what you do and where — edit them in “Basics” above.</p>
-            {template === 'affiliate' && (
+            {(template === 'picks' || ownCatalog) && (
               <>
-                <input value={d.title ?? ''} onChange={(e) => setBlockData(block.id, { title: e.target.value })} maxLength={120} className={INPUT} placeholder="Small line above the title (e.g. Tools · Products · Resources)" aria-label="Small line" />
-                <textarea value={d.body ?? ''} onChange={(e) => setBlockData(block.id, { body: e.target.value })} rows={3} maxLength={400} className={INPUT} placeholder="A sentence about what you recommend" aria-label="Intro" />
-                <input value={d.button ?? ''} onChange={(e) => setBlockData(block.id, { button: e.target.value })} maxLength={40} className={INPUT} placeholder="Button text (default: See my picks)" aria-label="Button text" />
+                <input value={d.title ?? ''} onChange={(e) => setBlockData(block.id, { title: e.target.value })} maxLength={120} className={INPUT} placeholder={ownCatalog ? 'Small line above the title (e.g. Products · Services)' : 'Small line above the title (e.g. Tools · Products · Resources)'} aria-label="Small line" />
+                <textarea value={d.body ?? ''} onChange={(e) => setBlockData(block.id, { body: e.target.value })} rows={3} maxLength={400} className={INPUT} placeholder={ownCatalog ? 'A sentence about what you sell' : 'A sentence about what you recommend'} aria-label="Intro" />
+                <input value={d.button ?? ''} onChange={(e) => setBlockData(block.id, { button: e.target.value })} maxLength={40} className={INPUT} placeholder={ownCatalog ? 'Button text (e.g. See our products)' : 'Button text (default: See my picks)'} aria-label="Button text" />
                 <p className="text-[12.5px] text-navy/45">The big image on the right is your cover image (or your photo).</p>
               </>
             )}
@@ -267,13 +283,19 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
         )
       case 'products': {
         const products = d.products ?? []
+        // Empresas: the member's own catalog, so nothing here talks about
+        // affiliate links or commission, and there is no standard note to
+        // switch off.
+        const own = template === 'affiliate'
         const setProduct = (i: number, patch: Partial<MemberPageProduct>) => setBlockData(block.id, { products: products.map((x, j) => (j === i ? { ...x, ...patch } : x)) })
         return (
           <div className="space-y-2">
             <p className="text-[12.5px] text-navy/50">
-              Add only products you recommend, with your own buy link (your affiliate code stays as you paste it). The page never shows prices, stars or reviews you didn’t write, and shows a standard note that links may earn you a commission (you can switch it off below).
+              {own
+                ? 'Add what you sell, with the link that takes the visitor to buy it or ask for a quote — your store, your WhatsApp, your order form. The page never shows prices, stars or reviews you didn’t write.'
+                : 'Add only products you recommend, with your own buy link (your affiliate code stays as you paste it). The page never shows prices, stars or reviews you didn’t write, and shows a standard note that links may earn you a commission (you can switch it off below).'}
             </p>
-            <input value={d.title ?? ''} onChange={(e) => setBlockData(block.id, { title: e.target.value })} maxLength={120} className={INPUT} placeholder="Section title (default: My picks)" aria-label="Section title" />
+            <input value={d.title ?? ''} onChange={(e) => setBlockData(block.id, { title: e.target.value })} maxLength={120} className={INPUT} placeholder={own ? 'Section title (default: My products)' : 'Section title (default: My picks)'} aria-label="Section title" />
             {products.map((p, i) => (
               <Row key={i} index={i} total={products.length} onMove={(dd) => setBlockData(block.id, { products: move(products, i, dd) })} onRemove={() => setBlockData(block.id, { products: products.filter((_, j) => j !== i) })}>
                 <div className="grid gap-2 sm:grid-cols-[minmax(0,1fr)_150px]">
@@ -286,9 +308,9 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                     ))}
                   </select>
                 </div>
-                <input value={p.url} onChange={(e) => setProduct(i, { url: e.target.value.trim() })} className={INPUT} placeholder="Your buy link (https://…)" aria-label="Buy link" />
+                <input value={p.url} onChange={(e) => setProduct(i, { url: e.target.value.trim() })} className={INPUT} placeholder={own ? 'Where to buy it or ask for a quote (https://…)' : 'Your buy link (https://…)'} aria-label="Buy link" />
                 {p.url.trim() && !/^https:\/\/\S+$/.test(p.url.trim()) && <p className="text-[12.5px] text-red-500">Use the full link, starting with https://</p>}
-                <input value={p.description ?? ''} onChange={(e) => setProduct(i, { description: e.target.value })} maxLength={300} className={INPUT} placeholder="Why you recommend it (short)" aria-label="Why you recommend it" />
+                <input value={p.description ?? ''} onChange={(e) => setProduct(i, { description: e.target.value })} maxLength={300} className={INPUT} placeholder={own ? 'What it is, in a line or two' : 'Why you recommend it (short)'} aria-label="Description" />
                 <div className="flex flex-wrap items-center gap-3">
                   {p.image && <img src={p.image} alt="" className="h-10 w-10 rounded-md object-cover" />}
                   <button type="button" disabled={uploading !== null} onClick={() => pickImage(`p${block.id}${i}`, 800, (url) => setProduct(i, { image: url }))} className={`${SMALL} inline-flex items-center gap-1.5 text-primary hover:bg-bg-soft`}>
@@ -297,51 +319,60 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                   <label className="inline-flex items-center gap-1.5 text-[13px] text-navy/70">
                     <input type="checkbox" checked={Boolean(p.favorite)} onChange={(e) => setProduct(i, { favorite: e.target.checked })} /> Top pick
                   </label>
-                  <input value={p.cta ?? ''} onChange={(e) => setProduct(i, { cta: e.target.value })} maxLength={30} className={`${INPUT} !w-auto flex-1`} placeholder="Button (default: See product)" aria-label="Button text" />
+                  <input value={p.cta ?? ''} onChange={(e) => setProduct(i, { cta: e.target.value })} maxLength={30} className={`${INPUT} !w-auto flex-1`} placeholder={own ? 'Button, e.g. Buy or Get a quote' : 'Button (default: See product)'} aria-label="Button text" />
                 </div>
-                <p className="text-[12px] text-navy/40">Use a photo you took or one you’re allowed to use (e.g. from the store’s affiliate program).</p>
+                <p className="text-[12px] text-navy/40">{own ? 'Use your own photo of the product, or one you’re allowed to use.' : 'Use a photo you took or one you’re allowed to use (e.g. from the store’s affiliate program).'}</p>
               </Row>
             ))}
             <Add label="Add a product" disabled={products.length >= maxProducts} onClick={() => setBlockData(block.id, { products: [...products, { title: '', url: '', category: 'other' }] })} />
             {!free && <p className="text-[12px] text-navy/45">Your plan shows up to {maxProducts} products.</p>}
-            <textarea value={d.body ?? ''} onChange={(e) => setBlockData(block.id, { body: e.target.value })} rows={2} maxLength={600} className={INPUT} placeholder="Your own note about these links (optional)" aria-label="Your note" />
-            <label className="flex items-start gap-2 text-[13px] text-navy/70">
-              <input type="checkbox" className="mt-0.5" checked={d.hideNote !== true} onChange={(e) => setBlockData(block.id, { hideNote: e.target.checked ? undefined : true })} aria-label="Show earnings statement" />
-              <span>
-                Show the standard affiliate (earnings) note
-                <span className="block text-[12px] text-navy/45">Hiding it only changes what the page shows. If you earn from these links, you are still responsible for telling visitors — e.g. in your own note above.</span>
-              </span>
-            </label>
+            <textarea value={d.body ?? ''} onChange={(e) => setBlockData(block.id, { body: e.target.value })} rows={2} maxLength={600} className={INPUT} placeholder={own ? 'A note about your products (optional)' : 'Your own note about these links (optional)'} aria-label="Your note" />
+            {!own && (
+              <label className="flex items-start gap-2 text-[13px] text-navy/70">
+                <input type="checkbox" className="mt-0.5" checked={d.hideNote !== true} onChange={(e) => setBlockData(block.id, { hideNote: e.target.checked ? undefined : true })} aria-label="Show earnings statement" />
+                <span>
+                  Show the standard affiliate (earnings) note
+                  <span className="block text-[12px] text-navy/45">Hiding it only changes what the page shows. If you earn from these links, you are still responsible for telling visitors — e.g. in your own note above.</span>
+                </span>
+              </label>
+            )}
           </div>
         )
       }
-      case 'contact':
+      case 'contact': {
+        // Each block of buttons holds its own (27/10/2026), so they can be
+        // spread around the page. A block saved before that has none of its
+        // own and shows the page's — nothing is lost.
+        const mine = d.links ?? links
+        const setMine = (next: MemberPageLink[]) => setBlockData(block.id, { links: next })
+        const patch = (i: number, p: Partial<MemberPageLink>) => setMine(mine.map((x, j) => (j === i ? { ...x, ...p } : x)))
         return (
           <div>
-            <p className="mb-2 text-[12.5px] text-navy/45">The first button is the big one.</p>
+            <p className="mb-2 text-[12.5px] text-navy/45">The first button is the big one. Add another block of buttons wherever you want them on the page.</p>
             <div className="space-y-2">
-              {links.map((link, i) => (
-                <Row key={i} index={i} total={links.length} onMove={(dd) => setLinks((l) => move(l, i, dd))} onRemove={() => setLinks((l) => l.filter((_, j) => j !== i))}>
+              {mine.map((link, i) => (
+                <Row key={i} index={i} total={mine.length} onMove={(dd) => setMine(move(mine, i, dd))} onRemove={() => setMine(mine.filter((_, j) => j !== i))}>
                   <div className="grid gap-2 sm:grid-cols-[130px_minmax(0,1fr)]">
-                    <select value={link.type} onChange={(e) => setLink(i, { type: e.target.value as MemberPageLinkType })} className={INPUT} aria-label="Type">
+                    <select value={link.type} onChange={(e) => patch(i, { type: e.target.value as MemberPageLinkType })} className={INPUT} aria-label="Type">
                       {LINK_TYPES.map((t) => (
                         <option key={t.id} value={t.id}>
                           {t.label}
                         </option>
                       ))}
                     </select>
-                    <input value={link.url} onChange={(e) => setLink(i, { url: e.target.value })} className={INPUT} placeholder={LINK_TYPES.find((t) => t.id === link.type)?.placeholder} aria-label="Address" />
+                    <input value={link.url} onChange={(e) => patch(i, { url: e.target.value })} className={INPUT} placeholder={LINK_TYPES.find((t) => t.id === link.type)?.placeholder} aria-label="Address" />
                   </div>
                   {link.type === 'whatsapp_group' && link.url.trim() && !/^https:\/\/chat\.whatsapp\.com\/\S+$/i.test(link.url.trim()) && (
                     <p className="text-[12.5px] text-red-500">Paste the full invite link: in WhatsApp, Group info → Invite via link → Copy link.</p>
                   )}
-                  <input value={link.label} onChange={(e) => setLink(i, { label: e.target.value })} maxLength={40} className={INPUT} placeholder="Button text (optional)" aria-label="Button text" />
+                  <input value={link.label} onChange={(e) => patch(i, { label: e.target.value })} maxLength={40} className={INPUT} placeholder="Button text (optional)" aria-label="Button text" />
                 </Row>
               ))}
             </div>
-            <Add label="Add a button" disabled={links.length >= 12} onClick={() => setLinks((l) => [...l, { type: l.length === 0 ? 'whatsapp' : 'instagram', label: '', url: '' }])} />
+            <Add label="Add a button" disabled={mine.length >= 12} onClick={() => setMine([...mine, { type: mine.length === 0 ? 'whatsapp' : 'instagram', label: '', url: '' }])} />
           </div>
         )
+      }
       case 'highlights':
         return (
           <div>
@@ -849,14 +880,25 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                       title={taken ? 'Already on the page' : undefined}
                       onClick={() => {
                         const id = blockId()
-                        setBlocks((l) => [...l, { id, type: t.type, ...(['testimonials', 'faq', 'credentials'].includes(t.type) ? { data: { items: [{ title: '', body: '' }] } } : {}) }])
+                        // A second block of buttons starts empty, with its
+                        // own list, so it never repeats the first one's
+                        // buttons (reported 26/10/2026).
+                        setBlocks((l) => [
+                          ...l,
+                          {
+                            id,
+                            type: t.type,
+                            ...(['testimonials', 'faq', 'credentials'].includes(t.type) ? { data: { items: [{ title: '', body: '' }] } } : {}),
+                            ...(t.type === 'contact' && l.some((b) => b.type === 'contact') ? { data: { links: [] } } : {}),
+                          },
+                        ])
                         setOpen(id)
                         setAdding(false)
                       }}
                       className="rounded-xl border border-navy/10 px-3 py-2.5 text-left transition-colors hover:border-primary/40 hover:bg-bg-soft disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:border-navy/10 disabled:hover:bg-transparent"
                     >
-                      <span className="block text-[13.5px] font-semibold text-navy">{t.label}</span>
-                      <span className="block text-[12px] text-navy/45">{taken ? 'Already on the page' : t.hint}</span>
+                      <span className="block text-[13.5px] font-semibold text-navy">{sectionLabel(t.type)}</span>
+                      <span className="block text-[12px] text-navy/45">{taken ? 'Already on the page' : sectionHint(t.type)}</span>
                     </button>
                     )
                   })}
