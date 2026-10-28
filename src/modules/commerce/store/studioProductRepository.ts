@@ -64,8 +64,11 @@ function loadSnapshot(): Promise<CatalogSnapshot> {
     studioWorkspaceService.listBundles().catch(() => NO_BUNDLES),
   ]).then(([rows, categories, bundles]: [PortalCatalogRow[], PortalCategoryRow[], typeof NO_BUNDLES]) => {
     // Workspaces and (since Sprint 78) calculators — what the viewer opens.
-    // Since Sprint 86 also Downloads (content_type 'pdf': single PDFs and kits).
-    const workspaces = rows.filter((r) => r.content_type === 'workspace' || r.content_type === 'calculator' || r.content_type === 'pdf')
+    // Since Sprint 86 also Downloads (content_type 'pdf': single PDFs and kits),
+    // and since 28/10/2026 Academy courses (content_type 'course').
+    const workspaces = rows.filter(
+      (r) => r.content_type === 'workspace' || r.content_type === 'calculator' || r.content_type === 'pdf' || r.content_type === 'course',
+    )
     const listed = new Set(workspaces.map((r) => r.product_id))
     // A bundle is shown only while it still includes a listed Workspace.
     const bundleItems = bundles.items.filter((i) => listed.has(i.product_id))
@@ -125,7 +128,13 @@ function baseProduct(
 function fromCatalogRow(row: PortalCatalogRow, resolveCategory: ResolveCategory): Product {
   return {
     ...baseProduct(row, row.product_id, resolveCategory(row.category_id)),
-    ...(row.content_type === 'calculator' ? { type: 'Calculator' as const } : row.content_type === 'pdf' ? { type: 'Download' as const } : {}),
+    ...(row.content_type === 'calculator'
+      ? { type: 'Calculator' as const }
+      : row.content_type === 'pdf'
+        ? { type: 'Download' as const }
+        : row.content_type === 'course'
+          ? { type: 'Course' as const }
+          : {}),
     featured: row.is_featured,
     tags: row.tags ?? [],
     createdAt: row.published_at ?? undefined,
@@ -158,7 +167,7 @@ export function studioProductFromRow(row: PortalProductRow, placement: CategoryP
   return {
     ...product,
     // A Studio calculator (Sprint 78) is sold and opened like a Workspace.
-    ...(row.content_type === 'calculator' ? { type: 'Calculator' as const } : {}),
+    ...(row.content_type === 'calculator' ? { type: 'Calculator' as const } : row.content_type === 'course' ? { type: 'Course' as const } : {}),
     // A Download (Sprint 86): its files are listed as "what's included".
     ...(row.content_type === 'pdf' ? { type: 'Download' as const, downloadKind: meta.downloadKind === 'kit' ? ('Kit' as const) : ('PDF' as const) } : {}),
     featured,
