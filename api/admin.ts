@@ -2265,10 +2265,15 @@ async function withOwnerEmails(db: Db, rows: Record<string, any>[]) {
 async function listMemberPages(db: Db) {
   const { data, error } = await db.from('member_pages').select('*').order('updated_at', { ascending: false })
   if (error) {
-    if (isMissingTable(error)) return { pages: [], ready: false, openPageIds: [] }
+    if (isMissingTable(error)) return { pages: [], ready: false, openPageIds: [], selfService: false }
     throw error
   }
-  return { pages: await withOwnerEmails(db, data ?? []), ready: true, openPageIds: await openPageIds(db) }
+  return {
+    pages: await withOwnerEmails(db, data ?? []),
+    ready: true,
+    openPageIds: await openPageIds(db),
+    selfService: await pageSelfService(db),
+  }
 }
 
 // Pages released before launch (Sprint 145): while the site is closed
@@ -2567,10 +2572,22 @@ async function memberPageSignups(req: VercelRequest, db: Db) {
   return { signups: data ?? [] }
 }
 
+// Handing a page to its owner has two ways of quietly not working: the owner
+// has no plan with a page (the page leaves the site, per RLS), or the plan is
+// there but "Subscribers build their own page" is off, so they open the
+// editor read-only. Both are silent until someone notices, so the save says
+// which one happened (28/10/2026).
 async function ownerPageWarning(db: Db, managed: { owner_managed?: boolean }, userId: string | null) {
   if (!managed.owner_managed || !userId) return {}
   const { data } = await db.rpc('member_page_level', { p_user: userId })
-  return data ? {} : { warning: 'Saved — the owner edits this page now, but their plan has no page, so it is off the site until they get one (Admin → Members → Plan).' }
+  if (!data)
+    return { warning: 'Saved — the owner edits this page now, but their plan has no page, so it is off the site until they get one (Admin → Members → Plan).' }
+  if (!(await pageSelfService(db)))
+    return {
+      warning:
+        'Saved — the owner has a plan with a page, but “Subscribers build their own page” is off in Admin → Site, so they open the editor read-only with “Coming soon”.',
+    }
+  return {}
 }
 
 async function updateMemberPage(req: VercelRequest, db: Db) {

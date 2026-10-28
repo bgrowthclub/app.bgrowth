@@ -205,7 +205,8 @@ export const adminService = {
   listMemberPages() {
     return call<AdminMemberPagesOverview>('GET', 'member-pages')
   },
-  // `warning`: the owner edits the page but has no plan with a page yet.
+  // `warning`: the page is the owner's now, but something stops them from
+  // editing it — no plan with a page, or the Admin → Site switch is off.
   saveMemberPage(draft: AdminMemberPageDraft) {
     return call<{ page: MemberPage; warning?: string }>(draft.id ? 'PATCH' : 'POST', 'member-pages', undefined, draft)
   },

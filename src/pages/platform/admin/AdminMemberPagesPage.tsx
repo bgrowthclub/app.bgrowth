@@ -145,6 +145,16 @@ export default function AdminMemberPagesPage() {
           {notice && <p className="rounded-xl bg-emerald-50 px-4 py-3 text-[13.5px] text-emerald-700">{notice}</p>}
           {error && <p className="text-[14px] text-red-500">{error}</p>}
 
+          {/* A page handed to its owner does nothing for them while the
+              general switch is off: they open the editor read-only. Easy to
+              miss, now that a page plan is given member by member, so the
+              screen says it instead of waiting for someone to notice. */}
+          {data.selfService === false && data.pages.some((p) => p.owner_managed) && !editing && (
+            <p className="rounded-xl bg-amber-50 px-4 py-3 text-[13.5px] leading-relaxed text-amber-800">
+              {data.pages.filter((p) => p.owner_managed).length === 1 ? 'One page is its owner’s' : `${data.pages.filter((p) => p.owner_managed).length} pages are their owners’`}, but “Subscribers build their own page” is off in Admin → Site — they open My Business Page read-only, with “Coming soon”. Their pages stay on the site; only editing is blocked.
+            </p>
+          )}
+
           {numbers && !editing && <AdminMemberPageStats key={numbers.id} page={numbers} onClose={() => setNumbers(null)} />}
           {contacts && !editing && (
             <div className="space-y-2">
