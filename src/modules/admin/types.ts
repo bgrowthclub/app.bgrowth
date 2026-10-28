@@ -413,6 +413,9 @@ export interface AdminMemberPagesOverview {
   ready: boolean
   // Pages released before launch (open while the site is closed).
   openPageIds?: string[]
+  // Admin → Site "Subscribers build their own page". Off = a page handed to
+  // its owner opens read-only for them.
+  selfService?: boolean
 }
 
 // The team's page editor sends the shared draft plus the owner.
