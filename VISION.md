@@ -149,11 +149,16 @@ next; a member should never have to leave the ecosystem, create a second
 account, or start over to go from one to the next, or from one category to
 another:
 
-- 🎓 **BGrowth Academy™** — *Learn.* Courses, certifications, learning
-  paths, and education — for any Growth Category, not only business. Where
-  a prospective member learns what a goal actually involves and decides
-  whether it's the right path, before committing money, time, or
-  reputation to it.
+- 🎓 **BGrowth Academy™** — *Learn.* Courses, minicourses, masterclasses,
+  workbooks, learning paths, and certification programs — for any Growth
+  Category, not only business. Where a prospective member learns what a
+  goal actually involves and decides whether it's the right path, before
+  committing money, time, or reputation to it. Academy teaches the
+  decision; it does not replace the doing. A course that has taught
+  someone what the goal involves ends by handing them the Growth System™
+  that does the work, and the Workspace they'll run it from — so Academy
+  is the doorway into the ecosystem, not a parallel product line
+  competing with it.
 
 - 💼 **BGrowth Workspace™** — *Work.* The primary experience after login,
   and the successor to everything previously called "BGrowth Library."
@@ -231,6 +236,12 @@ just one.
    video, and leaves the learner to translate it into practice alone. A
    Growth System is software a member works *from* — every time they
    pursue the goal, not once, passively, before forgetting it.
+   This is not an argument against teaching, and Academy is not an
+   exception to it: Academy exists to help someone decide and to teach
+   what a goal involves, and it hands the work itself to a Growth System.
+   A plan that makes paid courses the core of the business inverts this
+   philosophy and should be recognized as a change of strategy, not an
+   Academy feature.
 2. **Software you work from, not a document you read.** Every Growth
    System runs live in the browser inside Workspace — a member fills it
    out, prints it, or saves a copy — not a static PDF someone has to
