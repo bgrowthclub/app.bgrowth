@@ -6,6 +6,11 @@ import { MEMBER_PAGE_LABELS } from '../../modules/find/memberPageService'
 import { usePageTexts } from '../../lib/usePageTexts'
 import type { MemberPage, MemberPageProduct, MemberPageProductCategory } from '../../modules/find/types'
 
+// From how many products the search box is worth showing (28/10/2026,
+// lowered from 7: an affiliate page is browsed, so the search earns its
+// place early — the reference is Shopee's own affiliate page).
+const SEARCH_FROM = 4
+
 export const PRODUCT_CATEGORY_ICONS: Record<MemberPageProductCategory, LucideIcon> = {
   car: Car,
   work: Briefcase,
@@ -111,7 +116,7 @@ export default function MemberProductPicks({ products, title, note, hideNote = f
       )}
 
       <h2 className={h2}>{title || t.picks}</h2>
-      {(used.length > 1 || items.length > 6) && (
+      {(used.length > 1 || items.length >= SEARCH_FROM) && (
         <div className="mt-5 flex flex-col gap-3 md:flex-row md:items-center">
           {used.length > 1 && (
             <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 md:flex-wrap md:overflow-visible">
@@ -133,7 +138,7 @@ export default function MemberProductPicks({ products, title, note, hideNote = f
               })}
             </div>
           )}
-          {items.length > 6 && (
+          {items.length >= SEARCH_FROM && (
             <label className="flex items-center gap-2 rounded-full border border-navy/10 bg-white px-3.5 py-2 md:ml-auto md:w-64">
               <Search size={15} className="text-navy/40" aria-hidden />
               <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t.searchPicks} className="w-full bg-transparent text-[13.5px] text-navy outline-none" />
