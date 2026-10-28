@@ -321,19 +321,7 @@ export default function MemberPageView({ page, preview = false, onLinkClick }: P
           })}
 
       <footer className="mt-14 text-center">
-        {!preview && (
-          <div className="mb-5">
-            <MemberPagePromo language={page.language} />
-          </div>
-        )}
-        <a
-          href={preview ? '#' : '/'}
-          onClick={preview ? (e) => e.preventDefault() : undefined}
-          translate="no"
-          className="notranslate text-[12.5px] font-medium text-navy/35 hover:text-navy/60"
-        >
-          {t.madeWith}
-        </a>
+        <MemberPagePromo language={page.language} preview={preview} madeWith={t.madeWith} />
       </footer>
       </div>
     </div>

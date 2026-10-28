@@ -16,6 +16,15 @@
   --color-navy: #0A1B4D;
   --color-navy-rgb: 10 27 77;
 
+  /* BGrowth's own blue, fixed. A member page overrides --color-primary with
+     the member's chosen color, so anything that must stay BGrowth-blue on
+     someone else's page (the invitation pill in the page footer) reads these
+     instead. Same hues as --color-primary; a separate name so a theme can
+     never repaint the brand. */
+  --color-brand: #1061EC;
+  --color-brand-accent: #2F80FF;
+  --color-brand-soft: #E8F0FE;
+
   /* Studio Workspace accent — default scale (the brand primary). The
      Workspace viewer overrides these on its own root element from each
      Workspace's brand.primaryColor (modules/workspace/lib/theme.ts). */

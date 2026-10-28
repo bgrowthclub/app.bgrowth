@@ -630,15 +630,9 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
       <footer className="border-t border-navy/[0.06]">
         <div className={`mx-auto ${look.wide} px-5 py-8 text-center`}>
           <p className="text-[12px] text-navy/40">{t.disclaimer}</p>
-          {!preview && <MemberPagePromo language={page.language} />}
-          <a
-            href={preview ? '#' : '/'}
-            onClick={preview ? (e) => e.preventDefault() : undefined}
-            translate="no"
-            className="notranslate mt-2 inline-block text-[12.5px] font-medium text-navy/35 hover:text-navy/60"
-          >
-            {t.madeWith}
-          </a>
+          <div className="mt-4">
+            <MemberPagePromo language={page.language} preview={preview} madeWith={t.madeWith} />
+          </div>
         </div>
       </footer>
     </div>
