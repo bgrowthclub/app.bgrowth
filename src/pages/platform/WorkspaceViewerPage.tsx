@@ -6,6 +6,8 @@ import Button from '../../components/ui/Button'
 import DocumentWorkspaceRenderer from '../../components/workspace/DocumentWorkspaceRenderer'
 import CalculatorRunner from '../../components/calculator/CalculatorRunner'
 import DownloadRunner from '../../components/workspace/DownloadRunner'
+import CourseRunner from '../../components/academy/CourseRunner'
+import { isCourseContent } from '../../modules/academy/types'
 import { isDownloadContent } from '../../modules/workspace/types/portal'
 import RecordSwitcher from '../../components/workspace/RecordSwitcher'
 import RecordsPanel from '../../components/workspace/RecordsPanel'
@@ -126,6 +128,37 @@ export default function WorkspaceViewerPage() {
             <DownloadRunner productId={product.id} content={product.content} />
           ) : (
             <p className={`${CARD} p-8 text-center text-[14px] text-navy/50`}>The files for this product aren&rsquo;t ready yet.</p>
+          )}
+        </div>
+        <div className="mt-6">
+          <ReviewPrompt workspaceName={product.name} reviews={reviews} />
+        </div>
+      </div>
+    )
+  }
+
+  // A course (BGrowth Academy™): lessons and progress, no named records —
+  // the student has one row, created the first time they tick a lesson.
+  if (product.content_type === 'course') {
+    return (
+      <div className="mx-auto max-w-5xl">
+        <SEO title={product.name} description={product.short_description} path={`/platform/workspace/${slug}`} />
+        <Link to="/platform/my-systems" className="no-print inline-flex items-center gap-1.5 text-[13px] font-semibold text-primary">
+          <ArrowLeft className="h-4 w-4" />
+          My Workspaces
+        </Link>
+        <h1 className="mt-2 break-words font-display text-2xl font-bold text-navy md:text-3xl">{product.name}</h1>
+        <div className="mt-6">
+          {isCourseContent(product.content) ? (
+            <CourseRunner
+              course={product.content}
+              productId={product.id}
+              userId={user?.id}
+              records={ws.records}
+              reloadRecords={ws.reloadRecords}
+            />
+          ) : (
+            <p className={`${CARD} p-8 text-center text-[14px] text-navy/50`}>This course hasn&rsquo;t been published with its lessons yet.</p>
           )}
         </div>
         <div className="mt-6">
