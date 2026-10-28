@@ -1314,6 +1314,50 @@ same account and, where relevant, the same Growth System data.
   variant of `BusinessSystem` — model them as their own type when built,
   linked to a member's profile the same way owned Growth Systems are, and
   taggable by Growth Category.
+
+  **How it gets built (decided 28/10/2026, not implemented).** Follow the
+  Journeys precedent exactly — it is the worked example of adding a
+  product to this ecosystem without a second runtime:
+
+  - **A course is a `portal.products` row** with its own `content_type`
+    (`course`), authored in a new **Academy Engine** screen in BGrowth
+    Studio, published through the Portal's existing publish endpoint and
+    release flow (draft → reviewed → approved → scheduled → published).
+    It therefore inherits pricing, free/paid, bundles, plan inclusion,
+    plan discounts, coupons, reviews, tags, gallery, SEO and link
+    previews with no new code on any of those.
+  - **Access is the access the site already has** — license, team grant,
+    or plan inclusion, through `portal.has_workspace_access()`. No
+    separate enrolment table, no "student" role.
+  - **Delivery is Workspace**, at the member's own route, with progress
+    in `workspace_instances` (`data.kind` `course`), the same record type
+    a Workspace, calculator and Journey already use. "Resume where you
+    left off" is that record, not a new mechanism.
+  - **Formats are content, not code**: course, minicourse, masterclass,
+    workbook/playbook, learning path and certification program are shapes
+    the same type expresses — never a type or a page pipeline each.
+  - **A lesson composes what exists**: text, media, downloads from the
+    File Library, quizzes and exercises, plus links to a Growth System, a
+    Journey or a Knowledge article. A lesson must never hardcode a Growth
+    System's content (CLAUDE.md §8); it references it.
+  - **The handoff is first-class.** A course names the Growth System(s)
+    it prepares the student for, and ends by offering them — this is the
+    VISION's "Growth Systems, not courses" philosophy expressed in the
+    data model, and the reason Academy earns its place. A Journey's
+    action can likewise point at a course.
+  - **Certificates** belong only to programs that really offer one, and
+    are shown for what they are — issued by BGrowth for completing this
+    program, never implying a licence, qualification or government
+    credential. Use the same discipline the member pages' `credentials`
+    block established (shown as stated, "not verified by BGrowth").
+  - **Not in Academy:** the planned conversation simulator (scripted
+    scenarios, audio, branching feedback). It is its own product under
+    the Languages Growth Category, with its own cost per student and its
+    own content review for immigration, health and financial scenarios —
+    it must not gate or delay Academy, and the separate "Inglês de
+    Mudança" app (CLAUDE.md §3) is the precedent for where it lives.
+  - **Never** a second login, a second runtime, a parallel catalog, or a
+    per-category course pipeline — see §2, §4 and §14.
 - **💼 Workspace** (Work) — this repository's current focus; see §5. The
   Runtime described in §4 is Workspace's core engine, and is meant to run
   every category's systems, not only Business & Entrepreneurship's.
