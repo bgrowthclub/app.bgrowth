@@ -92,9 +92,11 @@ function toEntry(row: ArticleRow): KnowledgeArticleIndexEntry {
   }
 }
 
-// Studio's content blocks → the hub's body blocks. Kinds the hub doesn't
-// show yet (galleries, tables, CTAs…) are skipped; callouts and checklists
-// become a paragraph.
+// Studio's content blocks → the hub's body blocks. Callouts and checklists
+// become a paragraph; cta, download, code and faq have their own kinds since
+// 30/10/2026 (they used to be dropped in silence). Gallery, comparison,
+// table and embed are still skipped — the Studio has no editor for them, so
+// nobody can write one.
 function toBody(blocks: unknown): KnowledgeBodyBlock[] {
   if (!Array.isArray(blocks)) return []
   const body: KnowledgeBodyBlock[] = []
@@ -130,6 +132,39 @@ function toBody(blocks: unknown): KnowledgeBodyBlock[] {
         const items = Array.isArray(d.items) ? (d.items as { text?: string }[]).map((i) => `• ${i?.text ?? ''}`) : []
         const title = typeof d.title === 'string' && d.title.trim() ? [d.title] : []
         if (items.length) body.push({ kind: 'paragraph', text: [...title, ...items].join('\n') })
+        break
+      }
+      // A card with a link: the Studio's "CTA". Its `type` is only a
+      // suggestion of wording, so what is drawn is what the author typed.
+      case 'cta': {
+        const url = typeof d.linkUrl === 'string' ? d.linkUrl.trim() : ''
+        const title = typeof d.title === 'string' ? d.title : ''
+        if (url && (title.trim() || typeof d.buttonText === 'string'))
+          body.push({
+            kind: 'cta',
+            text: typeof d.description === 'string' ? d.description : '',
+            title,
+            url,
+            label: typeof d.buttonText === 'string' ? d.buttonText : '',
+          })
+        break
+      }
+      case 'download': {
+        const url = typeof d.url === 'string' ? d.url.trim() : ''
+        const name = typeof d.filename === 'string' ? d.filename : ''
+        if (url && name.trim()) body.push({ kind: 'download', text: '', title: name, url, label: typeof d.size === 'string' ? d.size : '' })
+        break
+      }
+      case 'code': {
+        const code = typeof d.code === 'string' ? d.code : ''
+        if (code.trim()) body.push({ kind: 'code', text: code, language: typeof d.language === 'string' ? d.language : '' })
+        break
+      }
+      case 'faq': {
+        const items = (Array.isArray(d.questions) ? (d.questions as { q?: string; a?: string }[]) : [])
+          .map((i) => ({ q: typeof i?.q === 'string' ? i.q : '', a: typeof i?.a === 'string' ? i.a : '' }))
+          .filter((i) => i.q.trim())
+        if (items.length) body.push({ kind: 'faq', text: '', items })
         break
       }
     }
