@@ -176,7 +176,12 @@ export default function JourneyMemberPage() {
       {journey.intro && state.phase === 'not_started' && <p className="whitespace-pre-line text-[15px] leading-relaxed text-navy/70">{journey.intro}</p>}
 
       <div className="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
-        <nav aria-label="Stages" className="lg:sticky lg:top-24 lg:self-start">
+        {/* min-w-0: a grid item defaults to min-width:auto, so without it
+            the stage list (whose titles don't wrap on a phone) stretched
+            this column to its full content width — 689px on a 390px phone.
+            Everything else in the grid inherited that width, which is why
+            a "full width" video ended up off the screen (30/10/2026). */}
+        <nav aria-label="Stages" className="min-w-0 lg:sticky lg:top-24 lg:self-start">
           <ol className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0">
             {journey.stages.map((s, i) => {
               const p = stageProgress.get(s.id)
