@@ -1,4 +1,5 @@
 import { lazy, Suspense } from 'react'
+import ErrorBoundary from './components/ui/ErrorBoundary'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import AppLayout from './components/layout/AppLayout'
 import SiteGate from './components/layout/SiteGate'
@@ -82,6 +83,9 @@ import ProductEnginePage from './studio/pages/ProductEnginePage'
 
 export default function App() {
   return (
+    // One boundary around every route: a component that throws shows a
+    // message with a way out instead of a blank page (30/10/2026).
+    <ErrorBoundary>
     <SiteGate>
     <Routes>
       <Route element={<AppLayout />}>
@@ -247,5 +251,6 @@ export default function App() {
       </Route>
     </Routes>
     </SiteGate>
+    </ErrorBoundary>
   )
 }

@@ -124,6 +124,13 @@ function Add({ label, onClick, disabled }: { label: string; onClick: () => void;
 
 // The page editor with a live preview: model, basics, look and the page's
 // sections (blocks). Shared by Admin → Pages and the subscriber's My Page.
+// A second (or third) copy of a section that may only appear once. The
+// first one stays; the extras are what the page can't carry.
+function isExtraCopy(blocks: MemberPageBlock[], block: MemberPageBlock, index: number): boolean {
+  if (!SINGLE_BLOCK_TYPES.includes(block.type)) return false
+  return blocks.findIndex((b) => b.type === block.type) !== index
+}
+
 export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel, extra, allowedTemplates, readOnly = false }: Props) {
   const allowed = (id: string) => !allowedTemplates || allowedTemplates.includes(id)
   const free = mode !== 'partial'
@@ -817,6 +824,22 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                         <span className={`truncate text-[14px] font-semibold ${block.hidden ? 'text-navy/40' : 'text-navy'}`}>{block.data?.title || label(block.type)}</span>
                         {block.data?.title && <span className="hidden text-[12px] text-navy/35 sm:inline">{label(block.type)}</span>}
                       </button>
+                      {/* A Pro page keeps its model's sections, so it only
+                          hides them — except an extra copy of a one-per-page
+                          section, which shouldn't be there at all. Without
+                          this the page can't be saved and can't be fixed
+                          either (found 30/10/2026). */}
+                      {!free && isExtraCopy(blocks, block, i) && (
+                        <button
+                          type="button"
+                          aria-label="Remove this extra copy"
+                          title="Remove this extra copy of the section"
+                          onClick={() => setBlocks((l) => l.filter((b) => b.id !== block.id))}
+                          className={`${SMALL} !px-1.5 text-red-500 hover:bg-red-50`}
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      )}
                       {!free && block.type !== 'hero' && (
                         <button
                           type="button"

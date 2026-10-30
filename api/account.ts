@@ -1,5 +1,6 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
+import { memberPageTemplates as pageModels } from '../src/modules/find/memberPageTemplates'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
 
@@ -575,22 +576,37 @@ const PAGE_SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/
 const RESERVED_PAGE_SLUGS = new Set(['admin', 'bgrowth', 'support', 'help', 'api', 'new', 'edit', 'settings'])
 const VIDEO_HOSTS = /^https:\/\/((www|m)\.)?(youtube\.com|youtu\.be|tiktok\.com|instagram\.com)\//i
 // The block order of each model — a Pro page must keep one of these.
-const TEMPLATE_SEQUENCES: Record<string, string> = {
-  professional: 'hero,contact,services,credentials,area,about,faq,cta',
-  local: 'hero,services,highlights,area,testimonials,faq,contact,cta',
-  creative: 'hero,highlights,gallery,about,services,testimonials,contact,cta',
-  personal: 'hero,about,services,testimonials,highlights,faq,contact,cta',
-  affiliate: 'hero,products,about,contact',
-  links: 'hero,contact,about',
-  cleaning: 'hero,contact,services,highlights,testimonials,area,faq,cta',
-  notary: 'hero,contact,services,area,about,faq,cta',
-  teacher: 'hero,contact,highlights,services,text,testimonials,about,cta',
-  creator: 'hero,contact,highlights,gallery,services,text,cta',
-  blank: 'hero,contact',
-}
-const TEMPLATE_COLORS: Record<string, string> = {
-  professional: 'navy', local: 'orange', creative: 'rose', personal: 'green', affiliate: 'blue', links: 'teal',
-  cleaning: 'teal', notary: 'navy', teacher: 'purple', creator: 'rose', blank: 'blue',
+// A Pro (partial) page keeps its model's sections as they are, so the save
+// checks the sections it receives against the model. These two maps used to
+// be written out by hand here, a copy of the models in
+// src/modules/find/memberPageTemplates.ts — and on 28/10/2026 that copy went
+// stale: the Empresas model gained a Services section and the new Affiliate
+// Picks model wasn't listed at all, so a Pro member could no longer save
+// either of them. They are derived from the models now, so a model can never
+// drift from this check again (CLAUDE.md §8: one source of truth).
+const PAGE_MODELS = pageModels('en')
+const TEMPLATE_SEQUENCES: Record<string, string> = Object.fromEntries(
+  PAGE_MODELS.map((t) => [t.id, t.blocks.map((b) => b.type).join(',')]),
+)
+const TEMPLATE_COLORS: Record<string, string> = Object.fromEntries(PAGE_MODELS.map((t) => [t.id, t.color]))
+
+// What a Pro (partial) page may send: the model's sections, in the model's
+// order, and nothing else. It used to have to match the model exactly, which
+// broke every page already saved whenever a model gained a section — as the
+// Empresas model did on 28/10/2026. So a page may be missing sections (it was
+// saved before they existed, or the member removed one); it may never add a
+// section, repeat one, or reorder them. Hiding a section keeps it in the list,
+// so hiding is unaffected.
+function keepsModelSections(sequence: string, model: string): boolean {
+  if (!sequence) return true
+  const want = model.split(',')
+  let i = 0
+  for (const type of sequence.split(',')) {
+    while (i < want.length && want[i] !== type) i += 1
+    if (i >= want.length) return false
+    i += 1
+  }
+  return true
 }
 
 // Before launch only the team builds and publishes member pages (decided
@@ -787,7 +803,8 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string }, re
     // the team switched it on for this page (signup_granted).
     if (!existing?.signup_granted) input.blocks = (input.blocks ?? []).filter((b) => b.type !== 'signup') as typeof input.blocks
     const sequence = (input.blocks ?? []).filter((b) => b.type !== 'signup').map((b) => b.type).join(',')
-    if (!TEMPLATE_SEQUENCES[template] || sequence !== TEMPLATE_SEQUENCES[template]) throw new HttpError(400, 'Your plan keeps the model’s sections as they are.')
+    if (!TEMPLATE_SEQUENCES[template] || !keepsModelSections(sequence, TEMPLATE_SEQUENCES[template]))
+      throw new HttpError(400, 'Your plan keeps the model’s sections as they are.')
     input.template = template
     input.blocks = (input.blocks ?? []).map((b) => {
       const { hidden, ...rest } = b as Record<string, any>
