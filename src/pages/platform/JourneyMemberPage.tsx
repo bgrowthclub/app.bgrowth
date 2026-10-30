@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { AlertCircle, ArrowLeft, ArrowRight, Check, Flag, PartyPopper, Route } from 'lucide-react'
+import { AlertCircle, ArrowLeft, ArrowRight, Check, ChevronLeft, ChevronRight, Flag, PartyPopper, Route } from 'lucide-react'
 import SEO from '../../components/seo/SEO'
 import EmptyState from '../../components/ui/EmptyState'
 import Button from '../../components/ui/Button'
@@ -89,8 +89,19 @@ export default function JourneyMemberPage() {
   }
 
   const stage = journey.stages.find((s) => s.id === stageId) ?? journey.stages[0]
+  // The stages either side of this one, for the buttons at the end of it.
+  const stageIndex = journey.stages.findIndex((s) => s.id === stage.id)
+  const previousStage = stageIndex > 0 ? { ...journey.stages[stageIndex - 1], index: stageIndex - 1 } : null
+  const nextStage = stageIndex >= 0 && stageIndex < journey.stages.length - 1 ? { ...journey.stages[stageIndex + 1], index: stageIndex + 1 } : null
   const progress = state.phase === 'ready' ? state.progress : null
   const resumeAction = summary?.resumeActionId ? journey.stages.flatMap((s) => s.actions).find((a) => a.id === summary.resumeActionId) : undefined
+
+  // From the buttons at the end of a stage: the next stage starts at its
+  // own beginning, not where the last one left off.
+  function goToStage(id: string) {
+    setStageId(id)
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   function goToResume() {
     if (!summary?.resumeStageId || !summary.resumeActionId) return
@@ -236,6 +247,37 @@ export default function JourneyMemberPage() {
             ))}
           </ul>
           {state.phase === 'not_started' && <p className="mt-4 text-[13px] text-navy/45">Start the Journey to check off steps.</p>}
+
+          {/* Moving between stages used to be possible only from the list at
+              the top — which, after scrolling through a stage's steps on a
+              phone, is a long way back (30/10/2026). */}
+          {journey.stages.length > 1 && (
+            <nav aria-label="Stages" className="mt-8 flex flex-col gap-3 border-t border-navy/[0.06] pt-6 sm:flex-row sm:items-stretch">
+              {[previousStage, nextStage].map((target, i) => {
+                const isNext = i === 1
+                if (!target)
+                  // Keeps the other button on its side instead of letting it slide over.
+                  return <span key={isNext ? 'next' : 'previous'} className="hidden flex-1 sm:block" aria-hidden />
+                return (
+                  <button
+                    key={isNext ? 'next' : 'previous'}
+                    type="button"
+                    onClick={() => goToStage(target.id)}
+                    className={`flex min-w-0 flex-1 items-center gap-2.5 rounded-xl2 border border-navy/10 bg-white px-4 py-3 transition-colors hover:border-primary/30 ${
+                      isNext ? 'text-left sm:justify-end sm:text-right' : 'text-left'
+                    }`}
+                  >
+                    {!isNext && <ChevronLeft size={18} className="shrink-0 text-primary" aria-hidden />}
+                    <span className="min-w-0">
+                      <span className="block text-[11.5px] font-semibold uppercase tracking-wide text-navy/40">{isNext ? 'Next' : 'Previous'}</span>
+                      <span className="block truncate text-[14px] font-semibold text-navy">{target.title || `Stage ${target.index + 1}`}</span>
+                    </span>
+                    {isNext && <ChevronRight size={18} className="shrink-0 text-primary" aria-hidden />}
+                  </button>
+                )
+              })}
+            </nav>
+          )}
         </section>
       </div>
     </div>
