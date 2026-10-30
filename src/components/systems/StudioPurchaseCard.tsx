@@ -42,6 +42,14 @@ const CALCULATOR_SUMMARY = [
 ]
 
 // A Download (Sprint 86): files the member keeps.
+// BGrowth Academy™ (30/10/2026): what a course gives the student.
+const COURSE_SUMMARY = [
+  'Lessons you work through at your own pace',
+  'Your progress is saved — come back where you left off',
+  'Text, video and files, plus the tools each lesson hands you',
+  'Works on desktop, tablet and mobile',
+]
+
 const DOWNLOAD_SUMMARY = [
   'Download your files right after purchase',
   'Yours to keep — download again any time from My Workspaces',
@@ -84,7 +92,14 @@ export default function StudioPurchaseCard({
   const free = product.basePrice === 0
   const pct = !free && planDiscount ? planDiscount.percent : 0
   const noun = studioProductNoun(product)
-  const summary = product.type === 'Calculator' ? CALCULATOR_SUMMARY : product.type === 'Download' ? DOWNLOAD_SUMMARY : QUICK_SUMMARY
+  const summary =
+    product.type === 'Calculator'
+      ? CALCULATOR_SUMMARY
+      : product.type === 'Course'
+        ? COURSE_SUMMARY
+        : product.type === 'Download'
+          ? DOWNLOAD_SUMMARY
+          : QUICK_SUMMARY
 
   return (
     <div className={`rounded-xl3 border border-navy/[0.06] bg-white p-6 shadow-glow ${className}`}>
