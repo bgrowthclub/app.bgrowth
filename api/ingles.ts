@@ -226,6 +226,12 @@ const ALWAYS_OPEN_PATHS = [
   '/privacy',
   '/terms',
   '/refund-policy',
+  // The Knowledge hub (30/10/2026): articles are what brings people in from
+  // search before launch, so the whole section opens — the list and every
+  // article. An article is free unless the team marks it (Portal migration
+  // 0072), because the gate would send a visitor to /register, which stays
+  // closed.
+  '/knowledge',
   '/t',
   // Bruno's course (/p/bruno/ingles-de-mudanca). Member pages — Bruno's and
   // Gika's included — open through openPageSlugs() (released + BGrowth Demos,

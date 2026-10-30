@@ -23,6 +23,12 @@ export const ALWAYS_OPEN_PATHS = [
   '/privacy',
   '/terms',
   '/refund-policy',
+  // The Knowledge hub (30/10/2026): articles are what brings people in from
+  // search before launch, so the whole section opens — the list and every
+  // article. An article is free unless the team marks it (Portal migration
+  // 0072), because the gate would send a visitor to /register, which stays
+  // closed.
+  '/knowledge',
   // Public tool links shared on Etsy, Pinterest… (Sprint 120) must keep working.
   '/t',
   // The "Inglês de Mudança" course lives under /p/bruno/ingles-de-mudanca
