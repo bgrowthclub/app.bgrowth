@@ -7,18 +7,29 @@ export interface KnowledgeCalloutCard {
   body: string
 }
 
-// One paragraph or heading of an article body. A future BGrowth Studio
-// export is expected to publish structured body blocks like this rather
-// than a single HTML string, so the Runtime never needs a sanitizer for
-// author-authored markup — kept simple (two block kinds) since this is
-// mock content, not a rich-text renderer.
+// One block of an article body. The Studio publishes structured blocks, not
+// an HTML string, so the Runtime never needs a sanitizer for author-written
+// markup — a link is a field, never markup inside the text.
+//
+// Until 30/10/2026 only six kinds were drawn and the Studio's cta, download,
+// code and faq blocks were dropped on the way in, without a word: an author
+// published a button and the article simply didn't have one. Those four are
+// drawn now.
 export interface KnowledgeBodyBlock {
-  kind: 'heading' | 'paragraph' | 'quote' | 'image' | 'video' | 'divider'
+  kind: 'heading' | 'paragraph' | 'quote' | 'image' | 'video' | 'divider' | 'cta' | 'download' | 'code' | 'faq'
   text: string
   /** heading: 2 or 3 (default 2) */
   level?: number
-  /** image/video address */
+  /** image/video/cta/download address */
   url?: string
+  /** cta/download: the heading of the card */
+  title?: string
+  /** cta: the button's words; download: the file size as the author wrote it */
+  label?: string
+  /** code: the language, as written in the Studio */
+  language?: string
+  /** faq: the questions and their answers */
+  items?: { q: string; a: string }[]
 }
 
 // Who reads an article published from BGrowth Studio (Portal migration
