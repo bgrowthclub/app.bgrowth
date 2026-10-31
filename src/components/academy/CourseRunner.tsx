@@ -33,6 +33,7 @@ export default function CourseRunner({ course, productId, userId, records, reloa
   const [openModules, setOpenModules] = useState<string[]>([])
   const [indexOpen, setIndexOpen] = useState(false)
   const lessonRef = useRef<HTMLDivElement | null>(null)
+  const keepRef = useRef<HTMLButtonElement | null>(null)
 
   // First render lands on where they stopped; after that they steer.
   useEffect(() => {
@@ -53,13 +54,17 @@ export default function CourseRunner({ course, productId, userId, records, reloa
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentId])
 
-  // A click elsewhere drops the picked passage.
+  // A click elsewhere drops the picked passage — but NOT a click on the
+  // button itself, which sits outside the lesson. Without this the button
+  // could never be pressed: pressing it dropped the passage first, the
+  // button disappeared, and the click never landed (31/10/2026).
   const clearPick = useCallback(() => setPicked(null), [])
   useEffect(() => {
     if (!picked) return
     const onDown = (e: MouseEvent | TouchEvent) => {
       const target = e.target as Node | null
-      if (target && lessonRef.current?.contains(target)) return
+      if (!target) return
+      if (lessonRef.current?.contains(target) || keepRef.current?.contains(target)) return
       clearPick()
     }
     window.addEventListener('scroll', clearPick, { passive: true })
@@ -101,8 +106,11 @@ export default function CourseRunner({ course, productId, userId, records, reloa
   const onPick = () => setPicked(read())
 
   const keep = () => {
-    if (!picked) return
-    addQuote(current.lesson.id, picked.text)
+    // read() again as a fallback: if anything dropped `picked` between the
+    // press and the click, the passage is still selected on the page.
+    const passage = picked?.text ?? read()?.text
+    if (!passage) return
+    addQuote(current.lesson.id, passage)
     window.getSelection()?.removeAllRanges()
     setPicked(null)
     setNotesOpen(true)
@@ -239,7 +247,13 @@ export default function CourseRunner({ course, productId, userId, records, reloa
           {picked && (
             <button
               type="button"
+              ref={keepRef}
+              // Keeps the selection alive while the button takes the press.
               onMouseDown={(e) => e.preventDefault()}
+              onTouchEnd={(e) => {
+                e.preventDefault()
+                keep()
+              }}
               onClick={keep}
               style={{ position: 'fixed', top: Math.max(8, picked.top - 46), left: picked.left, transform: 'translateX(-50%)', zIndex: 40 }}
               className="inline-flex items-center gap-1.5 rounded-xl bg-navy px-3.5 py-2 text-[13px] font-semibold text-white shadow-soft"
