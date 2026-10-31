@@ -1,6 +1,6 @@
-import { useCallback, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { studioWorkspaceService } from '../workspace/services/studioWorkspaceService'
-import { emptyProgress, openLesson, readProgress, summarize, toggleDone } from './progress'
+import { addQuoteToNote, emptyProgress, noteOf, openLesson, readProgress, setNote, summarize, toggleDone } from './progress'
 import type { CourseProgressData } from './progress'
 import type { CourseContent } from './types'
 import type { WorkspaceInstanceRow } from '../workspace/types/portal'
@@ -27,6 +27,9 @@ export function useCourseProgress(
   const [saving, setSaving] = useState(false)
   const rowId = useRef<string | null>(null)
   const queue = useRef<Promise<void>>(Promise.resolve())
+  // Typing a note shouldn't save on every key; it waits for a pause.
+  const noteTimer = useRef<number | null>(null)
+  const pendingNote = useRef<CourseProgressData | null>(null)
 
   if (rowId.current === null && existing) rowId.current = existing.id
   const data = local ?? (existing ? readProgress(existing.data) : emptyProgress())
@@ -61,6 +64,56 @@ export function useCourseProgress(
   )
 
   const toggle = useCallback((lessonId: string) => persist(toggleDone(data, lessonId)), [data, persist])
+
+  // Notes: shown as the student types, saved once they stop. flushNote()
+  // sends it right away — on leaving the lesson or closing the page, so a
+  // note is never lost to the wait.
+  const flushNote = useCallback(() => {
+    if (noteTimer.current !== null) {
+      window.clearTimeout(noteTimer.current)
+      noteTimer.current = null
+    }
+    const next = pendingNote.current
+    pendingNote.current = null
+    if (next) persist(next)
+  }, [persist])
+
+  const writeNote = useCallback(
+    (lessonId: string, text: string) => {
+      const next = setNote(data, lessonId, text)
+      setLocal(next)
+      pendingNote.current = next
+      if (noteTimer.current !== null) window.clearTimeout(noteTimer.current)
+      noteTimer.current = window.setTimeout(() => {
+        noteTimer.current = null
+        const pending = pendingNote.current
+        pendingNote.current = null
+        if (pending) persist(pending)
+      }, 900)
+    },
+    [data, persist],
+  )
+
+  // A passage the student picked in the lesson, copied into their note.
+  const addQuote = useCallback(
+    (lessonId: string, passage: string) => {
+      const next = addQuoteToNote(data, lessonId, passage)
+      if (next === data) return
+      flushNote()
+      persist(next)
+    },
+    [data, flushNote, persist],
+  )
+
+  // The page closing mustn't swallow a note still waiting.
+  useEffect(() => {
+    const onHide = () => flushNote()
+    window.addEventListener('pagehide', onHide)
+    return () => {
+      window.removeEventListener('pagehide', onHide)
+      flushNote()
+    }
+  }, [flushNote])
   // Opening a lesson only moves the bookmark, and only once it exists —
   // reading a course the student never ticked writes nothing.
   const open = useCallback(
@@ -73,5 +126,5 @@ export function useCourseProgress(
     [data, persist],
   )
 
-  return { data, summary, toggle, open, saving, saveError }
+  return { data, summary, toggle, open, saving, saveError, note: (id: string) => noteOf(data, id), writeNote, flushNote, addQuote }
 }
