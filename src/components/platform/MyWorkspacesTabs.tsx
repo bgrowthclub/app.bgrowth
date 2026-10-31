@@ -1,12 +1,14 @@
 import { NavLink } from 'react-router-dom'
-import { FileText, FolderOpen } from 'lucide-react'
+import { FileText, FolderOpen, GraduationCap } from 'lucide-react'
 
-// "Workspaces | Documents" — the two halves of the single My Workspaces
-// sidebar entry (decided 16/10/2026): the products the member can open
-// (/platform/my-systems) and what they filled in (/platform/documents).
-// Both routes and pages stay as they were; this only links them.
+// "Workspaces | Courses | Documents" — the three halves of the single My
+// Workspaces sidebar entry (16/10/2026; Courses added 31/10/2026): the
+// products the member can open, the courses they own, and what they filled
+// in. A course is listed here, where someone looks for what they have, but
+// opens in the Academy, where it is read.
 const TABS = [
   { label: 'Workspaces', to: '/platform/my-systems', icon: FolderOpen },
+  { label: 'Courses', to: '/platform/courses', icon: GraduationCap },
   { label: 'Documents', to: '/platform/documents', icon: FileText },
 ]
 

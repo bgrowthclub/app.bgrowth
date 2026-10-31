@@ -90,7 +90,7 @@ export const PLATFORM_NAV_GROUPS: PlatformNavGroup[] = [
       // can open and what they filled in ("My Documents",
       // pages/platform/MyDocumentsPage.tsx) — shared "Workspaces |
       // Documents" tabs on both pages (MyWorkspacesTabs). Both routes stay.
-      { label: 'My Workspaces', to: '/platform/my-systems', icon: FolderOpen, alsoActiveOn: ['/platform/documents'] },
+      { label: 'My Workspaces', to: '/platform/my-systems', icon: FolderOpen, alsoActiveOn: ['/platform/documents', '/platform/courses'] },
       // The store (decided 17/10/2026): members had no menu path to the
       // catalog — every product to buy, at /systems.
       { label: 'Catalog', to: '/systems', icon: ShoppingBag },
@@ -109,7 +109,9 @@ export const PLATFORM_NAV_GROUPS: PlatformNavGroup[] = [
       // BGrowth Journeys™, its own product (decided 24/10/2026): the list
       // is public (/journeys); a member's own Journey keeps this row lit.
       { label: 'Journeys', to: '/journeys', icon: Route, alsoActiveOn: ['/platform/journeys'] },
-      { label: 'Academy', to: '/platform/academy', icon: GraduationCap, locked: true },
+      // Unlocked on 31/10/2026: the Academy has real courses now, and it
+      // is where a course is read (/platform/academy/<course>).
+      { label: 'Academy', to: '/platform/academy', icon: GraduationCap },
       // Renamed from "Community" — this is the sidebar entry for what
       // VISION.md calls BGrowth Club™ (see CLAUDE.md's naming-gap note).
       // It's being locked at the same time, so this finally makes the
