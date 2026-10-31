@@ -13,10 +13,18 @@ export interface CourseProgressData {
   done: Record<string, string>
   /** The lesson they last opened, so the course resumes there. */
   lastLessonId: string | null
+  /**
+   * lessonId → the student's own notes for that lesson (30/10/2026).
+   * A passage they pick in the lesson is COPIED in here as a quote, rather
+   * than marked where it sits: a note is the student's own text, so editing
+   * the course later can't move it, break it or make it point at the wrong
+   * sentence.
+   */
+  notes?: Record<string, string>
 }
 
 export function emptyProgress(): CourseProgressData {
-  return { kind: 'course', version: 1, done: {}, lastLessonId: null }
+  return { kind: 'course', version: 1, done: {}, lastLessonId: null, notes: {} }
 }
 
 /** Reads saved data defensively (an older or tampered row still opens). */
@@ -30,7 +38,39 @@ export function readProgress(raw: unknown): CourseProgressData {
     }
   }
   if (typeof r.lastLessonId === 'string') out.lastLessonId = r.lastLessonId
+  if (r.notes && typeof r.notes === 'object' && !Array.isArray(r.notes)) {
+    for (const [id, text] of Object.entries(r.notes as Record<string, unknown>)) {
+      if (id && typeof text === 'string') out.notes![id] = text
+    }
+  }
   return out
+}
+
+/** The student's notes for one lesson (never undefined). */
+export function noteOf(data: CourseProgressData, lessonId: string): string {
+  return data.notes?.[lessonId] ?? ''
+}
+
+/** Replaces the note of one lesson; an empty note is dropped, not stored. */
+export function setNote(data: CourseProgressData, lessonId: string, text: string): CourseProgressData {
+  const notes = { ...(data.notes ?? {}) }
+  if (text.trim()) notes[lessonId] = text
+  else delete notes[lessonId]
+  return { ...data, notes }
+}
+
+/**
+ * Adds a passage the student picked in the lesson to their note, as a quote.
+ * Whitespace is collapsed so a selection spanning several lines reads as one
+ * quote, and a passage already in the note isn't added twice.
+ */
+export function addQuoteToNote(data: CourseProgressData, lessonId: string, passage: string): CourseProgressData {
+  const quote = passage.replace(/\s+/g, ' ').trim()
+  if (!quote) return data
+  const current = noteOf(data, lessonId)
+  if (current.includes(quote)) return data
+  const next = [current.trimEnd(), `"${quote}"`].filter(Boolean).join('\n\n')
+  return setNote(data, lessonId, next)
 }
 
 export interface ModuleProgress {

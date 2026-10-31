@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
-import { Check, ChevronLeft, ChevronRight, Clock } from 'lucide-react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { Check, ChevronLeft, ChevronRight, Clock, Quote, StickyNote } from 'lucide-react'
 import CourseLessonBody from './CourseLessonBody'
 import { CARD } from '../workspace/styles'
 import { courseLessons, courseMinutes, formatMinutes } from '../../modules/academy/types'
@@ -22,25 +22,79 @@ interface Props {
 // student stopped. There is no quiz and no certificate yet, by decision —
 // both can be added without changing what is saved here.
 export default function CourseRunner({ course, productId, userId, records, reloadRecords }: Props) {
-  const { data, summary, toggle, open, saveError } = useCourseProgress(course, productId, userId, records, reloadRecords)
+  const { data, summary, toggle, open, saveError, note, writeNote, flushNote, addQuote } = useCourseProgress(course, productId, userId, records, reloadRecords)
   const all = useMemo(() => courseLessons(course), [course])
   const [currentId, setCurrentId] = useState<string | null>(null)
+  // The passage the student just picked, and where to float the button.
+  const [picked, setPicked] = useState<{ text: string; top: number; left: number } | null>(null)
+  const [notesOpen, setNotesOpen] = useState(false)
+  const lessonRef = useRef<HTMLDivElement | null>(null)
 
   // First render lands on where they stopped; after that they steer.
   useEffect(() => {
     if (currentId === null && summary?.resumeLessonId) setCurrentId(summary.resumeLessonId)
   }, [currentId, summary])
 
+  // A lesson that already has notes opens with them in view.
+  useEffect(() => {
+    if (currentId) setNotesOpen(Boolean(data.notes?.[currentId]?.trim()))
+    // Only when the lesson changes — not on every keystroke in the note.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentId])
+
+  // A click elsewhere drops the picked passage.
+  const clearPick = useCallback(() => setPicked(null), [])
+  useEffect(() => {
+    if (!picked) return
+    const onDown = (e: MouseEvent | TouchEvent) => {
+      const target = e.target as Node | null
+      if (target && lessonRef.current?.contains(target)) return
+      clearPick()
+    }
+    window.addEventListener('scroll', clearPick, { passive: true })
+    document.addEventListener('mousedown', onDown)
+    return () => {
+      window.removeEventListener('scroll', clearPick)
+      document.removeEventListener('mousedown', onDown)
+    }
+  }, [picked, clearPick])
+
   const current = all.find((l) => l.lesson.id === currentId) ?? all[0]
   if (!current) return <p className={`${CARD} p-8 text-center text-[14px] text-navy/50`}>This course has no lessons yet.</p>
 
   const go = (id: string) => {
+    flushNote()
+    setPicked(null)
     setCurrentId(id)
     open(id)
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
   const isDone = Boolean(data.done[current.lesson.id])
+
+  // Picking a passage copies it into the note, instead of marking it where
+  // it sits: the note is the student's own text, so editing the course later
+  // can't move it or make it point at the wrong sentence (idea: 30/10/2026).
+  const read = () => {
+    const selection = typeof window === 'undefined' ? null : window.getSelection()
+    if (!selection || selection.isCollapsed || selection.rangeCount === 0) return null
+    const range = selection.getRangeAt(0)
+    const text = selection.toString().trim()
+    if (text.length < 3 || !lessonRef.current?.contains(range.commonAncestorContainer)) return null
+    const box = range.getBoundingClientRect()
+    if (!box.width && !box.height) return null
+    return { text, top: box.top, left: box.left + box.width / 2 }
+  }
+
+  const onPick = () => setPicked(read())
+
+  const keep = () => {
+    if (!picked) return
+    addQuote(current.lesson.id, picked.text)
+    window.getSelection()?.removeAllRanges()
+    setPicked(null)
+    setNotesOpen(true)
+  }
   const next = nextLessonId(course, current.lesson.id)
   const index = all.findIndex((l) => l.lesson.id === current.lesson.id)
   const previous = index > 0 ? all[index - 1].lesson.id : null
@@ -123,9 +177,23 @@ export default function CourseRunner({ course, productId, userId, records, reloa
             ) : null}
           </div>
 
-          <div className="mt-6">
+          <div ref={lessonRef} className="mt-6" onMouseUp={onPick} onTouchEnd={onPick}>
             <CourseLessonBody blocks={current.lesson.blocks ?? []} />
           </div>
+
+          {/* The button follows the selection, so on a phone it lands next to
+              what the student picked instead of at the end of the lesson. */}
+          {picked && (
+            <button
+              type="button"
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={keep}
+              style={{ position: 'fixed', top: Math.max(8, picked.top - 46), left: picked.left, transform: 'translateX(-50%)', zIndex: 40 }}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-navy px-3.5 py-2 text-[13px] font-semibold text-white shadow-soft"
+            >
+              <Quote size={14} aria-hidden /> Save to my notes
+            </button>
+          )}
 
           <div className="mt-8 flex flex-wrap items-center gap-3 border-t border-navy/[0.06] pt-6">
             <button
@@ -155,6 +223,37 @@ export default function CourseRunner({ course, productId, userId, records, reloa
               >
                 <ChevronLeft size={15} aria-hidden /> Previous
               </button>
+            )}
+          </div>
+          {/* The student's own notes for this lesson, kept in the same
+              record as their progress. */}
+          <div className="mt-6 border-t border-navy/[0.06] pt-5">
+            <button
+              type="button"
+              onClick={() => setNotesOpen((v) => !v)}
+              aria-expanded={notesOpen}
+              className="inline-flex items-center gap-2 text-[13.5px] font-semibold text-navy/60 transition-colors hover:text-navy"
+            >
+              <StickyNote size={15} className="text-primary" aria-hidden />
+              My notes
+              {!notesOpen && note(current.lesson.id).trim() && (
+                <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11.5px] font-semibold text-primary">written</span>
+              )}
+            </button>
+            {notesOpen && (
+              <>
+                <textarea
+                  value={note(current.lesson.id)}
+                  onChange={(e) => writeNote(current.lesson.id, e.target.value)}
+                  onBlur={flushNote}
+                  rows={5}
+                  maxLength={10000}
+                  aria-label="My notes for this lesson"
+                  placeholder="Write what you want to remember. Pick any passage in the lesson to bring it in here."
+                  className="mt-3 w-full rounded-xl2 border border-navy/10 bg-white px-4 py-3 text-[14.5px] leading-relaxed text-navy placeholder:text-navy/30 focus:border-primary/30"
+                />
+                <p className="mt-1.5 text-[12px] text-navy/40">Saved to your account, for your eyes only.</p>
+              </>
             )}
           </div>
         </article>
