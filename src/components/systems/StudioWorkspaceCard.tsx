@@ -5,6 +5,7 @@ import type { Product } from '../../modules/commerce/types/product'
 import StarRating from '../ui/StarRating'
 import { useReviewSummaries } from '../../modules/workspace/hooks/useReviewSummaries'
 import { studioPortalId } from '../../modules/commerce/store/studioProductRepository'
+import { studioProductNoun } from '../../modules/workspace/lib/productNoun'
 
 interface Props {
   product: Product
@@ -26,6 +27,7 @@ export default function StudioWorkspaceCard({ product }: Props) {
   const cover = product.assets.thumbnail
   const portalId = studioPortalId(product.id)
   const rating = useReviewSummaries()[portalId ?? '']
+  const noun = studioProductNoun(product)
 
   return (
     <Link
@@ -44,6 +46,15 @@ export default function StudioWorkspaceCard({ product }: Props) {
           <div className="grid h-full w-full place-items-center bg-grad-primary text-white">
             <Icon size={40} strokeWidth={1.6} />
           </div>
+        )}
+        {/* What this actually is. Until 31/10/2026 a course, a calculator
+            and a download looked identical in the catalog — you only found
+            out after clicking. A Workspace carries no label: it is the
+            common case, and labelling everything would label nothing. */}
+        {noun !== 'Workspace' && (
+          <span className="absolute left-3 top-3 rounded-full bg-white/95 px-2.5 py-1 text-[11px] font-bold uppercase tracking-wide text-navy/70 shadow-softer backdrop-blur">
+            {noun}
+          </span>
         )}
       </div>
 
@@ -64,7 +75,7 @@ export default function StudioWorkspaceCard({ product }: Props) {
         <div className="mt-5 flex items-center justify-between border-t border-navy/[0.06] pt-4">
           <span className="font-display text-[16px] font-bold text-navy">{formatPrice(product)}</span>
           <span className="inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-primary">
-            View Workspace
+            View {noun === 'Workspace' ? 'Workspace' : noun}
             <ArrowUpRight
               size={15}
               className="transition-transform duration-300 group-hover:translate-x-0.5 group-hover:-translate-y-0.5"
