@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Check, ChevronLeft, ChevronRight, Clock, Quote, StickyNote } from 'lucide-react'
+import { Check, ChevronDown, ChevronLeft, ChevronRight, Clock, ListTree, Quote, StickyNote } from 'lucide-react'
 import CourseLessonBody from './CourseLessonBody'
 import { CARD } from '../workspace/styles'
 import { courseLessons, courseMinutes, formatMinutes } from '../../modules/academy/types'
@@ -28,12 +28,23 @@ export default function CourseRunner({ course, productId, userId, records, reloa
   // The passage the student just picked, and where to float the button.
   const [picked, setPicked] = useState<{ text: string; top: number; left: number } | null>(null)
   const [notesOpen, setNotesOpen] = useState(false)
+  // Which modules are open in the index, and — on a phone — whether the
+  // index itself is open. Only the module being read starts open.
+  const [openModules, setOpenModules] = useState<string[]>([])
+  const [indexOpen, setIndexOpen] = useState(false)
   const lessonRef = useRef<HTMLDivElement | null>(null)
 
   // First render lands on where they stopped; after that they steer.
   useEffect(() => {
     if (currentId === null && summary?.resumeLessonId) setCurrentId(summary.resumeLessonId)
   }, [currentId, summary])
+
+  // The module being read is the one open in the index; the others stay
+  // closed until the student opens them.
+  useEffect(() => {
+    const moduleId = course.modules.find((m) => m.lessons.some((l) => l.id === currentId))?.id
+    if (moduleId) setOpenModules((list) => (list.includes(moduleId) ? list : [...list, moduleId]))
+  }, [course, currentId])
 
   // A lesson that already has notes opens with them in view.
   useEffect(() => {
@@ -65,6 +76,7 @@ export default function CourseRunner({ course, productId, userId, records, reloa
   const go = (id: string) => {
     flushNote()
     setPicked(null)
+    setIndexOpen(false)
     setCurrentId(id)
     open(id)
     if (typeof window !== 'undefined') window.scrollTo({ top: 0, behavior: 'smooth' })
@@ -124,47 +136,88 @@ export default function CourseRunner({ course, productId, userId, records, reloa
       )}
 
       <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)] lg:items-start">
-        {/* The map of the course. On a phone it sits above the lesson. */}
-        <nav className={`${CARD} max-h-[70vh] overflow-y-auto p-3 lg:sticky lg:top-24`} aria-label="Course contents">
-          {course.modules.map((module, mi) => {
-            const mp = summary?.modules.find((m) => m.moduleId === module.id)
-            return (
-              <div key={module.id} className={mi > 0 ? 'mt-4' : undefined}>
-                <p className="px-2 text-[11.5px] font-bold uppercase tracking-wide text-navy/40">
-                  {module.title}
-                  {mp && mp.total > 0 && <span className="ml-1.5 font-semibold normal-case tracking-normal text-navy/30">{mp.done}/{mp.total}</span>}
-                </p>
-                <ul className="mt-1.5 space-y-0.5">
-                  {module.lessons.map((lesson) => {
-                    const done = Boolean(data.done[lesson.id])
-                    const here = lesson.id === current.lesson.id
-                    return (
-                      <li key={lesson.id}>
-                        <button
-                          type="button"
-                          onClick={() => go(lesson.id)}
-                          aria-current={here ? 'true' : undefined}
-                          className={`flex w-full items-start gap-2 rounded-lg px-2 py-2 text-left text-[13.5px] transition-colors ${
-                            here ? 'bg-primary/[0.08] font-semibold text-navy' : 'text-navy/65 hover:bg-bg-soft'
-                          }`}
-                        >
-                          <span
-                            className={`mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full border ${
-                              done ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-navy/20 text-transparent'
-                            }`}
-                          >
-                            <Check size={11} strokeWidth={3} aria-hidden />
-                          </span>
-                          <span className="min-w-0">{lesson.title}</span>
-                        </button>
-                      </li>
-                    )
-                  })}
-                </ul>
-              </div>
-            )
-          })}
-        </nav>
+        {/* The map of the course. A long course was a wall of titles — and
+            on a phone that wall came BEFORE the lesson. Now each module
+            opens and closes (only the one being read is open), and on a
+            phone the whole index hides behind a bar saying where you are
+            (30/10/2026). */}
+        <div className="min-w-0 lg:sticky lg:top-24">
+          <button
+            type="button"
+            onClick={() => setIndexOpen((v) => !v)}
+            aria-expanded={indexOpen}
+            className={`${CARD} flex w-full items-center gap-3 px-4 py-3 text-left lg:hidden`}
+          >
+            <ListTree size={17} className="shrink-0 text-primary" aria-hidden />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-[13.5px] font-semibold text-navy">{current.module.title}</span>
+              <span className="block text-[12px] text-navy/45">
+                Lesson {index + 1} of {all.length}
+              </span>
+            </span>
+            <ChevronDown size={17} className={`shrink-0 text-navy/40 transition-transform ${indexOpen ? 'rotate-180' : ''}`} aria-hidden />
+          </button>
+
+          <nav
+            className={`${CARD} mt-3 max-h-[70vh] overflow-y-auto p-2 lg:mt-0 lg:block ${indexOpen ? 'block' : 'hidden'}`}
+            aria-label="Course contents"
+          >
+            {course.modules.map((module, mi) => {
+              const mp = summary?.modules.find((m) => m.moduleId === module.id)
+              const here = module.id === current.module.id
+              const expanded = openModules.includes(module.id)
+              return (
+                <div key={module.id} className={mi > 0 ? 'mt-1 border-t border-navy/[0.06] pt-1' : undefined}>
+                  <button
+                    type="button"
+                    onClick={() => setOpenModules((list) => (list.includes(module.id) ? list.filter((id) => id !== module.id) : [...list, module.id]))}
+                    aria-expanded={expanded}
+                    className="flex w-full items-start gap-2 rounded-lg px-2 py-2.5 text-left transition-colors hover:bg-bg-soft"
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className={`block text-[13px] font-bold leading-snug ${here ? 'text-navy' : 'text-navy/70'}`}>{module.title}</span>
+                      {mp && mp.total > 0 && (
+                        <span className={`mt-0.5 block text-[11.5px] ${mp.complete ? 'font-semibold text-emerald-600' : 'text-navy/45'}`}>
+                          {mp.complete ? 'Done' : `${mp.done}/${mp.total} lessons`}
+                        </span>
+                      )}
+                    </span>
+                    <ChevronDown size={15} className={`mt-0.5 shrink-0 text-navy/35 transition-transform ${expanded ? 'rotate-180' : ''}`} aria-hidden />
+                  </button>
+                  {expanded && (
+                    <ul className="mb-1 space-y-0.5 pl-1">
+                      {module.lessons.map((lesson) => {
+                        const done = Boolean(data.done[lesson.id])
+                        const reading = lesson.id === current.lesson.id
+                        return (
+                          <li key={lesson.id}>
+                            <button
+                              type="button"
+                              onClick={() => go(lesson.id)}
+                              aria-current={reading ? 'true' : undefined}
+                              className={`flex w-full items-start gap-2 rounded-lg px-2 py-2 text-left text-[13.5px] transition-colors ${
+                                reading ? 'bg-primary/[0.08] font-semibold text-navy' : 'text-navy/65 hover:bg-bg-soft'
+                              }`}
+                            >
+                              <span
+                                className={`mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full border ${
+                                  done ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-navy/20 text-transparent'
+                                }`}
+                              >
+                                <Check size={11} strokeWidth={3} aria-hidden />
+                              </span>
+                              <span className="min-w-0">{lesson.title}</span>
+                            </button>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  )}
+                </div>
+              )
+            })}
+          </nav>
+        </div>
 
         <article className={`${CARD} p-5 md:p-8`}>
           <p className="text-[11.5px] font-bold uppercase tracking-wide text-primary/80">{current.module.title}</p>
