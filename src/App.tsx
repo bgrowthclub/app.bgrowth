@@ -46,6 +46,8 @@ import PurchasesPage from './pages/platform/PurchasesPage'
 import PublicToolPage from './pages/PublicToolPage'
 import SupportPage from './pages/platform/SupportPage'
 import MyDocumentsPage from './pages/platform/MyDocumentsPage'
+import MyCoursesPage from './pages/platform/MyCoursesPage'
+import CoursePage from './pages/platform/CoursePage'
 import AdminMembersPage from './pages/platform/admin/AdminMembersPage'
 import AdminMemberPage from './pages/platform/admin/AdminMemberPage'
 import AdminSalesPage from './pages/platform/admin/AdminSalesPage'
@@ -191,6 +193,7 @@ export default function App() {
         <Route path="dashboard" element={<DashboardPage />} />
         <Route path="my-systems" element={<MyBusinessSystemsPage />} />
         <Route path="documents" element={<MyDocumentsPage />} />
+        <Route path="courses" element={<MyCoursesPage />} />
         {/* A Studio-published Workspace, opened and filled in (Portal data). */}
         <Route
           path="workspace/:slug"
@@ -201,6 +204,8 @@ export default function App() {
           }
         />
         <Route path="academy" element={<AcademyPage />} />
+        {/* A course is read in the Academy (31/10/2026). */}
+        <Route path="academy/:slug" element={<CoursePage />} />
         <Route path="community" element={<CommunityPage />} />
         <Route path="marketplace" element={<MarketplacePage />} />
         <Route path="find" element={<FindPage />} />

@@ -22,7 +22,8 @@ const DIFFICULTY_ORDER: Record<string, number> = { Beginner: 0, Intermediate: 1,
 export default function MyBusinessSystemsPage() {
   const { user } = useIdentity()
   const ownedState = useOwnedProductsState(user)
-  const owned = ownedState.products
+  // A course has its own tab since 31/10/2026, so it isn't repeated here.
+  const owned = ownedState.products.filter((p) => p.type !== 'Course')
 
   const industries = Array.from(new Set(owned.map((p) => p.tag)))
   const categories = Array.from(new Set(owned.map((p) => p.subTag).filter((c): c is string => Boolean(c))))

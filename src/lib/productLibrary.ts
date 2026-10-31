@@ -10,7 +10,7 @@ import { accessService } from '../modules/commerce/client/accessService'
 import { productCatalogService } from '../modules/commerce/services/ProductCatalogService'
 import { listStudioLibrary } from '../modules/workspace/services/studioAccess'
 import type { StudioProductAccess } from '../modules/workspace/services/studioAccess'
-import { workspaceViewerPath } from '../modules/workspace/config'
+import { coursePath, workspaceViewerPath } from '../modules/workspace/config'
 
 // Turns a Product this member has access to into a UserProduct — works for
 // any ProductType, not only GrowthSystem: icon/subTag get a real BusinessSystem
@@ -178,7 +178,9 @@ export function getProductActionLabel(type: ProductType): string {
 export function getProductActionRoute(product: UserProduct): string {
   // Trial ended — the product page is where it's bought.
   if (product.expired) return `/product/${product.slug}`
-  // A Studio-published Workspace opens in the Studio Workspace viewer.
+  // A course opens in the Academy; every other Studio product in the
+  // Workspace viewer.
+  if (product.type === 'Course') return coursePath(product.slug)
   if (product.sourceType === 'StudioWorkspace') return workspaceViewerPath(product.slug)
   switch (product.type) {
     case 'GrowthSystem':
