@@ -18,6 +18,7 @@ import { GROWTH_CATEGORIES } from '../types/growth'
 import { useCategoryLooks } from '../lib/useCategoryLooks'
 import { useProductTags } from '../lib/useProductTags'
 import { studioPortalId } from '../modules/commerce/store/studioProductRepository'
+import { studioProductNoun } from '../modules/workspace/lib/productNoun'
 import type { CategoryLookKeys } from '../lib/useCategoryLooks'
 import { categoryLook } from '../components/systems/categoryIcons'
 import type { ModuleType } from '../types/system'
@@ -33,6 +34,14 @@ const SORT_OPTIONS = [
 // match a title word for word, so a system also matches when any of the
 // query's meaningful words appears in it ("mobile", "notary"). Generic verbs
 // and filler words are ignored so they don't match everything.
+// A buyer sees four kinds; a PDF and a Kit are both a download to them.
+const KINDS = ['Workspace', 'Course', 'Calculator', 'Download'] as const
+
+function kindOf(product: Product): string {
+  const noun = studioProductNoun(product)
+  return noun === 'PDF' || noun === 'Kit' ? 'Download' : noun
+}
+
 const SEARCH_STOPWORDS = new Set(['become', 'start', 'business', 'improve', 'build', 'better', 'learn', 'with', 'your', 'from', 'that', 'this', 'want'])
 
 function matchesSearch(query: string, text: string) {
@@ -70,6 +79,9 @@ export default function BrowseSystems() {
   // Workspaces published from BGrowth Studio — listed before the example
   // systems (see lib/publishedCatalog.ts).
   const [studioProducts, setStudioProducts] = useState<Product[]>([])
+  // What kind of thing: a course, a calculator, a download or a Workspace
+  // (31/10/2026). A PDF and a Kit are both "Downloads" to a buyer.
+  const [kind, setKind] = useState('All')
   // Bundles of those Workspaces (Portal migration 0041) — listed first.
   const [bundles, setBundles] = useState<Product[]>([])
   // The Studio products have arrived — only then is "no results" true.
@@ -159,6 +171,7 @@ export default function BrowseSystems() {
     if (moduleType !== 'All') return []
     const list = studioProducts.filter(
       (p) =>
+        (kind === 'All' || kindOf(p) === kind) &&
         (area === 'All' || p.category === area) &&
         (category === 'All' || p.industry === category) &&
         hasTag(p.id) &&
@@ -170,11 +183,12 @@ export default function BrowseSystems() {
       if (sort === 'name-asc') return a.title.localeCompare(b.title)
       return 0
     })
-  }, [studioProducts, query, category, area, moduleType, sort, tag, productTags])
+  }, [studioProducts, query, category, area, moduleType, sort, tag, productTags, kind])
 
   // Same filters as the Workspaces; each bundle with the Workspaces it includes.
   const bundleResults = useMemo(() => {
-    if (moduleType !== 'All') return []
+    // A bundle mixes kinds, so filtering by one kind hides it.
+    if (moduleType !== 'All' || kind !== 'All') return []
     const byId = new Map(studioProducts.map((p) => [p.id, p]))
     return bundles
       .filter(
@@ -192,7 +206,7 @@ export default function BrowseSystems() {
         }),
       }))
       .filter(({ items }) => items.length > 0)
-  }, [bundles, studioProducts, query, category, area, moduleType, tag, productTags])
+  }, [bundles, studioProducts, query, category, area, moduleType, tag, productTags, kind])
 
   const results = useMemo(() => {
     let list = publishedList.filter((s) => {
@@ -305,6 +319,13 @@ export default function BrowseSystems() {
               )}
             </div>
           )}
+          <div className="flex flex-wrap items-center gap-2">
+            <span className="mr-1 text-[12px] font-semibold uppercase tracking-wide text-navy/30">Type</span>
+            <FilterPill label="All" active={kind === 'All'} onClick={() => setKind('All')} />
+            {KINDS.map((k) => (
+              <FilterPill key={k} label={k === 'Download' ? 'Downloads' : `${k}s`} active={kind === k} onClick={() => setKind(k)} />
+            ))}
+          </div>
           <div className="flex flex-wrap items-center gap-2">
             <span className="mr-1 text-[12px] font-semibold uppercase tracking-wide text-navy/30">Module Type</span>
             <FilterPill label="All" active={moduleType === 'All'} onClick={() => setModuleType('All')} />
