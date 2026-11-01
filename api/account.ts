@@ -1,6 +1,5 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node'
 import { createClient } from '@supabase/supabase-js'
-import { memberPageTemplates as pageModels } from '../src/modules/find/memberPageTemplates'
 import type { SupabaseClient } from '@supabase/supabase-js'
 import Stripe from 'stripe'
 
@@ -577,18 +576,50 @@ const RESERVED_PAGE_SLUGS = new Set(['admin', 'bgrowth', 'support', 'help', 'api
 const VIDEO_HOSTS = /^https:\/\/((www|m)\.)?(youtube\.com|youtu\.be|tiktok\.com|instagram\.com)\//i
 // The block order of each model — a Pro page must keep one of these.
 // A Pro (partial) page keeps its model's sections as they are, so the save
-// checks the sections it receives against the model. These two maps used to
-// be written out by hand here, a copy of the models in
-// src/modules/find/memberPageTemplates.ts — and on 28/10/2026 that copy went
-// stale: the Empresas model gained a Services section and the new Affiliate
-// Picks model wasn't listed at all, so a Pro member could no longer save
-// either of them. They are derived from the models now, so a model can never
-// drift from this check again (CLAUDE.md §8: one source of truth).
-const PAGE_MODELS = pageModels('en')
-const TEMPLATE_SEQUENCES: Record<string, string> = Object.fromEntries(
-  PAGE_MODELS.map((t) => [t.id, t.blocks.map((b) => b.type).join(',')]),
-)
-const TEMPLATE_COLORS: Record<string, string> = Object.fromEntries(PAGE_MODELS.map((t) => [t.id, t.color]))
+// checks the sections it receives against the model.
+//
+// These two maps are a COPY of the models in
+// src/modules/find/memberPageTemplates.ts. On 28/10/2026 I removed the copy
+// and imported that file instead — and it took /api/account down in
+// production on 01/11/2026: a serverless function cannot reach src/ at
+// runtime ("Cannot find module …/src/modules/find/memberPageTemplates"), so
+// the whole endpoint died before its first line ran. The copy is back, and
+// the import must not come back with it.
+//
+// CHANGING A MODEL'S SECTIONS? Change it in BOTH places. What protects us
+// from forgetting is below: a model missing from this map does NOT block
+// saving. A stale copy then costs a Pro member a little freedom on a new
+// model for a few days — never the ability to save, which is what the stale
+// copy cost on 30/10/2026.
+const TEMPLATE_SEQUENCES: Record<string, string> = {
+  professional: 'hero,contact,services,credentials,area,about,faq,cta',
+  local: 'hero,services,highlights,area,testimonials,faq,contact,cta',
+  creative: 'hero,highlights,gallery,about,services,testimonials,contact,cta',
+  personal: 'hero,about,services,testimonials,highlights,faq,contact,cta',
+  affiliate: 'hero,products,services,about,contact',
+  picks: 'hero,products,about,contact',
+  links: 'hero,contact,about',
+  cleaning: 'hero,contact,services,highlights,testimonials,area,faq,cta',
+  notary: 'hero,contact,services,area,about,faq,cta',
+  teacher: 'hero,contact,highlights,services,text,testimonials,about,cta',
+  creator: 'hero,contact,highlights,gallery,services,text,cta',
+  blank: 'hero,contact',
+}
+
+const TEMPLATE_COLORS: Record<string, string> = {
+  professional: 'navy',
+  local: 'orange',
+  creative: 'rose',
+  personal: 'green',
+  affiliate: 'blue',
+  picks: 'orange',
+  links: 'teal',
+  cleaning: 'teal',
+  notary: 'navy',
+  teacher: 'purple',
+  creator: 'rose',
+  blank: 'blue',
+}
 
 // What a Pro (partial) page may send: the model's sections, in the model's
 // order, and nothing else. It used to have to match the model exactly, which
@@ -803,8 +834,10 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string }, re
     // the team switched it on for this page (signup_granted).
     if (!existing?.signup_granted) input.blocks = (input.blocks ?? []).filter((b) => b.type !== 'signup') as typeof input.blocks
     const sequence = (input.blocks ?? []).filter((b) => b.type !== 'signup').map((b) => b.type).join(',')
-    if (!TEMPLATE_SEQUENCES[template] || !keepsModelSections(sequence, TEMPLATE_SEQUENCES[template]))
-      throw new HttpError(400, 'Your plan keeps the model’s sections as they are.')
+    // An unknown model (a new one this copy hasn't caught up with) is let
+    // through: a stale copy must never be the reason someone can't save.
+    const model = TEMPLATE_SEQUENCES[template]
+    if (model && !keepsModelSections(sequence, model)) throw new HttpError(400, 'Your plan keeps the model’s sections as they are.')
     input.template = template
     input.blocks = (input.blocks ?? []).map((b) => {
       const { hidden, ...rest } = b as Record<string, any>
@@ -812,7 +845,7 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string }, re
       return hidden && b.type !== 'hero' ? { ...block, hidden: true } : block
     }) as typeof input.blocks
     // The model's color; the background tint is open to every plan.
-    input.theme = { color: TEMPLATE_COLORS[template], ...(input.theme.background ? { background: input.theme.background } : {}) }
+    input.theme = { color: TEMPLATE_COLORS[template] ?? input.theme.color, ...(input.theme.background ? { background: input.theme.background } : {}) }
     input.highlights = input.highlights.slice(0, 1)
     // Pro: up to 12 product picks (Enterprise: 60).
     input.blocks = (input.blocks ?? []).map((b: any) =>
