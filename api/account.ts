@@ -656,9 +656,10 @@ async function memberPageLevel(db: Db, userId: string): Promise<'partial' | 'ful
   return data === 'full' || data === 'partial' ? data : null
 }
 
-// The page models the member's plans allow (Sprint 132): null = all of them
-// (a plan with a page and no list), else the union of the plans' lists.
-async function memberPageTemplates(db: Db, userId: string): Promise<string[] | null> {
+// What the member's live plans unlock, one entitlements object per plan.
+// null means the question couldn't be answered (a query error) — the callers
+// decide what that means for them, rather than guessing a permission here.
+async function livePlanEntitlements(db: Db, userId: string): Promise<any[] | null> {
   const now = new Date().toISOString()
   const { data, error } = await db
     .from('member_plans')
@@ -666,15 +667,36 @@ async function memberPageTemplates(db: Db, userId: string): Promise<string[] | n
     .eq('user_id', userId)
     .in('status', ['active', 'trialing', 'past_due'])
   if (error) return null
-  const allowed = new Set<string>()
+  const out: any[] = []
   for (const row of (data ?? []) as any[]) {
     if (row.starts_at > now || (row.ends_at && row.ends_at <= now)) continue
-    const ent = (Array.isArray(row.membership_plans) ? row.membership_plans[0] : row.membership_plans)?.entitlements ?? {}
+    out.push((Array.isArray(row.membership_plans) ? row.membership_plans[0] : row.membership_plans)?.entitlements ?? {})
+  }
+  return out
+}
+
+// The page models the member's plans allow (Sprint 132): null = all of them
+// (a plan with a page and no list), else the union of the plans' lists.
+async function memberPageTemplates(db: Db, userId: string): Promise<string[] | null> {
+  const plans = await livePlanEntitlements(db, userId)
+  if (!plans) return null
+  const allowed = new Set<string>()
+  for (const ent of plans) {
     if (ent.memberPage !== 'partial' && ent.memberPage !== 'full') continue
     if (!Array.isArray(ent.pageTemplates) || !ent.pageTemplates.length) return null
     ent.pageTemplates.forEach((t: string) => allowed.add(t))
   }
   return [...allowed]
+}
+
+// Whether the owner sees what visitors looked for on their page (01/11/2026):
+// a plan that includes it, or the team switching it on for this one page
+// (insights_granted, Portal migration 0073 — for a promotion or giveaway).
+// The plain numbers (visits, clicks) are NOT gated: every page owner has had
+// those since Sprint 76 and nothing is taken away here.
+async function memberPageInsights(db: Db, userId: string): Promise<boolean> {
+  const plans = await livePlanEntitlements(db, userId)
+  return (plans ?? []).some((ent) => ent.pageInsights === true)
 }
 
 function slugFrom(text: string) {
@@ -780,7 +802,10 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string }, re
 
   const templates = level ? await memberPageTemplates(db, user.id) : null
   const selfService = await memberPagesSelfService(db)
-  if (resource === 'my-page' && req.method === 'GET') return { level, templates, selfService, page: existing ?? null }
+  if (resource === 'my-page' && req.method === 'GET') {
+    const insights = existing?.insights_granted === true || (await memberPageInsights(db, user.id))
+    return { level, templates, selfService, insights, page: existing ?? null }
+  }
   // The page's e-mail list (Sprint 139, Portal migration 0065) — the owner's,
   // including a page the team made for them.
   if (resource === 'my-page-signups') {

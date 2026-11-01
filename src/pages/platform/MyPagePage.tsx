@@ -63,6 +63,9 @@ export default function MyPagePage() {
   const [templates, setTemplates] = useState<string[] | null>(null)
   // Off before launch: the editor is shown read-only with "Coming soon".
   const [selfService, setSelfService] = useState(false)
+  // What visitors looked for (01/11/2026): their plan includes it, or the
+  // team switched it on for this page.
+  const [insights, setInsights] = useState(false)
   const [tab, setTab] = useState<'edit' | 'numbers' | 'contacts'>('edit')
   const [days, setDays] = useState(30)
   const [stats, setStats] = useState<MemberPageStats | null>(null)
@@ -77,6 +80,7 @@ export default function MyPagePage() {
         setLevel(r.level)
         setTemplates(r.templates ?? null)
         setSelfService(r.selfService === true)
+        setInsights(r.insights === true)
         setPage(r.page)
       })
       .catch((err) => {
@@ -170,7 +174,7 @@ export default function MyPagePage() {
           }}
         />
       ) : activeTab === 'numbers' ? (
-        <MemberPageStatsView stats={stats} days={days} onDays={setDays} language={language} error={null} />
+        <MemberPageStatsView stats={stats} days={days} onDays={setDays} language={language} error={null} insights={insights} />
       ) : activeTab === 'contacts' ? (
         <MemberPageSignupsList load={() => myPageService.signups()} remove={(id) => myPageService.removeSignup(id)} fileName={slug ?? 'page'} />
       ) : null}

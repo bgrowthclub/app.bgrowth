@@ -296,6 +296,25 @@ export interface AdminDeletionRequest {
   } | null
 }
 
+// Admin → Catalog → Searches (api/admin.ts resource site-searches): what
+// visitors type in our catalog search. Counted since Sprint 97; only daily
+// totals per term, nothing about who searched.
+export interface AdminSiteSearchTerm {
+  query: string
+  count: number
+}
+
+export interface AdminSiteSearches {
+  // false until the database update (Portal migration 0052) has run.
+  ready: boolean
+  days: number
+  searches: number
+  found: AdminSiteSearchTerm[]
+  // What visitors wanted and we didn't have.
+  empty: AdminSiteSearchTerm[]
+  perDay: { day: string; count: number }[]
+}
+
 // Admin → Catalog (api/admin.ts resource catalog-health).
 export interface AdminCatalogIssue {
   level: 'problem' | 'warning'
@@ -428,6 +447,7 @@ export interface AdminMemberPageDraft extends MemberPageDraft {
   ownerManaged?: boolean
   // The team switched the e-mail list on for this page (Sprint 139).
   signupGranted?: boolean
+  insightsGranted?: boolean
 }
 
 // Admin → Site (Portal migration 0046).

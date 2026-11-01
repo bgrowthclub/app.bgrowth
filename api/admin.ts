@@ -1513,6 +1513,50 @@ async function memberDashboard(req: VercelRequest, db: Db) {
 // ---------------------------------------------------------------------------
 type Issue = { level: 'problem' | 'warning'; text: string }
 
+// ---------------------------------------------------------------------------
+// What visitors search for in our own catalog (01/11/2026). The counting has
+// run since Sprint 97 (portal.site_search_stats, Portal migration 0052) and
+// nothing ever read it — this is the first screen. Only daily totals per
+// term are stored, nothing about who searched, and a term that looked like
+// an e-mail or a long number was never stored at all.
+//   GET ?resource=site-searches&days=30
+// ---------------------------------------------------------------------------
+async function siteSearches(req: VercelRequest, db: Db) {
+  const days = Math.min(365, Math.max(7, Number(str(req.query.days)) || 30))
+  const since = new Date(Date.now() - (days - 1) * 86_400_000).toISOString().slice(0, 10)
+  const { data, error } = await db
+    .from('site_search_stats')
+    .select('day, query, had_results, count')
+    .gte('day', since)
+    .order('day')
+  if (error) {
+    if (isMissingTable(error)) return { ready: false, days, found: [], empty: [], perDay: [], searches: 0 }
+    throw error
+  }
+  const rows = (data ?? []) as { day: string; query: string; had_results: boolean; count: number }[]
+  const add = (map: Map<string, number>, key: string, n: number) => map.set(key, (map.get(key) ?? 0) + n)
+  const found = new Map<string, number>()
+  const empty = new Map<string, number>()
+  const perDay = new Map<string, number>()
+  let searches = 0
+  for (const r of rows) {
+    add(r.had_results ? found : empty, r.query, r.count)
+    add(perDay, r.day, r.count)
+    searches += r.count
+  }
+  const rank = (m: Map<string, number>) =>
+    [...m.entries()].sort((a, b) => b[1] - a[1]).slice(0, 100).map(([query, count]) => ({ query, count }))
+  return {
+    ready: true,
+    days,
+    searches,
+    found: rank(found),
+    // The useful half: what visitors wanted and we didn't have.
+    empty: rank(empty),
+    perDay: [...perDay.entries()].sort((a, b) => (a[0] < b[0] ? -1 : 1)).map(([day, count]) => ({ day, count })),
+  }
+}
+
 async function catalogHealth(db: Db) {
   const [products, listed, categories, licenses, records, reviews] = await Promise.all([
     db
@@ -2539,12 +2583,18 @@ async function createMemberPage(req: VercelRequest, db: Db) {
 
 // Who edits the page (Sprint 133): the owner (owner_managed — shown only
 // while their plan includes a page) or the team. Sent only by the new editor.
-function pageManagedBy(req: VercelRequest, userId: string | null): { owner_managed?: boolean; signup_granted?: boolean } {
+function pageManagedBy(
+  req: VercelRequest,
+  userId: string | null,
+): { owner_managed?: boolean; signup_granted?: boolean; insights_granted?: boolean } {
   const v = req.body?.ownerManaged
-  const out: { owner_managed?: boolean; signup_granted?: boolean } = {}
+  const out: { owner_managed?: boolean; signup_granted?: boolean; insights_granted?: boolean } = {}
   if (typeof v === 'boolean') out.owner_managed = v && Boolean(userId)
   // E-mail list switched on by the team for this page (Sprint 139, 0065).
   if (typeof req.body?.signupGranted === 'boolean') out.signup_granted = req.body.signupGranted
+  // What visitors looked for, switched on by the team for this page
+  // (01/11/2026, Portal migration 0073) — for a promotion or giveaway.
+  if (typeof req.body?.insightsGranted === 'boolean') out.insights_granted = req.body.insightsGranted
   return out
 }
 
@@ -3963,6 +4013,7 @@ const ROUTES: Record<string, Route> = {
   'POST wix-contacts-invite': (req, db) => sendWixInvites(req, db),
   'GET dashboard-members': (req, db) => memberDashboard(req, db),
   'GET catalog-health': (_req, db) => catalogHealth(db),
+  'GET site-searches': (req, db) => siteSearches(req, db),
   'GET deletion-requests': (_req, db) => listDeletionRequests(db),
   'POST deletion-complete': (req, db, admin) => completeDeletion(req, db, admin),
   'POST deletion-reject': (req, db, admin) => rejectDeletion(req, db, admin),

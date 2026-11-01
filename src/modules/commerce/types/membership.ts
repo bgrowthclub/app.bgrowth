@@ -62,6 +62,10 @@ export interface PlanEntitlements {
   // Which page models it allows (ids from memberPageTemplates); none = all.
   pageTemplates?: string[]
   prioritySupport?: boolean
+  // The page's own thermometer (01/11/2026): the owner sees what visitors
+  // looked for on it, including the searches that found nothing. The plain
+  // numbers (visits, clicks) are every page owner's and are not gated.
+  pageInsights?: boolean
   // Opens every product (Workspaces, calculators, downloads) while the plan
   // is live — Portal migration 0061. Otherwise a plan opens the products
   // included from it or a lower plan (portal.product_plan_access).

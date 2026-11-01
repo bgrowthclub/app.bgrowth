@@ -8,7 +8,7 @@ import { usePageTexts } from '../../lib/usePageTexts'
 import { MEMBER_PAGE_LABELS, memberLinkHref, memberLinkLabel, videoEmbed } from '../../modules/find/memberPageService'
 import { PAGE_BACKGROUNDS, PAGE_COLORS, blockLinks, pageBlocks } from '../../modules/find/memberPageTemplates'
 import type { MemberPageSkin } from '../../modules/find/memberPageTemplates'
-import type { MemberPage, MemberPageBlock, MemberPageHighlight, MemberPageLink } from '../../modules/find/types'
+import type { MemberPage, MemberPageBlock, MemberPageHighlight, MemberPageLink, MemberPageProductCategory } from '../../modules/find/types'
 
 interface Props {
   page: Pick<MemberPage, 'display_name' | 'headline' | 'bio' | 'photo_url' | 'location' | 'services' | 'highlights' | 'links' | 'language'> &
@@ -16,6 +16,8 @@ interface Props {
   skin: MemberPageSkin
   preview?: boolean
   onLinkClick?: (target: string) => void
+  onSearch?: (query: string, found: boolean) => void
+  onCategory?: (category: MemberPageProductCategory) => void
 }
 
 // How each look dresses the same sections.
@@ -86,7 +88,7 @@ function initials(name: string) {
 // A member's page in one of the four looks (Sprint 128: Professional, Local
 // Services, Creative Portfolio, Personal Brand) — the same fields and
 // blocks, laid out as a small professional website, phone first.
-export default function MemberSiteView({ page, skin, preview = false, onLinkClick }: Props) {
+export default function MemberSiteView({ page, skin, preview = false, onLinkClick, onSearch, onCategory }: Props) {
   const t = MEMBER_PAGE_LABELS[page.language] ?? MEMBER_PAGE_LABELS.en
   const look = LOOK[skin]
   const color = PAGE_COLORS.find((c) => c.id === page.theme?.color)
@@ -595,7 +597,7 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
         if (!(d.products ?? []).length) return null
         return section(
           block.id,
-          <MemberProductPicks products={d.products ?? []} title={d.title} note={d.body} hideNote={d.hideNote === true} kind={skin === 'affiliate' ? 'own' : 'affiliate'} hideStandardNote={skin === 'picks'} language={page.language} preview={preview} onLinkClick={onLinkClick} headingClass={look.h2} />,
+          <MemberProductPicks products={d.products ?? []} title={d.title} note={d.body} hideNote={d.hideNote === true} kind={skin === 'affiliate' ? 'own' : 'affiliate'} hideStandardNote={skin === 'picks'} language={page.language} preview={preview} onLinkClick={onLinkClick} onSearch={onSearch} onCategory={onCategory} headingClass={look.h2} />,
         )
       case 'cta': {
         if (!d.title?.trim() && !d.body?.trim()) return null

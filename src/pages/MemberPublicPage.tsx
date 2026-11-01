@@ -2,7 +2,13 @@ import { useEffect, useState } from 'react'
 import { Navigate, useParams } from 'react-router-dom'
 import SEO from '../components/seo/SEO'
 import MemberPageView from '../components/find/MemberPageView'
-import { getPublishedMemberPage, trackMemberPageClick, trackMemberPageView } from '../modules/find/memberPageService'
+import {
+  getPublishedMemberPage,
+  trackMemberPageCategory,
+  trackMemberPageClick,
+  trackMemberPageSearch,
+  trackMemberPageView,
+} from '../modules/find/memberPageService'
 import type { MemberPage } from '../modules/find/types'
 import { PAGE_BACKGROUNDS } from '../modules/find/memberPageTemplates'
 
@@ -59,7 +65,12 @@ export default function MemberPublicPage() {
         path={`/p/${page.slug}`}
         ogImage={page.photo_url ?? undefined}
       />
-      <MemberPageView page={page} onLinkClick={(target) => trackMemberPageClick(page.slug, target)} />
+      <MemberPageView
+        page={page}
+        onLinkClick={(target) => trackMemberPageClick(page.slug, target)}
+        onSearch={(query, found) => trackMemberPageSearch(page.slug, query, found)}
+        onCategory={(category) => trackMemberPageCategory(page.slug, category)}
+      />
     </div>
   )
 }

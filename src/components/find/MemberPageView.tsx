@@ -7,7 +7,7 @@ import MemberPagePromo from './MemberPagePromo'
 import type { CSSProperties } from 'react'
 import { MEMBER_PAGE_LABELS, memberLinkHref, memberLinkLabel, videoEmbed } from '../../modules/find/memberPageService'
 import { PAGE_BACKGROUNDS, PAGE_COLORS, blockLinks, pageBlocks, pageSkin } from '../../modules/find/memberPageTemplates'
-import type { MemberPage, MemberPageBlock } from '../../modules/find/types'
+import type { MemberPage, MemberPageBlock, MemberPageProductCategory } from '../../modules/find/types'
 
 const ICONS = MEMBER_LINK_ICONS
 
@@ -19,6 +19,9 @@ interface Props {
   // Called when a visitor opens a contact button or featured item, with
   // 'link:<type>' or 'featured:<title>' — the page's click numbers.
   onLinkClick?: (target: string) => void
+  // What visitors looked for in the products section (01/11/2026).
+  onSearch?: (query: string, found: boolean) => void
+  onCategory?: (category: MemberPageProductCategory) => void
 }
 
 function initials(name: string) {
@@ -35,10 +38,10 @@ function initials(name: string) {
 // subscriber's editor. Since Sprint 127 it draws the page's blocks in order
 // (hidden and empty ones skipped) in the page's color; a page without blocks
 // keeps the original layout (top, contacts, featured, services, about).
-export default function MemberPageView({ page, preview = false, onLinkClick }: Props) {
+export default function MemberPageView({ page, preview = false, onLinkClick, onSearch, onCategory }: Props) {
   // The four models (Sprint 128) have their own full-width looks.
   const skin = pageSkin(page.template)
-  if (skin) return <MemberSiteView page={page} skin={skin} preview={preview} onLinkClick={onLinkClick} />
+  if (skin) return <MemberSiteView page={page} skin={skin} preview={preview} onLinkClick={onLinkClick} onSearch={onSearch} onCategory={onCategory} />
   const t = MEMBER_PAGE_LABELS[page.language] ?? MEMBER_PAGE_LABELS.en
   // The page's own first button — what the "cta" block opens. A contact
   // block has its own buttons (27/10/2026) and reads them below.
@@ -280,7 +283,7 @@ export default function MemberPageView({ page, preview = false, onLinkClick }: P
         if (!(d.products ?? []).length) return null
         return (
           <section className="mt-10">
-            <MemberProductPicks products={d.products ?? []} title={d.title} note={d.body} hideNote={d.hideNote === true} language={page.language} preview={preview} onLinkClick={onLinkClick} headingClass="font-display text-xl font-bold text-navy" />
+            <MemberProductPicks products={d.products ?? []} title={d.title} note={d.body} hideNote={d.hideNote === true} language={page.language} preview={preview} onLinkClick={onLinkClick} onSearch={onSearch} onCategory={onCategory} headingClass="font-display text-xl font-bold text-navy" />
           </section>
         )
       case 'cta': {

@@ -215,6 +215,15 @@ export default function PlanEditor({ plan, nextRank, yearlyDiscountPercent, onSa
             <input
               type="checkbox"
               className="mt-0.5 h-4 w-4 accent-primary"
+              checked={ent.pageInsights === true}
+              onChange={(e) => setEnt({ ...ent, pageInsights: e.target.checked || undefined })}
+            />
+            What visitors looked for on their page (searches, including the ones that found nothing)
+          </label>
+          <label className={CHECK}>
+            <input
+              type="checkbox"
+              className="mt-0.5 h-4 w-4 accent-primary"
               checked={ent.includesAll === true}
               onChange={(e) => setEnt({ ...ent, includesAll: e.target.checked || undefined })}
             />

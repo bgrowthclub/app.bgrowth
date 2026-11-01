@@ -1,6 +1,7 @@
 import { BarChart3 } from 'lucide-react'
 import FilterPill from '../ui/FilterPill'
 import EmptyState from '../ui/EmptyState'
+import { MEMBER_PAGE_LABELS } from '../../modules/find/memberPageService'
 import type { MemberPageStats, MemberPageStatRow } from '../../modules/find/types'
 
 const PERIODS = [7, 30, 90] as const
@@ -14,7 +15,14 @@ const LABELS = {
     courseLeads: 'Course e-mails',
     signups: 'List sign-ups',
     perDay: 'Visits per day',
-    perLink: 'What people clicked',
+    perLink: 'Contact buttons',
+    perProduct: 'Products and featured items',
+    searched: 'What people looked for',
+    searchFound: 'Searches that found something',
+    searchEmpty: 'Searches that found nothing',
+    searchEmptyHint: 'The most useful list here: what people wanted and didn’t find.',
+    perCategory: 'Categories people opened',
+    noSearches: 'No searches in this period yet.',
     noClicks: 'No clicks in this period yet.',
     notReady: 'The numbers start once the database update (Portal migration 0045) runs.',
     privacy: 'Only totals are counted — nothing about who visited.',
@@ -29,7 +37,14 @@ const LABELS = {
     courseLeads: 'E-mails do curso',
     signups: 'Inscrições na lista',
     perDay: 'Visitas por dia',
-    perLink: 'Onde as pessoas clicaram',
+    perLink: 'Botões de contato',
+    perProduct: 'Produtos e destaques',
+    searched: 'O que as pessoas procuraram',
+    searchFound: 'Buscas que acharam',
+    searchEmpty: 'Buscas que não acharam nada',
+    searchEmptyHint: 'A lista mais útil daqui: o que as pessoas queriam e não encontraram.',
+    perCategory: 'Categorias abertas',
+    noSearches: 'Ainda não houve buscas neste período.',
     noClicks: 'Ainda não houve cliques neste período.',
     notReady: 'Os números começam depois da atualização do banco (migration 0045 do Portal).',
     privacy: 'Contamos só os totais — nada sobre quem visitou.',
@@ -48,8 +63,57 @@ function sum(rows: MemberPageStatRow[], kind: MemberPageStatRow['kind']) {
 
 function targetLabel(target: string, t: Labels) {
   if (target.startsWith('link:')) return t.links[target.slice(5)] ?? target.slice(5)
-  if (target.startsWith('featured:')) return `${target.slice(9)} · ${t.featured}`
+  if (target.startsWith('featured:')) return target.slice(9)
   return target
+}
+
+/** A product category's name, from the same list the page itself shows. */
+function categoryLabel(id: string, language: 'en' | 'pt') {
+  const labels = MEMBER_PAGE_LABELS[language] ?? MEMBER_PAGE_LABELS.en
+  return (labels.categories as Record<string, string>)[id] ?? id
+}
+
+/** Adds up one kind of row per target, biggest first. */
+function byTarget(rows: MemberPageStatRow[], keep: (r: MemberPageStatRow) => boolean) {
+  const totals = new Map<string, number>()
+  for (const r of rows) if (keep(r)) totals.set(r.target, (totals.get(r.target) ?? 0) + r.count)
+  return [...totals.entries()].sort((a, b) => b[1] - a[1])
+}
+
+// One ranked list with a bar per line — used for contact buttons, products,
+// searches and categories, so the four read the same way.
+function BarList({ title, hint, entries, empty, label, language }: {
+  title: string
+  hint?: string
+  entries: [string, number][]
+  empty: string
+  label?: (target: string) => string
+  language: 'en' | 'pt'
+}) {
+  const max = Math.max(1, ...entries.map(([, n]) => n))
+  return (
+    <div className={`${CARD} p-5`}>
+      <p className="text-[13px] font-semibold text-navy/60">{title}</p>
+      {hint && <p className="mt-1 text-[12.5px] text-navy/40">{hint}</p>}
+      {entries.length === 0 ? (
+        <p className="mt-3 text-[14px] text-navy/45">{empty}</p>
+      ) : (
+        <ul className="mt-3 space-y-2.5">
+          {entries.map(([target, n]) => (
+            <li key={target}>
+              <div className="flex items-baseline justify-between gap-3 text-[14px]">
+                <span className="truncate text-navy">{label ? label(target) : target}</span>
+                <span className="shrink-0 font-semibold text-navy">{n.toLocaleString(language === 'pt' ? 'pt-BR' : 'en-US')}</span>
+              </div>
+              <div className="mt-1 h-1.5 rounded-full bg-bg-soft">
+                <div className="h-full rounded-full bg-primary" style={{ width: `${(n / max) * 100}%` }} />
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
+  )
 }
 
 // The last `days` days, oldest first, as YYYY-MM-DD.
@@ -65,12 +129,16 @@ interface Props {
   onDays: (days: number) => void
   language: 'en' | 'pt'
   error?: string | null
+  // What visitors looked for (01/11/2026): shown to the team, and to an owner
+  // whose plan includes it or whose page the team switched it on for. The
+  // plain numbers above are every owner's and are never hidden.
+  insights?: boolean
 }
 
 // A member page's numbers: visits, clicks per button/featured item and the
 // course's visits and e-mails, over 7/30/90 days. Shared by the owner's
 // "My Page" and Admin → Pages.
-export default function MemberPageStatsView({ stats, days, onDays, language, error }: Props) {
+export default function MemberPageStatsView({ stats, days, onDays, language, error, insights = false }: Props) {
   const t = LABELS[language] ?? LABELS.en
   const rows = stats?.rows ?? []
   const visits = sum(rows, 'view')
@@ -85,10 +153,17 @@ export default function MemberPageStatsView({ stats, days, onDays, language, err
   const daysShown = dayList(days)
   const maxDay = Math.max(1, ...daysShown.map((d) => perDay.get(d) ?? 0))
 
-  const perTarget = new Map<string, number>()
-  for (const r of rows) if (r.kind === 'click') perTarget.set(r.target, (perTarget.get(r.target) ?? 0) + r.count)
-  const targets = [...perTarget.entries()].sort((a, b) => b[1] - a[1])
-  const maxTarget = Math.max(1, ...targets.map(([, n]) => n))
+  // Clicks split in two (01/11/2026): a contact button and a product are
+  // different questions — "did they want to talk to me" and "what did they
+  // want". They used to share one list, where a page with many products
+  // buried the contacts.
+  const contacts = byTarget(rows, (r) => r.kind === 'click' && !r.target.startsWith('featured:'))
+  const products = byTarget(rows, (r) => r.kind === 'click' && r.target.startsWith('featured:'))
+  // What visitors typed, and what they wanted and didn't find.
+  const searchesFound = byTarget(rows, (r) => r.kind === 'search')
+  const searchesEmpty = byTarget(rows, (r) => r.kind === 'search_empty')
+  const categories = byTarget(rows, (r) => r.kind === 'category')
+  const hasSearch = insights && (searchesFound.length > 0 || searchesEmpty.length > 0 || categories.length > 0)
 
   const tiles = [
     { label: t.visits, value: visits },
@@ -145,26 +220,24 @@ export default function MemberPageStatsView({ stats, days, onDays, language, err
             </div>
           </div>
 
-          <div className={`${CARD} p-5`}>
-            <p className="text-[13px] font-semibold text-navy/60">{t.perLink}</p>
-            {targets.length === 0 ? (
-              <p className="mt-3 text-[14px] text-navy/45">{t.noClicks}</p>
-            ) : (
-              <ul className="mt-3 space-y-2.5">
-                {targets.map(([target, n]) => (
-                  <li key={target}>
-                    <div className="flex items-baseline justify-between gap-3 text-[14px]">
-                      <span className="truncate text-navy">{targetLabel(target, t)}</span>
-                      <span className="shrink-0 font-semibold text-navy">{n}</span>
-                    </div>
-                    <div className="mt-1 h-1.5 rounded-full bg-bg-soft">
-                      <div className="h-full rounded-full bg-primary" style={{ width: `${(n / maxTarget) * 100}%` }} />
-                    </div>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+          <BarList title={t.perLink} entries={contacts} empty={t.noClicks} label={(x) => targetLabel(x, t)} language={language} />
+
+          {products.length > 0 && (
+            <BarList title={t.perProduct} entries={products} empty={t.noClicks} label={(x) => targetLabel(x, t)} language={language} />
+          )}
+
+          {hasSearch && (
+            <div className="space-y-5">
+              <p className="font-display text-[15px] font-bold text-navy">{t.searched}</p>
+              {searchesEmpty.length > 0 && (
+                <BarList title={t.searchEmpty} hint={t.searchEmptyHint} entries={searchesEmpty} empty={t.noSearches} language={language} />
+              )}
+              {searchesFound.length > 0 && <BarList title={t.searchFound} entries={searchesFound} empty={t.noSearches} language={language} />}
+              {categories.length > 0 && (
+                <BarList title={t.perCategory} entries={categories} empty={t.noSearches} label={(c) => categoryLabel(c, language)} language={language} />
+              )}
+            </div>
+          )}
 
           <p className="text-[12.5px] text-navy/40">{t.privacy}</p>
         </>

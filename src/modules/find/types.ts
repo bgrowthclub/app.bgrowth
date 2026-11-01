@@ -144,6 +144,9 @@ export interface MemberPage {
   owner_managed?: boolean
   // The team switched the e-mail list on for this page (promotions etc.).
   signup_granted?: boolean
+  // What visitors looked for, switched on by the team for this page
+  // (01/11/2026, Portal migration 0073).
+  insights_granted?: boolean
   // A BGrowth Demo (Portal migration 0067): public while the site is closed,
   // set only by a website admin in Admin → Pages. Never skips publication
   // or plan checks. Absent before 0067.
@@ -156,7 +159,18 @@ export interface MemberPage {
 
 // Member page numbers (Portal migration 0045): one total per day, kind and
 // target. Nothing about the visitors themselves is kept.
-export type MemberPageStatKind = 'view' | 'click' | 'course_view' | 'course_lead' | 'signup'
+// 'search'/'search_empty' = what visitors typed in the page's own product
+// search and whether it found anything; 'category' = a category chip they
+// opened (01/11/2026, Portal migrations 0073–0074).
+export type MemberPageStatKind =
+  | 'view'
+  | 'click'
+  | 'course_view'
+  | 'course_lead'
+  | 'signup'
+  | 'search'
+  | 'search_empty'
+  | 'category'
 
 // One person on a page's e-mail list (the owner's list — BGrowth never
 // sends to it).

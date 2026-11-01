@@ -42,7 +42,8 @@ export default function AdminMemberPageStats({ page, onClose }: { page: MemberPa
           <X size={18} />
         </button>
       </div>
-      <MemberPageStatsView stats={stats} days={days} onDays={setDays} language="en" error={error} />
+      {/* The team always sees what visitors looked for, whatever the owner's plan. */}
+      <MemberPageStatsView stats={stats} days={days} onDays={setDays} language="en" error={error} insights />
     </div>
   )
 }

@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import type { MouseEvent } from 'react'
 import { BookOpen, Briefcase, Car, ExternalLink, Home, Laptop, Package, Plane, Search, Star, Wallet } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -39,6 +39,12 @@ interface Props {
   language: MemberPage['language']
   preview?: boolean
   onLinkClick?: (target: string) => void
+  // What visitors looked for here (01/11/2026). Passed in, like onLinkClick:
+  // this component stays presentational and never counts anything itself.
+  // onSearch is called once the visitor stops typing, with whether the term
+  // found anything — a term that found nothing is the useful half.
+  onSearch?: (query: string, found: boolean) => void
+  onCategory?: (category: MemberPageProductCategory) => void
   // The look's section title class.
   headingClass?: string
 }
@@ -50,7 +56,7 @@ interface Props {
 // ratings or reviews); links open as typed. On an affiliate page they are
 // marked sponsored and the standard note shows unless the member switched it
 // off (Sprint 146); on an Empresas page neither applies.
-export default function MemberProductPicks({ products, title, note, hideNote = false, kind = 'affiliate', hideStandardNote = false, language, preview = false, onLinkClick, headingClass }: Props) {
+export default function MemberProductPicks({ products, title, note, hideNote = false, kind = 'affiliate', hideStandardNote = false, language, preview = false, onLinkClick, onSearch, onCategory, headingClass }: Props) {
   const t = MEMBER_PAGE_LABELS[language] ?? MEMBER_PAGE_LABELS.en
   // The standard note, edited in Admin → Site → Page texts → Member pages.
   const standardNote = usePageTexts().text(`pages.affiliate.${language === 'pt' ? 'pt' : 'en'}.note`)
@@ -68,6 +74,26 @@ export default function MemberProductPicks({ products, title, note, hideNote = f
         (!q || p.title.toLowerCase().includes(q) || (p.description ?? '').toLowerCase().includes(q)),
     )
   }, [items, category, query])
+
+  // A search is reported once the visitor stops typing (1.5 s), so a term
+  // typed letter by letter counts once — the same wait the catalog uses. The
+  // callback is held in a ref because the page passes an inline arrow: using
+  // it as an effect dependency would restart the wait on every render.
+  const report = useRef(onSearch)
+  useEffect(() => {
+    report.current = onSearch
+  }, [onSearch])
+  const found = shown.length > 0
+  useEffect(() => {
+    if (preview || query.trim().length < 2) return
+    const id = window.setTimeout(() => report.current?.(query, found), 1500)
+    return () => window.clearTimeout(id)
+  }, [query, found, preview])
+
+  const pickCategory = (c: MemberPageProductCategory | 'all') => {
+    setCategory(c)
+    if (!preview && c !== 'all') onCategory?.(c)
+  }
 
   const open = (p: MemberPageProduct) =>
     preview
@@ -127,7 +153,7 @@ export default function MemberProductPicks({ products, title, note, hideNote = f
                   <button
                     key={c}
                     type="button"
-                    onClick={() => setCategory(c)}
+                    onClick={() => pickCategory(c)}
                     className={`inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3.5 py-2 text-[13px] font-semibold transition-colors ${
                       active ? 'border-primary bg-primary text-white' : 'border-navy/10 bg-white text-navy/70 hover:border-primary/40'
                     }`}

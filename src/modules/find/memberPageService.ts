@@ -186,6 +186,46 @@ export function trackMemberPageClick(slug: string, target: string) {
   send({ slug, kind: 'click', target: target.slice(0, 120) })
 }
 
+// What visitors look for on the page itself (01/11/2026) — the page's own
+// thermometer, next to what they search for in the catalog. A search that
+// found nothing is counted apart ('search_empty'), because that is the
+// useful half: a product the member doesn't have yet.
+//
+// Privacy, the same rule the catalog search follows: the term is normalized
+// and nothing about the visitor is sent. The server drops a term that looks
+// like an e-mail or carries a long number (portal.track_member_page, Portal
+// migration 0074) — someone typing their own data into a search box must
+// not leave it in our numbers.
+export function trackMemberPageSearch(slug: string, query: string, found: boolean) {
+  if (isAutomated()) return
+  const q = query.trim().replace(/\s+/g, ' ').toLowerCase().slice(0, 120)
+  if (q.length < 2) return
+  // Once per term per browser session: a term typed letter by letter, or
+  // searched again after scrolling, is one search.
+  if (seenOnce(`bgrowth.pagesearch.${slug}.${found ? 'y' : 'n'}.${q}`)) return
+  send({ slug, kind: found ? 'search' : 'search_empty', target: q })
+}
+
+/** Which category chips visitors open — once per category per session. */
+export function trackMemberPageCategory(slug: string, category: string) {
+  if (isAutomated()) return
+  const c = category.trim().slice(0, 120)
+  if (!c || c === 'all') return
+  if (seenOnce(`bgrowth.pagecategory.${slug}.${c}`)) return
+  send({ slug, kind: 'category', target: c })
+}
+
+/** True if this browser session already counted this key. */
+function seenOnce(key: string): boolean {
+  try {
+    if (sessionStorage.getItem(key)) return true
+    sessionStorage.setItem(key, '1')
+  } catch {
+    /* private mode: count anyway */
+  }
+  return false
+}
+
 // The signed-in member's own page, if the team linked one to their account.
 export async function getMyMemberPage(userId: string): Promise<MemberPage | null> {
   if (!supabase) return null
@@ -230,7 +270,15 @@ async function accountCall<T>(method: 'GET' | 'PUT' | 'POST' | 'DELETE', resourc
 
 export const myPageService = {
   get() {
-    return accountCall<{ level: MemberPageLevel | null; templates?: string[] | null; selfService?: boolean; page: MemberPage | null }>('GET', 'my-page')
+    return accountCall<{
+      level: MemberPageLevel | null
+      templates?: string[] | null
+      selfService?: boolean
+      // What visitors looked for: the plan includes it, or the team switched
+      // it on for this page (01/11/2026).
+      insights?: boolean
+      page: MemberPage | null
+    }>('GET', 'my-page')
   },
   async save(draft: MemberPageDraft) {
     return (await accountCall<{ page: MemberPage }>('PUT', 'my-page', draft)).page

@@ -27,6 +27,8 @@ export default function AdminMemberPagesPage() {
   const [contacts, setContacts] = useState<MemberPage | null>(null)
   // The e-mail list switched on by the team for this page (Sprint 139).
   const [signupGranted, setSignupGranted] = useState(false)
+  // What visitors looked for, switched on by the team for this page (01/11/2026).
+  const [insightsGranted, setInsightsGranted] = useState(false)
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   // The owner e-mail field of the page being edited (team only).
@@ -37,6 +39,7 @@ export default function AdminMemberPagesPage() {
     setOwnerEmail(editing && editing !== 'new' ? editing.owner_email ?? '' : '')
     setOwnerManaged(editing && editing !== 'new' ? Boolean(editing.owner_managed) : false)
     setSignupGranted(editing && editing !== 'new' ? Boolean(editing.signup_granted) : false)
+    setInsightsGranted(editing && editing !== 'new' ? Boolean(editing.insights_granted) : false)
   }, [editing])
 
   useEffect(() => {
@@ -179,7 +182,7 @@ export default function AdminMemberPagesPage() {
               mode="team"
               page={editing === 'new' ? null : editing}
               upload={(dataUrl) => adminService.uploadMemberPageImage(dataUrl)}
-              onSave={(draft) => save({ ...draft, ownerEmail, ownerManaged: ownerManaged && Boolean(ownerEmail.trim()), signupGranted })}
+              onSave={(draft) => save({ ...draft, ownerEmail, ownerManaged: ownerManaged && Boolean(ownerEmail.trim()), signupGranted, insightsGranted })}
               onCancel={() => setEditing(null)}
               extra={
                 <label className="block">
@@ -200,6 +203,15 @@ export default function AdminMemberPagesPage() {
                       E-mail list on for this page (given by the team)
                       <span className="block text-[12px] text-navy/45">
                         For a promotion or giveaway: the owner can add the “E-mail list” section and see the contacts even if their plan doesn’t include it.
+                      </span>
+                    </span>
+                  </span>
+                  <span className="mt-2 flex items-start gap-2 text-[13px] text-navy/70">
+                    <input type="checkbox" className="mt-0.5 h-4 w-4 accent-primary" checked={insightsGranted} onChange={(e) => setInsightsGranted(e.target.checked)} />
+                    <span>
+                      Show what visitors looked for (given by the team)
+                      <span className="block text-[12px] text-navy/45">
+                        For a promotion or giveaway: the owner sees the searches on their page — including the ones that found nothing — even if their plan doesn’t include it. The team always sees them here.
                       </span>
                     </span>
                   </span>

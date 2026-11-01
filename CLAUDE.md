@@ -343,6 +343,40 @@ This repo is a **static, client-only MVP**:
   unchanged and the editor asks the person to review it ("Please review…",
   also next to Save). Nothing hidden becomes visible and nothing with
   content is deleted without the person doing it.
+  **Since Sprint 176 a page says what visitors looked for on it** (approved
+  by the owner 01/11/2026; Portal migrations 0073 + 0074): three new kinds in
+  `portal.member_page_stats` — `search` and `search_empty` (what was typed in
+  the page's own product search, and whether it found anything) and
+  `category` (a category chip opened) — counted through the same
+  `api/ingles.ts?action=track` as every other number. 0073 widened the
+  table's `kind` check and added `member_pages.insights_granted`; **0074
+  widened `portal.track_member_page` itself**, which keeps its own list of
+  accepted kinds — without it the table accepts them and the function drops
+  them in silence (the same shape of gap as the missing grants in 0071). The
+  privacy rule lives in that function, matching the catalog's
+  `record_site_search`: the term is normalized and never stored if it looks
+  like an e-mail or carries 6+ digits; nothing about the visitor is stored.
+  `MemberProductPicks` reports a search 1.5 s after typing stops and a
+  category when it's opened, through `onSearch`/`onCategory` props threaded
+  like the existing `onLinkClick` (the component counts nothing itself and
+  never reports in `preview`); `memberPageService` dedupes once per term per
+  browser session. `MemberPageStatsView` now splits clicks into contact
+  buttons and products (one list buried the other) and adds a "what people
+  looked for" group, shown only when `insights` is true. **Who sees it:** a
+  plan with the new `pageInsights` entitlement (Admin → Plans checkbox), or
+  the team ticking "Show what visitors looked for" on the page in Admin →
+  Pages (`insights_granted`, saved with the page draft like
+  `signup_granted` — for a promotion or giveaway); the team always sees it in
+  Admin → Pages → Numbers. The plain numbers (visits, clicks) stay open to
+  every page owner as they have been since Sprint 76 — nothing was taken
+  away. `api/account.ts` gained `livePlanEntitlements()` (shared by
+  `memberPageTemplates` and the new `memberPageInsights`) and `my-page` GET
+  returns `insights`. **Also: Admin → Catalog → Searches** (resource
+  `site-searches`, `pages/platform/admin/AdminSearchesPage.tsx`): the first
+  screen ever to read `portal.site_search_stats`, counted since Sprint 97 and
+  until now written and never looked at — searches per day, and the terms
+  that found nothing first, which are the products visitors asked for and the
+  catalog doesn't have.
   **BGrowth Journeys™ is its own product, the 11th** (decided 24/10/2026;
   Sprints 140–143, 153; Portal migration 0068 — written as 0066, renamed
   because it needs 0067; NOT applied yet): a guided path to a goal, stages →

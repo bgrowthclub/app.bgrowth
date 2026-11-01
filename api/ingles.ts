@@ -14,7 +14,8 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 //                   e-mail also counts on the creator's page numbers.
 //   GET  creator   ?slug=  — the creator's published member page (public
 //                   data: name, headline, photo, links) for "Quem criou".
-//   POST track     { slug, kind: view|click|course_view, target? } — adds
+//   POST track     { slug, kind: view|click|course_view|search|search_empty|
+//                   category, target? } — adds
 //                   one to the page's numbers for today (Portal migration
 //                   0045). Only totals are kept, nothing about the visitor.
 //   POST search    { q, results } — what was typed in the catalog search and
@@ -27,7 +28,12 @@ import type { SupabaseClient } from '@supabase/supabase-js'
 type Db = SupabaseClient<any, 'portal', any>
 
 const MOVING_WHEN = ['ja-moro', 'ate-3-meses', '3-12-meses', 'sem-data']
-const TRACK_KINDS = ['view', 'click', 'course_view']
+// 'search'/'search_empty' carry what a visitor typed in the page's own
+// product search, 'category' which category chip they opened (01/11/2026).
+// The term is normalized and dropped if it looks personal (an e-mail, a long
+// number) by portal.track_member_page itself — Portal migration 0074.
+const TRACK_KINDS = ['view', 'click', 'course_view', 'search', 'search_empty', 'category']
+const TRACK_WITH_TARGET = ['click', 'search', 'search_empty', 'category']
 const SIGNUP_EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 const SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/
 
@@ -154,7 +160,7 @@ async function trackEvent(req: VercelRequest, db: Db) {
   const slug = str(body.slug, 40).toLowerCase()
   const kind = str(body.kind, 20)
   if (!SLUG.test(slug) || !TRACK_KINDS.includes(kind)) return { ok: true }
-  const target = kind === 'click' ? str(body.target, 120) : ''
+  const target = TRACK_WITH_TARGET.includes(kind) ? str(body.target, 120) : ''
   const resolved = await resolveSlug(db, slug)
   // Site closed: visits to pages visitors can't see aren't counted.
   if (!(await pageOpenToVisitors(db, slug, resolved))) return { ok: true }

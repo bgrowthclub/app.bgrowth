@@ -15,7 +15,7 @@ import type {
   AdminSupportThread,
   CreateGrantResult,
   NewGrantInput, AdminCatalogCategories, AdminCategory,
-  AdminNewsletterCampaign, AdminNewsletterDraft, AdminNewsletterOverview, AdminReview, AdminMemberDashboard, DashboardPeriod, AdminDeletionRequest, AdminCatalogHealth,
+  AdminNewsletterCampaign, AdminNewsletterDraft, AdminNewsletterOverview, AdminReview, AdminMemberDashboard, DashboardPeriod, AdminDeletionRequest, AdminCatalogHealth, AdminSiteSearches,
   AdminBundle, AdminBundleDraft, AdminBundlesOverview,
   AdminTeamMember, AdminActivityPage, AdminMemberPageDraft, AdminMemberPagesOverview,
   AdminWixContactsOverview, WixContactGroup,
@@ -75,6 +75,10 @@ export const adminService = {
   },
   getCatalogHealth() {
     return call<AdminCatalogHealth>('GET', 'catalog-health')
+  },
+  // What visitors search for in the catalog (01/11/2026).
+  getSiteSearches(days: number) {
+    return call<AdminSiteSearches>('GET', 'site-searches', { days: String(days) })
   },
   async listDeletionRequests() {
     return (await call<{ requests: AdminDeletionRequest[] }>('GET', 'deletion-requests')).requests
