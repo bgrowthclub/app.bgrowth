@@ -30,6 +30,7 @@ import {
   Tag,
   Route,
   Search,
+  KeyRound,
 } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 
@@ -163,6 +164,7 @@ export const PLATFORM_NAV_GROUPS: PlatformNavGroup[] = [
     items: [
       { label: 'Health Check', to: '/platform/admin/catalog', icon: ClipboardCheck },
       { label: 'Searches', to: '/platform/admin/searches', icon: Search },
+      { label: 'Access', to: '/platform/admin/access', icon: KeyRound },
       { label: 'Bundles', to: '/platform/admin/bundles', icon: Package },
       { label: 'Plans', to: '/platform/admin/plans', icon: Crown },
       { label: 'Coupons', to: '/platform/admin/coupons', icon: TicketPercent },

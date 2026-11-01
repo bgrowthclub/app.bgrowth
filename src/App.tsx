@@ -59,6 +59,7 @@ import AdminDashboardPage from './pages/platform/admin/AdminDashboardPage'
 import AdminDeletionsPage from './pages/platform/admin/AdminDeletionsPage'
 import AdminCatalogPage from './pages/platform/admin/AdminCatalogPage'
 import AdminSearchesPage from './pages/platform/admin/AdminSearchesPage'
+import AdminProductAccessPage from './pages/platform/admin/AdminProductAccessPage'
 import AdminBundlesPage from './pages/platform/admin/AdminBundlesPage'
 import AdminTeamPage from './pages/platform/admin/AdminTeamPage'
 import AdminActivityPage from './pages/platform/admin/AdminActivityPage'
@@ -235,6 +236,7 @@ export default function App() {
         <Route path="admin/deletions" element={<AdminRoute><AdminDeletionsPage /></AdminRoute>} />
         <Route path="admin/catalog" element={<AdminRoute><AdminCatalogPage /></AdminRoute>} />
         <Route path="admin/searches" element={<AdminRoute><AdminSearchesPage /></AdminRoute>} />
+        <Route path="admin/access" element={<AdminRoute><AdminProductAccessPage /></AdminRoute>} />
         <Route path="admin/bundles" element={<AdminRoute><AdminBundlesPage /></AdminRoute>} />
         <Route path="admin/plans" element={<AdminRoute><AdminPlansPage /></AdminRoute>} />
         <Route path="admin/coupons" element={<AdminRoute><AdminCouponsPage /></AdminRoute>} />

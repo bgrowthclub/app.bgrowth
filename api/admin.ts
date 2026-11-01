@@ -201,14 +201,19 @@ async function getMember(req: VercelRequest, db: Db) {
   }
 }
 
-async function listProducts(db: Db) {
+async function listProducts(req: VercelRequest, db: Db) {
+  // ?all=1 also lists courses. SELLABLE_TYPES deliberately leaves `course`
+  // out (01/11/2026: the team cannot yet give a course, put one in a bundle
+  // or include one in a plan — flagged to the owner, not changed here), but
+  // the "who has this product" screen must be able to pick one.
+  const types = str(req.query.all) === '1' ? [...SELLABLE_TYPES, 'course'] : SELLABLE_TYPES
   const { data, error } = await db
     .from('products')
-    .select('id, name, slug, is_free, price_cents, currency, status, last_published_at')
+    .select('id, name, slug, is_free, price_cents, currency, status, last_published_at, content_type')
     .eq('status', 'published')
     // Workspaces and calculators — a bundle (0041) isn't something to give
     // access to.
-    .in('content_type', SELLABLE_TYPES)
+    .in('content_type', types)
     .order('name')
   if (error) throw error
   return { products: data ?? [] }
@@ -372,6 +377,190 @@ function refundedOf(session: Stripe.Checkout.Session): number | null {
   const charge = pi.latest_charge
   if (!charge || typeof charge === 'string') return null
   return charge.amount_refunded
+}
+
+// ---------------------------------------------------------------------------
+// Who has this product (01/11/2026). Until now the Admin area only answered
+// the opposite question — a member's products (getMember). This answers
+// "who is in this course", and the same for a Workspace, a calculator or a
+// Download, in one screen.
+//
+// For a course it also says how far along each student is, read from their
+// workspace_instances row (data.total is stamped on every save since Sprint
+// 179) — no course content needed here.
+//
+//   GET ?resource=product-members&id=<product>
+//
+// Honest about where each person comes from: a purchase, a free claim, a
+// trial and a team grant are real rows, one per person. Access through a
+// PLAN is not — it is the rule "everyone on plan X or above opens this", so
+// those people are listed from the plans themselves and leave the list when
+// their plan ends.
+// ---------------------------------------------------------------------------
+type ProductMemberSource = 'purchase' | 'free' | 'trial' | 'team' | 'plan'
+
+interface ProductMemberRow {
+  userId: string
+  email: string | null
+  fullName: string | null
+  source: ProductMemberSource
+  // What the source says in detail (the plan's name, the grant's note).
+  detail?: string
+  since: string | null
+  endsAt: string | null
+  expired: boolean
+  lastOpenedAt: string | null
+  // Courses only: 0–100, or null when they never ticked a lesson.
+  percent: number | null
+  records: number
+}
+
+/** Percent done from a saved course record — the server's copy of
+ *  modules/academy/progress.ts percentFromRecord(). A function cannot import
+ *  from src/ (see CLAUDE.md §13), so the rule lives in both places. */
+function coursePercentFromData(raw: unknown): number | null {
+  if (!raw || typeof raw !== 'object') return null
+  const data = raw as { kind?: unknown; total?: unknown; done?: unknown }
+  if (data.kind !== 'course') return null
+  const total = typeof data.total === 'number' && data.total > 0 ? Math.floor(data.total) : 0
+  if (!total) return null
+  const done = data.done && typeof data.done === 'object' && !Array.isArray(data.done) ? Object.keys(data.done).length : 0
+  return Math.max(0, Math.min(100, Math.round((done / total) * 100)))
+}
+
+async function productMembers(req: VercelRequest, db: Db) {
+  const productId = str(req.query.id)
+  if (!productId) throw new HttpError(400, 'Missing product.')
+
+  const { data: product, error: productError } = await db
+    .from('products')
+    .select('id, name, slug, content_type')
+    .eq('id', productId)
+    .maybeSingle()
+  if (productError) throw productError
+  if (!product) throw new HttpError(404, 'Product not found.')
+  const isCourse = product.content_type === 'course'
+
+  const [licenses, grants, planAccess, instances] = await Promise.all([
+    db.from('licenses').select('*').eq('product_id', productId),
+    db.from('access_grants').select('*').or(`product_id.eq.${productId},scope.eq.all`),
+    db.from('product_plan_access').select('plan_id').eq('product_id', productId).maybeSingle(),
+    db.from('workspace_instances').select('user_id, data, updated_at').eq('product_id', productId),
+  ])
+  if (licenses.error) throw licenses.error
+  if (grants.error) throw grants.error
+  if (instances.error) throw instances.error
+
+  // Progress and record counts per member.
+  const progress = new Map<string, { percent: number | null; records: number; updatedAt: string | null }>()
+  for (const row of (instances.data ?? []) as { user_id: string; data: unknown; updated_at: string | null }[]) {
+    const current = progress.get(row.user_id) ?? { percent: null, records: 0, updatedAt: null }
+    const percent = coursePercentFromData(row.data)
+    progress.set(row.user_id, {
+      percent: percent === null ? current.percent : Math.max(current.percent ?? 0, percent),
+      records: current.records + 1,
+      updatedAt: !current.updatedAt || (row.updated_at && row.updated_at > current.updatedAt) ? row.updated_at : current.updatedAt,
+    })
+  }
+
+  const rows: ProductMemberRow[] = []
+  const seen = new Set<string>()
+  const add = (userId: string, row: Omit<ProductMemberRow, 'userId' | 'email' | 'fullName' | 'percent' | 'records'>) => {
+    // One line per person: a real row (purchase/trial/team) always wins over
+    // plan access, so nobody is listed twice.
+    if (seen.has(userId)) return
+    seen.add(userId)
+    const p = progress.get(userId)
+    rows.push({ userId, email: null, fullName: null, percent: p?.percent ?? null, records: p?.records ?? 0, ...row })
+  }
+
+  for (const l of (licenses.data ?? []) as any[]) {
+    const expired =
+      l.status !== 'active' || (l.access_policy === 'expiring' && l.expires_at && new Date(l.expires_at).getTime() <= Date.now())
+    add(l.user_id, {
+      source: l.type === 'trial' ? 'trial' : l.price_cents === 0 || l.type === 'free' ? 'free' : 'purchase',
+      since: l.activated_at ?? l.created_at ?? null,
+      endsAt: l.access_policy === 'expiring' ? l.expires_at ?? null : null,
+      expired: Boolean(expired),
+      lastOpenedAt: l.last_opened_at ?? null,
+    })
+  }
+
+  for (const g of (grants.data ?? []) as any[]) {
+    add(g.user_id, {
+      source: 'team',
+      detail: g.scope === 'all' ? 'All products' : g.note || undefined,
+      since: g.created_at ?? null,
+      endsAt: g.expires_at ?? null,
+      expired: !isGrantActive(g as GrantRow),
+      lastOpenedAt: null,
+    })
+  }
+
+  // Through a plan: the product's lowest plan (higher ranks include it too),
+  // plus any plan that opens everything.
+  const { data: plans, error: plansError } = await db.from('membership_plans').select('id, name, rank, entitlements')
+  if (plansError) throw plansError
+  const planById = new Map((plans ?? []).map((p: any) => [p.id as string, p]))
+  const required = planAccess.data?.plan_id ? planById.get(planAccess.data.plan_id)?.rank ?? null : null
+  const opensIt = (plans ?? []).filter(
+    (p: any) => (p.entitlements?.includesAll === true) || (required !== null && (p.rank ?? 0) >= required),
+  )
+  if (opensIt.length) {
+    const { data: memberPlans, error: mpError } = await db
+      .from('member_plans')
+      .select('user_id, plan_id, starts_at, ends_at, status')
+      .in('plan_id', opensIt.map((p: any) => p.id))
+      .in('status', ['active', 'trialing', 'past_due'])
+    if (mpError) throw mpError
+    const now = new Date().toISOString()
+    for (const mp of (memberPlans ?? []) as any[]) {
+      if (mp.starts_at > now || (mp.ends_at && mp.ends_at <= now)) continue
+      add(mp.user_id, {
+        source: 'plan',
+        detail: planById.get(mp.plan_id)?.name ?? undefined,
+        since: mp.starts_at ?? null,
+        endsAt: mp.ends_at ?? null,
+        expired: false,
+        lastOpenedAt: null,
+      })
+    }
+  }
+
+  // Names and e-mails in one query.
+  if (rows.length) {
+    const { data: users, error: usersError } = await db
+      .from('users')
+      .select('id, email, full_name')
+      .in('id', rows.map((r) => r.userId))
+    if (usersError) throw usersError
+    const byId = new Map((users ?? []).map((u: any) => [u.id as string, u]))
+    for (const row of rows) {
+      const u = byId.get(row.userId)
+      row.email = u?.email ?? null
+      row.fullName = u?.full_name ?? null
+    }
+  }
+
+  rows.sort((a, b) => (b.since ?? '').localeCompare(a.since ?? ''))
+  const active = rows.filter((r) => !r.expired)
+  return {
+    product: { id: product.id, name: product.name, slug: product.slug, contentType: product.content_type, isCourse },
+    members: rows,
+    totals: {
+      people: rows.length,
+      active: active.length,
+      expired: rows.length - active.length,
+      // "Took it and never opened it" — the most telling number of the lot.
+      neverOpened: active.filter((r) => !r.lastOpenedAt && r.records === 0).length,
+      ...(isCourse
+        ? {
+            started: active.filter((r) => r.percent !== null && r.percent > 0).length,
+            finished: active.filter((r) => r.percent === 100).length,
+          }
+        : {}),
+    },
+  }
 }
 
 async function listSales(db: Db) {
@@ -3991,7 +4180,8 @@ const ROUTES: Record<string, Route> = {
   'DELETE categories': (req, db) => deleteCategory(req, db),
   'PATCH product-category': (req, db) => setProductCategory(req, db),
   'GET sales': (_req, db) => listSales(db),
-  'GET products': (_req, db) => listProducts(db),
+  'GET products': (req, db) => listProducts(req, db),
+  'GET product-members': (req, db) => productMembers(req, db),
   'POST grants': (req, db, admin) => createGrant(req, db, admin),
   'PATCH grants': (req, db) => revokeGrant(req, db),
   'POST licenses': (req, db) => giveLicense(req, db),

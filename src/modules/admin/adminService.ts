@@ -15,7 +15,7 @@ import type {
   AdminSupportThread,
   CreateGrantResult,
   NewGrantInput, AdminCatalogCategories, AdminCategory,
-  AdminNewsletterCampaign, AdminNewsletterDraft, AdminNewsletterOverview, AdminReview, AdminMemberDashboard, DashboardPeriod, AdminDeletionRequest, AdminCatalogHealth, AdminSiteSearches,
+  AdminNewsletterCampaign, AdminNewsletterDraft, AdminNewsletterOverview, AdminReview, AdminMemberDashboard, DashboardPeriod, AdminDeletionRequest, AdminCatalogHealth, AdminSiteSearches, AdminProductMembers,
   AdminBundle, AdminBundleDraft, AdminBundlesOverview,
   AdminTeamMember, AdminActivityPage, AdminMemberPageDraft, AdminMemberPagesOverview,
   AdminWixContactsOverview, WixContactGroup,
@@ -128,8 +128,14 @@ export const adminService = {
   listSales() {
     return call<AdminSalesReport>('GET', 'sales')
   },
-  async listProducts() {
-    return (await call<{ products: AdminProduct[] }>('GET', 'products')).products
+  // includeCourses: the access screen can pick a course; the grant/bundle
+  // screens still can't (api/admin.ts SELLABLE_TYPES).
+  async listProducts(includeCourses = false) {
+    return (await call<{ products: AdminProduct[] }>('GET', 'products', includeCourses ? { all: '1' } : undefined)).products
+  },
+  // Who has one product (01/11/2026).
+  getProductMembers(productId: string) {
+    return call<AdminProductMembers>('GET', 'product-members', { id: productId })
   },
   createGrant(input: NewGrantInput) {
     return call<CreateGrantResult>('POST', 'grants', undefined, input)

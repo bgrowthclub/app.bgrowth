@@ -343,6 +343,30 @@ This repo is a **static, client-only MVP**:
   unchanged and the editor asks the person to review it ("Please review…",
   also next to Save). Nothing hidden becomes visible and nothing with
   content is deleted without the person doing it.
+  **Since Sprint 180 the Admin area answers "who has this product"**
+  (approved by the owner 01/11/2026; no migration): Admin → Catalog →
+  **Access** (`/platform/admin/access`, resource `product-members`,
+  admin-only, `pages/platform/admin/AdminProductAccessPage.tsx`). Until now
+  the Admin area only answered the opposite question — one member's products
+  (`getMember`) — so "who is in this course" had no screen. Per person: how
+  they got in (bought it, free, trial, given by the team, through a plan),
+  since when, last opened, and — for a course — how far along, from their
+  `workspace_instances` row. The percentage rule is a deliberate copy of
+  `modules/academy/progress.ts` `percentFromRecord()`
+  (`coursePercentFromData` in api/admin.ts), because a function must not
+  import from `src/` (§13); change both. Totals include **"never opened
+  it"**. One line per person: a real record (purchase/trial/team) wins over
+  plan access. Plan access is NOT a row per person — it is "everyone on this
+  plan or above" — so those people are listed from `member_plans` and leave
+  the list when the plan ends; the screen says so. Read-only: giving or
+  ending access stays in Admin → Members, where it is logged. `listProducts`
+  takes `?all=1` to include courses in the picker.
+  **Known gap, flagged and NOT changed (01/11/2026):** `SELLABLE_TYPES` in
+  api/admin.ts is `['workspace', 'calculator', 'pdf']`, so the team cannot
+  give a course to a member, put a course in a Bundle, or include a course
+  in a plan — a course is sold by `api/studio-checkout.ts`, which has its own
+  rule. Adding `course` there is a product decision (it changes Bundles and
+  Admin → Plans → Included too), so it waits for the owner.
   **Since Sprint 179 a course card shows how far along the student is, and
   courses finally reach the lists** (approved by the owner 01/11/2026; no
   migration): `listStudioLibrary` (modules/workspace/services/studioAccess)

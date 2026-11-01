@@ -58,6 +58,32 @@ export interface AdminProduct {
   price_cents: number | null
   currency: string
   last_published_at?: string | null
+  content_type?: string
+}
+
+// Admin → Catalog → Access (api/admin.ts resource product-members,
+// 01/11/2026): who has one product, how they got in and how far along they
+// are. The opposite of Admin → Members, which answers one person's products.
+export interface AdminProductMember {
+  userId: string
+  email: string | null
+  fullName: string | null
+  // 'plan' is not a row per person: it is "everyone on this plan or above".
+  source: 'purchase' | 'free' | 'trial' | 'team' | 'plan'
+  detail?: string
+  since: string | null
+  endsAt: string | null
+  expired: boolean
+  lastOpenedAt: string | null
+  // Courses only: 0–100, null when they never ticked a lesson.
+  percent: number | null
+  records: number
+}
+
+export interface AdminProductMembers {
+  product: { id: string; name: string; slug: string; contentType: string; isCourse: boolean }
+  members: AdminProductMember[]
+  totals: { people: number; active: number; expired: number; neverOpened: number; started?: number; finished?: number }
 }
 
 export interface NewGrantInput {
