@@ -360,13 +360,17 @@ This repo is a **static, client-only MVP**:
   plan or above" — so those people are listed from `member_plans` and leave
   the list when the plan ends; the screen says so. Read-only: giving or
   ending access stays in Admin → Members, where it is logged. `listProducts`
-  takes `?all=1` to include courses in the picker.
-  **Known gap, flagged and NOT changed (01/11/2026):** `SELLABLE_TYPES` in
-  api/admin.ts is `['workspace', 'calculator', 'pdf']`, so the team cannot
-  give a course to a member, put a course in a Bundle, or include a course
-  in a plan — a course is sold by `api/studio-checkout.ts`, which has its own
-  rule. Adding `course` there is a product decision (it changes Bundles and
-  Admin → Plans → Included too), so it waits for the owner.
+  lists every sellable type, courses included.
+  **Sprint 181 (approved by the owner 01/11/2026): `course` joined
+  `SELLABLE_TYPES`** in api/admin.ts, which had been
+  `['workspace', 'calculator', 'pdf']` since before courses existed. A course
+  was already sold by `api/studio-checkout.ts` (which only refuses a
+  Journey), but was missing from that list, so the team could not give a
+  course to a member, put one in a Bundle or include one in a plan. All nine
+  uses were checked and all are wanted: giving a license, the product picker,
+  Health Check, Bundles (list + validation), the Home highlights, Tags,
+  Admin → Plans → Included, and coupon targets. A bundle is still not in the
+  list (it isn't something to give access to) and a Journey is never sold.
   **Since Sprint 179 a course card shows how far along the student is, and
   courses finally reach the lists** (approved by the owner 01/11/2026; no
   migration): `listStudioLibrary` (modules/workspace/services/studioAccess)

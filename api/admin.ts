@@ -28,7 +28,14 @@ type Db = SupabaseClient<any, 'portal', any>
 const PAGE_SIZE = 25
 // What the site sells one by one (and in bundles): Studio Workspaces and,
 // since Sprint 78, Studio calculators.
-const SELLABLE_TYPES = ['workspace', 'calculator', 'pdf']
+// Everything the team can give, bundle, include in a plan, tag, feature on
+// the Home, target with a coupon and check in Health Check. `course` joined
+// on 01/11/2026 (approved by the owner): a course was already sold by
+// api/studio-checkout.ts but was missing here, so the team could not give
+// one to a member, put one in a Bundle or include one in a plan.
+// A bundle is not here — it isn't something to give access to — and a
+// Journey is never sold (see api/studio-checkout.ts).
+const SELLABLE_TYPES = ['workspace', 'calculator', 'pdf', 'course']
 
 class HttpError extends Error {
   constructor(public status: number, message: string, public extra?: Record<string, unknown>) {
@@ -201,19 +208,14 @@ async function getMember(req: VercelRequest, db: Db) {
   }
 }
 
-async function listProducts(req: VercelRequest, db: Db) {
-  // ?all=1 also lists courses. SELLABLE_TYPES deliberately leaves `course`
-  // out (01/11/2026: the team cannot yet give a course, put one in a bundle
-  // or include one in a plan — flagged to the owner, not changed here), but
-  // the "who has this product" screen must be able to pick one.
-  const types = str(req.query.all) === '1' ? [...SELLABLE_TYPES, 'course'] : SELLABLE_TYPES
+async function listProducts(db: Db) {
   const { data, error } = await db
     .from('products')
     .select('id, name, slug, is_free, price_cents, currency, status, last_published_at, content_type')
     .eq('status', 'published')
     // Workspaces and calculators — a bundle (0041) isn't something to give
     // access to.
-    .in('content_type', types)
+    .in('content_type', SELLABLE_TYPES)
     .order('name')
   if (error) throw error
   return { products: data ?? [] }
@@ -4180,7 +4182,7 @@ const ROUTES: Record<string, Route> = {
   'DELETE categories': (req, db) => deleteCategory(req, db),
   'PATCH product-category': (req, db) => setProductCategory(req, db),
   'GET sales': (_req, db) => listSales(db),
-  'GET products': (req, db) => listProducts(req, db),
+  'GET products': (_req, db) => listProducts(db),
   'GET product-members': (req, db) => productMembers(req, db),
   'POST grants': (req, db, admin) => createGrant(req, db, admin),
   'PATCH grants': (req, db) => revokeGrant(req, db),

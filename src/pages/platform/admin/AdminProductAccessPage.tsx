@@ -37,7 +37,7 @@ export default function AdminProductAccessPage() {
 
   useEffect(() => {
     adminService
-      .listProducts(true)
+      .listProducts()
       .then((list) => {
         setProducts(list)
         if (list.length) setProductId((current) => current || list[0].id)
