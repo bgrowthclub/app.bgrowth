@@ -7,14 +7,17 @@ interface Props {
   error: string | null
   onSubmit: (subject: string, message: string) => void
   onCancel?: () => void
+  // Filled in when the member came from a product's "Need help with this?"
+  // (01/11/2026) — only the starting value; they can change it.
+  defaultSubject?: string
 }
 
 const INPUT =
   'w-full rounded-xl border border-navy/10 bg-white px-3.5 py-2.5 text-sm text-navy placeholder:text-navy/30 outline-none focus:border-primary/40 focus:ring-2 focus:ring-primary/15'
 
 // Starts a support conversation: a subject and the first message.
-export default function NewSupportConversation({ busy, error, onSubmit, onCancel }: Props) {
-  const [subject, setSubject] = useState('')
+export default function NewSupportConversation({ busy, error, onSubmit, onCancel, defaultSubject }: Props) {
+  const [subject, setSubject] = useState(defaultSubject ?? '')
   const [message, setMessage] = useState('')
 
   function submit(e: FormEvent) {

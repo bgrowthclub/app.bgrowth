@@ -11,6 +11,7 @@ import RecordSwitcher from '../../components/workspace/RecordSwitcher'
 import RecordsPanel from '../../components/workspace/RecordsPanel'
 import NewRecordDialog from '../../components/workspace/NewRecordDialog'
 import ReviewPrompt from '../../components/reviews/ReviewPrompt'
+import NeedHelpButton from '../../components/platform/NeedHelpButton'
 import { CARD } from '../../components/workspace/styles'
 import { useIdentity } from '../../modules/identity/IdentityContext'
 import { useStudioWorkspace } from '../../modules/workspace/hooks/useStudioWorkspace'
@@ -131,6 +132,7 @@ export default function WorkspaceViewerPage() {
         <div className="mt-6">
           <ReviewPrompt workspaceName={product.name} reviews={reviews} />
         </div>
+        <NeedHelpButton about={product.name} className="mt-5" />
       </div>
     )
   }
@@ -190,9 +192,6 @@ export default function WorkspaceViewerPage() {
       {!instance && (
         <div className="mt-6">
           <RecordsPanel records={ws.records} recordPath={recordPath} onNew={() => setNaming(true)} />
-          <div className="mt-4">
-            <ReviewPrompt workspaceName={product.name} reviews={reviews} />
-          </div>
         </div>
       )}
 
@@ -220,6 +219,14 @@ export default function WorkspaceViewerPage() {
           </div>
         )}
       </div>
+
+      {/* Review and help at the END (01/11/2026, decided with the owner): the
+          review used to sit above the Workspace, asking for a rating of
+          something the member hadn't opened yet. */}
+      <div className="mt-8">
+        <ReviewPrompt workspaceName={product.name} reviews={reviews} />
+      </div>
+      <NeedHelpButton about={product.name} className="mt-5" />
 
       <NewRecordDialog
         open={naming}

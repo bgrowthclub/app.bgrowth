@@ -26,11 +26,14 @@ function message(err: unknown) {
 export default function SupportPage() {
   const [params, setParams] = useSearchParams()
   const selectedId = params.get('c')
+  // Came from a product's "Need help with this?" (01/11/2026): the new
+  // conversation opens with that product as the subject.
+  const about = params.get('about')?.trim().slice(0, 160) || null
   const [state, setState] = useState<SupportState | null>(null)
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [loadError, setLoadError] = useState<string>()
   const [thread, setThread] = useState<SupportThread | null>(null)
-  const [composing, setComposing] = useState(false)
+  const [composing, setComposing] = useState(Boolean(about))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [online, setOnline] = useState(false)
@@ -159,6 +162,7 @@ export default function SupportPage() {
                   error={error}
                   onSubmit={start}
                   onCancel={conversations.length > 0 ? () => setComposing(false) : undefined}
+                  defaultSubject={about ? `Help with ${about}` : undefined}
                 />
               ) : selectedId ? (
                 thread ? (

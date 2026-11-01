@@ -715,6 +715,15 @@ This repo is a **static, client-only MVP**:
   hours, a ticket answered by e-mail too outside them) through
   `api/support.ts`; the team answers in Admin → Support (see
   ARCHITECTURE.md §8b).
+  Since Sprint 178 (01/11/2026) every product carries
+  `components/platform/NeedHelpButton` ("Need help with this?", quiet and
+  `no-print`) at its end — Workspace, calculator, Download and course — which
+  opens `/platform/support?about=<product>`; `SupportPage` reads `about` and
+  starts the new conversation with that subject (`NewSupportConversation`
+  `defaultSubject`), so the team knows which product it is about without
+  asking. In the same sprint the review prompt moved to the **end** of the
+  Workspace viewer: it used to sit above the content, in the no-record
+  branch, asking for a rating of something the member hadn't opened yet.
   **Since Sprint 61 there is a newsletter** (approved by the user):
   visitors subscribe on the site in one step (welcome e-mail, areas of
   interest, one-click unsubscribe) through `api/newsletter.ts`, members

@@ -4,6 +4,7 @@ import SEO from '../../components/seo/SEO'
 import Button from '../../components/ui/Button'
 import CourseRunner from '../../components/academy/CourseRunner'
 import ReviewPrompt from '../../components/reviews/ReviewPrompt'
+import NeedHelpButton from '../../components/platform/NeedHelpButton'
 import { CARD } from '../../components/workspace/styles'
 import { useIdentity } from '../../modules/identity/IdentityContext'
 import { useStudioWorkspace } from '../../modules/workspace/hooks/useStudioWorkspace'
@@ -70,6 +71,7 @@ export default function CoursePage() {
       <div className="mt-6">
         <ReviewPrompt workspaceName={product.name} reviews={reviews} />
       </div>
+      <NeedHelpButton about={product.name} className="mt-5" />
     </div>
   )
 }
