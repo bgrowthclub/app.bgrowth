@@ -343,6 +343,24 @@ This repo is a **static, client-only MVP**:
   unchanged and the editor asks the person to review it ("Please review…",
   also next to Save). Nothing hidden becomes visible and nothing with
   content is deleted without the person doing it.
+  **Since Sprint 179 a course card shows how far along the student is, and
+  courses finally reach the lists** (approved by the owner 01/11/2026; no
+  migration): `listStudioLibrary` (modules/workspace/services/studioAccess)
+  only allowed `workspace`, `calculator` and `pdf` — a course never entered
+  the member's owned list, so Sprint 172's "Courses" tab and the Academy's
+  "Your courses" were permanently empty, for everyone. `course` is now
+  allowed there. Progress: `useCourseProgress` stamps the course's lesson
+  count on every save (`CourseProgressData.total`), so
+  `percentFromRecord()` (modules/academy/progress.ts) reads a percentage
+  straight from a `workspace_instances` row with no course content — which
+  only its owner may read anyway. `productLibrary` fetches the member's rows
+  once (`listAllInstances`) and fills `UserProduct.progress` for Course
+  products with the real number; every other type still reads BGrowth
+  Identity™'s `UserProgress`. `ProductLibraryCard` draws a thin bar in the
+  library footer, and only when progress is reported — a record saved before
+  the total was stamped, or a course never ticked, shows no bar instead of a
+  made-up 0%. A failed progress read is logged and ignored: it must never
+  empty the library.
   **Since Sprint 176 a page says what visitors looked for on it** (approved
   by the owner 01/11/2026; Portal migrations 0073 + 0074): three new kinds in
   `portal.member_page_stats` — `search` and `search_empty` (what was typed in
@@ -1144,9 +1162,22 @@ prompted it.
 
 ## 13. Build Requirements
 
-- `npm run build` (`tsc && vite build`) must pass with zero errors before
-  any change is considered done. `tsconfig.json` uses `strict: true` —
-  do not weaken strictness to make an error disappear.
+- `npm run build` (`npm run check:api && tsc && vite build`) must pass with
+  zero errors before any change is considered done. `tsconfig.json` uses
+  `strict: true` — do not weaken strictness to make an error disappear.
+- **A file in `api/` must never import from `src/`.** Vercel does not deploy
+  `src/` with a serverless function, so the import fails at module load
+  (`ERR_MODULE_NOT_FOUND`) and every call to that endpoint answers 500 —
+  the handler never runs. This took `/api/account` down on 31/10/2026
+  (Sprint 175). Neither `tsc` nor the editor catches it: TypeScript follows
+  the import and finds the file, so it looks correct. `npm run check:api`
+  (added 01/11/2026, Sprint 179; runs first in `build`) greps `api/` for it
+  and fails the build. Whatever a function needs, copy it into `api/` —
+  and when the copy duplicates a rule that also lives in `src/`, say so in
+  a comment on both sides, as `api/account.ts` does for the page models.
+- `api/` is NOT type-checked by `npm run build` (the root `tsc` only
+  compiles `src/`); its own project is `api/tsconfig.json`, run by hand with
+  `npx tsc -p api/tsconfig.json`. Run it after changing a function.
 - There is currently no test suite and no linter configured in this repo.
   Do not silently add one as part of an unrelated task — if you believe one
   is needed, say so and let the user decide.

@@ -35,8 +35,16 @@ export function useCourseProgress(
   const data = local ?? (existing ? readProgress(existing.data) : emptyProgress())
   const summary = useMemo(() => (course ? summarize(course, data) : null), [course, data])
 
+  // Every save stamps how many lessons the course has, so the course cards
+  // can show progress without reading the course content (01/11/2026).
+  const lessonCount = useMemo(
+    () => (course ? course.modules.reduce((n, m) => n + m.lessons.length, 0) : 0),
+    [course],
+  )
+
   const persist = useCallback(
-    (next: CourseProgressData) => {
+    (raw: CourseProgressData) => {
+      const next = lessonCount > 0 ? { ...raw, total: lessonCount } : raw
       setLocal(next)
       if (!userId || !productId) return
       setSaveError(null)
@@ -60,7 +68,7 @@ export function useCourseProgress(
           },
         )
     },
-    [productId, userId, reloadRecords],
+    [productId, userId, reloadRecords, lessonCount],
   )
 
   const toggle = useCallback((lessonId: string) => persist(toggleDone(data, lessonId)), [data, persist])

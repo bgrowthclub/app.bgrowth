@@ -21,6 +21,14 @@ export interface CourseProgressData {
    * sentence.
    */
   notes?: Record<string, string>
+  /**
+   * How many lessons the course had when this was last saved (01/11/2026).
+   * Stamped here so a LIST of courses can show progress without loading
+   * every course's content — which only its owner may read anyway. It is
+   * refreshed on every save, so editing the course corrects it as soon as
+   * the student touches it again.
+   */
+  total?: number
 }
 
 export function emptyProgress(): CourseProgressData {
@@ -38,6 +46,7 @@ export function readProgress(raw: unknown): CourseProgressData {
     }
   }
   if (typeof r.lastLessonId === 'string') out.lastLessonId = r.lastLessonId
+  if (typeof r.total === 'number' && Number.isFinite(r.total) && r.total > 0) out.total = Math.floor(r.total)
   if (r.notes && typeof r.notes === 'object' && !Array.isArray(r.notes)) {
     for (const [id, text] of Object.entries(r.notes as Record<string, unknown>)) {
       if (id && typeof text === 'string') out.notes![id] = text
@@ -71,6 +80,23 @@ export function addQuoteToNote(data: CourseProgressData, lessonId: string, passa
   if (current.includes(quote)) return data
   const next = [current.trimEnd(), `"${quote}"`].filter(Boolean).join('\n\n')
   return setNote(data, lessonId, next)
+}
+
+/**
+ * How far along a saved record is, as a percentage — read straight from a
+ * workspace_instances row, with no course content needed (01/11/2026). Used
+ * by the course cards in My Workspaces and in the Academy.
+ *
+ * null when it can't be said honestly: not a course record, or saved before
+ * the lesson total was stamped on it. A card then shows no bar rather than a
+ * made-up number.
+ */
+export function percentFromRecord(raw: unknown): number | null {
+  if (!raw || typeof raw !== 'object' || (raw as { kind?: string }).kind !== 'course') return null
+  const data = readProgress(raw)
+  if (!data.total) return null
+  const done = Object.keys(data.done).length
+  return Math.max(0, Math.min(100, Math.round((done / data.total) * 100)))
 }
 
 export interface ModuleProgress {

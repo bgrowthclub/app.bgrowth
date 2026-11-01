@@ -5,8 +5,9 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "tsc && vite build",
-    "preview": "vite preview"
+    "build": "npm run check:api && tsc && vite build",
+    "preview": "vite preview",
+    "check:api": "grep -rqE \"from ['\\\"]\\\\.\\\\./src\" api/ && echo 'ERRO: um arquivo em api/ importa de src/. A Vercel nao envia src/ junto com a funcao, entao ela quebra em producao no carregamento do modulo (ERR_MODULE_NOT_FOUND) — e o tsc nao pega isso. Copie o que precisa para dentro de api/.' && exit 1 || exit 0"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.3",

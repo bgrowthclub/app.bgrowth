@@ -47,6 +47,7 @@ export default function ProductLibraryCard({ product, size = 'default' }: Props)
   const actionLabel = product.expired ? 'Buy Workspace' : featured ? 'Continue' : getProductActionLabel(product.type)
   const actionRoute = getProductActionRoute(product)
   const status = getProductLibraryStatus(product)
+  const percent = product.progress ? Math.max(0, Math.min(100, Math.round(product.progress.percentComplete))) : null
 
   return (
     <div
@@ -117,6 +118,27 @@ export default function ProductLibraryCard({ product, size = 'default' }: Props)
                 {product.lastOpenedAt ? formatDate(product.lastOpenedAt) : 'Not opened yet'}
               </span>
             </div>
+            {/* How far along they are (01/11/2026) — only when the product
+                reports real progress; a course does, from the lessons the
+                student ticked. No bar is better than an invented one. */}
+            {percent !== null && (
+              <div className="pt-1">
+                <div className="flex items-center justify-between">
+                  <span className="text-navy/40">Progress</span>
+                  <span className="font-medium text-navy/60">{percent}%</span>
+                </div>
+                <div
+                  className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-bg-soft"
+                  role="progressbar"
+                  aria-valuenow={percent}
+                  aria-valuemin={0}
+                  aria-valuemax={100}
+                  aria-label="Progress"
+                >
+                  <div className="h-full rounded-full bg-primary transition-[width] duration-500" style={{ width: `${percent}%` }} />
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           (product.difficulty || product.estimatedTime) && (

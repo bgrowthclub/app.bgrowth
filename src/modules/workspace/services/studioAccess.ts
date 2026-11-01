@@ -49,7 +49,16 @@ export async function listStudioLibrary(memberId: string): Promise<StudioLibrary
   const resolveCategory = categoryResolver(categories)
   const items: StudioLibraryItem[] = []
   for (const row of rows) {
-    if (row.content_type !== 'workspace' && row.content_type !== 'calculator' && row.content_type !== 'pdf') continue
+    // A course too, since Sprint 172 put it in My Workspaces → Courses and
+    // in the Academy's "Your courses" — it was left out until 01/11/2026,
+    // which made both lists permanently empty.
+    if (
+      row.content_type !== 'workspace' &&
+      row.content_type !== 'calculator' &&
+      row.content_type !== 'pdf' &&
+      row.content_type !== 'course'
+    )
+      continue
     const license = licenses.find((l) => l.product_id === row.id) ?? null
     const grant = activeGrants.find((g) => g.scope === 'all' || g.product_id === row.id)
     const accessState = deriveAccessState(license, Boolean(grant))

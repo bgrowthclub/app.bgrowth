@@ -11,6 +11,9 @@ import { productCatalogService } from '../modules/commerce/services/ProductCatal
 import { listStudioLibrary } from '../modules/workspace/services/studioAccess'
 import type { StudioProductAccess } from '../modules/workspace/services/studioAccess'
 import { coursePath, workspaceViewerPath } from '../modules/workspace/config'
+import { studioWorkspaceService } from '../modules/workspace/services/studioWorkspaceService'
+import { studioPortalId } from '../modules/commerce/store/studioProductRepository'
+import { percentFromRecord } from '../modules/academy/progress'
 
 // Turns a Product this member has access to into a UserProduct — works for
 // any ProductType, not only GrowthSystem: icon/subTag get a real BusinessSystem
@@ -18,7 +21,14 @@ import { coursePath, workspaceViewerPath } from '../modules/workspace/config'
 // `source`, same adapter every marketing page uses — see
 // lib/publishedCatalog.ts), and fall back to the category icon/no subTag
 // otherwise, since Product itself doesn't model that narrower taxonomy.
-function buildUserProduct(product: Product, access: ProductAccess | StudioProductAccess, user: User): UserProduct {
+function buildUserProduct(
+  product: Product,
+  access: ProductAccess | StudioProductAccess,
+  user: User,
+  // Real course progress by portal product id (01/11/2026) — see
+  // courseProgressByProduct below. Absent for every other product type.
+  coursePercent?: Map<string, number>,
+): UserProduct {
   const system = resolveProductSystem(product)
   const purchase: Purchase = {
     id: `purchase-${product.id}`,
@@ -50,7 +60,10 @@ function buildUserProduct(product: Product, access: ProductAccess | StudioProduc
     // ProductLibraryCard already renders "Not opened yet" when this is
     // undefined, and sort falls back to the purchase date.
     lastOpenedAt: 'lastOpenedAt' in access ? access.lastOpenedAt : undefined,
-    progress: user.progress.find((p) => p.productId === product.slug),
+    // A course's progress is real (the student's own ticked lessons); every
+    // other type still reads BGrowth Identity™'s own UserProgress.
+    progress:
+      product.type === 'Course' ? courseProgress(product, coursePercent) : user.progress.find((p) => p.productId === product.slug),
     coverImage: product.assets.thumbnail,
     sourceType: product.source?.type,
     expired: 'accessState' in access ? access.accessState === 'expired' : undefined,
@@ -66,22 +79,52 @@ function buildUserProduct(product: Product, access: ProductAccess | StudioProduc
 // OrderService.completeOrder(), which calls AccessService.grantAccess() as
 // its own side effect (see ARCHITECTURE.md's "Payment completion
 // pipeline") — nothing here changes when that's wired to real persistence.
+// A course's own progress, from the record the student fills in. Undefined
+// when they never ticked a lesson (the card then says "Not Started") or when
+// the record predates the stamped lesson total — never a guessed number.
+function courseProgress(product: Product, percentByProduct?: Map<string, number>) {
+  const portalId = studioPortalId(product.id)
+  const percent = portalId ? percentByProduct?.get(portalId) : undefined
+  return percent === undefined ? undefined : { productId: product.slug, percentComplete: percent }
+}
+
+// Every course the member has made progress in, in ONE query: their
+// workspace_instances rows, keeping the course ones. A row with no stamped
+// total is skipped rather than shown as 0%.
+async function courseProgressByProduct(userId: string): Promise<Map<string, number>> {
+  const out = new Map<string, number>()
+  try {
+    for (const row of await studioWorkspaceService.listAllInstances(userId)) {
+      const percent = percentFromRecord(row.data)
+      if (percent === null) continue
+      // One row per course per member, but take the furthest along if a
+      // member somehow has two.
+      out.set(row.product_id, Math.max(out.get(row.product_id) ?? 0, percent))
+    }
+  } catch (err) {
+    // Progress is decoration: a failed read must never empty the library.
+    console.warn('[My Workspaces] course progress not loaded:', err)
+  }
+  return out
+}
+
 export async function getUserProducts(user: User): Promise<UserProduct[]> {
   // Studio-published Workspaces (Portal licenses/grants — the Portal's
   // "My Library" list, expired ones included) first, then Commerce's own
   // access records. A failed Portal read is thrown so the page can say so
   // instead of pretending the member owns nothing.
-  const [studioItems, grants] = await Promise.all([
+  const [studioItems, grants, coursePercent] = await Promise.all([
     listStudioLibrary(user.id),
     accessService.listAccessForMember(user.id),
+    courseProgressByProduct(user.id),
   ])
-  const studio = studioItems.map(({ product, access }) => buildUserProduct(product, access, user))
+  const studio = studioItems.map(({ product, access }) => buildUserProduct(product, access, user, coursePercent))
   const products = await Promise.all(
     grants
       .filter((g) => g.hasAccess)
       .map(async (access) => {
         const product = await productCatalogService.getById(access.productId)
-        return product ? buildUserProduct(product, access, user) : undefined
+        return product ? buildUserProduct(product, access, user, coursePercent) : undefined
       }),
   )
   return [...studio, ...products.filter((p): p is UserProduct => Boolean(p))]
