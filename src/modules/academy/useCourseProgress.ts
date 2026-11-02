@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { studioWorkspaceService } from '../workspace/services/studioWorkspaceService'
-import { addQuoteToNote, emptyProgress, noteOf, openLesson, readProgress, setNote, summarize, toggleDone } from './progress'
+import { addQuoteToNote, answerOf, emptyProgress, noteOf, openLesson, readProgress, setAnswer, setNote, summarize, toggleDone } from './progress'
 import type { CourseProgressData } from './progress'
 import type { CourseContent } from './types'
 import type { WorkspaceInstanceRow } from '../workspace/types/portal'
@@ -73,6 +73,13 @@ export function useCourseProgress(
 
   const toggle = useCallback((lessonId: string) => persist(toggleDone(data, lessonId)), [data, persist])
 
+  // A quiz answer saves right away, like ticking a lesson: it is one click,
+  // not typing, so there is nothing to wait for.
+  const answer = useCallback(
+    (questionId: string, optionId: string | null) => persist(setAnswer(data, questionId, optionId)),
+    [data, persist],
+  )
+
   // Notes: shown as the student types, saved once they stop. flushNote()
   // sends it right away — on leaving the lesson or closing the page, so a
   // note is never lost to the wait.
@@ -134,5 +141,18 @@ export function useCourseProgress(
     [data, persist],
   )
 
-  return { data, summary, toggle, open, saving, saveError, note: (id: string) => noteOf(data, id), writeNote, flushNote, addQuote }
+  return {
+    data,
+    summary,
+    toggle,
+    open,
+    saving,
+    saveError,
+    note: (id: string) => noteOf(data, id),
+    writeNote,
+    flushNote,
+    addQuote,
+    answer,
+    answerFor: (id: string) => answerOf(data, id),
+  }
 }

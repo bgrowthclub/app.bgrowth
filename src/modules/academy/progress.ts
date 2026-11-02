@@ -29,10 +29,18 @@ export interface CourseProgressData {
    * the student touches it again.
    */
   total?: number
+  /**
+   * questionId → the option the student picked (02/11/2026). Kept in the
+   * same row as the ticked lessons, keyed by question id across the whole
+   * course, so an answer survives the question being moved to another
+   * lesson. Nothing here gates anything: it is the student's own record of
+   * what they answered, and they may answer again as often as they like.
+   */
+  answers?: Record<string, string>
 }
 
 export function emptyProgress(): CourseProgressData {
-  return { kind: 'course', version: 1, done: {}, lastLessonId: null, notes: {} }
+  return { kind: 'course', version: 1, done: {}, lastLessonId: null, notes: {}, answers: {} }
 }
 
 /** Reads saved data defensively (an older or tampered row still opens). */
@@ -52,7 +60,29 @@ export function readProgress(raw: unknown): CourseProgressData {
       if (id && typeof text === 'string') out.notes![id] = text
     }
   }
+  if (r.answers && typeof r.answers === 'object' && !Array.isArray(r.answers)) {
+    for (const [id, option] of Object.entries(r.answers as Record<string, unknown>)) {
+      if (id && typeof option === 'string') out.answers![id] = option
+    }
+  }
   return out
+}
+
+/** The option the student picked for one question, or null. */
+export function answerOf(data: CourseProgressData, questionId: string): string | null {
+  return data.answers?.[questionId] ?? null
+}
+
+/**
+ * Records an answer, or clears it when optionId is null (the student chose
+ * to try the question again). Clearing removes the key rather than storing
+ * an empty one, so "never answered" and "answered" stay distinguishable.
+ */
+export function setAnswer(data: CourseProgressData, questionId: string, optionId: string | null): CourseProgressData {
+  const answers = { ...(data.answers ?? {}) }
+  if (optionId) answers[questionId] = optionId
+  else delete answers[questionId]
+  return { ...data, answers }
 }
 
 /** The student's notes for one lesson (never undefined). */

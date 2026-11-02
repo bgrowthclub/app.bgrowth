@@ -28,6 +28,30 @@ export type CourseBlock =
    * block only ever shows what the author typed.
    */
   | { type: 'product'; slug: string; label?: string; note?: string }
+  /**
+   * A short self-check (02/11/2026). Deliberately NOT a gate: the student
+   * answers, sees at once whether they got it right and why, and moves on
+   * either way — no passing grade, no limit on tries. (Wix's own programs
+   * use a passing grade only to decide who COMPLETES a program, never to
+   * block the next lesson; if BGrowth ever issues certificates, that is
+   * when a passing grade earns its place.)
+   */
+  | { type: 'quiz'; title?: string; questions: CourseQuestion[] }
+
+export interface CourseQuestion {
+  /**
+   * Stable: the student's answer is saved against it, so rewording the
+   * question keeps their answer and changing the id loses it — the same
+   * reasoning that makes a lesson id stable.
+   */
+  id: string
+  prompt: string
+  options: { id: string; text: string }[]
+  /** The id of the one right option. */
+  answer: string
+  /** Shown after answering, right or wrong — this is where a quiz teaches. */
+  explanation?: string
+}
 
 export interface CourseLesson {
   id: string

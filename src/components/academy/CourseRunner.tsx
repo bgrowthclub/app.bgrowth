@@ -19,10 +19,12 @@ interface Props {
 // BGrowth Academy™ — the student's reading experience (Etapa A, 28/10/2026):
 // the modules and lessons on the left, the lesson on the right, a progress
 // bar, "mark as done" and "next lesson". The course resumes where the
-// student stopped. There is no quiz and no certificate yet, by decision —
-// both can be added without changing what is saved here.
+// student stopped. Since 02/11/2026 a lesson can also carry a quiz block —
+// a self-check that teaches, never a gate (see CourseQuiz). There is no
+// certificate yet, and no passing grade: a grade belongs with the
+// certificate, which is what it would decide.
 export default function CourseRunner({ course, productId, userId, records, reloadRecords }: Props) {
-  const { data, summary, toggle, open, saveError, note, writeNote, flushNote, addQuote } = useCourseProgress(course, productId, userId, records, reloadRecords)
+  const { data, summary, toggle, open, saveError, note, writeNote, flushNote, addQuote, answer, answerFor } = useCourseProgress(course, productId, userId, records, reloadRecords)
   const all = useMemo(() => courseLessons(course), [course])
   const [currentId, setCurrentId] = useState<string | null>(null)
   // The passage the student just picked, and where to float the button.
@@ -239,7 +241,7 @@ export default function CourseRunner({ course, productId, userId, records, reloa
           </div>
 
           <div ref={lessonRef} className="mt-6" onMouseUp={onPick} onTouchEnd={onPick}>
-            <CourseLessonBody blocks={current.lesson.blocks ?? []} />
+            <CourseLessonBody blocks={current.lesson.blocks ?? []} answerFor={answerFor} onAnswer={answer} />
           </div>
 
           {/* The button follows the selection, so on a phone it lands next to

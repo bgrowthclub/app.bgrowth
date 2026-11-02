@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { ArrowRight, Download, ExternalLink } from 'lucide-react'
+import CourseQuiz from './CourseQuiz'
 import { videoEmbed } from '../../modules/find/memberPageService'
 import type { CourseBlock } from '../../modules/academy/types'
 
@@ -8,13 +9,28 @@ import type { CourseBlock } from '../../modules/academy/types'
 // file from the Studio's Library, an outside link, or a product this lesson
 // hands the student. A block never carries a Growth System's content — it
 // points at it (CLAUDE.md §8).
-export default function CourseLessonBody({ blocks }: { blocks: CourseBlock[] }) {
+interface Props {
+  blocks: CourseBlock[]
+  /**
+   * A quiz block is the one block that reads and writes the student's
+   * progress, so the runtime hands it down rather than letting a
+   * presentational block reach for it (CLAUDE.md §6).
+   */
+  answerFor: (questionId: string) => string | null
+  onAnswer: (questionId: string, optionId: string | null) => void
+}
+
+export default function CourseLessonBody({ blocks, answerFor, onAnswer }: Props) {
   if (!blocks.length) return <p className="text-[14px] text-navy/45">This lesson has no content yet.</p>
   return (
     <div className="space-y-5">
-      {blocks.map((block, i) => (
-        <Block key={i} block={block} />
-      ))}
+      {blocks.map((block, i) =>
+        block.type === 'quiz' ? (
+          <CourseQuiz key={i} title={block.title} questions={block.questions ?? []} answerFor={answerFor} onAnswer={onAnswer} />
+        ) : (
+          <Block key={i} block={block} />
+        ),
+      )}
     </div>
   )
 }
