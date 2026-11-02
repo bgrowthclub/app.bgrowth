@@ -60,13 +60,16 @@ export async function loadStudioPurchaseInfo(slug: string, userId: string | unde
 }
 
 // Buy (paid → Stripe Checkout URL) or claim (free → the Workspace's path).
-export function startStudioCheckout(slug: string): Promise<{ checkoutUrl?: string; redirectUrl?: string }> {
-  return postStudioCheckout({ productSlug: slug })
+// `useCoupon` is the member choosing the coupon path over their plan's
+// price (02/11/2026) — the two never stack, so the server charges the list
+// price and opens Stripe's coupon field instead.
+export function startStudioCheckout(slug: string, useCoupon = false): Promise<{ checkoutUrl?: string; redirectUrl?: string }> {
+  return postStudioCheckout({ productSlug: slug, ...(useCoupon ? { useCoupon: true } : {}) })
 }
 
 // The one call to /api/studio-checkout — a Workspace ({ productSlug }) or a
 // bundle ({ bundleSlug }, see bundlePurchase.ts).
-export async function postStudioCheckout(body: Record<string, string>): Promise<{ checkoutUrl?: string; redirectUrl?: string }> {
+export async function postStudioCheckout(body: Record<string, string | boolean>): Promise<{ checkoutUrl?: string; redirectUrl?: string }> {
   const { data } = await client().auth.getSession()
   const token = data.session?.access_token
   if (!token) throw new Error('Sign in to continue.')

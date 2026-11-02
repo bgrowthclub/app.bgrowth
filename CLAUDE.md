@@ -377,12 +377,22 @@ This repo is a **static, client-only MVP**:
   `planWorkspaceDiscount` in api/studio-checkout.ts is now unused (superseded
   by `planPriceFor`, no remaining callers) — left in place, not deleted, per
   §12.
-  **Still open, decided but NOT built:** coupons and plan discounts do not
-  stack — the bigger one wins — which needs the coupon typed on our own
-  product page instead of inside Stripe Checkout. The rule is decided
-  (01/11/2026); the owner has not approved an interface for it, so coupons
-  still work exactly as before (entered in Stripe, stacking with the plan
-  price).
+  **Since Sprint 184 a coupon and a plan price never stack** (approved by
+  the owner 02/11/2026; no migration): Stripe Checkout takes either an
+  amount we set OR its own coupon field, and the coupon is typed inside
+  Stripe — so we cannot compare the two and pick the better one when the
+  session is created. The member picks the path on the product page and we
+  open the matching session. `StudioPurchaseCard` shows "Buy — $39.20" with
+  the plan's price plus a quiet "I have a coupon" link; clicking it swaps
+  to the list price, says the plan's discount won't apply, and offers a way
+  back. Someone without a plan price sees none of it — the coupon field in
+  Stripe stays open for them exactly as before.
+  `api/studio-checkout.ts` takes `useCoupon` in the body: with a plan price
+  and no coupon it charges that price and sets `allow_promotion_codes:
+  false`; with `useCoupon` it charges the list price and opens the field
+  (metadata `gaveUpPlanPrice`). An interface that picks the bigger one
+  automatically was designed and rejected by the owner (01/11/2026) — it
+  needs the coupon typed on our page, which made the buy box heavy.
   **Since Sprint 180 the Admin area answers "who has this product"**
   (approved by the owner 01/11/2026; no migration): Admin → Catalog →
   **Access** (`/platform/admin/access`, resource `product-members`,

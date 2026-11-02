@@ -12,7 +12,7 @@ export interface StudioPurchaseState {
   // Back from Stripe and the license isn't there yet — the Portal's webhook
   // usually grants it within seconds.
   confirming: boolean
-  buy: () => void
+  buy: (useCoupon?: boolean) => void
   startTrial: () => void
 }
 
@@ -75,12 +75,12 @@ export function useStudioPurchase(slug: string | undefined, userId: string | und
     }
   }, [checkoutResult, userId, refresh])
 
-  const buy = useCallback(async () => {
+  const buy = useCallback(async (useCoupon = false) => {
     if (!slug) return
     setBusy('buy')
     setError(undefined)
     try {
-      const { checkoutUrl, redirectUrl } = await startStudioCheckout(slug)
+      const { checkoutUrl, redirectUrl } = await startStudioCheckout(slug, useCoupon)
       if (checkoutUrl) {
         window.location.assign(checkoutUrl)
         return

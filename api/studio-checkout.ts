@@ -551,13 +551,22 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const stripe = new Stripe(secretKey)
     // What this member pays, from the plan × product table (Sprint 183).
     const planPrice = await planPriceFor(supabase, user.id, product.id, product.price_cents)
-    const unitAmount = planPrice.cents
+    // A plan price and a coupon never stack (decided with the owner,
+    // 01/11/2026): Stripe takes either an amount we set OR its own coupon
+    // field, so the member picks ONE path on the product page and we create
+    // the matching session. Without a plan price there is nothing to
+    // protect, so the coupon field stays open as it always was.
+    const hasPlanPrice = planPrice.cents < product.price_cents
+    const useCoupon = req.body?.useCoupon === true
+    const unitAmount = hasPlanPrice && !useCoupon ? planPrice.cents : product.price_cents
+    const allowCoupon = !hasPlanPrice || useCoupon
     const useStoredPrice = Boolean(product.stripe_price_id) && unitAmount === product.price_cents
     const stripeProduct = useStoredPrice ? null : await stripeProductFor(stripe, supabase, product)
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',
-      // Coupons made in Admin → Coupons (Sprint 123).
-      allow_promotion_codes: true,
+      // Coupons made in Admin → Coupons (Sprint 123). Off when the member
+      // chose their plan's price instead — the two don't stack.
+      allow_promotion_codes: allowCoupon,
       customer_email: user.email,
       client_reference_id: user.id,
       line_items: [
@@ -589,6 +598,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         productSlug: product.slug,
         source: 'website',
         ...(unitAmount !== product.price_cents ? { planPricing: planPrice.source, listCents: String(product.price_cents) } : {}),
+        ...(hasPlanPrice && useCoupon ? { gaveUpPlanPrice: String(planPrice.cents) } : {}),
       },
     })
     if (!session.url) throw new Error('Stripe did not return a checkout URL.')

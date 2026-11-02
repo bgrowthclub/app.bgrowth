@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, Check, Loader2 } from 'lucide-react'
 import Button from '../ui/Button'
@@ -17,7 +18,7 @@ interface Props {
   error?: string
   openTo: string
   signInTo: string
-  onBuy: () => void
+  onBuy: (useCoupon?: boolean) => void
   onStartTrial: () => void
   // What this member actually pays, from the plan × product table
   // (02/11/2026, Portal migration 0075): a % off or a fixed price, applied
@@ -96,6 +97,12 @@ export default function StudioPurchaseCard({
   // Never show a "discount" that isn't one.
   const member = !free && planPrice && planPrice.dollars < product.basePrice ? planPrice : null
   const memberLabel = member ? money(Math.max(0.5, member.dollars)) : null
+  // The member asked to use a coupon instead of their plan's price
+  // (02/11/2026). They never stack — Stripe takes either an amount we set
+  // or its own coupon field — so this picks which checkout we open. Only
+  // ever shown to someone who actually has a plan price to give up.
+  const [couponPath, setCouponPath] = useState(false)
+  const showCouponPath = Boolean(member) && couponPath
   const noun = studioProductNoun(product)
   const summary =
     product.type === 'Calculator'
@@ -124,7 +131,7 @@ export default function StudioPurchaseCard({
             Open {noun}
           </Button>
           {trialActive && !free && (
-            <Button type="button" variant="secondary" onClick={onBuy} disabled={busy !== null} className="mt-3 w-full">
+            <Button type="button" variant="secondary" onClick={() => onBuy()} disabled={busy !== null} className="mt-3 w-full">
               {busy === 'buy' ? 'Opening checkout…' : `Buy Now — ${memberLabel ?? priceLabel(product)}`}
             </Button>
           )}
@@ -132,8 +139,10 @@ export default function StudioPurchaseCard({
       ) : (
         <>
           <div className="flex items-baseline gap-2">
-            {member && <span className="text-lg font-semibold text-navy/35 line-through">{priceLabel(product)}</span>}
-            <span className="font-display text-3xl font-bold text-navy">{free ? 'Free' : memberLabel ?? priceLabel(product)}</span>
+            {member && !showCouponPath && <span className="text-lg font-semibold text-navy/35 line-through">{priceLabel(product)}</span>}
+            <span className="font-display text-3xl font-bold text-navy">
+              {free ? 'Free' : showCouponPath ? priceLabel(product) : memberLabel ?? priceLabel(product)}
+            </span>
             {!free && <span className="text-[13px] text-navy/40">one-time</span>}
           </div>
           {!free && includedInPlan && (
@@ -144,7 +153,13 @@ export default function StudioPurchaseCard({
               </Link>
             </p>
           )}
-          {member && <p className="mt-1 text-[12.5px] font-semibold text-primary">{member.note}</p>}
+          {member && !showCouponPath && <p className="mt-1 text-[12.5px] font-semibold text-primary">{member.note}</p>}
+          {showCouponPath && member && (
+            <p className="mt-1 text-[12.5px] leading-relaxed text-navy/60">
+              You’ll type the coupon on the next screen. With a coupon, the {member.note.toLowerCase()} doesn’t apply — it’s one or the
+              other.
+            </p>
+          )}
 
           {!signedIn ? (
             <>
@@ -159,13 +174,35 @@ export default function StudioPurchaseCard({
             <>
               <Button
                 type="button"
-                onClick={onBuy}
+                onClick={() => onBuy(showCouponPath)}
                 disabled={status === 'loading' || busy !== null}
                 icon={<ArrowRight size={16} />}
                 className="mt-5 w-full"
               >
-                {busy === 'buy' ? (free ? 'Adding…' : 'Opening checkout…') : free ? 'Get It Free' : `Buy ${noun}`}
+                {busy === 'buy'
+                  ? free
+                    ? 'Adding…'
+                    : 'Opening checkout…'
+                  : free
+                    ? 'Get It Free'
+                    : showCouponPath
+                      ? 'Continue with a coupon'
+                      : member
+                        ? `Buy — ${memberLabel}`
+                        : `Buy ${noun}`}
               </Button>
+              {member && (
+                <p className="mt-3 text-center">
+                  <button
+                    type="button"
+                    disabled={busy !== null}
+                    onClick={() => setCouponPath((v) => !v)}
+                    className="text-[13px] font-semibold text-primary hover:underline disabled:opacity-40"
+                  >
+                    {showCouponPath ? `Go back and use ${member.note.toLowerCase()}` : 'I have a coupon'}
+                  </button>
+                </p>
+              )}
               {canStartTrial && trialDays && (
                 <Button
                   type="button"
