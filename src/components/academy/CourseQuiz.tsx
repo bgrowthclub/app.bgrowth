@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Check, RotateCcw, X } from 'lucide-react'
-import { isAnswered, mark, score } from '../../modules/academy/quiz'
+import { isAnswerable, isAnswered, mark, score } from '../../modules/academy/quiz'
 import type { GivenAnswer } from '../../modules/academy/quiz'
 import type { CourseQuestion } from '../../modules/academy/types'
 
@@ -25,9 +25,13 @@ interface Props {
 // and they may try again as often as they like — so there is no score to
 // defend and no reason to hide the answer.
 export default function CourseQuiz({ title, questions, answerFor, onAnswer }: Props) {
-  if (!questions.length) return null
+  // A question with no right answer recorded yet is not shown at all — see
+  // isAnswerable. The whole quiz disappears rather than showing an empty
+  // box when none of its questions is ready.
+  const ready = questions.filter(isAnswerable)
+  if (!ready.length) return null
 
-  const { answered, right } = score(questions, answerFor)
+  const { answered, right } = score(ready, answerFor)
 
   return (
     <section className="rounded-xl2 border border-navy/[0.08] bg-bg-soft px-4 py-4 sm:px-5 sm:py-5">
@@ -36,7 +40,7 @@ export default function CourseQuiz({ title, questions, answerFor, onAnswer }: Pr
         {answered > 0 && (
           <p className="text-[12.5px] font-semibold text-navy/50">
             {right} of {answered} right
-            {answered < questions.length && ` · ${questions.length - answered} to go`}
+            {answered < ready.length && ` · ${ready.length - answered} to go`}
           </p>
         )}
       </div>
@@ -45,7 +49,7 @@ export default function CourseQuiz({ title, questions, answerFor, onAnswer }: Pr
       </p>
 
       <ol className="mt-4 space-y-4">
-        {questions.map((question, i) => (
+        {ready.map((question, i) => (
           <Question key={question.id} index={i + 1} question={question} given={answerFor(question.id)} onAnswer={onAnswer} />
         ))}
       </ol>

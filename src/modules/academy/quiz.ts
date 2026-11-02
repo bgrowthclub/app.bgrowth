@@ -25,6 +25,18 @@ export function normalizeTyped(text: string): string {
   return text.replace(/\s+/g, ' ').trim().toLowerCase()
 }
 
+/**
+ * Can this question be marked at all? A typed question imported from Wix
+ * arrives with no accepted answer, because Wix stores none — it is kept so
+ * the author can fill it in, and skipped here until they do. A student is
+ * never shown a question that has no right answer behind it.
+ */
+export function isAnswerable(question: CourseQuestion): boolean {
+  if (question.kind === 'typed') return question.accept.some((a) => a.trim())
+  if (question.kind === 'multi') return question.answers.length > 0
+  return Boolean(question.answer)
+}
+
 export function isAnswered(given: GivenAnswer | null | undefined): boolean {
   if (given === null || given === undefined) return false
   return Array.isArray(given) ? given.length > 0 : given.trim().length > 0
