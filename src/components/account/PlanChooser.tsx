@@ -16,11 +16,16 @@ interface Props {
   // Free and "price on request" plans: where their button goes.
   freeTo: string
   requestTo: string
+  // Member area only (01/11/2026): what the Free card says to someone who
+  // already has an account. Without it that card offered "Create Free
+  // Account" to a signed-in member, which led nowhere — and there is no
+  // "switch to Free" anyway: going back to Free is what cancelling does.
+  freeNote?: string
 }
 
 // The plan cards with a Monthly | Yearly switch (shown only when some plan
 // has a yearly price). Used on the Pricing page and in Account → Membership.
-export default function PlanChooser({ plans, currentPlanId, busyPlanId, actionLabel, onChoose, freeTo, requestTo }: Props) {
+export default function PlanChooser({ plans, currentPlanId, busyPlanId, actionLabel, onChoose, freeTo, requestTo, freeNote }: Props) {
   const hasYearly = plans.some((p) => !p.is_free && !p.price_on_request && p.yearly_cents != null)
   const [interval, setInterval] = useState<BillingInterval>('month')
 
@@ -63,8 +68,8 @@ export default function PlanChooser({ plans, currentPlanId, busyPlanId, actionLa
                 priceNote="forever"
                 description={plan.description}
                 features={plan.features}
-                ctaLabel={current ? 'Your plan' : 'Create Free Account'}
-                ctaTo={freeTo}
+                ctaLabel={current ? 'Your plan' : freeNote ?? 'Create Free Account'}
+                {...(current || !freeNote ? { ctaTo: freeTo } : { onCtaClick: () => {}, ctaDisabled: true })}
                 highlighted={plan.highlighted}
                 badge={badge}
               />

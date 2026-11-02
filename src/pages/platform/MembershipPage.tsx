@@ -176,6 +176,13 @@ export default function MembershipPage() {
             onChoose={choose}
             freeTo="/platform"
             requestTo="/platform/support"
+            freeNote={
+              subscription?.cancel_at_period_end
+                ? `Starts on ${day(subscription.ends_at ?? subscription.current_period_end)}`
+                : subscription
+                  ? 'Cancel your plan to go back'
+                  : 'Your plan when this one ends'
+            }
           />
         </section>
       )}
