@@ -38,7 +38,7 @@ export type CourseBlock =
    */
   | { type: 'quiz'; title?: string; questions: CourseQuestion[] }
 
-export interface CourseQuestion {
+export interface CourseQuestionBase {
   /**
    * Stable: the student's answer is saved against it, so rewording the
    * question keeps their answer and changing the id loses it — the same
@@ -46,12 +46,30 @@ export interface CourseQuestion {
    */
   id: string
   prompt: string
-  options: { id: string; text: string }[]
-  /** The id of the one right option. */
-  answer: string
   /** Shown after answering, right or wrong — this is where a quiz teaches. */
   explanation?: string
 }
+
+export interface CourseQuizOption {
+  id: string
+  text: string
+}
+
+/**
+ * The three kinds of question (the last two added 02/11/2026, when the Wix
+ * courses turned out to be only about half single-choice). `kind` is absent
+ * on a single-choice question, so every quiz written before the others
+ * existed stays valid and keeps its meaning.
+ */
+export type CourseQuestion =
+  | (CourseQuestionBase & { kind?: 'single'; options: CourseQuizOption[]; answer: string })
+  | (CourseQuestionBase & { kind: 'multi'; options: CourseQuizOption[]; answers: string[] })
+  /**
+   * A typed answer. `accept` holds every wording counted as right, compared
+   * ignoring case and surrounding spaces. With no grade at stake, a near
+   * miss shows what was expected rather than a bare "wrong".
+   */
+  | (CourseQuestionBase & { kind: 'typed'; accept: string[] })
 
 export interface CourseLesson {
   id: string

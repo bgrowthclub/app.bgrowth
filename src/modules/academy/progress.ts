@@ -30,13 +30,15 @@ export interface CourseProgressData {
    */
   total?: number
   /**
-   * questionId → the option the student picked (02/11/2026). Kept in the
-   * same row as the ticked lessons, keyed by question id across the whole
-   * course, so an answer survives the question being moved to another
-   * lesson. Nothing here gates anything: it is the student's own record of
-   * what they answered, and they may answer again as often as they like.
+   * questionId → what the student answered (02/11/2026). An option id for a
+   * single choice, a list of option ids for "tick all that apply", or the
+   * text they typed. Kept in the same row as the ticked lessons, keyed by
+   * question id across the whole course, so an answer survives the question
+   * being moved to another lesson. Nothing here gates anything: it is the
+   * student's own record of what they answered, and they may answer again as
+   * often as they like.
    */
-  answers?: Record<string, string>
+  answers?: Record<string, string | string[]>
 }
 
 export function emptyProgress(): CourseProgressData {
@@ -61,15 +63,20 @@ export function readProgress(raw: unknown): CourseProgressData {
     }
   }
   if (r.answers && typeof r.answers === 'object' && !Array.isArray(r.answers)) {
-    for (const [id, option] of Object.entries(r.answers as Record<string, unknown>)) {
-      if (id && typeof option === 'string') out.answers![id] = option
+    for (const [id, given] of Object.entries(r.answers as Record<string, unknown>)) {
+      if (!id) continue
+      if (typeof given === 'string') out.answers![id] = given
+      else if (Array.isArray(given)) {
+        const picked = given.filter((g): g is string => typeof g === 'string')
+        if (picked.length) out.answers![id] = picked
+      }
     }
   }
   return out
 }
 
-/** The option the student picked for one question, or null. */
-export function answerOf(data: CourseProgressData, questionId: string): string | null {
+/** What the student answered for one question, or null. */
+export function answerOf(data: CourseProgressData, questionId: string): string | string[] | null {
   return data.answers?.[questionId] ?? null
 }
 
@@ -78,10 +85,15 @@ export function answerOf(data: CourseProgressData, questionId: string): string |
  * to try the question again). Clearing removes the key rather than storing
  * an empty one, so "never answered" and "answered" stay distinguishable.
  */
-export function setAnswer(data: CourseProgressData, questionId: string, optionId: string | null): CourseProgressData {
+export function setAnswer(
+  data: CourseProgressData,
+  questionId: string,
+  given: string | string[] | null,
+): CourseProgressData {
   const answers = { ...(data.answers ?? {}) }
-  if (optionId) answers[questionId] = optionId
-  else delete answers[questionId]
+  const empty = given === null || (Array.isArray(given) ? given.length === 0 : !given.trim())
+  if (empty) delete answers[questionId]
+  else answers[questionId] = given as string | string[]
   return { ...data, answers }
 }
 

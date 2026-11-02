@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom'
 import { ArrowRight, Download, ExternalLink } from 'lucide-react'
 import CourseQuiz from './CourseQuiz'
+import type { GivenAnswer } from '../../modules/academy/quiz'
 import { videoEmbed } from '../../modules/find/memberPageService'
 import type { CourseBlock } from '../../modules/academy/types'
 
@@ -16,8 +17,8 @@ interface Props {
    * progress, so the runtime hands it down rather than letting a
    * presentational block reach for it (CLAUDE.md §6).
    */
-  answerFor: (questionId: string) => string | null
-  onAnswer: (questionId: string, optionId: string | null) => void
+  answerFor: (questionId: string) => GivenAnswer | null
+  onAnswer: (questionId: string, given: GivenAnswer | null) => void
 }
 
 export default function CourseLessonBody({ blocks, answerFor, onAnswer }: Props) {

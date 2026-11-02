@@ -76,7 +76,7 @@ export function useCourseProgress(
   // A quiz answer saves right away, like ticking a lesson: it is one click,
   // not typing, so there is nothing to wait for.
   const answer = useCallback(
-    (questionId: string, optionId: string | null) => persist(setAnswer(data, questionId, optionId)),
+    (questionId: string, given: string | string[] | null) => persist(setAnswer(data, questionId, given)),
     [data, persist],
   )
 
