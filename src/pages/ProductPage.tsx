@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams, useSearchParams, Link, Navigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
 import { CheckSquare, Square } from 'lucide-react'
@@ -67,6 +67,10 @@ export default function ProductPage() {
   const { current: memberPlan } = useMemberPlan()
   // The lowest plan that includes this product, if any (Sprint 126).
   const [includedPlan, setIncludedPlan] = useState<string | null>(null)
+  // What this member pays, from the plan × product table (Portal migration
+  // 0075). The checkout decides the real price; this is the same rule, so
+  // the page and the till never disagree.
+  const [planOffer, setPlanOffer] = useState<{ kind: string; percent: number | null; price_cents: number | null } | null | undefined>(undefined)
   const [searchParams] = useSearchParams()
   // Studio Workspaces: ownership, trial and checkout (no-op for other products).
   const purchase = useStudioPurchase(slug, user?.id, searchParams.get('checkout'))
@@ -75,6 +79,39 @@ export default function ProductPage() {
     product ? studioPortalId(product.id) : undefined,
     user ? { id: user.id, displayName: user.displayName } : null,
   )
+
+  // The same rule the checkout uses (api/studio-checkout.ts planPriceFor):
+  // the table's row for this plan wins; with no row, the plan's old blanket
+  // "% off Workspaces" still counts. Shown only when it really is cheaper.
+  const memberPrice = useMemo(() => {
+    if (!product || product.basePrice === 0 || !memberPlan || planOffer === undefined) return null
+    const base = product.basePrice
+    const pct = (p: number, note: string) => (p > 0 ? { dollars: Math.round(base * (100 - p)) / 100, note } : null)
+    if (planOffer?.kind === 'percent' && planOffer.percent)
+      return pct(planOffer.percent, `${planOffer.percent}% off with your ${memberPlan.name} plan`)
+    if (planOffer?.kind === 'fixed' && planOffer.price_cents != null)
+      return { dollars: planOffer.price_cents / 100, note: `Your ${memberPlan.name} plan price` }
+    if (planOffer?.kind === 'full') return null
+    const wide = memberPlan.entitlements?.workspaceDiscountPercent ?? 0
+    return pct(wide, `${wide}% off with your ${memberPlan.name} plan`)
+  }, [product, memberPlan, planOffer])
+
+  // The plan's offer for this exact product, when the member has a plan.
+  useEffect(() => {
+    const portalId = product ? studioPortalId(product.id) : undefined
+    if (!portalId || !memberPlan) {
+      setPlanOffer(null)
+      return
+    }
+    let cancelled = false
+    studioWorkspaceService
+      .getPlanOffer(portalId, memberPlan.id)
+      .then((offer) => !cancelled && setPlanOffer(offer))
+      .catch(() => !cancelled && setPlanOffer(null))
+    return () => {
+      cancelled = true
+    }
+  }, [product, memberPlan])
 
   useEffect(() => {
     let cancelled = false
@@ -148,11 +185,7 @@ export default function ProductPage() {
       signInTo="/login"
       onBuy={purchase.buy}
       onStartTrial={purchase.startTrial}
-      planDiscount={
-        memberPlan?.entitlements?.workspaceDiscountPercent
-          ? { percent: memberPlan.entitlements.workspaceDiscountPercent, planName: memberPlan.name }
-          : null
-      }
+      planPrice={memberPrice}
       includedInPlan={includedPlan}
       className={className}
     />

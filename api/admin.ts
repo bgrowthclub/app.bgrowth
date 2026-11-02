@@ -3650,14 +3650,30 @@ async function listPlanProducts(db: Db) {
     db.from('product_plan_access').select('product_id, plan_id'),
     db.from('membership_plans').select('id, name, rank, is_free, status, entitlements').order('rank'),
   ])
+  // The paid offers per (plan, product) — Portal migration 0075. "Included"
+  // is NOT read from here: it lives in product_plan_access, which is what
+  // portal.has_workspace_access() checks when the member opens the product.
+  // Two tables, one concept each.
+  const offers = await db.from('plan_product_pricing').select('plan_id, product_id, kind, percent, price_cents')
+  const pricingReady = !offers.error || !notReady(offers.error)
+  if (offers.error && !notReady(offers.error)) throw offers.error
   if (links.error) {
     if (notReady(links.error)) return { ready: false, products: [], plans: [], included: {} }
     throw links.error
   }
   if (products.error) throw products.error
   if (plans.error) throw plans.error
+  const pricing: Record<string, Record<string, { kind: string; percent: number | null; priceCents: number | null }>> = {}
+  for (const row of (offers.data ?? []) as Record<string, any>[]) {
+    if (row.kind === 'included') continue
+    pricing[row.product_id] = pricing[row.product_id] ?? {}
+    pricing[row.product_id][row.plan_id] = { kind: row.kind, percent: row.percent ?? null, priceCents: row.price_cents ?? null }
+  }
+
   return {
     ready: true,
+    pricingReady,
+    pricing,
     products: products.data ?? [],
     plans: ((plans.data ?? []) as Record<string, any>[])
       .filter((p) => !p.is_free)
@@ -3688,6 +3704,58 @@ async function setPlanProduct(req: VercelRequest, db: Db) {
   }
   const { data: names } = await db.from('products').select('name').in('id', productIds)
   return { planName, count: productIds.length, names: ((names ?? []) as { name: string }[]).map((n) => n.name) }
+}
+
+// One cell of Admin → Plans → Included (02/11/2026, Portal migration
+// 0075): what ONE plan does with ONE product when it is not included —
+// a % off, a fixed price, or nothing. "Included" is not set here: it is
+// product_plan_access (setPlanProduct above), because that is the table
+// the database checks before opening a product.
+//   PUT ?resource=plan-pricing { productId, planId, kind, percent?, priceCents? }
+//   kind: 'percent' | 'fixed' | 'full' | 'none' (none removes the row)
+async function setPlanPricing(req: VercelRequest, db: Db) {
+  const productId = str(req.body?.productId)
+  const planId = str(req.body?.planId)
+  const kind = str(req.body?.kind)
+  if (!isUuid(productId) || !isUuid(planId)) throw new HttpError(400, 'Choose the product and the plan.')
+  if (!['percent', 'fixed', 'full', 'none'].includes(kind)) throw new HttpError(400, 'Unknown option.')
+
+  const [{ data: plan }, { data: product }] = await Promise.all([
+    db.from('membership_plans').select('id, name, is_free').eq('id', planId).maybeSingle(),
+    db.from('products').select('id, name, is_free, content_type').eq('id', productId).maybeSingle(),
+  ])
+  if (!plan || plan.is_free) throw new HttpError(400, 'Choose a paid plan.')
+  if (!product || !SELLABLE_TYPES.includes(product.content_type)) throw new HttpError(404, 'Product not found.')
+  if (product.is_free) throw new HttpError(400, 'This product is already free for everyone.')
+
+  if (kind === 'none') {
+    const { error } = await db.from('plan_product_pricing').delete().eq('plan_id', planId).eq('product_id', productId)
+    if (error && !notReady(error)) throw error
+    if (error) throw new HttpError(409, 'Run the database update (Portal migration 0075) first.')
+    return { planName: plan.name, productName: product.name, kind }
+  }
+
+  let percent: number | null = null
+  let priceCents: number | null = null
+  if (kind === 'percent') {
+    percent = Math.round(Number(req.body?.percent))
+    if (!Number.isFinite(percent) || percent < 1 || percent > 100) throw new HttpError(400, 'The discount must be between 1% and 100%.')
+  }
+  if (kind === 'fixed') {
+    priceCents = Math.round(Number(req.body?.priceCents))
+    // Stripe refuses a charge under 50 cents, and the rest of the checkout
+    // already floors at that (api/studio-checkout.ts).
+    if (!Number.isFinite(priceCents) || priceCents < 50) throw new HttpError(400, 'The fixed price must be at least $0.50.')
+  }
+
+  const { error } = await db
+    .from('plan_product_pricing')
+    .upsert({ plan_id: planId, product_id: productId, kind, percent, price_cents: priceCents, updated_at: new Date().toISOString() })
+  if (error) {
+    if (notReady(error)) throw new HttpError(409, 'Run the database update (Portal migration 0075) first.')
+    throw error
+  }
+  return { planName: plan.name, productName: product.name, kind, percent, priceCents }
 }
 
 // Admin → Plans → Subscribers (Sprint 122, migration 0058): every paid
@@ -4050,6 +4118,14 @@ function describe(key: string, b: Body, r: Record<string, any>): Described {
       const what = r.count === 1 ? `“${r.names?.[0] ?? 'a product'}”` : `${r.count} products`
       return { area: 'plans', summary: r.planName ? `Included ${what} in the ${r.planName} plan and above` : `Took ${what} out of the plans` }
     }
+    case 'PUT plan-pricing': {
+      const what = `“${r.productName ?? 'a product'}” on the ${r.planName ?? ''} plan`
+      if (r.kind === 'none' || r.kind === 'full') return { area: 'plans', summary: `Set ${what} to full price` }
+      return {
+        area: 'plans',
+        summary: r.kind === 'percent' ? `Set ${what} to ${r.percent}% off` : `Set ${what} to a fixed $${((r.priceCents ?? 0) / 100).toFixed(2)}`,
+      }
+    }
     case 'POST coupons':
       return { area: 'plans', summary: `Created the coupon ${r.coupon?.code ?? ''} (${b.kind === 'amount' ? `$${b.value} off` : `${b.value}% off`})` }
     case 'PATCH coupons':
@@ -4247,6 +4323,7 @@ const ROUTES: Record<string, Route> = {
   'GET plan-subscribers': (_req, db) => listPlanSubscribers(db),
   'GET plan-products': (_req, db) => listPlanProducts(db),
   'PUT plan-products': (req, db) => setPlanProduct(req, db),
+  'PUT plan-pricing': (req, db) => setPlanPricing(req, db),
   'GET coupons': (_req, db) => listCoupons(db),
   'POST coupons': (req, db) => createCoupon(req, db),
   'PATCH coupons': (req) => setCouponActive(req),

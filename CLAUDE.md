@@ -343,6 +343,46 @@ This repo is a **static, client-only MVP**:
   unchanged and the editor asks the person to review it ("Please review…",
   also next to Save). Nothing hidden becomes visible and nothing with
   content is deleted without the person doing it.
+  **Since Sprint 183 one table says what every plan does with every
+  product** (approved by the owner 01/11/2026; Portal migration 0075):
+  Admin → Plans → **Included** is now a product × plan grid where each cell
+  is included / % off / fixed price / full price. It replaces three settings
+  that lived apart and disagreed: `workspaceDiscountPercent` (one % for
+  everything, which also hit courses), `academyDiscount` (set in Admin →
+  Plans, saved, and **never read by any checkout** — a promise that silently
+  did nothing) and the per-course list beside it.
+  **Two tables, one concept each, on purpose.** "Included" stays in
+  `portal.product_plan_access`, because that is what
+  `portal.has_workspace_access()` checks before opening a product — moving it
+  would have made the screen say "included" while the product refused to
+  open. It still flows upward (included in Starter = included in every plan
+  above), so a cell that inherits inclusion is shown but not editable: it is
+  changed where it was set, and the two can never contradict each other. The
+  paid offers live in `portal.plan_product_pricing` (plan_id, product_id,
+  kind, percent, price_cents), public to read like the inclusion table, and
+  written only through `api/admin.ts` (`PUT plan-pricing`, admin-only, with a
+  line in `describe()`).
+  **The price rule** (`planPriceFor` in api/studio-checkout.ts): among the
+  member's live plans, the LOWEST resulting price wins — the member's side,
+  not the pricier plan's. A pair with no row still gets the plan's old
+  blanket `workspaceDiscountPercent`, so nothing a plan already promised
+  stopped working the day this shipped; the table simply wins where it says
+  something. `academyDiscount` is deliberately not read. Floor of 50 cents
+  (Stripe's minimum). Checkout metadata carries `planPricing` (where the
+  price came from) and `listCents`.
+  **The product page shows the same number** (`StudioPurchaseCard.planPrice`,
+  which replaced `planDiscount`): list price struck through, the member's
+  price, and a line saying where it came from — so a lower price never looks
+  like a glitch, and the page can never disagree with the till.
+  `planWorkspaceDiscount` in api/studio-checkout.ts is now unused (superseded
+  by `planPriceFor`, no remaining callers) — left in place, not deleted, per
+  §12.
+  **Still open, decided but NOT built:** coupons and plan discounts do not
+  stack — the bigger one wins — which needs the coupon typed on our own
+  product page instead of inside Stripe Checkout. The rule is decided
+  (01/11/2026); the owner has not approved an interface for it, so coupons
+  still work exactly as before (entered in Stripe, stacking with the plan
+  price).
   **Since Sprint 180 the Admin area answers "who has this product"**
   (approved by the owner 01/11/2026; no migration): Admin → Catalog →
   **Access** (`/platform/admin/access`, resource `product-members`,

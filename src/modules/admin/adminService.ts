@@ -326,6 +326,11 @@ export const adminService = {
   listPlanProducts() {
     return call<AdminPlanProducts>('GET', 'plan-products')
   },
+  // One cell of the Included table (02/11/2026): what this plan does with
+  // this product when it isn't included.
+  setPlanPricing(productId: string, planId: string, offer: { kind: 'percent' | 'fixed' | 'full' | 'none'; percent?: number; priceCents?: number }) {
+    return call<{ planName: string; productName: string }>('PUT', 'plan-pricing', undefined, { productId, planId, ...offer })
+  },
   async setPlanProducts(productIds: string[], planId: string | null) {
     await call('PUT', 'plan-products', undefined, { productIds, planId })
   },

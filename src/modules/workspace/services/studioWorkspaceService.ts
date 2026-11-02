@@ -118,6 +118,21 @@ export const studioWorkspaceService = {
     return images.length || video ? { images, video } : null
   },
 
+  // What one plan does with one product when it isn't included
+  // (02/11/2026, Portal migration 0075). Public to read, like the
+  // inclusion table — it is part of the shop window. Returns null before
+  // the migration, or when that pair has no row.
+  async getPlanOffer(productId: string, planId: string): Promise<{ kind: string; percent: number | null; price_cents: number | null } | null> {
+    const { data, error } = await client()
+      .from('plan_product_pricing')
+      .select('kind, percent, price_cents')
+      .eq('product_id', productId)
+      .eq('plan_id', planId)
+      .maybeSingle()
+    if (error) return null
+    return (data as { kind: string; percent: number | null; price_cents: number | null } | null) ?? null
+  },
+
   async listCategories(): Promise<PortalCategoryRow[]> {
     const { data, error } = await client().from('workspace_categories').select('*')
     if (error) throw error

@@ -19,8 +19,11 @@ interface Props {
   signInTo: string
   onBuy: () => void
   onStartTrial: () => void
-  // The member's plan takes a % off (Sprint 125) — applied at checkout.
-  planDiscount?: { percent: number; planName: string } | null
+  // What this member actually pays, from the plan × product table
+  // (02/11/2026, Portal migration 0075): a % off or a fixed price, applied
+  // at checkout. `note` says where it came from, so a lower price never
+  // looks like a glitch.
+  planPrice?: { dollars: number; note: string } | null
   // The lowest plan that includes it (Sprint 126): "Included in Pro and above".
   includedInPlan?: string | null
   className?: string
@@ -85,12 +88,14 @@ export default function StudioPurchaseCard({
   signInTo,
   onBuy,
   onStartTrial,
-  planDiscount = null,
+  planPrice = null,
   includedInPlan = null,
   className = '',
 }: Props) {
   const free = product.basePrice === 0
-  const pct = !free && planDiscount ? planDiscount.percent : 0
+  // Never show a "discount" that isn't one.
+  const member = !free && planPrice && planPrice.dollars < product.basePrice ? planPrice : null
+  const memberLabel = member ? money(Math.max(0.5, member.dollars)) : null
   const noun = studioProductNoun(product)
   const summary =
     product.type === 'Calculator'
@@ -120,15 +125,15 @@ export default function StudioPurchaseCard({
           </Button>
           {trialActive && !free && (
             <Button type="button" variant="secondary" onClick={onBuy} disabled={busy !== null} className="mt-3 w-full">
-              {busy === 'buy' ? 'Opening checkout…' : `Buy Now — ${priceLabel(product, pct)}`}
+              {busy === 'buy' ? 'Opening checkout…' : `Buy Now — ${memberLabel ?? priceLabel(product)}`}
             </Button>
           )}
         </>
       ) : (
         <>
           <div className="flex items-baseline gap-2">
-            {pct > 0 && <span className="text-lg font-semibold text-navy/35 line-through">{priceLabel(product)}</span>}
-            <span className="font-display text-3xl font-bold text-navy">{free ? 'Free' : priceLabel(product, pct)}</span>
+            {member && <span className="text-lg font-semibold text-navy/35 line-through">{priceLabel(product)}</span>}
+            <span className="font-display text-3xl font-bold text-navy">{free ? 'Free' : memberLabel ?? priceLabel(product)}</span>
             {!free && <span className="text-[13px] text-navy/40">one-time</span>}
           </div>
           {!free && includedInPlan && (
@@ -139,11 +144,7 @@ export default function StudioPurchaseCard({
               </Link>
             </p>
           )}
-          {pct > 0 && planDiscount && (
-            <p className="mt-1 text-[12.5px] font-semibold text-primary">
-              {planDiscount.percent}% off with your {planDiscount.planName} plan
-            </p>
-          )}
+          {member && <p className="mt-1 text-[12.5px] font-semibold text-primary">{member.note}</p>}
 
           {!signedIn ? (
             <>

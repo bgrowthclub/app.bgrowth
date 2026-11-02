@@ -648,11 +648,24 @@ export interface AdminCouponDraft {
   firstTimeOnly: boolean
 }
 
-// Admin → Plans → Included (Sprint 126, Portal migration 0061).
+// What one plan does with one product when it is NOT included
+// (02/11/2026, Portal migration 0075).
+export interface AdminPlanOffer {
+  kind: 'percent' | 'fixed' | 'full'
+  percent: number | null
+  priceCents: number | null
+}
+
+// Admin → Plans → Included (Sprint 126, Portal migration 0061; the paid
+// offers added 02/11/2026, Portal migration 0075).
 export interface AdminPlanProducts {
   ready: boolean
+  // false before Portal migration 0075: only inclusion can be set.
+  pricingReady?: boolean
   products: { id: string; name: string; slug: string; content_type: string; is_free: boolean; status: string }[]
   plans: { id: string; name: string; rank: number; status: string; includesAll: boolean }[]
-  // product id → the lowest plan that includes it
+  // product id → the lowest plan that includes it (and every plan above it)
   included: Record<string, string>
+  // product id → plan id → the paid offer, for plans that don't include it
+  pricing?: Record<string, Record<string, AdminPlanOffer>>
 }

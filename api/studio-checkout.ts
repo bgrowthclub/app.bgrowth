@@ -240,6 +240,80 @@ async function planWorkspaceDiscount(
   return best
 }
 
+// What the member actually pays for ONE product, given their live plans
+// (02/11/2026, Portal migration 0075). The plan × product table decides:
+// a % off or a fixed price for that exact pair. When a pair has no row,
+// the plan's old "% off Workspaces" still applies, so nothing a plan
+// already promised stops working the day this ships — the table simply
+// wins where it says something.
+//
+// Two live plans saying different things: the member pays the LOWEST, not
+// the one from the pricier plan (decided with the owner, 01/11/2026).
+// Stripe refuses anything under 50 cents, so that is the floor.
+//
+// entitlements.academyDiscount is deliberately NOT read: it was never read
+// by any checkout, and a course's price now comes from this table.
+async function planPriceFor(
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  supabase: SupabaseClient<any, any, any>,
+  userId: string,
+  productId: string,
+  priceCents: number,
+): Promise<{ cents: number; source: string }> {
+  const { data, error } = await supabase
+    .from('member_plans')
+    .select('plan_id, status, starts_at, ends_at, membership_plans(entitlements)')
+    .eq('user_id', userId)
+  if (error || !data) return { cents: priceCents, source: 'list' }
+
+  const now = Date.now()
+  const live = (data as Record<string, any>[]).filter(
+    (r) =>
+      ['active', 'trialing', 'past_due'].includes(r.status) &&
+      Date.parse(r.starts_at) <= now &&
+      (!r.ends_at || Date.parse(r.ends_at) > now),
+  )
+  if (!live.length) return { cents: priceCents, source: 'list' }
+
+  // The table's rows for this product, for the plans the member has.
+  const offers = await supabase
+    .from('plan_product_pricing')
+    .select('plan_id, kind, percent, price_cents')
+    .eq('product_id', productId)
+    .in('plan_id', live.map((r) => r.plan_id))
+  const byPlan = new Map<string, Record<string, any>>()
+  // Before Portal migration 0075 this table doesn't exist: the old
+  // behaviour (the plan-wide %) is all there is, and that is fine.
+  if (!offers.error) for (const row of (offers.data ?? []) as Record<string, any>[]) byPlan.set(row.plan_id, row)
+
+  let best = priceCents
+  let source = 'list'
+  for (const row of live) {
+    const offer = byPlan.get(row.plan_id)
+    let candidate: number | null = null
+    let from = ''
+    if (offer?.kind === 'percent' && offer.percent > 0) {
+      candidate = Math.round(priceCents * (1 - Number(offer.percent) / 100))
+      from = `plan-percent-${offer.percent}`
+    } else if (offer?.kind === 'fixed' && offer.price_cents != null) {
+      candidate = Number(offer.price_cents)
+      from = 'plan-fixed'
+    } else if (!offer || offer.kind !== 'full') {
+      // No row for this pair: the plan's old blanket discount still counts.
+      const pct = Number(row.membership_plans?.entitlements?.workspaceDiscountPercent ?? 0)
+      if (pct > 0) {
+        candidate = Math.round(priceCents * (1 - Math.min(pct, 100) / 100))
+        from = `plan-wide-${Math.min(pct, 100)}`
+      }
+    }
+    if (candidate !== null && candidate < best) {
+      best = candidate
+      source = from
+    }
+  }
+  return { cents: Math.max(50, best), source }
+}
+
 async function bundleCheckout(
   req: VercelRequest,
   res: VercelResponse,
@@ -475,9 +549,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const origin = siteOrigin(req)
     const productUrl = `${origin}/product/${encodeURIComponent(product.slug)}`
     const stripe = new Stripe(secretKey)
-    // The member's plan may take a % off Workspaces bought one by one (Sprint 125).
-    const discount = await planWorkspaceDiscount(supabase, user.id)
-    const unitAmount = discount > 0 ? Math.max(50, Math.round(product.price_cents * (1 - discount / 100))) : product.price_cents
+    // What this member pays, from the plan × product table (Sprint 183).
+    const planPrice = await planPriceFor(supabase, user.id, product.id, product.price_cents)
+    const unitAmount = planPrice.cents
     const useStoredPrice = Boolean(product.stripe_price_id) && unitAmount === product.price_cents
     const stripeProduct = useStoredPrice ? null : await stripeProductFor(stripe, supabase, product)
     const session = await stripe.checkout.sessions.create({
@@ -514,7 +588,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         productId: product.id,
         productSlug: product.slug,
         source: 'website',
-        ...(unitAmount !== product.price_cents ? { planDiscountPercent: String(discount) } : {}),
+        ...(unitAmount !== product.price_cents ? { planPricing: planPrice.source, listCents: String(product.price_cents) } : {}),
       },
     })
     if (!session.url) throw new Error('Stripe did not return a checkout URL.')
