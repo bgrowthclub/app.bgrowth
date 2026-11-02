@@ -30,6 +30,11 @@ export default function PlanProductsPanel() {
   const [bulkPlan, setBulkPlan] = useState('')
   const [busy, setBusy] = useState(false)
   const [draft, setDraft] = useState<Draft | null>(null)
+  // Which cell is open for editing. A cell is a quiet label until it is
+  // opened: 600 identical dropdowns saying "Full price" buried the handful
+  // of cells that actually say something (02/11/2026).
+  const [open, setOpen] = useState<{ productId: string; planId: string } | null>(null)
+  const [onlySet, setOnlySet] = useState(false)
 
   function load() {
     adminService
@@ -41,8 +46,15 @@ export default function PlanProductsPanel() {
 
   const planName = useMemo(() => new Map((data?.plans ?? []).map((p) => [p.id, p.name])), [data])
   const planRank = useMemo(() => new Map((data?.plans ?? []).map((p) => [p.id, p.rank])), [data])
+  // "Has something set" reads both tables, the same two the cells read.
+  const configured = (productId: string) =>
+    Boolean(data?.included[productId]) || Object.keys(data?.pricing?.[productId] ?? {}).length > 0
   const visible = (data?.products ?? []).filter(
-    (p) => (kind === 'all' || p.content_type === kind) && (!filter || p.name.toLowerCase().includes(filter.toLowerCase())),
+    (p) =>
+      (kind === 'all' || p.content_type === kind) &&
+      (!filter || p.name.toLowerCase().includes(filter.toLowerCase())) &&
+      // Free products have nothing to set, so the filter hides them too.
+      (!onlySet || configured(p.id)),
   )
 
   async function apply(ids: string[], planId: string | null) {
@@ -61,6 +73,7 @@ export default function PlanProductsPanel() {
         return { ...d, included }
       })
       setPicked([])
+      setOpen(null)
       setNotice(planId ? `${ids.length} product(s) included in ${planName.get(planId)} and above.` : `${ids.length} product(s) taken out of the plans.`)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Couldn’t save.')
@@ -90,6 +103,7 @@ export default function PlanProductsPanel() {
         return { ...d, pricing }
       })
       setDraft(null)
+      setOpen(null)
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Couldn’t save.')
     } finally {
@@ -122,12 +136,28 @@ export default function PlanProductsPanel() {
     return { state: 'offer' as const, offer }
   }
 
+  // What a plan column adds up to, so the header answers "what does this
+  // plan actually open?" without reading 100 rows.
+  function summaryOf(plan: { id: string; rank: number; includesAll: boolean }) {
+    if (plan.includesAll) return 'everything'
+    let included = 0
+    let offers = 0
+    for (const product of data?.products ?? []) {
+      if (product.is_free) continue
+      const cell = cellOf(product.id, plan)
+      if (cell.state === 'included' || cell.state === 'inherited') included += 1
+      else if (cell.state === 'offer' && cell.offer && cell.offer.kind !== 'full') offers += 1
+    }
+    return [included ? `${included} included` : '', offers ? `${offers} priced` : ''].filter(Boolean).join(' · ')
+  }
+
   return (
     <div className="space-y-5">
       <details className={`${CARD} px-5 py-3 text-[13.5px] text-navy/70`}>
         <summary className="cursor-pointer font-semibold text-navy">How it works</summary>
         <ul className="mt-3 list-disc space-y-1.5 pl-5">
           <li>Each cell says what that plan does with that product: includes it, takes a % off, charges a fixed price, or nothing.</li>
+          <li>A dash means full price — nothing special. Click any cell to change it.</li>
           <li>“Included” flows upward: included in Starter means included in every plan above it. A higher plan therefore shows “included via Starter” and is changed where it was set.</li>
           <li>Members open an included product while their plan is active. If they cancel they lose access; what they filled in is kept and comes back if they subscribe again.</li>
           <li>A discount or fixed price applies when they buy it one by one. If two live plans offer different prices, the member pays the lowest.</li>
@@ -153,6 +183,10 @@ export default function PlanProductsPanel() {
           <option value="calculator">Calculators</option>
           <option value="pdf">Downloads</option>
         </select>
+        <label className="flex items-center gap-2 text-[13px] text-navy/70">
+          <input type="checkbox" className="h-4 w-4 accent-primary" checked={onlySet} onChange={(e) => setOnlySet(e.target.checked)} />
+          Only products with something set
+        </label>
         <span className="text-[12.5px] text-navy/40">
           {visible.length} product(s) · {data.plans.length} plan(s)
         </span>
@@ -176,17 +210,23 @@ export default function PlanProductsPanel() {
       )}
 
       <div className={`${CARD} overflow-x-auto`}>
-        <table className="w-full min-w-[760px] text-left">
+        <table className="w-full table-fixed text-left" style={{ minWidth: 300 + data.plans.length * 130 }}>
           <thead>
             <tr className="border-b border-navy/[0.07]">
-              <th scope="col" className="px-5 py-3 text-[11.5px] font-bold uppercase tracking-wide text-navy/45">
+              <th scope="col" className="w-[300px] px-5 py-3 text-[11.5px] font-bold uppercase tracking-wide text-navy/45">
                 Product
               </th>
-              {data.plans.map((p) => (
-                <th key={p.id} scope="col" className="px-3 py-3 text-[11.5px] font-bold uppercase tracking-wide text-navy/45">
-                  {p.name}
-                </th>
-              ))}
+              {data.plans.map((p) => {
+                const sum = summaryOf(p)
+                return (
+                  <th key={p.id} scope="col" className="px-3 py-3 align-top">
+                    <span className="block text-[11.5px] font-bold uppercase tracking-wide text-navy/45">{p.name}</span>
+                    <span className="mt-0.5 block text-[11px] font-normal normal-case tracking-normal text-navy/35">
+                      {sum || 'nothing set'}
+                    </span>
+                  </th>
+                )
+              })}
             </tr>
           </thead>
           <tbody>
@@ -226,70 +266,111 @@ export default function PlanProductsPanel() {
                 ) : (
                   data.plans.map((plan) => {
                     const cell = cellOf(product.id, plan)
+                    const isOpen = open?.productId === product.id && open?.planId === plan.id
                     const editing = draft && draft.productId === product.id && draft.planId === plan.id
-                    return (
-                      <td key={plan.id} className="px-3 py-3 align-top">
-                        {cell.state === 'all' ? (
-                          <span className={pillClass('blue')}>Everything</span>
-                        ) : cell.state === 'inherited' ? (
-                          <span className="text-[12.5px] text-navy/45">Included via {cell.from}</span>
-                        ) : (
-                          <>
-                            <select
-                              className="w-full rounded-lg border border-navy/10 bg-white px-2 py-1.5 text-[12.5px] text-navy"
-                              disabled={busy}
-                              value={cell.state === 'included' ? 'included' : cell.offer?.kind ?? 'none'}
-                              aria-label={`What ${plan.name} does with ${product.name}`}
-                              onChange={(e) => {
-                                const v = e.target.value
-                                setError(null)
-                                if (v === 'included') return void apply([product.id], plan.id)
-                                if (cell.state === 'included') return void apply([product.id], null)
-                                if (v === 'percent' || v === 'fixed') return setDraft({ productId: product.id, planId: plan.id, kind: v, value: '' })
-                                return void saveOffer(product.id, plan.id, { kind: 'none' })
-                              }}
-                            >
-                              <option value="included">Included</option>
-                              <option value="percent">% off</option>
-                              <option value="fixed">Fixed price</option>
-                              <option value="none">Full price</option>
-                            </select>
 
-                            {editing ? (
-                              <span className="mt-1.5 flex items-center gap-1.5">
-                                <input
-                                  autoFocus
-                                  className="w-20 rounded-lg border border-navy/10 px-2 py-1 text-[12.5px] text-navy"
-                                  value={draft.value}
-                                  inputMode="decimal"
-                                  placeholder={draft.kind === 'percent' ? '20' : '9.00'}
-                                  aria-label={draft.kind === 'percent' ? 'Percentage off' : 'Fixed price in dollars'}
-                                  onChange={(e) => setDraft({ ...draft, value: e.target.value })}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter') commitDraft()
-                                    if (e.key === 'Escape') setDraft(null)
-                                  }}
-                                />
-                                <span className="text-[12px] text-navy/45">{draft.kind === 'percent' ? '%' : 'USD'}</span>
-                                <button
-                                  type="button"
-                                  disabled={busy}
-                                  onClick={commitDraft}
-                                  className="text-[12px] font-semibold text-primary disabled:opacity-40"
-                                >
-                                  Save
-                                </button>
-                              </span>
-                            ) : cell.state === 'offer' && cell.offer ? (
-                              <span className="mt-1.5 block text-[12px] text-navy/55">
-                                {cell.offer.kind === 'percent'
-                                  ? `${cell.offer.percent}% off`
-                                  : cell.offer.kind === 'fixed'
-                                    ? `$${((cell.offer.priceCents ?? 0) / 100).toFixed(2)}`
-                                    : 'Full price'}
-                              </span>
-                            ) : null}
-                          </>
+                    if (cell.state === 'all')
+                      return (
+                        <td key={plan.id} className="px-3 py-3 align-top">
+                          <span className={pillClass('blue')}>Everything</span>
+                        </td>
+                      )
+
+                    if (cell.state === 'inherited')
+                      return (
+                        <td key={plan.id} className="px-3 py-3 align-top">
+                          <span className="text-[12px] text-navy/40">via {cell.from}</span>
+                        </td>
+                      )
+
+                    // Closed: a quiet label. Full price is the default, so it
+                    // shows as a dash and lets the cells that mean something
+                    // be the only thing you see.
+                    if (!isOpen) {
+                      const offer = cell.state === 'offer' ? cell.offer : undefined
+                      const label =
+                        cell.state === 'included' ? (
+                          <span className={pillClass('green')}>Included</span>
+                        ) : offer?.kind === 'percent' ? (
+                          <span className={pillClass('amber')}>{offer.percent}% off</span>
+                        ) : offer?.kind === 'fixed' ? (
+                          <span className={pillClass('amber')}>${((offer.priceCents ?? 0) / 100).toFixed(2)}</span>
+                        ) : (
+                          <span className="text-navy/25">—</span>
+                        )
+                      return (
+                        <td key={plan.id} className="px-3 py-2 align-top">
+                          <button
+                            type="button"
+                            disabled={busy}
+                            onClick={() => {
+                              setError(null)
+                              setDraft(null)
+                              setOpen({ productId: product.id, planId: plan.id })
+                            }}
+                            className="w-full rounded-lg border border-transparent px-2 py-1.5 text-left transition-colors hover:border-navy/10 hover:bg-bg-soft disabled:opacity-40"
+                            aria-label={`What ${plan.name} does with ${product.name}`}
+                          >
+                            {label}
+                          </button>
+                        </td>
+                      )
+                    }
+
+                    return (
+                      <td key={plan.id} className="px-3 py-2 align-top">
+                        <select
+                          autoFocus
+                          className="w-full rounded-lg border border-primary/40 bg-white px-2 py-1.5 text-[12.5px] text-navy"
+                          disabled={busy}
+                          value={cell.state === 'included' ? 'included' : cell.offer?.kind ?? 'none'}
+                          aria-label={`What ${plan.name} does with ${product.name}`}
+                          onChange={(e) => {
+                            const v = e.target.value
+                            setError(null)
+                            if (v === 'included') return void apply([product.id], plan.id)
+                            if (cell.state === 'included') return void apply([product.id], null)
+                            if (v === 'percent' || v === 'fixed') return setDraft({ productId: product.id, planId: plan.id, kind: v, value: '' })
+                            return void saveOffer(product.id, plan.id, { kind: 'none' })
+                          }}
+                        >
+                          <option value="included">Included</option>
+                          <option value="percent">% off</option>
+                          <option value="fixed">Fixed price</option>
+                          <option value="none">Full price</option>
+                        </select>
+
+                        {editing ? (
+                          <span className="mt-1.5 flex items-center gap-1.5">
+                            <input
+                              autoFocus
+                              className="w-16 rounded-lg border border-navy/10 px-2 py-1 text-[12.5px] text-navy"
+                              value={draft.value}
+                              inputMode="decimal"
+                              placeholder={draft.kind === 'percent' ? '20' : '9.00'}
+                              aria-label={draft.kind === 'percent' ? 'Percentage off' : 'Fixed price in dollars'}
+                              onChange={(e) => setDraft({ ...draft, value: e.target.value })}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') commitDraft()
+                                if (e.key === 'Escape') {
+                                  setDraft(null)
+                                  setOpen(null)
+                                }
+                              }}
+                            />
+                            <span className="text-[12px] text-navy/45">{draft.kind === 'percent' ? '%' : 'USD'}</span>
+                            <button type="button" disabled={busy} onClick={commitDraft} className="text-[12px] font-semibold text-primary disabled:opacity-40">
+                              Save
+                            </button>
+                          </span>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setOpen(null)}
+                            className="mt-1 text-[11.5px] font-semibold text-navy/40 hover:text-navy"
+                          >
+                            Close
+                          </button>
                         )}
                       </td>
                     )
