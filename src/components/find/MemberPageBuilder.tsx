@@ -6,7 +6,7 @@ import { CARD, INPUT, LINK_BUTTON, SMALL_BUTTON } from '../admin/styles'
 import MemberPageView from './MemberPageView'
 import ResponsiveFrame from '../ui/ResponsiveFrame'
 import { shrinkImage } from '../../lib/shrinkImage'
-import { MEMBER_PAGE_LABELS, videoEmbed } from '../../modules/find/memberPageService'
+import { MEMBER_PAGE_LABELS, WHATSAPP_JOIN_RE, videoEmbed } from '../../modules/find/memberPageService'
 import { BLOCK_TYPES, LEGACY_BLOCKS, PAGE_BACKGROUNDS, PAGE_COLORS, SINGLE_BLOCK_TYPES, blockId, memberPageTemplates, mergeDuplicateSections, switchTemplateBlocks, templateBlocks, templatePreview } from '../../modules/find/memberPageTemplates'
 import type {
   MemberPage,
@@ -54,7 +54,7 @@ const SMALL = LINK_BUTTON
 
 const LINK_TYPES: { id: MemberPageLinkType; label: string; placeholder: string }[] = [
   { id: 'whatsapp', label: 'WhatsApp', placeholder: '+1 555 123 4567' },
-  { id: 'whatsapp_group', label: 'WhatsApp group', placeholder: 'https://chat.whatsapp.com/…' },
+  { id: 'whatsapp_group', label: 'WhatsApp group or channel', placeholder: 'https://chat.whatsapp.com/… or https://whatsapp.com/channel/…' },
   { id: 'phone', label: 'Call', placeholder: '+1 555 123 4567' },
   { id: 'booking', label: 'Booking', placeholder: 'https://calendly.com/…' },
   { id: 'instagram', label: 'Instagram', placeholder: 'https://instagram.com/…' },
@@ -369,8 +369,11 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                     </select>
                     <input value={link.url} onChange={(e) => patch(i, { url: e.target.value })} className={INPUT} placeholder={LINK_TYPES.find((t) => t.id === link.type)?.placeholder} aria-label="Address" />
                   </div>
-                  {link.type === 'whatsapp_group' && link.url.trim() && !/^https:\/\/chat\.whatsapp\.com\/\S+$/i.test(link.url.trim()) && (
-                    <p className="text-[12.5px] text-red-500">Paste the full invite link: in WhatsApp, Group info → Invite via link → Copy link.</p>
+                  {link.type === 'whatsapp_group' && link.url.trim() && !WHATSAPP_JOIN_RE.test(link.url.trim()) && (
+                    <p className="text-[12.5px] text-red-500">
+                      Paste the full link: a group (WhatsApp → Group info → Invite via link → Copy link) or a channel
+                      (channel → Copy link).
+                    </p>
                   )}
                   <input value={link.label} onChange={(e) => patch(i, { label: e.target.value })} maxLength={40} className={INPUT} placeholder="Button text (optional)" aria-label="Button text" />
                 </Row>

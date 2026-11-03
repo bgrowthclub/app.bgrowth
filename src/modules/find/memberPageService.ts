@@ -94,6 +94,21 @@ export function memberLinkHref(type: string, url: string): string {
   return /^https?:\/\//.test(value) ? value : `https://${value}`
 }
 
+/**
+ * A WhatsApp group invite or a WhatsApp channel (03/11/2026). The button
+ * started as groups only; a channel is the shape an affiliate actually uses,
+ * and from the visitor's side both are one button — "join me on WhatsApp" —
+ * so they share the type and only the wording changes.
+ *
+ * THE SAME RULE IS COPIED in api/account.ts and api/admin.ts (a function
+ * must not import from src/, CLAUDE.md §13). Change all three.
+ */
+export const WHATSAPP_JOIN_RE = /^https:\/\/(chat\.whatsapp\.com\/|(www\.)?whatsapp\.com\/channel\/)\S+$/i
+
+export function isWhatsAppChannel(url: string): boolean {
+  return /^https:\/\/(www\.)?whatsapp\.com\/channel\//i.test(url.trim())
+}
+
 const DEFAULT_LINK_LABELS: Record<string, { en: string; pt: string }> = {
   whatsapp: { en: 'WhatsApp', pt: 'WhatsApp' },
   whatsapp_group: { en: 'Join the WhatsApp group', pt: 'Entrar no grupo do WhatsApp' },
@@ -107,9 +122,16 @@ const DEFAULT_LINK_LABELS: Record<string, { en: string; pt: string }> = {
   other: { en: 'Link', pt: 'Link' },
 }
 
-// The button text: the label written for it, or the network's name.
-export function memberLinkLabel(link: { type: string; label: string }, language: 'en' | 'pt'): string {
-  return link.label.trim() || (DEFAULT_LINK_LABELS[link.type] ?? DEFAULT_LINK_LABELS.other)[language]
+const WHATSAPP_CHANNEL_LABEL = { en: 'Join the WhatsApp channel', pt: 'Entrar no canal do WhatsApp' }
+
+// The button text: the label written for it, or the network's name. One
+// button carries both a WhatsApp group and a WhatsApp channel, so when no
+// label was written the address decides which word is true.
+export function memberLinkLabel(link: { type: string; label: string; url?: string }, language: 'en' | 'pt'): string {
+  const written = link.label.trim()
+  if (written) return written
+  if (link.type === 'whatsapp_group' && link.url && isWhatsAppChannel(link.url)) return WHATSAPP_CHANNEL_LABEL[language]
+  return (DEFAULT_LINK_LABELS[link.type] ?? DEFAULT_LINK_LABELS.other)[language]
 }
 
 export interface VideoEmbed {

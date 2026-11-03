@@ -744,8 +744,11 @@ function readMyPage(b: Record<string, any>) {
     if (!url) return []
     if (type === 'email' && !/^(mailto:)?[^\s@]+@[^\s@]+\.[^\s@]+$/.test(url)) throw new HttpError(400, `“${url}” isn’t an e-mail address.`)
     // A WhatsApp group is its invite link (Sprint 134).
-    if (type === 'whatsapp_group' && !/^https:\/\/chat\.whatsapp\.com\/\S+$/i.test(url)) {
-      throw new HttpError(400, 'Paste the group’s full invite link (https://chat.whatsapp.com/…) — in WhatsApp: Group info → Invite via link → Copy link.')
+    // A group invite OR a channel (03/11/2026). The same rule is in
+    // src/modules/find/memberPageService.ts (WHATSAPP_JOIN_RE) — a function
+    // must not import from src/; change both.
+    if (type === 'whatsapp_group' && !/^https:\/\/(chat\.whatsapp\.com\/|(www\.)?whatsapp\.com\/channel\/)\S+$/i.test(url)) {
+      throw new HttpError(400, 'Paste the full link: a group invite (https://chat.whatsapp.com/…) or a channel (https://whatsapp.com/channel/…).')
     }
     if ((type === 'whatsapp' || type === 'phone') && !/^https?:\/\//.test(url) && url.replace(/\D/g, '').length < 8) {
       throw new HttpError(400, 'Write the WhatsApp number with country code (for example +1 555 123 4567).')

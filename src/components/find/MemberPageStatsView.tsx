@@ -27,7 +27,7 @@ const LABELS = {
     notReady: 'The numbers start once the database update (Portal migration 0045) runs.',
     privacy: 'Only totals are counted — nothing about who visited.',
     featured: 'Featured',
-    links: { whatsapp: 'WhatsApp', whatsapp_group: 'WhatsApp group', phone: 'Call', booking: 'Booking', email: 'E-mail', instagram: 'Instagram', tiktok: 'TikTok', youtube: 'YouTube', website: 'Website', other: 'Link' } as Record<string, string>,
+    links: { whatsapp: 'WhatsApp', whatsapp_group: 'WhatsApp group or channel', phone: 'Call', booking: 'Booking', email: 'E-mail', instagram: 'Instagram', tiktok: 'TikTok', youtube: 'YouTube', website: 'Website', other: 'Link' } as Record<string, string>,
   },
   pt: {
     days: (n: number) => `${n} dias`,
@@ -49,7 +49,7 @@ const LABELS = {
     notReady: 'Os números começam depois da atualização do banco (migration 0045 do Portal).',
     privacy: 'Contamos só os totais — nada sobre quem visitou.',
     featured: 'Destaque',
-    links: { whatsapp: 'WhatsApp', whatsapp_group: 'Grupo do WhatsApp', phone: 'Ligar', booking: 'Agendamento', email: 'E-mail', instagram: 'Instagram', tiktok: 'TikTok', youtube: 'YouTube', website: 'Site', other: 'Link' } as Record<string, string>,
+    links: { whatsapp: 'WhatsApp', whatsapp_group: 'Grupo ou canal do WhatsApp', phone: 'Ligar', booking: 'Agendamento', email: 'E-mail', instagram: 'Instagram', tiktok: 'TikTok', youtube: 'YouTube', website: 'Site', other: 'Link' } as Record<string, string>,
   },
 }
 
