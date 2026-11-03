@@ -86,6 +86,8 @@ export interface CourseModule {
   lessons: CourseLesson[]
 }
 
+export type CertificateKind = 'completion' | 'achievement' | 'participation'
+
 export interface CourseContent {
   kind: 'course'
   version: 1
@@ -93,6 +95,15 @@ export interface CourseContent {
   intro?: string
   /** What the student will be able to do by the end (up to 10). */
   outcomes?: string[]
+  /**
+   * The hours printed on the certificate (02/11/2026). Set by hand in the
+   * Studio, never taken from the lessons' estimated minutes: a certificate
+   * states a fact, and those minutes are a guess from how much text a lesson
+   * holds. Absent = the certificate doesn't mention hours.
+   */
+  hours?: number
+  /** Which certificate this course issues. Absent = completion. */
+  certificate?: CertificateKind
   modules: CourseModule[]
 }
 

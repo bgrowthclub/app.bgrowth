@@ -244,6 +244,8 @@ const ALWAYS_OPEN_PATHS = [
   // Portal migration 0067, applied 24/10/2026), not through this list.
   '/p/bruno',
   '/ingles-de-mudanca',
+  // Checking a certificate (02/11/2026): printed on every certificate.
+  '/verify',
 ]
 
 function isAlwaysOpenPath(path: string) {

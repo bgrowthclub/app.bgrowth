@@ -902,6 +902,161 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string }, re
   return { page: data }
 }
 
+/* ------------------------------------------------- BGrowth Academy™ ---- */
+
+/**
+ * Has this member access to this product? The same rule as
+ * portal.has_workspace_access(): an active license, an active access grant,
+ * or a plan that includes it. Copied here because a function must not import
+ * from src/ (CLAUDE.md §13) — the download resource below runs the same
+ * check inline; change both.
+ */
+async function hasAccess(db: Db, userId: string, productId: string) {
+  const now = new Date().toISOString()
+  const [{ data: licenses, error: licenseError }, { data: grants, error: grantError }] = await Promise.all([
+    db.from('licenses').select('id, access_policy, expires_at').eq('user_id', userId).eq('product_id', productId).eq('status', 'active'),
+    db.from('access_grants').select('id, scope, product_id, expires_at').eq('user_id', userId).is('revoked_at', null),
+  ])
+  if (licenseError) throw licenseError
+  if (grantError) throw grantError
+  const licensed = (licenses ?? []).some((l) => l.access_policy === 'lifetime' || !l.expires_at || l.expires_at > now)
+  const granted = (grants ?? []).some(
+    (g) => (!g.expires_at || g.expires_at > now) && (g.scope === 'all' || (g.scope === 'specific' && g.product_id === productId)),
+  )
+  return licensed || granted || (await includedInPlan(db, userId, productId))
+}
+
+type QuizQuestion = { id?: string; kind?: string; answer?: string; answers?: string[]; accept?: string[] }
+type LessonBlock = { type?: string; questions?: QuizQuestion[] }
+type CourseLessonRow = { id?: string; blocks?: LessonBlock[] }
+type CourseModuleRow = { lessons?: CourseLessonRow[] }
+type CourseContentRow = { kind?: string; modules?: CourseModuleRow[]; hours?: number; certificate?: string }
+
+/**
+ * Can a student be marked right on this question? A typed question imported
+ * from Wix has no accepted answer, so it is never shown and must never be
+ * required. THE SAME RULE IS IN src/modules/academy/quiz.ts (isAnswerable) —
+ * a function must not import from src/; change both.
+ */
+function questionCounts(q: QuizQuestion) {
+  if (q.kind === 'typed') return (q.accept ?? []).some((a) => String(a ?? '').trim())
+  if (q.kind === 'multi') return (q.answers ?? []).length > 0
+  return Boolean(q.answer)
+}
+
+/** What a student must have done, read from the course itself. */
+function courseRequirements(content: CourseContentRow) {
+  const lessons: string[] = []
+  const questions: string[] = []
+  for (const module of content.modules ?? []) {
+    for (const lesson of module.lessons ?? []) {
+      if (lesson.id) lessons.push(lesson.id)
+      for (const block of lesson.blocks ?? []) {
+        if (block.type !== 'quiz') continue
+        for (const question of block.questions ?? []) {
+          if (question.id && questionCounts(question)) questions.push(question.id)
+        }
+      }
+    }
+  }
+  return { lessons, questions }
+}
+
+/**
+ * Certificates (02/11/2026). The rule the owner chose: every lesson ticked
+ * AND every answerable question answered — right or wrong, because there is
+ * no grade. Checked here, on the server, from the course and the student's
+ * own record; the browser is never asked whether it finished.
+ */
+async function certificatesAction(req: VercelRequest, db: Db, user: { id: string }, method: string) {
+  if (method === 'GET') {
+    const { data, error } = await db
+      .from('certificates')
+      .select('code, course_name, student_name, kind, hours, issued_at, revoked_at, product_id')
+      .eq('user_id', user.id)
+      .order('issued_at', { ascending: false })
+    if (error) throw error
+    return { certificates: data ?? [] }
+  }
+  if (method !== 'POST') throw new HttpError(405, 'Use GET or POST.')
+
+  const productId = str(req.body?.productId)
+  if (!productId) throw new HttpError(400, 'Which course?')
+
+  const { data: product, error: productError } = await db
+    .from('products')
+    .select('id, name, content_type, content, status')
+    .eq('id', productId)
+    .maybeSingle()
+  if (productError) throw productError
+  if (!product || product.content_type !== 'course') throw new HttpError(404, 'Course not found.')
+  if (!(await hasAccess(db, user.id, productId))) throw new HttpError(403, 'You don’t have this course.')
+
+  // Already issued? Hand back the same one — finishing again must not mint a
+  // second number for the same course.
+  const { data: existing, error: existingError } = await db
+    .from('certificates')
+    .select('code, course_name, student_name, kind, hours, issued_at, revoked_at, product_id')
+    .eq('user_id', user.id)
+    .eq('product_id', productId)
+    .maybeSingle()
+  if (existingError) throw existingError
+  if (existing) return { certificate: existing, issued: false }
+
+  const content = (product.content ?? {}) as CourseContentRow
+  if (content.kind !== 'course') throw new HttpError(409, 'This course has no content yet.')
+  const need = courseRequirements(content)
+  if (!need.lessons.length) throw new HttpError(409, 'This course has no lessons yet.')
+
+  const { data: records, error: recordError } = await db
+    .from('workspace_instances')
+    .select('data')
+    .eq('user_id', user.id)
+    .eq('product_id', productId)
+  if (recordError) throw recordError
+  const progress = (records ?? []).map((r) => r.data as { kind?: string; done?: Record<string, string>; answers?: Record<string, unknown> } | null)
+    .find((d) => d?.kind === 'course')
+  const done = progress?.done ?? {}
+  const answers = progress?.answers ?? {}
+
+  const lessonsLeft = need.lessons.filter((id) => !done[id]).length
+  const questionsLeft = need.questions.filter((id) => {
+    const given = answers[id]
+    if (Array.isArray(given)) return given.length === 0
+    return typeof given !== 'string' || !given.trim()
+  }).length
+  if (lessonsLeft > 0 || questionsLeft > 0) {
+    return { certificate: null, issued: false, lessonsLeft, questionsLeft }
+  }
+
+  const { data: profile } = await db.from('users').select('full_name').eq('id', user.id).maybeSingle()
+  const studentName = String(profile?.full_name ?? '').trim()
+  if (studentName.length < 2) throw new HttpError(409, 'Add your name in your profile first — it goes on the certificate.')
+
+  // 'achievement' means passing an assessment, which doesn't exist: a course
+  // that somehow carries it still gets a completion, never a claim we can't
+  // stand behind.
+  const kind = content.certificate === 'participation' ? 'participation' : 'completion'
+  const { data: code, error: codeError } = await db.rpc('new_certificate_code')
+  if (codeError) throw codeError
+
+  const { data: created, error: insertError } = await db
+    .from('certificates')
+    .insert({
+      code,
+      user_id: user.id,
+      product_id: productId,
+      kind,
+      student_name: studentName,
+      course_name: String(product.name ?? '').trim(),
+      hours: Number.isInteger(content.hours) && (content.hours as number) > 0 ? content.hours : null,
+    })
+    .select('code, course_name, student_name, kind, hours, issued_at, revoked_at, product_id')
+    .single()
+  if (insertError) throw insertError
+  return { certificate: created, issued: true }
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   allowPortal(req, res)
   if (req.method === 'OPTIONS') return res.status(204).end()
@@ -909,7 +1064,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const resource = str(req.query.resource)
     const planResource = ['plan-checkout', 'plan-switch', 'plan-cancel', 'plan-resume', 'plan-portal'].includes(resource)
     const pageResource = resource === 'my-page' || resource === 'my-page-image' || resource === 'my-page-signups'
-    if (!planResource && !pageResource && resource !== 'deletion' && resource !== 'announcements-seen' && resource !== 'download' && resource !== 'profile' && resource !== 'purchases')
+    if (!planResource && !pageResource && resource !== 'deletion' && resource !== 'announcements-seen' && resource !== 'download' && resource !== 'profile' && resource !== 'purchases' && resource !== 'certificates')
       throw new HttpError(404, 'Unknown action.')
     const url = process.env.SUPABASE_URL
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY
@@ -923,6 +1078,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (planResource) return res.status(200).json({ ok: true, ...(await planAction(req, db, user, resource)) })
     if (pageResource) return res.status(200).json({ ok: true, ...(await myPageAction(req, db, user, resource)) })
     if (resource === 'purchases' && req.method === 'GET') return res.status(200).json({ ok: true, ...(await purchasesOf(db, user.id, user.email ?? '')) })
+    if (resource === 'certificates') return res.status(200).json({ ok: true, ...(await certificatesAction(req, db, user, req.method ?? 'GET')) })
 
     // One file of a Download the member owns (Sprint 86).
     if (resource === 'download') {

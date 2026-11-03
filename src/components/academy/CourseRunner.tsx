@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Check, ChevronDown, ChevronLeft, ChevronRight, Clock, ListTree, Quote, StickyNote } from 'lucide-react'
+import CourseCertificate from './CourseCertificate'
 import CourseLessonBody from './CourseLessonBody'
 import { CARD } from '../workspace/styles'
 import { courseLessons, courseMinutes, formatMinutes } from '../../modules/academy/types'
@@ -329,10 +330,15 @@ export default function CourseRunner({ course, productId, userId, records, reloa
       </div>
 
       {summary?.complete && (
-        <p className="mt-6 rounded-xl2 bg-emerald-50 px-5 py-4 text-center text-[14px] font-semibold text-emerald-700">
+        <p className="no-print mt-6 rounded-xl2 bg-emerald-50 px-5 py-4 text-center text-[14px] font-semibold text-emerald-700">
           You finished every lesson in this course.
         </p>
       )}
+
+      {/* The certificate (02/11/2026). Shown once every lesson is ticked;
+          whether it is actually earned — the quizzes too — is decided on the
+          server, not here. */}
+      {summary?.complete && <CourseCertificate productId={productId} />}
     </div>
   )
 }

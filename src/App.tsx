@@ -44,6 +44,7 @@ import MembershipPage from './pages/platform/MembershipPage'
 import SettingsPage from './pages/platform/SettingsPage'
 import PurchasesPage from './pages/platform/PurchasesPage'
 import PublicToolPage from './pages/PublicToolPage'
+import VerifyCertificatePage from './pages/VerifyCertificatePage'
 import SupportPage from './pages/platform/SupportPage'
 import MyDocumentsPage from './pages/platform/MyDocumentsPage'
 import MyCoursesPage from './pages/platform/MyCoursesPage'
@@ -102,6 +103,10 @@ export default function App() {
         <Route path="/t/calc/:code" element={<PublicToolPage kind="calc" />} />
         <Route path="/t/planner/:code" element={<PublicToolPage kind="planner" />} />
         <Route path="/t/:code" element={<PublicToolPage kind="template" />} />
+        {/* Checking an Academy certificate (02/11/2026). Open while the site
+            is closed: a certificate carries this address printed on it. */}
+        <Route path="/verify" element={<VerifyCertificatePage />} />
+        <Route path="/verify/:code" element={<VerifyCertificatePage />} />
         {/* Requires a signed-in member (see CommerceEngineClient.ts —
             Checkout needs a memberId to create an Order) — a guest is
             redirected to /login, matching /platform/*'s existing gate. */}

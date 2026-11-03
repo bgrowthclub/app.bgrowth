@@ -35,6 +35,9 @@ export const ALWAYS_OPEN_PATHS = [
   // (decided 14/10/2026); /p/bruno itself redirects to Bruno's page.
   '/p/bruno',
   '/ingles-de-mudanca',
+  // Checking a certificate (02/11/2026): the address is printed on every
+  // certificate, so it has to answer even before the site opens.
+  '/verify',
 ]
 
 // "/p/<slug>" (one segment, optional trailing slash) → the slug, lowercased.
