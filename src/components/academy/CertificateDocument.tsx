@@ -55,7 +55,10 @@ export default function CertificateDocument({ data }: { data: CertificateData })
   const verifyUrl = `bgrowth.app/verify/${data.code}`
 
   return (
-    <div className="bg-certificate" style={{ ['--cert-accent' as string]: look.accent }}>
+    // translate="no": a certificate states exactly what BGrowth issued. A
+    // machine-translated name, course title or disclaimer would no longer be
+    // that statement, so this one document is never translated.
+    <div className="bg-certificate notranslate" translate="no" style={{ ['--cert-accent' as string]: look.accent }}>
       <style>{CSS}</style>
       <div className="cert-sheet">
         <span className="cert-sweep cert-sweep-tl2" />
