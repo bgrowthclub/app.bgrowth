@@ -104,7 +104,7 @@ export default function Navbar({ mode = 'public', banner }: { mode?: NavMode; ba
                     href={link.to}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="rounded-full px-4 py-2 text-[13.5px] font-medium text-navy/70 transition-colors hover:bg-bg-soft hover:text-navy"
+                    className="rounded-full px-4 py-2 text-[15px] font-medium text-navy/70 transition-colors hover:bg-bg-soft hover:text-navy"
                   >
                     {link.label}
                   </a>
@@ -115,7 +115,7 @@ export default function Navbar({ mode = 'public', banner }: { mode?: NavMode; ba
                   to={link.to}
                   end
                   className={({ isActive }) =>
-                    `rounded-full px-4 py-2 text-[13.5px] font-medium transition-colors ${
+                    `rounded-full px-4 py-2 text-[15px] font-medium transition-colors ${
                       isActive && !isAnchor
                         ? 'bg-bg-soft text-navy'
                         : 'text-navy/70 hover:bg-bg-soft hover:text-navy'
@@ -130,23 +130,23 @@ export default function Navbar({ mode = 'public', banner }: { mode?: NavMode; ba
 
           <div className="hidden items-center gap-2 lg:flex">
             {mode === 'public' && user ? (
-              <Button to="/platform/dashboard" className="!px-5 !py-2.5 !text-[13.5px]">
+              <Button to="/platform/dashboard" className="!px-5 !py-2.5 !text-[15px]">
                 My Dashboard
               </Button>
             ) : mode === 'public' ? (
               <>
                 <Link
                   to="/login"
-                  className="rounded-full px-4 py-2 text-[13.5px] font-semibold text-navy/60 transition-colors hover:text-navy"
+                  className="rounded-full px-4 py-2 text-[15px] font-semibold text-navy/60 transition-colors hover:text-navy"
                 >
                   Login
                 </Link>
-                <Button to="/register" className="!px-5 !py-2.5 !text-[13.5px]">
+                <Button to="/register" className="!px-5 !py-2.5 !text-[15px]">
                   Join BGrowth
                 </Button>
               </>
             ) : (
-              <button className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[13.5px] font-semibold text-navy/50 transition-colors hover:text-navy/80">
+              <button className="inline-flex items-center gap-1.5 rounded-full px-4 py-2 text-[15px] font-semibold text-navy/50 transition-colors hover:text-navy/80">
                 <LogOut size={14} />
                 Logout
               </button>
