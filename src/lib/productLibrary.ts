@@ -10,6 +10,7 @@ import { accessService } from '../modules/commerce/client/accessService'
 import { productCatalogService } from '../modules/commerce/services/ProductCatalogService'
 import { listStudioLibrary } from '../modules/workspace/services/studioAccess'
 import type { StudioProductAccess } from '../modules/workspace/services/studioAccess'
+import { studioProductNoun } from '../modules/workspace/lib/productNoun'
 import { coursePath, workspaceViewerPath } from '../modules/workspace/config'
 import { studioWorkspaceService } from '../modules/workspace/services/studioWorkspaceService'
 import { studioPortalId } from '../modules/commerce/store/studioProductRepository'
@@ -49,7 +50,11 @@ function buildUserProduct(
     icon: ICONS_BY_CATEGORY[system?.category ?? ''] ?? ICONS_BY_CATEGORY.Default,
     // A Studio Workspace without a Studio category shows a plain label, not
     // the raw Growth Category id.
-    tag: product.industry ?? (product.source?.type === 'StudioWorkspace' ? 'Workspace' : product.category),
+    // Todo produto do Studio vinha marcado como "Workspace" (06/11/2026),
+    // então curso, calculadora e download apareciam com o rótulo errado —
+    // inclusive em "Your courses", onde cada cartão dizia Workspace.
+    // studioProductNoun é quem sabe o que cada um é.
+    tag: product.industry ?? (product.source?.type === 'StudioWorkspace' ? studioProductNoun(product) : product.category),
     subTag: system?.category,
     difficulty: product.difficulty,
     estimatedTime: product.estimatedTime,
