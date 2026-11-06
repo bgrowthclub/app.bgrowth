@@ -84,6 +84,7 @@ export const SITE_PAGE_SUGGESTIONS = [
   '/#solutions',
   '/knowledge',
   '/journeys',
+  '/academy',
   '/resources',
   '/about',
   '/contact',

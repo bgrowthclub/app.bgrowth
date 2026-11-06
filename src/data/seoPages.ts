@@ -31,6 +31,13 @@ export const SEO_PAGES: SeoPage[] = [
     description: 'Guided Journeys that break a goal into clear stages and actions, with the right articles and tools at each step.',
   },
   {
+    path: '/academy',
+    label: 'Academy',
+    title: 'BGrowth Academy',
+    description:
+      'Step-by-step courses with lessons you work through at your own pace, questions to check yourself, and a certificate at the end.',
+  },
+  {
     path: '/workspaces',
     label: 'Life Worlds',
     title: 'Life Worlds',

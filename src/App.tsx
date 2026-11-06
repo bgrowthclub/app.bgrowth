@@ -43,6 +43,7 @@ import ProfilePage from './pages/platform/ProfilePage'
 import MembershipPage from './pages/platform/MembershipPage'
 import SettingsPage from './pages/platform/SettingsPage'
 import PurchasesPage from './pages/platform/PurchasesPage'
+import PublicAcademyPage from './pages/AcademyPage'
 import PublicToolPage from './pages/PublicToolPage'
 import VerifyCertificatePage from './pages/VerifyCertificatePage'
 import SupportPage from './pages/platform/SupportPage'
@@ -125,6 +126,8 @@ export default function App() {
         <Route path="/my-systems" element={<Navigate to="/platform/my-systems" replace />} />
         <Route path="/system/:slug" element={<SystemOverviewPage />} />
         <Route path="/system/:slug/module/:moduleSlug" element={<SystemModulePage />} />
+        {/* BGrowth Academy™ — a página pública (06/11/2026). */}
+        <Route path="/academy" element={<PublicAcademyPage />} />
         <Route path="/workspaces" element={<WorkspacesPage />} />
         {/* BGrowth Journeys (Portal migration 0068) — this site only. */}
         <Route path="/journeys" element={<JourneysPage />} />
