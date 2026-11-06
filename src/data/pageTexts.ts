@@ -27,7 +27,63 @@ const list = (id: string, label: string, items: string[]): PageTextField => ({ i
 export const PAGE_TEXT_BLOCKS: PageTextBlock[] = [
   {
     page: 'Home',
-    title: 'Top of the page',
+    title: 'Top of the page (new)',
+    fields: [
+      line('home.hero.eyebrow', 'Small line above the title', 'Tools · Knowledge · Opportunities · Connections'),
+      line('home.hero.title1', 'Title — before the blue word', 'Turn your'),
+      line('home.hero.title2', 'Title — the blue word', 'ambition'),
+      line('home.hero.title3', 'Title — after the blue word', 'into action.'),
+      para(
+        'home.hero.subtitle',
+        'Sentence under the title',
+        'Find the knowledge, tools and opportunities to build your skills, bring your ideas to life, and grow your business.',
+      ),
+      line('home.hero.cta', 'Main button', 'Get started'),
+      line('home.hero.secondary', 'Link next to the button', 'See how it works'),
+    ],
+  },
+  {
+    page: 'Home',
+    title: 'From ideas to real progress',
+    fields: [
+      line('home.steps.eyebrow', 'Small line above the title', 'A more practical way forward'),
+      line('home.steps.title', 'Title', 'From ideas to real progress.'),
+      para(
+        'home.steps.subtitle',
+        'Sentence under the title',
+        'Whether you are learning a new skill, starting a business or looking for new opportunities, BGrowth gives you the tools and support to move forward, step by step.',
+      ),
+      list('home.steps.items', 'The five steps — "Verb — what it leads to", one per line', [
+        'Discover — new opportunities',
+        'Learn — practical skills',
+        'Build — with the right tools',
+        'Manage — your work',
+        'Connect — with a community',
+      ]),
+    ],
+  },
+  {
+    page: 'Home',
+    title: 'Everything has a purpose',
+    fields: [
+      line('home.pillars.eyebrow', 'Small line above the title', 'The BGrowth platform'),
+      line('home.pillars.title', 'Title — before the blue word', 'Everything has a'),
+      line('home.pillars.highlight', 'Title — the blue word', 'purpose.'),
+      para(
+        'home.pillars.subtitle',
+        'Sentence under the title',
+        'Learn, market and operate with the right tools, resources and opportunities to turn your goals into real progress.',
+      ),
+      para(
+        'home.pillars.soonNote',
+        'Note under the three pillars',
+        'What is marked “coming soon” is being built. Join the newsletter and we will tell you the day it opens.',
+      ),
+    ],
+  },
+  {
+    page: 'Home',
+    title: 'Top of the page (old — not on the page any more)',
     fields: [
       line('home.hero.title1', 'Title — first line', 'What do you want'),
       line('home.hero.title2', 'Title — second line', 'to achieve'),

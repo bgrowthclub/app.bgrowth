@@ -40,12 +40,14 @@ export interface SiteNavigation {
 }
 
 export const DEFAULT_NAVIGATION: SiteNavigation = {
-  // "Solutions" is a same-page anchor on the homepage (ScrollToTop handles
-  // the hash); "Knowledge" is the Knowledge Hub.
+  // Four items (05/11/2026), the owner's choice: the products live inside
+  // "Solutions" rather than at the top, so the ones still being built don't
+  // take a place in the menu. "Solutions" is a same-page anchor on the
+  // homepage — it points at the three pillars, and ScrollToTop handles the
+  // hash. Journeys moved into the Operate pillar.
   menu: [
-    { label: 'Home', to: '/' },
-    { label: 'Solutions', to: '/#life-worlds' },
-    { label: 'Journeys', to: '/journeys' },
+    { label: 'Explore', to: '/systems' },
+    { label: 'Solutions', to: '/#solutions' },
     { label: 'Knowledge', to: '/knowledge' },
     { label: 'About', to: '/about' },
   ],
@@ -77,8 +79,11 @@ export const SITE_PAGE_SUGGESTIONS = [
   '/',
   '/systems',
   '/workspaces',
-  '/#life-worlds',
+  // The three pillars on the homepage; '/#life-worlds' now lives on
+  // /workspaces, which has its own entry above.
+  '/#solutions',
   '/knowledge',
+  '/journeys',
   '/resources',
   '/about',
   '/contact',
