@@ -81,7 +81,13 @@ export default function BrowseSystems() {
   const [studioProducts, setStudioProducts] = useState<Product[]>([])
   // What kind of thing: a course, a calculator, a download or a Workspace
   // (31/10/2026). A PDF and a Kit are both "Downloads" to a buyer.
-  const [kind, setKind] = useState('All')
+  // Também vem da URL (06/11/2026): a Home liga para o catálogo já
+  // filtrado — /systems?type=course — e sem isto o link caía no catálogo
+  // inteiro, sem filtro nenhum.
+  const [kind, setKind] = useState(() => {
+    const given = (searchParams.get('type') ?? '').toLowerCase()
+    return KINDS.find((k) => k.toLowerCase() === given) ?? 'All'
+  })
   // Bundles of those Workspaces (Portal migration 0041) — listed first.
   const [bundles, setBundles] = useState<Product[]>([])
   // The Studio products have arrived — only then is "no results" true.
@@ -245,12 +251,18 @@ export default function BrowseSystems() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, catalogLoaded])
 
-  const updateParams = (nextArea: string, nextCategory: string, nextTag = tag) => {
+  const updateParams = (nextArea: string, nextCategory: string, nextTag = tag, nextKind = kind) => {
     const params: Record<string, string> = {}
     if (nextArea !== 'All') params.area = nextArea
     if (nextCategory !== 'All') params.category = nextCategory
     if (nextTag !== 'All') params.tag = nextTag
+    if (nextKind !== 'All') params.type = nextKind.toLowerCase()
     setSearchParams(params)
+  }
+
+  const handleKind = (k: string) => {
+    setKind(k)
+    updateParams(area, category, tag, k)
   }
 
   const handleCategory = (c: string) => {
@@ -321,9 +333,9 @@ export default function BrowseSystems() {
           )}
           <div className="flex flex-wrap items-center gap-2">
             <span className="mr-1 text-[12px] font-semibold uppercase tracking-wide text-navy/30">Type</span>
-            <FilterPill label="All" active={kind === 'All'} onClick={() => setKind('All')} />
+            <FilterPill label="All" active={kind === 'All'} onClick={() => handleKind('All')} />
             {KINDS.map((k) => (
-              <FilterPill key={k} label={k === 'Download' ? 'Downloads' : `${k}s`} active={kind === k} onClick={() => setKind(k)} />
+              <FilterPill key={k} label={k === 'Download' ? 'Downloads' : `${k}s`} active={kind === k} onClick={() => handleKind(k)} />
             ))}
           </div>
           <div className="flex flex-wrap items-center gap-2">

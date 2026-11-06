@@ -42,7 +42,7 @@ const PILLARS: Pillar[] = [
     accent: 'text-violet-600',
     products: [
       { name: 'BGrowth Academy™', blurb: 'Courses and structured programs for real-world skills.', to: '/systems?type=course' },
-      { name: 'BGrowth Workspaces™', blurb: 'Interactive tools to plan, organize and get work done.', to: '/systems' },
+      { name: 'BGrowth Workspaces™', blurb: 'Interactive tools to plan, organize and get work done.', to: '/systems?type=workspace' },
       { name: 'BGrowth Knowledge™', blurb: 'Free guides, articles and resources to keep you moving.', to: '/knowledge' },
     ],
   },
