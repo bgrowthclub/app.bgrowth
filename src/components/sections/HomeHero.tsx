@@ -21,7 +21,7 @@ export default function HomeHero() {
 
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-primary/[0.06] via-bg to-bg">
-      <div className="container-px mx-auto max-w-page pb-6 pt-24 sm:pb-8 sm:pt-28 lg:pb-10 lg:pt-32">
+      <div className="container-px mx-auto max-w-page pb-2 pt-24 sm:pb-3 sm:pt-28 lg:pb-4 lg:pt-28">
         <div className="grid items-center gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-10">
           <motion.div initial="hidden" animate="show" variants={fadeUp}>
             <p className="text-[12px] font-bold uppercase tracking-[0.22em] text-primary">{t.text('home.lead.kicker')}</p>

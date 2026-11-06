@@ -15,7 +15,7 @@ export default function HomeSteps() {
   const steps = t.items('home.steps.items')
 
   return (
-    <section className="section-py bg-bg">
+    <section className="bg-bg pb-20 pt-10 md:pb-28 md:pt-12">
       <div className="container-px mx-auto max-w-page">
         <motion.div initial="hidden" whileInView="show" viewport={viewportOnce} variants={fadeUp} className="text-center">
           <p className="eyebrow">{t.text('home.steps.eyebrow')}</p>
