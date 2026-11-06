@@ -83,6 +83,20 @@ export const PAGE_TEXT_BLOCKS: PageTextBlock[] = [
   },
   {
     page: 'Home',
+    title: 'Closing invitation',
+    fields: [
+      line('home.close.title', 'Title', 'Your next step is one decision away.'),
+      para(
+        'home.close.subtitle',
+        'Sentence under the title',
+        'Create your free account and start with the tools, courses and guides that fit where you are right now.',
+      ),
+      line('home.close.cta', 'Main button', 'Get started'),
+      line('home.close.secondary', 'Link next to the button', 'See what is available'),
+    ],
+  },
+  {
+    page: 'Home',
     title: 'Top of the page (old — not on the page any more)',
     fields: [
       line('home.hero.title1', 'Title — first line', 'What do you want'),

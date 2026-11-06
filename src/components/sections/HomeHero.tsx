@@ -49,13 +49,17 @@ export default function HomeHero() {
             transition={{ duration: 0.5, delay: 0.1 }}
             className="relative -mx-4 sm:mx-0 lg:-mr-16 xl:-mr-28 2xl:-mr-40"
           >
+            {/* The render is a rectangle with straight edges. A mask fades
+                its left and bottom into the page, the way it does in the
+                design, so it reads as part of the page and not as a
+                picture pasted on top. */}
             <img
               src={heroImage}
               alt=""
               width={1152}
               height={582}
               fetchPriority="high"
-              className="w-full max-w-none"
+              className="w-full max-w-none [mask-image:linear-gradient(to_right,transparent,black_14%),linear-gradient(to_top,transparent,black_18%)] [mask-composite:intersect] [-webkit-mask-composite:source-in]"
             />
           </motion.div>
         </div>

@@ -4,6 +4,7 @@ import HomeHero from '../components/sections/HomeHero'
 import HomeSteps from '../components/sections/HomeSteps'
 import HomePillars from '../components/sections/HomePillars'
 import AboutStory from '../components/sections/AboutStory'
+import HomeClose from '../components/sections/HomeClose'
 
 // The Home page, rebuilt 05/11/2026 from the design the owner approved:
 // the hero, the five steps, and the three pillars (Learn & Build, Market,
@@ -21,6 +22,7 @@ export default function HomePage() {
       <HomeSteps />
       <HomePillars />
       <AboutStory />
+      <HomeClose />
     </>
   )
 }

@@ -100,22 +100,23 @@ export default function HomePillars() {
               viewport={viewportOnce}
               variants={fadeUp}
               custom={i}
-              className={`rounded-xl2 border border-navy/[0.07] bg-gradient-to-b ${pillar.tint} to-white px-6 py-7`}
+              className={`flex flex-col rounded-xl2 border border-navy/[0.07] bg-gradient-to-b ${pillar.tint} to-white px-7 py-8 shadow-soft`}
             >
-              <p className="flex items-center gap-2.5 text-[12px] font-bold uppercase tracking-[0.18em] text-navy/35">
-                {pillar.number}
-                <span className="h-px w-6 bg-navy/15" />
-                <span className={pillar.accent}>{pillar.eyebrow}</span>
+              <p className="flex items-baseline gap-3">
+                <span className={`font-display text-[40px] font-extrabold leading-none tracking-tight ${pillar.accent} opacity-25`}>
+                  {pillar.number}
+                </span>
+                <span className={`text-[12px] font-bold uppercase tracking-[0.18em] ${pillar.accent}`}>{pillar.eyebrow}</span>
               </p>
-              <h3 className="mt-3 font-display text-[23px] font-extrabold leading-tight tracking-tight text-navy">
+              <h3 className="mt-4 font-display text-[25px] font-extrabold leading-tight tracking-tight text-navy">
                 {pillar.title} <span className={pillar.accent}>{pillar.highlight}</span>
               </h3>
-              <p className="mt-2.5 text-[14.5px] leading-relaxed text-navy/60">{pillar.blurb}</p>
+              <p className="mt-3 text-[14.5px] leading-relaxed text-navy/60">{pillar.blurb}</p>
 
-              <ul className="mt-6 space-y-2.5">
-                {pillar.products.map((product) => (
+              <ul className="mt-7 space-y-2.5">
+                {pillar.products.map((product, p) => (
                   <li key={product.name}>
-                    <ProductRow product={product} />
+                    <ProductRow product={product} lead={p === 0} />
                   </li>
                 ))}
               </ul>
@@ -129,11 +130,11 @@ export default function HomePillars() {
   )
 }
 
-function ProductRow({ product }: { product: Product }) {
+function ProductRow({ product, lead }: { product: Product; lead?: boolean }) {
   const body = (
     <>
       <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span className="text-[14.5px] font-bold text-navy">{product.name}</span>
+        <span className={`font-bold text-navy ${lead ? 'text-[16px]' : 'text-[14.5px]'}`}>{product.name}</span>
         {product.soon && (
           <span className="rounded-full bg-navy/[0.06] px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-navy/45">
             Coming soon
@@ -146,12 +147,13 @@ function ProductRow({ product }: { product: Product }) {
 
   // Not built yet: a card, not a link. Clicking through to an empty page
   // costs more trust than the honest badge does.
-  if (!product.to) return <span className="block rounded-xl bg-white/70 px-4 py-3">{body}</span>
+  const box = lead ? 'px-4 py-3.5' : 'px-4 py-3'
+  if (!product.to) return <span className={`block rounded-xl bg-white/70 ${box}`}>{body}</span>
 
   return (
     <Link
       to={product.to}
-      className="group block rounded-xl bg-white px-4 py-3 transition-shadow hover:shadow-md"
+      className={`group block rounded-xl bg-white ${box} transition-shadow hover:shadow-md`}
     >
       {body}
       <span className="mt-1 inline-flex items-center gap-1 text-[13px] font-semibold text-primary">

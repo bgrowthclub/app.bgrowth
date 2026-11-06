@@ -25,7 +25,14 @@ export default function HomeSteps() {
           <p className="mx-auto mt-4 max-w-2xl text-[16px] leading-relaxed text-navy/60">{t.text('home.steps.subtitle')}</p>
         </motion.div>
 
-        <ol className="mt-12 grid gap-8 sm:grid-cols-3 lg:grid-cols-5">
+        {/* The thin line between the steps, as in the design: it turns five
+            separate icons into one path. Decorative, so it is drawn behind
+            and hidden where the steps stack. */}
+        <ol className="relative mt-12 grid gap-8 sm:grid-cols-3 lg:grid-cols-5">
+          <span
+            aria-hidden
+            className="pointer-events-none absolute left-[10%] right-[10%] top-6 hidden h-px bg-gradient-to-r from-transparent via-navy/[0.12] to-transparent lg:block"
+          />
           {steps.map((step, i) => {
             const [verb, rest] = splitStep(step)
             const Icon = ICONS[i % ICONS.length]
@@ -37,9 +44,9 @@ export default function HomeSteps() {
                 viewport={viewportOnce}
                 variants={fadeUp}
                 custom={i}
-                className="text-center"
+                className="relative text-center"
               >
-                <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/[0.08]">
+                <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full border border-primary/10 bg-bg bg-gradient-to-b from-primary/[0.10] to-primary/[0.04]">
                   <Icon size={20} className="text-primary" aria-hidden />
                 </span>
                 <p className="mt-3 text-[15px] font-bold text-navy">{verb}</p>
