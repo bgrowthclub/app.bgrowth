@@ -83,7 +83,7 @@ export default function HomePillars() {
     // id="solutions": the top menu's "Solutions" scrolls here.
     <section id="solutions" className="section-py bg-bg-soft scroll-mt-24">
       <div className="container-px mx-auto max-w-wide">
-        <motion.div initial="hidden" whileInView="visible" viewport={viewportOnce} variants={fadeUp} className="text-center">
+        <motion.div initial="hidden" whileInView="show" viewport={viewportOnce} variants={fadeUp} className="text-center">
           <p className="eyebrow">{t.text('home.pillars.eyebrow')}</p>
           <h2 className="mt-3 font-display text-[30px] font-extrabold tracking-tight text-navy sm:text-[38px]">
             {t.text('home.pillars.title')} <span className="text-primary">{t.text('home.pillars.highlight')}</span>
@@ -96,10 +96,10 @@ export default function HomePillars() {
             <motion.article
               key={pillar.number}
               initial="hidden"
-              whileInView="visible"
+              whileInView="show"
               viewport={viewportOnce}
               variants={fadeUp}
-              transition={{ delay: i * 0.06 }}
+              custom={i}
               className={`rounded-xl2 border border-navy/[0.07] bg-gradient-to-b ${pillar.tint} to-white px-6 py-7`}
             >
               <p className="flex items-center gap-2.5 text-[12px] font-bold uppercase tracking-[0.18em] text-navy/35">

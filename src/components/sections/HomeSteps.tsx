@@ -17,7 +17,7 @@ export default function HomeSteps() {
   return (
     <section className="section-py bg-bg">
       <div className="container-px mx-auto max-w-wide">
-        <motion.div initial="hidden" whileInView="visible" viewport={viewportOnce} variants={fadeUp} className="text-center">
+        <motion.div initial="hidden" whileInView="show" viewport={viewportOnce} variants={fadeUp} className="text-center">
           <p className="eyebrow">{t.text('home.steps.eyebrow')}</p>
           <h2 className="mt-3 font-display text-[30px] font-extrabold tracking-tight text-navy sm:text-[36px]">
             {t.text('home.steps.title')}
@@ -33,10 +33,10 @@ export default function HomeSteps() {
               <motion.li
                 key={step}
                 initial="hidden"
-                whileInView="visible"
+                whileInView="show"
                 viewport={viewportOnce}
                 variants={fadeUp}
-                transition={{ delay: i * 0.05 }}
+                custom={i}
                 className="text-center"
               >
                 <span className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-primary/[0.08]">
