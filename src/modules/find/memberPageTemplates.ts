@@ -296,6 +296,24 @@ export function memberPageTemplates(lang: Lang): MemberPageTemplate[] {
       example: { headline: L('Quality products at fair prices', 'Produtos de qualidade com preço justo') },
     },
     {
+      // Payment LINKS, never bank details (decided with the owner,
+      // 07/11/2026). A public page showing an account number is what a
+      // scammer clones: copy the page, swap the account, send it to the
+      // person's own clients. A link goes to the provider, who can be
+      // checked — and the member can revoke it.
+      id: 'payments',
+      name: { en: 'Payments & invoices', pt: 'Pagamentos e cobranças' },
+      description: {
+        en: 'One page with your payment links — a big button for each way to pay you. Links only, never account numbers: anyone can copy a number off a public page.',
+        pt: 'Uma página com seus links de pagamento — um botão grande para cada forma de te pagar. Só links, nunca número de conta: qualquer um copia um número de uma página pública.',
+      },
+      color: 'navy',
+      blocks: [b('hero'), b('contact'), b('about')],
+      example: {
+        headline: L('Pay safely, in a few taps', 'Pague com segurança, em poucos toques'),
+      },
+    },
+    {
       id: 'cleaning',
       name: { en: 'Cleaning & home services', pt: 'Limpeza e serviços para casa' },
       description: { en: 'Services with prices, area served and reviews up front.', pt: 'Serviços com preço, área atendida e avaliações em destaque.' },
@@ -431,9 +449,14 @@ export function memberPageTemplates(lang: Lang): MemberPageTemplate[] {
 // stacked buttons — logo, name, a line about the business and its links.
 export type MemberPageSkin = 'professional' | 'local' | 'creative' | 'personal' | 'affiliate' | 'picks' | 'links'
 const SKINS: MemberPageSkin[] = ['professional', 'local', 'creative', 'personal', 'affiliate', 'picks', 'links']
+// A model whose look belongs to ANOTHER model: 'payments' is a page of big
+// stacked buttons, which is exactly the Link Page look, so it borrows it
+// rather than duplicating a skin.
+const BORROWED_SKIN: Record<string, MemberPageSkin> = { payments: 'links' }
 export function pageSkin(template: string | null | undefined): MemberPageSkin | null {
-  const id = (template ?? '') as MemberPageSkin
-  return SKINS.includes(id) ? id : null
+  const id = template ?? ''
+  if (BORROWED_SKIN[id]) return BORROWED_SKIN[id]
+  return SKINS.includes(id as MemberPageSkin) ? (id as MemberPageSkin) : null
 }
 
 export const MEMBER_PAGE_TEMPLATES = memberPageTemplates('en')
@@ -584,11 +607,18 @@ export function templatePreview(t: MemberPageTemplate, lang: Lang): MemberPageCo
     location: s.location[lang],
     services: t.example.services ?? [],
     highlights: [],
-    links: [
-      { type: 'whatsapp', label: '', url: '+1 555 123 4567' },
-      { type: 'email', label: '', url: 'hello@example.com' },
-      { type: 'instagram', label: '', url: 'https://instagram.com/' },
-    ],
+    links:
+      t.id === 'payments'
+        ? [
+            { type: 'other', label: lang === 'pt' ? 'Pagar com PIX' : 'Pay with a card', url: 'https://' },
+            { type: 'other', label: lang === 'pt' ? 'Pagar uma cobrança' : 'Pay an invoice', url: 'https://' },
+            { type: 'whatsapp', label: lang === 'pt' ? 'Falar comigo' : 'Talk to me', url: '+1 555 123 4567' },
+          ]
+        : [
+            { type: 'whatsapp', label: '', url: '+1 555 123 4567' },
+            { type: 'email', label: '', url: 'hello@example.com' },
+            { type: 'instagram', label: '', url: 'https://instagram.com/' },
+          ],
     language: lang,
     blocks: t.id === 'affiliate' || t.id === 'picks' ? t.blocks.map((block) => (block.type === 'products' ? { ...block, data: { ...block.data, products: samplePicks(lang) } } : block)) : t.blocks,
     theme: { color: t.color },

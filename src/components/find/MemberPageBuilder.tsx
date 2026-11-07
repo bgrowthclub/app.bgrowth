@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { ReactNode } from 'react'
-import { ArrowDown, ArrowLeft, ArrowUp, Check, ChevronDown, ChevronRight, Eye, EyeOff, ImagePlus, Lock, Monitor, Plus, Smartphone, Trash2, X } from 'lucide-react'
+import { ArrowDown, ArrowLeft, ArrowUp, Banknote, Brush, Check, ChevronDown, ChevronRight, Eye, EyeOff, GraduationCap, Home, ImagePlus, LayoutTemplate, Link2, Lock, Monitor, Plus, ShoppingBag, Smartphone, Sparkles, Stamp, Tag, Trash2, UserRound, Video, X } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import Button from '../ui/Button'
 import { CARD, INPUT, LINK_BUTTON, SMALL_BUTTON } from '../admin/styles'
 import MemberPageView from './MemberPageView'
@@ -129,6 +130,26 @@ function Add({ label, onClick, disabled }: { label: string; onClick: () => void;
 function isExtraCopy(blocks: MemberPageBlock[], block: MemberPageBlock, index: number): boolean {
   if (!SINGLE_BLOCK_TYPES.includes(block.type)) return false
   return blocks.findIndex((b) => b.type === block.type) !== index
+}
+
+// One icon per model, for the picker's cards (07/11/2026). It lives here,
+// not on MemberPageTemplate: the templates are data (modules/find), and a
+// React icon component has no business in them. An unknown id falls back
+// to a generic one, so a new model never crashes the picker.
+const TEMPLATE_ICONS: Record<string, LucideIcon> = {
+  professional: UserRound,
+  local: Home,
+  creative: Brush,
+  personal: Sparkles,
+  affiliate: Tag,
+  picks: ShoppingBag,
+  links: Link2,
+  payments: Banknote,
+  cleaning: Home,
+  notary: Stamp,
+  teacher: GraduationCap,
+  creator: Video,
+  blank: LayoutTemplate,
 }
 
 export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel, extra, allowedTemplates, readOnly = false }: Props) {
@@ -597,39 +618,78 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
           </>
         ) : (
           <>
+            {/* One card per model (07/11/2026, the owner's design): the
+                model's own look on the right, and on the left what it is
+                plus the two things a person wants to do with it — use it,
+                or see it properly first. The picture stays a REAL render of
+                the model, not a stock photo: a photo of a camera says
+                nothing about how the page will look. */}
             <div className="grid gap-4 md:grid-cols-2">
-              {[...templates].sort((a, b) => Number(allowed(b.id)) - Number(allowed(a.id))).map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => setCandidate(t.id)}
-                  className={`group overflow-hidden rounded-2xl border text-left transition-colors hover:border-primary/40 ${template === t.id ? 'border-primary/50 ring-2 ring-primary/15' : 'border-navy/10'}`}
-                >
-                  <div className="pointer-events-none relative border-b border-navy/[0.06] bg-bg-soft">
-                    <ResponsiveFrame width={1280} maxHeight={230}>
-                      <MemberPageView preview page={sample(t.id)} />
-                    </ResponsiveFrame>
-                    <div className="absolute bottom-2 right-2 w-[72px] overflow-hidden rounded-lg border-[3px] border-navy/80 bg-white shadow-softer">
-                      <ResponsiveFrame width={390} maxHeight={130}>
-                        <MemberPageView preview page={sample(t.id)} />
-                      </ResponsiveFrame>
+              {[...templates].sort((a, b) => Number(allowed(b.id)) - Number(allowed(a.id))).map((t) => {
+                const Icon = TEMPLATE_ICONS[t.id] ?? LayoutTemplate
+                const locked = !allowed(t.id)
+                return (
+                  <div
+                    key={t.id}
+                    className={`flex overflow-hidden rounded-2xl border bg-white transition-colors ${
+                      template === t.id ? 'border-primary/50 ring-2 ring-primary/15' : 'border-navy/10'
+                    }`}
+                  >
+                    <div className="flex min-w-0 flex-1 flex-col p-5">
+                      <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-primary/[0.09]">
+                        <Icon size={17} className="text-primary" aria-hidden />
+                      </span>
+                      <span className="mt-3 flex flex-wrap items-center gap-2 font-display text-[16px] font-bold text-navy">
+                        {t.name[language]}
+                        {template === t.id && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">Current</span>}
+                        {/* Kept from the old card on purpose: without it,
+                            "Use Template" on a locked model is a wall with
+                            no warning. */}
+                        {locked && (
+                          <span className="inline-flex items-center gap-1 rounded-full bg-navy/[0.06] px-2 py-0.5 text-[11px] font-semibold text-navy/55">
+                            <Lock size={11} /> Higher plan
+                          </span>
+                        )}
+                      </span>
+                      <span className="mt-1.5 block text-[13px] leading-relaxed text-navy/55">{t.description[language]}</span>
+
+                      <span className="mt-auto flex flex-wrap items-center gap-2 pt-4">
+                        {locked ? (
+                          <Button to="/platform/membership" className={SMALL_BUTTON}>
+                            <Lock size={14} /> See the plans
+                          </Button>
+                        ) : readOnly ? (
+                          <span className="text-[12.5px] font-semibold text-navy/45">Coming soon</span>
+                        ) : (
+                          <Button type="button" onClick={() => chooseTemplate(t.id)} className={SMALL_BUTTON}>
+                            {template === t.id ? 'Keep this model' : 'Use this model'}
+                          </Button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setCandidate(t.id)}
+                          className={`${SMALL} border border-navy/10 bg-white text-navy/70 hover:border-primary/40 hover:text-navy`}
+                        >
+                          View demo
+                        </button>
+                      </span>
                     </div>
+
+                    <button
+                      type="button"
+                      onClick={() => setCandidate(t.id)}
+                      aria-label={`View the ${t.name[language]} model`}
+                      className="relative hidden w-[42%] shrink-0 border-l border-navy/[0.06] bg-bg-soft sm:block"
+                    >
+                      <span className="pointer-events-none block">
+                        <ResponsiveFrame width={1280} maxHeight={300}>
+                          <MemberPageView preview page={sample(t.id)} />
+                        </ResponsiveFrame>
+                      </span>
+                    </button>
                   </div>
-                  <div className="p-4">
-                    <span className="flex items-center gap-2 font-semibold text-navy">
-                      {t.name[language]}
-                      {template === t.id && <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[11px] font-semibold text-primary">Current</span>}
-                      {!allowed(t.id) && (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-navy/[0.06] px-2 py-0.5 text-[11px] font-semibold text-navy/55">
-                          <Lock size={11} /> Higher plan
-                        </span>
-                      )}
-                    </span>
-                    <span className="mt-1 block text-[13px] text-navy/55">{t.description[language]}</span>
-                    <span className="mt-2 inline-block text-[13px] font-semibold text-primary group-hover:underline">See it on computer and phone →</span>
-                  </div>
-                </button>
-              ))}
+                )
+              })}
             </div>
             {(onCancel || template) && (
               <div className="mt-5 flex justify-end">

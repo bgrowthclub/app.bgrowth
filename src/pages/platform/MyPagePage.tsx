@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
-import { Check, Copy, ExternalLink, MessageCircle, Share2 } from 'lucide-react'
+import { Check, Copy, ExternalLink, MessageCircle, Palette, Rocket, Share2, Sparkles } from 'lucide-react'
 import SEO from '../../components/seo/SEO'
-import SectionHeader from '../../components/ui/SectionHeader'
+import mypageHero from '../../assets/mypage-hero.webp'
 import Button from '../../components/ui/Button'
 import MemberPageStatsView from '../../components/find/MemberPageStatsView'
 import MemberPageBuilder from '../../components/find/MemberPageBuilder'
@@ -12,8 +12,8 @@ import { getMyMemberPageStats, myPageService } from '../../modules/find/memberPa
 import type { MemberPage, MemberPageLevel, MemberPageStats } from '../../modules/find/types'
 
 const TEXT = {
-  en: { title: 'My Business Page', description: 'A simple professional page for your business — share it anywhere.', open: 'Open', edit: 'Edit', numbers: 'Numbers', contacts: 'Contacts', copy: 'Copy link', copied: 'Copied', share: 'Share', whatsapp: 'WhatsApp' },
-  pt: { title: 'Minha página de negócio', description: 'Uma página profissional simples para o seu negócio — compartilhe onde quiser.', open: 'Abrir', edit: 'Editar', numbers: 'Números', contacts: 'Contatos', copy: 'Copiar link', copied: 'Copiado', share: 'Compartilhar', whatsapp: 'WhatsApp' },
+  en: { titleLead: 'My', titleAccent: 'Business', titleTail: 'Page', title: 'My Business Page', description: 'A simple professional page for your business — share it anywhere.', open: 'Open', edit: 'Edit', numbers: 'Numbers', contacts: 'Contacts', copy: 'Copy link', copied: 'Copied', share: 'Share', whatsapp: 'WhatsApp' },
+  pt: { titleLead: 'Minha', titleAccent: 'página', titleTail: 'de negócio', title: 'Minha página de negócio', description: 'Uma página profissional simples para o seu negócio — compartilhe onde quiser.', open: 'Abrir', edit: 'Editar', numbers: 'Números', contacts: 'Contatos', copy: 'Copiar link', copied: 'Copiado', share: 'Compartilhar', whatsapp: 'WhatsApp' },
 }
 
 // The page's address with copy and share buttons.
@@ -48,6 +48,63 @@ function ShareBar({ slug, name, t }: { slug: string; name: string; t: (typeof TE
       )}
     </div>
   )
+}
+
+
+// The top of the screen (07/11/2026, the owner's design): who the page is
+// for, what it is, and the three steps the job actually has. The steps are
+// a map, not buttons — someone who just subscribed opened this and found
+// forms, with no idea the work had a shape.
+function PageHeader({ name, t, language }: { name: string; t: (typeof TEXT)['en']; language: MemberPage['language'] }) {
+  const steps = STEPS[language]
+  return (
+    <div className="mb-6 overflow-hidden rounded-2xl border border-navy/[0.07] bg-gradient-to-br from-primary/[0.08] to-white">
+      <div className="grid items-center gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,0.52fr)]">
+        <div className="px-6 py-6">
+          <p className="text-[11.5px] font-bold uppercase tracking-[0.2em] text-primary">{name}</p>
+          <h1 className="mt-2 font-display text-[30px] font-extrabold leading-tight tracking-tight text-navy">
+            {t.titleLead} <span className="text-primary">{t.titleAccent}</span> {t.titleTail}
+          </h1>
+          <p className="mt-2 text-[14.5px] text-navy/60">{t.description}</p>
+
+          <ol className="mt-5 flex flex-wrap gap-2">
+            {steps.map((step, i) => (
+              <li
+                key={step.label}
+                className="inline-flex items-center gap-2 rounded-full bg-white/80 px-3.5 py-2 text-[13px] font-semibold text-navy/70"
+              >
+                <span className="flex h-6 w-6 items-center justify-center rounded-full bg-primary/[0.1]">
+                  <step.icon size={13} className="text-primary" aria-hidden />
+                </span>
+                <span className="text-navy/35">{i + 1}.</span> {step.label}
+              </li>
+            ))}
+          </ol>
+        </div>
+
+        <img
+          src={mypageHero}
+          alt=""
+          width={782}
+          height={382}
+          className="hidden h-full w-full object-cover md:block [mask-image:linear-gradient(to_right,transparent,black_18%)]"
+        />
+      </div>
+    </div>
+  )
+}
+
+const STEPS = {
+  en: [
+    { icon: Sparkles, label: 'Choose a model' },
+    { icon: Palette, label: 'Make it yours' },
+    { icon: Rocket, label: 'Publish & share' },
+  ],
+  pt: [
+    { icon: Sparkles, label: 'Escolha um modelo' },
+    { icon: Palette, label: 'Deixe com a sua cara' },
+    { icon: Rocket, label: 'Publique e compartilhe' },
+  ],
 }
 
 // /platform/my-page — "My Business Page", the member's own public page (BGrowth Find™).
@@ -121,7 +178,7 @@ export default function MyPagePage() {
   return (
     <div className="mx-auto max-w-6xl">
       <SEO title={t.title} description={t.description} path="/platform/my-page" />
-      <SectionHeader eyebrow={page?.display_name ?? linked?.displayName ?? user.displayName} title={t.title} description={t.description} className="mb-6" />
+      <PageHeader name={page?.display_name ?? linked?.displayName ?? user.displayName} t={t} language={language} />
       {slug && page?.status !== 'draft' && <ShareBar slug={slug} name={page?.display_name ?? linked?.displayName ?? user.displayName} t={t} />}
 
       {!level && page?.owner_managed && (
