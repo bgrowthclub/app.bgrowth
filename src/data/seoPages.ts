@@ -38,6 +38,13 @@ export const SEO_PAGES: SeoPage[] = [
       'Step-by-step courses with lessons you work through at your own pace, questions to check yourself, and a certificate at the end.',
   },
   {
+    path: '/pages',
+    label: 'Pages',
+    title: 'BGrowth Pages',
+    description:
+      'A professional page to showcase your services, be contacted and share everything about your business — behind one link.',
+  },
+  {
     path: '/workspaces',
     label: 'Life Worlds',
     title: 'Life Worlds',

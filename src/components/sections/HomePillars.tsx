@@ -55,7 +55,7 @@ const PILLARS: Pillar[] = [
     tint: 'from-emerald-500/[0.07]',
     accent: 'text-emerald-600',
     products: [
-      { name: 'BGrowth Pages™', blurb: 'A page of your own to show your work and be contacted.', to: '/register?next=/platform/my-page' },
+      { name: 'BGrowth Pages™', blurb: 'A page of your own to show your work and be contacted.', to: '/pages' },
       { name: 'BGrowth Find™', blurb: 'Be found by customers looking for what you do.', soon: true },
       { name: 'BGrowth Marketplace™', blurb: 'Sell physical and digital products.', soon: true },
     ],
