@@ -12,8 +12,8 @@ import { getMyMemberPageStats, myPageService } from '../../modules/find/memberPa
 import type { MemberPage, MemberPageLevel, MemberPageStats } from '../../modules/find/types'
 
 const TEXT = {
-  en: { titleLead: 'My', titleAccent: 'Business', titleTail: 'Page', title: 'My Business Page', description: 'A simple professional page for your business — share it anywhere.', open: 'Open', edit: 'Edit', numbers: 'Numbers', contacts: 'Contacts', copy: 'Copy link', copied: 'Copied', share: 'Share', whatsapp: 'WhatsApp' },
-  pt: { titleLead: 'Minha', titleAccent: 'página', titleTail: 'de negócio', title: 'Minha página de negócio', description: 'Uma página profissional simples para o seu negócio — compartilhe onde quiser.', open: 'Abrir', edit: 'Editar', numbers: 'Números', contacts: 'Contatos', copy: 'Copiar link', copied: 'Copiado', share: 'Compartilhar', whatsapp: 'WhatsApp' },
+  en: { titleLead: 'My', titleAccent: 'Business', titleTail: 'Page', title: 'My Business Page', description: 'A simple professional page for your business — share it anywhere.', open: 'Open', edit: 'Edit', numbers: 'Numbers', contacts: 'Contacts', copy: 'Copy link', copied: 'Copied', share: 'Share', whatsapp: 'WhatsApp', live: 'Live', draft: 'Draft', draftAddress: 'Once you publish, it will be at' },
+  pt: { titleLead: 'Minha', titleAccent: 'página', titleTail: 'de negócio', title: 'Minha página de negócio', description: 'Uma página profissional simples para o seu negócio — compartilhe onde quiser.', open: 'Abrir', edit: 'Editar', numbers: 'Números', contacts: 'Contatos', copy: 'Copiar link', copied: 'Copiado', share: 'Compartilhar', whatsapp: 'WhatsApp', live: 'No ar', draft: 'Rascunho', draftAddress: 'Quando você publicar, ela fica em' },
 }
 
 // The page's address with copy and share buttons.
@@ -55,17 +55,49 @@ function ShareBar({ slug, name, t }: { slug: string; name: string; t: (typeof TE
 // for, what it is, and the three steps the job actually has. The steps are
 // a map, not buttons — someone who just subscribed opened this and found
 // forms, with no idea the work had a shape.
-function PageHeader({ name, t, language }: { name: string; t: (typeof TEXT)['en']; language: MemberPage['language'] }) {
+function PageHeader({
+  name,
+  t,
+  language,
+  status,
+  slug,
+}: {
+  name: string
+  t: (typeof TEXT)['en']
+  language: MemberPage['language']
+  // undefined = no page yet; 'draft' = saved but not online.
+  status?: MemberPage['status']
+  slug?: string
+}) {
   const steps = STEPS[language]
   return (
     <div className="mb-6 overflow-hidden rounded-2xl border border-navy/[0.07] bg-gradient-to-br from-primary/[0.08] to-white">
       <div className="grid items-center gap-6 md:grid-cols-[minmax(0,1fr)_minmax(0,0.52fr)]">
         <div className="px-6 py-6">
-          <p className="text-[11.5px] font-bold uppercase tracking-[0.2em] text-primary">{name}</p>
+          <div className="flex flex-wrap items-center gap-2.5">
+            <p className="text-[11.5px] font-bold uppercase tracking-[0.2em] text-primary">{name}</p>
+            {/* Is it online or not (07/11/2026). Before this, a member with
+                a draft saw no badge and no address at all, so there was
+                nothing on the screen telling them their page wasn't live. */}
+            {status === 'published' ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-emerald-700">
+                <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden /> {t.live}
+              </span>
+            ) : status === 'draft' ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-amber-700">
+                <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden /> {t.draft}
+              </span>
+            ) : null}
+          </div>
           <h1 className="mt-2 font-display text-[30px] font-extrabold leading-tight tracking-tight text-navy">
             {t.titleLead} <span className="text-primary">{t.titleAccent}</span> {t.titleTail}
           </h1>
           <p className="mt-2 text-[14.5px] text-navy/60">{t.description}</p>
+          {status === 'draft' && slug && (
+            <p className="mt-2 text-[13.5px] text-navy/50">
+              {t.draftAddress} <span className="font-semibold text-navy/70">bgrowth.app/p/{slug}</span>
+            </p>
+          )}
 
           <ol className="mt-5 flex flex-wrap gap-2">
             {steps.map((step, i) => (
@@ -178,7 +210,7 @@ export default function MyPagePage() {
   return (
     <div className="mx-auto max-w-6xl">
       <SEO title={t.title} description={t.description} path="/platform/my-page" />
-      <PageHeader name={page?.display_name ?? linked?.displayName ?? user.displayName} t={t} language={language} />
+      <PageHeader name={page?.display_name ?? linked?.displayName ?? user.displayName} t={t} language={language} status={page?.status} slug={slug} />
       {slug && page?.status !== 'draft' && <ShareBar slug={slug} name={page?.display_name ?? linked?.displayName ?? user.displayName} t={t} />}
 
       {!level && page?.owner_managed && (
