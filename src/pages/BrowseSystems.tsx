@@ -8,6 +8,8 @@ import SearchToolbar from '../components/ui/SearchToolbar'
 import { recordCatalogSearch } from '../lib/searchStats'
 import { X } from 'lucide-react'
 import FilterSelect from '../components/ui/FilterSelect'
+import ViewToggle from '../components/ui/ViewToggle'
+import type { CardView } from '../components/ui/ViewToggle'
 import BusinessSystemCard from '../components/systems/BusinessSystemCard'
 import StudioWorkspaceCard from '../components/systems/StudioWorkspaceCard'
 import BundleCard from '../components/systems/BundleCard'
@@ -64,6 +66,7 @@ export default function BrowseSystems() {
   const [moduleType, setModuleType] = useState<ModuleType | 'All'>('All')
   const [tag, setTag] = useState(searchParams.get('tag') ?? 'All')
   const [sort, setSort] = useState('featured')
+  const [view, setView] = useState<CardView>('grid')
 
   // The Workspace Catalog — reads the Runtime↔Product Engine connection's
   // Published Product Repository (via ProductService.getPublished())
@@ -292,6 +295,44 @@ export default function BrowseSystems() {
     setSearchParams({})
   }
 
+  // The result cards, built once and laid out either way below — the
+  // list view must not fork this into a second copy of the same three
+  // maps (07/11/2026).
+  const resultCards = (
+    <>
+          {bundleResults.map(({ bundle, items }, i) => (
+            <motion.div
+              key={bundle.id}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: (i % 6) * 0.06, duration: 0.5 }}
+            >
+              <BundleCard bundle={bundle} items={items} />
+            </motion.div>
+          ))}
+          {studioResults.map((product, i) => (
+            <motion.div
+              key={product.id}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: (i % 6) * 0.06, duration: 0.5 }}
+            >
+              <StudioWorkspaceCard product={product} />
+            </motion.div>
+          ))}
+          {results.map((sys, i) => (
+            <motion.div
+              key={sys.slug}
+              initial={{ opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: (i % 6) * 0.06, duration: 0.5 }}
+            >
+              <BusinessSystemCard system={sys} />
+            </motion.div>
+          ))}
+    </>
+  )
+
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-primary/[0.06] via-bg to-bg pt-28 pb-24 md:pt-32">
       <SEO title={seoPage('/systems').title} description={seoPage('/systems').description} path="/systems" />
@@ -321,14 +362,20 @@ export default function BrowseSystems() {
           />
         </div>
 
-        <div className="mt-8">
-          <SearchToolbar
-            query={query}
-            onQueryChange={setQuery}
-            sortValue={sort}
-            onSortChange={setSort}
-            sortOptions={SORT_OPTIONS}
-          />
+        <div className="mt-8 flex items-center gap-3">
+          <div className="min-w-0 flex-1">
+            <SearchToolbar
+              query={query}
+              onQueryChange={setQuery}
+              sortValue={sort}
+              onSortChange={setSort}
+              sortOptions={SORT_OPTIONS}
+            />
+          </div>
+          {/* Cards or list, the same control the member area has
+              (07/11/2026). On a phone the toggle is hidden: the grid is one
+              column there anyway, so the two views would look identical. */}
+          <ViewToggle value={view} onChange={setView} className="hidden sm:flex" />
         </div>
 
         {/* The filters as dropdowns (07/11/2026, the owner's decision, which
@@ -410,38 +457,13 @@ export default function BrowseSystems() {
         )}
 
         {bundleResults.length + studioResults.length + results.length > 0 ? (
-          <Grid cols={3} className="mt-10">
-            {bundleResults.map(({ bundle, items }, i) => (
-              <motion.div
-                key={bundle.id}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: (i % 6) * 0.06, duration: 0.5 }}
-              >
-                <BundleCard bundle={bundle} items={items} />
-              </motion.div>
-            ))}
-            {studioResults.map((product, i) => (
-              <motion.div
-                key={product.id}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: (i % 6) * 0.06, duration: 0.5 }}
-              >
-                <StudioWorkspaceCard product={product} />
-              </motion.div>
-            ))}
-            {results.map((sys, i) => (
-              <motion.div
-                key={sys.slug}
-                initial={{ opacity: 0, y: 16 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: (i % 6) * 0.06, duration: 0.5 }}
-              >
-                <BusinessSystemCard system={sys} />
-              </motion.div>
-            ))}
-          </Grid>
+          view === 'grid' ? (
+            <Grid cols={3} className="mt-10">
+              {resultCards}
+            </Grid>
+          ) : (
+            <div className="mt-10 max-w-2xl space-y-5">{resultCards}</div>
+          )
         ) : (
           <div className="mt-16">
             <EmptyState title="No systems match your search." description="Try a different keyword, industry, or module type." />
