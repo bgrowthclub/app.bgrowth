@@ -7,6 +7,8 @@ import Button from '../../components/ui/Button'
 import EmptyState from '../../components/ui/EmptyState'
 import StudioWorkspaceCard from '../../components/systems/StudioWorkspaceCard'
 import ContinueLearningCard from '../../components/academy/ContinueLearningCard'
+import ViewToggle from '../../components/ui/ViewToggle'
+import type { CardView } from '../../components/ui/ViewToggle'
 import { useIdentity } from '../../modules/identity/IdentityContext'
 import { useOwnedProductsState } from '../../lib/productLibrary'
 import { loadStudioWorkspaceProducts } from '../../lib/publishedCatalog'
@@ -33,6 +35,7 @@ export default function AcademyPage() {
   const { user } = useIdentity()
   const owned = useOwnedProductsState(user)
   const [query, setQuery] = useState('')
+  const [view, setView] = useState<CardView>('grid')
 
   const myCourses = useMemo(() => owned.products.filter((p) => p.type === 'Course'), [owned.products])
 
@@ -90,17 +93,24 @@ export default function AcademyPage() {
         </p>
       </div>
 
-      <label className="relative block max-w-xl">
-        <Search size={17} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-navy/30" aria-hidden />
-        <input
-          type="search"
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search courses, topics or skills…"
-          aria-label="Search courses"
-          className="w-full rounded-full border border-navy/[0.09] bg-white py-3 pl-11 pr-4 text-[15px] text-navy placeholder:text-navy/35 focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/15"
-        />
-      </label>
+      {/* The view toggle sits with the search and governs BOTH course
+          lists below (07/11/2026, at the owner's request — the same
+          control My Workspaces has). One switch for the whole page: two,
+          one per section, would be a choice nobody wants to make twice. */}
+      <div className="flex items-center gap-3">
+        <label className="relative block max-w-xl flex-1">
+          <Search size={17} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-navy/30" aria-hidden />
+          <input
+            type="search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder="Search courses, topics or skills…"
+            aria-label="Search courses"
+            className="w-full rounded-full border border-navy/[0.09] bg-white py-3 pl-11 pr-4 text-[15px] text-navy placeholder:text-navy/35 focus:border-primary/40 focus:outline-none focus:ring-2 focus:ring-primary/15"
+          />
+        </label>
+        <ViewToggle value={view} onChange={setView} />
+      </div>
 
       {featured && !term && <FeaturedCourse product={featured} />}
 
@@ -119,7 +129,7 @@ export default function AcademyPage() {
           {owned.status === 'loading' ? (
             <p className="py-6 text-[14px] text-navy/40">Loading…</p>
           ) : (
-            <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            <div className={view === 'grid' ? 'mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3' : 'mt-5 max-w-2xl space-y-3'}>
               {myShown.map((product) => (
                 <ContinueLearningCard key={product.slug} product={product} />
               ))}
@@ -163,11 +173,19 @@ export default function AcademyPage() {
       {availableShown.length > 0 && (
         <section>
           <h2 className="font-display text-xl font-bold text-navy">Courses you can take</h2>
-          <Grid className="mt-5">
-            {availableShown.map((product) => (
-              <StudioWorkspaceCard key={product.slug} product={product} />
-            ))}
-          </Grid>
+          {view === 'grid' ? (
+            <Grid className="mt-5">
+              {availableShown.map((product) => (
+                <StudioWorkspaceCard key={product.slug} product={product} />
+              ))}
+            </Grid>
+          ) : (
+            <div className="mt-5 max-w-2xl space-y-4">
+              {availableShown.map((product) => (
+                <StudioWorkspaceCard key={product.slug} product={product} />
+              ))}
+            </div>
+          )}
         </section>
       )}
     </div>

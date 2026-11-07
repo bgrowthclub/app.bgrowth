@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react'
-import { FolderOpen, LayoutGrid, List as ListIcon } from 'lucide-react'
+import { FolderOpen } from 'lucide-react'
 import SEO from '../../components/seo/SEO'
 import SearchToolbar from '../../components/ui/SearchToolbar'
 import FilterPill from '../../components/ui/FilterPill'
 import EmptyState from '../../components/ui/EmptyState'
 import Button from '../../components/ui/Button'
 import Grid from '../../components/layout/Grid'
+import ViewToggle from '../../components/ui/ViewToggle'
+import type { CardView } from '../../components/ui/ViewToggle'
 import ProductLibraryCard from '../../components/systems/ProductLibraryCard'
 import MyWorkspacesTabs from '../../components/platform/MyWorkspacesTabs'
 import { useOwnedProductsState } from '../../lib/productLibrary'
@@ -34,7 +36,7 @@ export default function MyBusinessSystemsPage() {
   const [category, setCategory] = useState('All')
   const [difficulty, setDifficulty] = useState('All')
   const [sort, setSort] = useState('recent')
-  const [view, setView] = useState<'grid' | 'list'>('grid')
+  const [view, setView] = useState<CardView>('grid')
 
   const results = useMemo(() => {
     const list = owned.filter((p) => {
@@ -118,28 +120,7 @@ export default function MyBusinessSystemsPage() {
           </SearchToolbar>
         </div>
 
-        <div className="flex shrink-0 gap-1 rounded-xl border border-navy/10 bg-white p-1 shadow-softer">
-          <button
-            onClick={() => setView('grid')}
-            aria-label="Grid view"
-            aria-pressed={view === 'grid'}
-            className={`grid h-8 w-8 place-items-center rounded-lg transition-colors ${
-              view === 'grid' ? 'bg-bg-soft text-primary' : 'text-navy/40 hover:text-navy'
-            }`}
-          >
-            <LayoutGrid size={16} />
-          </button>
-          <button
-            onClick={() => setView('list')}
-            aria-label="List view"
-            aria-pressed={view === 'list'}
-            className={`grid h-8 w-8 place-items-center rounded-lg transition-colors ${
-              view === 'list' ? 'bg-bg-soft text-primary' : 'text-navy/40 hover:text-navy'
-            }`}
-          >
-            <ListIcon size={16} />
-          </button>
-        </div>
+        <ViewToggle value={view} onChange={setView} />
       </div>
 
       {results.length > 0 ? (
