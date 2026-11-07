@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import catalogHero from '../assets/catalog-hero.webp'
 import SEO from '../components/seo/SEO'
 import { seoPage } from '../data/seoPages'
 import { motion } from 'framer-motion'
@@ -281,14 +282,32 @@ export default function BrowseSystems() {
   }
 
   return (
-    <section className="pt-36 pb-24 md:pt-44">
+    <section className="relative overflow-hidden bg-gradient-to-b from-primary/[0.06] via-bg to-bg pt-28 pb-24 md:pt-32">
       <SEO title={seoPage('/systems').title} description={seoPage('/systems').description} path="/systems" />
-      <div className="container-px mx-auto max-w-page">
-        <div className="max-w-2xl">
-          <p className="eyebrow">Business Systems™</p>
-          <h1 className="mt-2 font-display text-3xl font-bold tracking-tight text-navy md:text-4xl">
-            Find the system built for your business.
-          </h1>
+      <div className="container-px relative mx-auto max-w-page">
+        {/* The header band from the owner's design (07/11/2026): the same
+            tinted top the Home and Academy pages use, with her own render
+            beside the title. The illustration is decorative — alt="" and a
+            mask that fades its straight edges into the page, exactly as the
+            Home hero does, so it reads as part of the page. */}
+        <div className="grid items-center gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.62fr)]">
+          <div className="max-w-2xl">
+            <p className="eyebrow">Business Systems™</p>
+            <h1 className="mt-3 font-display text-[34px] font-extrabold leading-[1.08] tracking-tight text-navy md:text-[44px]">
+              Find the system built for <span className="text-primary">your business.</span>
+            </h1>
+            <p className="mt-4 max-w-xl text-[16px] leading-relaxed text-navy/60">
+              Explore courses, workspaces and step-by-step systems to start, organize and grow with confidence.
+            </p>
+          </div>
+
+          <img
+            src={catalogHero}
+            alt=""
+            width={810}
+            height={454}
+            className="hidden w-full lg:block [mask-image:linear-gradient(to_right,transparent,black_12%,black_88%,transparent),linear-gradient(to_top,transparent,black_12%,black_94%,transparent)] [mask-composite:intersect] [-webkit-mask-composite:source-in]"
+          />
         </div>
 
         <div className="mt-8">
