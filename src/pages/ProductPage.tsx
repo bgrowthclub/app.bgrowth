@@ -170,6 +170,11 @@ export default function ProductPage() {
   // Published from BGrowth Studio (Portal database): bought, claimed free
   // or trialled right here, opened in this site's Workspace viewer.
   const studio = isStudioWorkspaceProduct(product)
+  // Signing in comes back to THIS product (07/11/2026). It used to be a
+  // bare /login: someone who found a course from the Home, pressed "Sign In
+  // to Get It Free" and created an account landed on the dashboard and had
+  // to find the product all over again. GuestRoute already honours ?next=,
+  // exactly as the Knowledge members' gate does.
   const studioCard = (className?: string) => (
     <StudioPurchaseCard
       product={product}
@@ -182,7 +187,7 @@ export default function ProductPage() {
       confirming={purchase.confirming}
       error={purchase.error}
       openTo={workspaceViewerPath(product.slug)}
-      signInTo="/login"
+      signInTo={`/login?next=${encodeURIComponent(`/product/${product.slug}`)}`}
       onBuy={purchase.buy}
       onStartTrial={purchase.startTrial}
       planPrice={memberPrice}

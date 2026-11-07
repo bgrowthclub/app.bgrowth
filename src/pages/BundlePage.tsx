@@ -70,7 +70,7 @@ export default function BundlePage() {
       confirming={purchase.confirming}
       error={purchase.error}
       myWorkspacesTo={purchase.myWorkspacesTo}
-      signInTo="/login"
+      signInTo={`/login?next=${encodeURIComponent(bundlePath(bundle.slug))}`}
       onBuy={purchase.buy}
       className={className}
     />

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation } from 'react-router-dom'
 import SEO from '../../components/seo/SEO'
 import AuthCard from '../../components/ui/AuthCard'
 import Button from '../../components/ui/Button'
@@ -16,6 +16,13 @@ export default function LoginPage() {
   const { login, error, busy } = useIdentity()
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  // "Create one" must carry the ?next= this page was opened with
+  // (07/11/2026): someone sent here from a product page has no account yet,
+  // so the register link is the path they actually take — dropping next
+  // there would lose the product anyway, which is the bug we just fixed.
+  const { search } = useLocation()
+  const next = new URLSearchParams(search).get('next')
+  const registerTo = next && next.startsWith('/') && !next.startsWith('//') ? `/register?next=${encodeURIComponent(next)}` : '/register'
   // No "Remember me" checkbox in the approved design — sessions are
   // remembered by default.
   const rememberMe = true
@@ -34,7 +41,7 @@ export default function LoginPage() {
         footer={
           <>
             Don&rsquo;t have an account?{' '}
-            <Link to="/register" className="font-semibold text-primary">
+            <Link to={registerTo} className="font-semibold text-primary">
               Create one
             </Link>
           </>
