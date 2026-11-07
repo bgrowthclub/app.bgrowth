@@ -6,7 +6,8 @@ import { seoPage } from '../data/seoPages'
 import { motion } from 'framer-motion'
 import SearchToolbar from '../components/ui/SearchToolbar'
 import { recordCatalogSearch } from '../lib/searchStats'
-import FilterPill from '../components/ui/FilterPill'
+import { X } from 'lucide-react'
+import FilterSelect from '../components/ui/FilterSelect'
 import BusinessSystemCard from '../components/systems/BusinessSystemCard'
 import StudioWorkspaceCard from '../components/systems/StudioWorkspaceCard'
 import BundleCard from '../components/systems/BundleCard'
@@ -16,12 +17,9 @@ import Grid from '../components/layout/Grid'
 import { loadBundleProducts, loadPublishedSystemProducts, loadStudioWorkspaceProducts, systemForCard } from '../lib/publishedCatalog'
 import type { Product } from '../modules/commerce/types/product'
 import { GROWTH_CATEGORIES } from '../types/growth'
-import { useCategoryLooks } from '../lib/useCategoryLooks'
 import { useProductTags } from '../lib/useProductTags'
 import { studioPortalId } from '../modules/commerce/store/studioProductRepository'
 import { studioProductNoun } from '../modules/workspace/lib/productNoun'
-import type { CategoryLookKeys } from '../lib/useCategoryLooks'
-import { categoryLook } from '../components/systems/categoryIcons'
 import type { ModuleType } from '../types/system'
 
 const SORT_OPTIONS = [
@@ -65,7 +63,6 @@ export default function BrowseSystems() {
   const [area, setArea] = useState(searchParams.get('area') ?? 'All')
   const [moduleType, setModuleType] = useState<ModuleType | 'All'>('All')
   const [tag, setTag] = useState(searchParams.get('tag') ?? 'All')
-  const [allTags, setAllTags] = useState(false)
   const [sort, setSort] = useState('featured')
 
   // The Workspace Catalog — reads the Runtime↔Product Engine connection's
@@ -137,19 +134,11 @@ export default function BrowseSystems() {
     [studioProducts],
   )
 
-  // Area pills (Growth Categories) appear once Workspaces exist in more than
-  // one Area; the static examples are all Business & Entrepreneurship.
-  // Icons and colors chosen in Admin → Catalog → Categories.
-  const looks = useCategoryLooks()
-  const lookIcon = (look: CategoryLookKeys | undefined, active: boolean) => {
-    if (!look) return undefined
-    const { Icon, color } = categoryLook(look)
-    return (
-      <span className={`grid h-5 w-5 place-items-center rounded-full ${active ? 'bg-white/20 text-white' : color.soft}`}>
-        <Icon size={12} />
-      </span>
-    )
-  }
+  // The Area and Industry filters carried the category's own icon while
+  // they were pills (Admin → Catalog → Categories). A dropdown option can't
+  // hold one, so lookIcon/useCategoryLooks went with them (07/11/2026); the
+  // icons still appear on the cards themselves. useCategoryLooks and
+  // categoryLook are untouched and used elsewhere.
 
   // Tags (Admin → Catalog → Tags): a Workspace or bundle matches a tag
   // pill, and a search also matches its tags. Only tags in use show, most
@@ -164,7 +153,6 @@ export default function BrowseSystems() {
     }
     return Array.from(count).sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([name]) => name)
   }, [studioProducts, bundles, productTags])
-  const shownTags = allTags ? tagChoices : tagChoices.slice(0, 12)
 
   const areas = useMemo(() => {
     const present = new Set<string>(studioProducts.map((p) => p.category))
@@ -281,6 +269,29 @@ export default function BrowseSystems() {
     updateParams(area, category, t)
   }
 
+  // What is filtered right now, shown back as clearable chips — a dropdown
+  // hides its options, so without this the page never says why it is
+  // showing three products instead of thirty.
+  const activeFilters: { label: string; clear: () => void }[] = []
+  if (area !== 'All') {
+    activeFilters.push({ label: areas.find((g) => g.id === area)?.label ?? area, clear: () => handleArea('All') })
+  }
+  if (category !== 'All') activeFilters.push({ label: category, clear: () => handleCategory('All') })
+  if (kind !== 'All') activeFilters.push({ label: kind === 'Download' ? 'Downloads' : `${kind}s`, clear: () => handleKind('All') })
+  if (tag !== 'All') activeFilters.push({ label: tag, clear: () => handleTag('All') })
+  if (moduleType !== 'All') {
+    activeFilters.push({ label: MODULE_TYPE_CONFIG[moduleType].label, clear: () => setModuleType('All') })
+  }
+
+  const clearFilters = () => {
+    setArea('All')
+    setCategory('All')
+    setKind('All')
+    setTag('All')
+    setModuleType('All')
+    setSearchParams({})
+  }
+
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-primary/[0.06] via-bg to-bg pt-28 pb-24 md:pt-32">
       <SEO title={seoPage('/systems').title} description={seoPage('/systems').description} path="/systems" />
@@ -320,51 +331,83 @@ export default function BrowseSystems() {
           />
         </div>
 
-        <div className="mt-6 space-y-3">
+        {/* The filters as dropdowns (07/11/2026, the owner's decision, which
+            knowingly departs from her design's pill rows). Five rows of
+            pills took 200px before the first product, and both Area and
+            Industry grow on their own — eight Growth Categories are planned
+            and an industry arrives with every new Workspace. The dropdowns
+            hide the options, so what IS filtered is shown back as the chips
+            below, each clearable. */}
+        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {areas.length > 1 && (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="mr-1 text-[12px] font-semibold uppercase tracking-wide text-navy/30">Area</span>
-              <FilterPill label="All" active={area === 'All'} onClick={() => handleArea('All')} />
-              {areas.map((g) => (
-                <FilterPill key={g.id} label={g.label} active={area === g.id} onClick={() => handleArea(g.id)} icon={lookIcon(looks.bySlug.get(g.id), area === g.id)} />
-              ))}
-            </div>
+            <FilterSelect
+              label="Area"
+              value={area}
+              onChange={handleArea}
+              options={[{ value: 'All', label: 'All areas' }, ...areas.map((g) => ({ value: g.id, label: g.label }))]}
+            />
           )}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="mr-1 text-[12px] font-semibold uppercase tracking-wide text-navy/30">Industry</span>
-            {industries.map((c) => (
-              <FilterPill key={c} label={c} active={category === c} onClick={() => handleCategory(c)} icon={lookIcon(looks.byName.get(c), category === c)} />
-            ))}
-          </div>
+          {industries.length > 1 && (
+            <FilterSelect
+              label="Industry"
+              value={category}
+              onChange={handleCategory}
+              options={industries.map((c) => ({ value: c, label: c === 'All' ? 'All industries' : c }))}
+            />
+          )}
+          <FilterSelect
+            label="Type"
+            value={kind}
+            onChange={handleKind}
+            options={[
+              { value: 'All', label: 'All types' },
+              ...KINDS.map((k) => ({ value: k, label: k === 'Download' ? 'Downloads' : `${k}s` })),
+            ]}
+          />
           {tagChoices.length > 0 && (
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="mr-1 text-[12px] font-semibold uppercase tracking-wide text-navy/30">Tags</span>
-              <FilterPill label="All" active={tag === 'All'} onClick={() => handleTag('All')} />
-              {(tag !== 'All' && !shownTags.includes(tag) ? [tag, ...shownTags] : shownTags).map((t) => (
-                <FilterPill key={t} label={t} active={tag === t} onClick={() => handleTag(t)} />
-              ))}
-              {tagChoices.length > 12 && (
-                <button type="button" onClick={() => setAllTags((v) => !v)} className="text-[13px] font-semibold text-primary hover:underline">
-                  {allTags ? 'Fewer' : `+${tagChoices.length - 12} more`}
-                </button>
-              )}
-            </div>
+            <FilterSelect
+              label="Tag"
+              value={tag}
+              onChange={handleTag}
+              options={[{ value: 'All', label: 'All tags' }, ...tagChoices.map((t) => ({ value: t, label: t }))]}
+            />
           )}
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="mr-1 text-[12px] font-semibold uppercase tracking-wide text-navy/30">Type</span>
-            <FilterPill label="All" active={kind === 'All'} onClick={() => handleKind('All')} />
-            {KINDS.map((k) => (
-              <FilterPill key={k} label={k === 'Download' ? 'Downloads' : `${k}s`} active={kind === k} onClick={() => handleKind(k)} />
-            ))}
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            <span className="mr-1 text-[12px] font-semibold uppercase tracking-wide text-navy/30">Module Type</span>
-            <FilterPill label="All" active={moduleType === 'All'} onClick={() => setModuleType('All')} />
-            {allModuleTypes.map((t) => (
-              <FilterPill key={t} label={MODULE_TYPE_CONFIG[t].label} active={moduleType === t} onClick={() => setModuleType(t)} />
-            ))}
-          </div>
+          {allModuleTypes.length > 0 && (
+            <FilterSelect
+              label="Module Type"
+              value={moduleType}
+              onChange={(v) => setModuleType(v as ModuleType | 'All')}
+              options={[
+                { value: 'All', label: 'All module types' },
+                ...allModuleTypes.map((t) => ({ value: t, label: MODULE_TYPE_CONFIG[t].label })),
+              ]}
+            />
+          )}
         </div>
+
+        {activeFilters.length > 0 && (
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            {activeFilters.map((f) => (
+              <button
+                key={f.label}
+                type="button"
+                onClick={f.clear}
+                className="inline-flex items-center gap-1.5 rounded-full bg-primary/[0.08] py-1.5 pl-3.5 pr-2.5 text-[13px] font-semibold text-primary transition-colors hover:bg-primary/15"
+              >
+                {f.label}
+                <X size={13} aria-hidden />
+                <span className="sr-only">Remove this filter</span>
+              </button>
+            ))}
+            <button
+              type="button"
+              onClick={clearFilters}
+              className="ml-1 text-[13px] font-semibold text-navy/45 transition-colors hover:text-navy"
+            >
+              Clear all
+            </button>
+          </div>
+        )}
 
         {bundleResults.length + studioResults.length + results.length > 0 ? (
           <Grid cols={3} className="mt-10">
