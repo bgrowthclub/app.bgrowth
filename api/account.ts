@@ -497,7 +497,14 @@ async function includedInPlan(db: Db, userId: string, productId: string): Promis
 // same cleaning in api/admin.ts and api/account.ts.
 const PAGE_BLOCK_TYPES = new Set(['hero', 'contact', 'highlights', 'services', 'about', 'testimonials', 'gallery', 'text', 'faq', 'area', 'cta', 'credentials', 'products', 'signup'])
 const PAGE_COLORS = new Set(['blue', 'teal', 'green', 'purple', 'rose', 'orange', 'navy'])
-const PAGE_TEMPLATES = new Set(['professional', 'local', 'creative', 'personal', 'affiliate', 'links', 'cleaning', 'notary', 'teacher', 'creator', 'blank'])
+// A COPY of the model ids in src/modules/find/memberPageTemplates.ts: a
+// function must not import from src/ (CLAUDE.md §13). Keep the two in step
+// — a model missing here is saved as 'professional', silently, which is how
+// 'payments' shipped broken on 07/11/2026 and 'picks' before it.
+const PAGE_TEMPLATES = new Set([
+  'professional', 'local', 'creative', 'personal', 'affiliate', 'picks', 'links', 'payments',
+  'cleaning', 'notary', 'teacher', 'creator', 'simple', 'blank',
+])
 // Background tints (light only — dark text stays readable), open to every plan.
 const PAGE_BACKGROUNDS = new Set(['cream', 'sand', 'mist', 'sky', 'mint', 'blush', 'lavender'])
 const pageText = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '')
@@ -599,6 +606,8 @@ const TEMPLATE_SEQUENCES: Record<string, string> = {
   affiliate: 'hero,products,services,about,contact',
   picks: 'hero,products,about,contact',
   links: 'hero,contact,about',
+  payments: 'hero,contact,about',
+  simple: 'hero,contact',
   cleaning: 'hero,contact,services,highlights,testimonials,area,faq,cta',
   notary: 'hero,contact,services,area,about,faq,cta',
   teacher: 'hero,contact,highlights,services,text,testimonials,about,cta',
@@ -614,6 +623,8 @@ const TEMPLATE_COLORS: Record<string, string> = {
   affiliate: 'blue',
   picks: 'orange',
   links: 'teal',
+  payments: 'navy',
+  simple: 'blue',
   cleaning: 'teal',
   notary: 'navy',
   teacher: 'purple',
@@ -836,7 +847,7 @@ function readMyPage(b: Record<string, any>) {
   }
 }
 
-async function myPageAction(req: VercelRequest, db: Db, user: { id: string }, resource: string) {
+async function myPageAction(req: VercelRequest, db: Db, user: { id: string; email_confirmed_at?: string | null }, resource: string) {
   const level = await memberPageLevel(db, user.id)
   // Every page this member owns, oldest first (07/11/2026 — a plan can give
   // more than one). Which one a request is about comes from ?page=<id> or
@@ -967,6 +978,15 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string }, re
     const base = slugFrom(input.display_name).slice(0, 34) || 'page'
     slug = base.length >= 3 ? base : `${base}-page`
     for (let n = 2; RESERVED_PAGE_SLUGS.has(slug) || (await slugTaken(db, slug)); n += 1) slug = `${base}-${n}`
+  }
+
+  // A page only goes public once the e-mail behind the account is real
+  // (08/11/2026, the owner's rule). Checked HERE and not in the route
+  // guard: the guard only asks "signed in?", and a rule that protects the
+  // public web has to hold even for a caller who never loaded our screen.
+  // Saving a draft is always allowed — the wall is publishing.
+  if (input.status === 'published' && !user.email_confirmed_at) {
+    throw new HttpError(403, 'Confirm your e-mail address before putting your page online — check your inbox for our message.')
   }
 
   if (!existing) {
