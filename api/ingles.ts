@@ -82,6 +82,39 @@ async function captchaOk(req: VercelRequest): Promise<boolean> {
   }
 }
 
+/**
+ * A visitor reporting a member page (08/11/2026, Portal migration 0081).
+ * Whatever the team reviews, the person who finds the bad page is the one
+ * who lands on it.
+ *
+ * NOTHING about the reporter is stored — no name, no address, no IP. A
+ * report is about the page, and asking who is complaining is mostly a
+ * reason not to complain. The cost is that it can be spammed, which is why
+ * it is one row the team can dismiss, never an automatic takedown.
+ */
+async function pageReport(req: VercelRequest, db: Db) {
+  const body = (req.body && typeof req.body === 'object' ? req.body : {}) as Record<string, unknown>
+  const asked = str(body.slug, 40).toLowerCase()
+  const slug = await resolveSlug(db, asked)
+  if (!(await pageOpenToVisitors(db, asked, slug))) throw new HttpError(404, 'This page isn’t available.')
+  const reason = str(body.reason, 40)
+  if (!REPORT_REASONS.has(reason)) throw new HttpError(400, 'Choose a reason.')
+  const detail = str(body.detail, 1000)
+
+  const { data: page } = await db.from('member_pages').select('id').eq('slug', slug).eq('status', 'published').maybeSingle()
+  if (!page) throw new HttpError(404, 'This page isn’t available.')
+
+  const { error } = await db.from('member_page_reports').insert({ page_id: page.id, reason, detail: detail || null })
+  if (error) {
+    // A database without 0081 must not show the visitor an error for doing
+    // the right thing: thank them, and log it for us.
+    console.error('[page-report] insert failed:', error)
+  }
+  return { ok: true }
+}
+
+const REPORT_REASONS = new Set(['scam', 'adult', 'illegal', 'impersonation', 'not-working', 'other'])
+
 async function pageSignup(req: VercelRequest, db: Db) {
   const body = (req.body && typeof req.body === 'object' ? req.body : {}) as Record<string, unknown>
   const asked = str(body.slug, 40).toLowerCase()
@@ -437,6 +470,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // replaced by the page's own ?…): still answer with the link preview.
     if (!action && req.method === 'GET' && PREVIEW_BOT.test(String(req.headers['user-agent'] ?? ''))) action = 'og'
     if (req.method === 'POST' && action === 'lead') return res.status(200).json(await saveLead(req, db))
+    if (req.method === 'POST' && action === 'page-report') return res.status(200).json(await pageReport(req, db))
     if (req.method === 'POST' && action === 'page-signup') return res.status(200).json(await pageSignup(req, db))
     if (req.method === 'POST' && action === 'track') return res.status(200).json(await trackEvent(req, db))
     if (req.method === 'POST' && action === 'search') return res.status(200).json(await trackSearch(req, db))

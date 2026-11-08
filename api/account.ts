@@ -887,6 +887,26 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string; emai
 
   const templates = level ? await memberPageTemplates(db, user.id) : null
   const selfService = await memberPagesSelfService(db)
+  // Which pages stay online when the plan allows fewer than the member has
+  // (08/11/2026, Portal migration 0081). The order they send is the order
+  // of preference; the database keeps the first N.
+  if (resource === 'my-pages-keep' && req.method === 'PUT') {
+    const ids = Array.isArray(req.body?.ids) ? (req.body.ids as unknown[]).map((v) => String(v)) : []
+    const mine = new Set(pages.map((p) => p.id))
+    const chosen = ids.filter((id) => mine.has(id))
+    if (!chosen.length) throw new HttpError(400, 'Choose at least one page.')
+    // Highest first, so the order sent is the order kept. Pages left out
+    // drop to 0 and fall behind — none is deleted, and raising the plan
+    // again brings them all back exactly as they were.
+    for (const [i, id] of chosen.entries()) {
+      await db.from('member_pages').update({ priority: chosen.length - i }).eq('id', id).eq('user_id', user.id)
+    }
+    for (const page of pages) {
+      if (!chosen.includes(page.id)) await db.from('member_pages').update({ priority: 0 }).eq('id', page.id).eq('user_id', user.id)
+    }
+    return { kept: chosen }
+  }
+
   if (resource === 'my-page' && req.method === 'GET') {
     const insights = existing?.insights_granted === true || (await memberPageInsights(db, user.id))
     return {
@@ -897,7 +917,14 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string; emai
       allowance: await memberPageAllowance(db, user.id),
       linkLimit: await memberPageLinkLimit(db, user.id),
       // The light list the screen draws before anything is opened.
-      pages: pages.map((p) => ({ id: p.id, slug: p.slug, display_name: p.display_name, status: p.status, updated_at: p.updated_at })),
+      pages: pages.map((p) => ({
+        id: p.id,
+        slug: p.slug,
+        display_name: p.display_name,
+        status: p.status,
+        updated_at: p.updated_at,
+        priority: p.priority ?? 0,
+      })),
       page: existing ?? null,
     }
   }
@@ -1249,7 +1276,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   try {
     const resource = str(req.query.resource)
     const planResource = ['plan-checkout', 'plan-switch', 'plan-cancel', 'plan-resume', 'plan-portal'].includes(resource)
-    const pageResource = resource === 'my-page' || resource === 'my-page-image' || resource === 'my-page-signups'
+    const pageResource =
+      resource === 'my-page' || resource === 'my-page-image' || resource === 'my-page-signups' || resource === 'my-pages-keep'
     if (!planResource && !pageResource && resource !== 'deletion' && resource !== 'announcements-seen' && resource !== 'download' && resource !== 'profile' && resource !== 'purchases' && resource !== 'certificates')
       throw new HttpError(404, 'Unknown action.')
     const url = process.env.SUPABASE_URL

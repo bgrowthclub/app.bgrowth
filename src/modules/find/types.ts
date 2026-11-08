@@ -108,6 +108,9 @@ export interface MemberPageSummary {
   display_name: string
   status: 'draft' | 'pending' | 'published'
   updated_at?: string | null
+  // Which pages the member keeps online when the plan allows fewer than
+  // they have (08/11/2026). Higher is kept first.
+  priority?: number
 }
 
 export interface MemberPageBlock {

@@ -306,6 +306,15 @@ export async function isMemberPageIndexable(pageId: string): Promise<boolean> {
   return data
 }
 
+/** A visitor reporting a page (08/11/2026). Nothing about them is sent. */
+export async function reportMemberPage(slug: string, reason: string, detail: string): Promise<void> {
+  await fetch('/api/ingles?action=page-report', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ slug, reason, detail }),
+  })
+}
+
 export const myPageService = {
   // Without an id: the member's first page, plus the list and how many they
   // may have (07/11/2026). With one: that page opened for editing.
@@ -329,6 +338,10 @@ export const myPageService = {
   // (the endpoint refuses it past the allowance).
   async save(draft: MemberPageDraft, id?: string) {
     return (await accountCall<{ page: MemberPage }>('PUT', 'my-page', id ? { ...draft, id } : draft)).page
+  },
+  // Which pages stay online, in order of preference (08/11/2026).
+  async keepPages(ids: string[]) {
+    await accountCall('PUT', 'my-pages-keep', { ids })
   },
   async uploadImage(dataUrl: string) {
     return (await accountCall<{ url: string }>('POST', 'my-page-image', { dataUrl })).url

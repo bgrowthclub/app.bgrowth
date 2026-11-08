@@ -17,7 +17,7 @@ import type {
   NewGrantInput, AdminCatalogCategories, AdminCategory,
   AdminNewsletterCampaign, AdminNewsletterDraft, AdminNewsletterOverview, AdminReview, AdminMemberDashboard, DashboardPeriod, AdminDeletionRequest, AdminCatalogHealth, AdminSiteSearches, AdminProductMembers,
   AdminBundle, AdminBundleDraft, AdminBundlesOverview,
-  AdminTeamMember, AdminActivityPage, AdminMemberPageDraft, AdminMemberPagesOverview,
+  AdminTeamMember, AdminActivityPage, AdminMemberPageDraft, AdminMemberPagesOverview, AdminPageReport,
   AdminWixContactsOverview, WixContactGroup,
   AdminPlan, AdminPlanDraft, AdminPlansOverview, AdminMemberPlans, MemberPlanReason, AdminPlanSubscribers,
   AdminCouponsOverview, AdminCouponDraft, AdminPlanProducts } from './types'
@@ -347,6 +347,12 @@ export const adminService = {
   // whole page list (08/11/2026).
   listPageQueue() {
     return call<{ pages: MemberPage[]; ready: boolean }>('GET', 'page-queue')
+  },
+  listPageReports() {
+    return call<{ reports: AdminPageReport[]; ready: boolean }>('GET', 'page-reports')
+  },
+  async dismissPageReport(id: string) {
+    await call('PATCH', 'page-reports', undefined, { id })
   },
   // The team's decision on a Free member's page (08/11/2026, migration 0079).
   async reviewMemberPage(id: string, action: 'approve' | 'return', note: string) {

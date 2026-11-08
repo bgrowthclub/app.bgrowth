@@ -169,13 +169,31 @@ export const TERMS_OF_SERVICE: LegalDocumentData = {
       ],
     },
     {
+      // Member pages are the one place a member publishes to the open web
+      // under our address (08/11/2026). Without this written down, taking a
+      // page off the air is an argument instead of a rule.
+      heading: 'Your business page',
+      paragraphs: [
+        `If your plan includes one, you can publish a page at ${LEGAL_SITE}/p/your-address. The page is yours: what you write, your photos and your links. You are responsible for all of it, and for having the right to use it.`,
+        'A page published by a free account is looked at by our team before it goes online, and again after any change. This is a check that it follows the rules below — it is not a recommendation, an endorsement or a verification of anything you claim on it.',
+      ],
+      bullets: [
+        'No adult or sexual content, and nothing involving minors.',
+        'Nothing illegal, fraudulent or deliberately misleading — including fake reviews, invented credentials, or pretending to be another person or business.',
+        'No one else’s photos, logos or text without the right to use them.',
+        'No one else’s personal details, and no bank account or card numbers — use a payment link instead.',
+      ],
+    },
+    {
       heading: 'Acceptable use',
       bullets: [
         'Do not use the site for anything illegal, harmful or fraudulent.',
         'Do not try to access other people’s accounts or data, or to break or overload the service.',
         'Do not copy the site or its content with automated tools.',
       ],
-      paragraphs: ['We may suspend or close an account that breaks these Terms.'],
+      paragraphs: [
+        'We may suspend or close an account that breaks these Terms. We may also take a business page off the web at any time, with or without notice, if it breaks the rules above or is reported and found to. The page and its content are not deleted when we do: you keep them, and you can put the page back once the problem is fixed.',
+      ],
     },
     {
       heading: 'Availability and changes',

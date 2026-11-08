@@ -4,6 +4,7 @@ import { MEMBER_LINK_ICONS } from './memberLinkIcons'
 import MemberProductPicks from './MemberProductPicks'
 import MemberPageSignupForm from './MemberPageSignupForm'
 import MemberPagePromo from './MemberPagePromo'
+import ReportPageLink from './ReportPageLink'
 import { usePageTexts } from '../../lib/usePageTexts'
 import { MEMBER_PAGE_LABELS, memberLinkHref, memberLinkLabel, videoEmbed } from '../../modules/find/memberPageService'
 import { PAGE_BACKGROUNDS, PAGE_COLORS, blockLinks, pageBlocks } from '../../modules/find/memberPageTemplates'
@@ -634,6 +635,7 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
           <p className="text-[12px] text-navy/40">{t.disclaimer}</p>
           <div className="mt-4">
             <MemberPagePromo language={page.language} preview={preview} madeWith={t.madeWith} />
+            <ReportPageLink slug={page.slug ?? ''} language={page.language} preview={preview} />
           </div>
         </div>
       </footer>

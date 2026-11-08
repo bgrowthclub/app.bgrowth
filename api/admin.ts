@@ -4126,6 +4126,8 @@ function describe(key: string, b: Body, r: Record<string, any>): Described {
         area: 'plans',
         summary: `Gave the plan “${r.planName}”${b.endsAt ? ` until ${fmtDay(b.endsAt)}` : ' with no end date'} (${String(b.reason ?? 'other')})`,
       }
+    case 'PATCH page-reports':
+      return { area: 'pages', summary: `Dismissed a report about “${r.slug ?? 'a page'}”` }
     case 'PUT page-review':
       return {
         area: 'pages',
@@ -4372,6 +4374,53 @@ async function pageReviewQueue(db: Db) {
   return { pages: await withOwnerEmails(db, data ?? []), ready: true }
 }
 
+/**
+ * Pages visitors reported, newest first (08/11/2026, Portal migration
+ * 0081). Open ones only — a handled report is history, and the team needs
+ * a list of work, not an archive.
+ */
+async function listPageReports(db: Db) {
+  const { data, error } = await db
+    .from('member_page_reports')
+    .select('id, page_id, reason, detail, created_at, member_pages(slug, display_name, status)')
+    .is('handled_at', null)
+    .order('created_at', { ascending: false })
+    .limit(100)
+  if (error) {
+    if (isMissingTable(error)) return { reports: [], ready: false }
+    throw error
+  }
+  const reports = (data ?? []).map((r: any) => {
+    const page = Array.isArray(r.member_pages) ? r.member_pages[0] : r.member_pages
+    return {
+      id: r.id,
+      pageId: r.page_id,
+      reason: r.reason,
+      detail: r.detail,
+      createdAt: r.created_at,
+      slug: page?.slug ?? '',
+      displayName: page?.display_name ?? '',
+      pageStatus: page?.status ?? '',
+    }
+  })
+  return { reports, ready: true }
+}
+
+/** Dismiss a report: the team looked, and that is the end of it. */
+async function handlePageReport(req: VercelRequest, db: Db, admin: Admin) {
+  const id = str(req.body?.id)
+  if (!id) throw new HttpError(400, 'Which report?')
+  const { data, error } = await db
+    .from('member_page_reports')
+    .update({ handled_at: new Date().toISOString(), handled_by: admin.id })
+    .eq('id', id)
+    .select('id, reason, member_pages(slug)')
+    .single()
+  if (error) throw error
+  const page = Array.isArray((data as any)?.member_pages) ? (data as any).member_pages[0] : (data as any)?.member_pages
+  return { id, slug: page?.slug ?? '' }
+}
+
 const ROUTES: Record<string, Route> = {
   'GET me': async (_req, _db, admin) => ({ admin }),
   'GET members': (req, db) => listMembers(req, db),
@@ -4430,6 +4479,8 @@ const ROUTES: Record<string, Route> = {
   'GET member-pages': (_req, db) => listMemberPages(db),
   'GET member-page-stats': (req, db) => memberPageStats(req, db),
   'GET page-queue': (_req, db) => pageReviewQueue(db),
+  'GET page-reports': (_req, db) => listPageReports(db),
+  'PATCH page-reports': (req, db, admin) => handlePageReport(req, db, admin),
   'PUT page-review': (req, db, admin) => reviewMemberPage(req, db, admin),
   'GET member-page-signups': (req, db) => memberPageSignups(req, db),
   'DELETE member-page-signups': (req, db) => memberPageSignups(req, db),
@@ -4486,6 +4537,8 @@ const SUPPORT_ACTIONS = new Set([
   // in Activity with their name either way.
   'GET page-queue',
   'PUT page-review',
+  'GET page-reports',
+  'PATCH page-reports',
   'GET members',
   'GET member',
   'POST confirmation',

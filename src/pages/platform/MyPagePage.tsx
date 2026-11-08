@@ -7,6 +7,7 @@ import Button from '../../components/ui/Button'
 import MemberPageStatsView from '../../components/find/MemberPageStatsView'
 import MemberPageBuilder from '../../components/find/MemberPageBuilder'
 import MemberPageSignupsList from '../../components/find/MemberPageSignupsList'
+import KeepPagesChooser from '../../components/find/KeepPagesChooser'
 import { useIdentity } from '../../modules/identity/IdentityContext'
 import { getMyMemberPageStats, myPageService } from '../../modules/find/memberPageService'
 import type { MemberPage, MemberPageLevel, MemberPageStats, MemberPageSummary } from '../../modules/find/types'
@@ -218,6 +219,7 @@ export default function MyPagePage() {
       })
   }
 
+  const publishedCount = pages.filter((p) => p.status === 'published').length
   const teamPage = page ? !page.owner_managed : Boolean(linked)
   const statsPageId = page?.id ?? linked?.id
   const showNumbers = Boolean(statsPageId) && (teamPage || level === 'full')
@@ -271,6 +273,17 @@ export default function MyPagePage() {
       )}
       {notice && <p className="mb-6 rounded-xl bg-emerald-50 px-4 py-3 text-[13.5px] text-emerald-700">{notice}</p>}
       {error && <p className="mb-6 text-[14px] text-red-500">{error}</p>}
+
+      {/* More pages online than the plan now allows: they choose which
+          stay, instead of a rule choosing for them (08/11/2026). */}
+      {canEdit && publishedCount > allowance && (
+        <KeepPagesChooser
+          pages={pages.filter((p) => p.status === 'published')}
+          allowance={allowance}
+          language={language}
+          onSaved={() => window.location.reload()}
+        />
+      )}
 
       {/* The member's pages (07/11/2026). It only appears when there is
           something to choose between — one page and one allowed is the

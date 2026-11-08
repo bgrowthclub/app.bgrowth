@@ -4,6 +4,7 @@ import MemberSiteView from './MemberSiteView'
 import MemberProductPicks from './MemberProductPicks'
 import MemberPageSignupForm from './MemberPageSignupForm'
 import MemberPagePromo from './MemberPagePromo'
+import ReportPageLink from './ReportPageLink'
 import type { CSSProperties } from 'react'
 import { MEMBER_PAGE_LABELS, memberLinkHref, memberLinkLabel, videoEmbed } from '../../modules/find/memberPageService'
 import { PAGE_BACKGROUNDS, PAGE_COLORS, blockLinks, pageBlocks, pageSkin } from '../../modules/find/memberPageTemplates'
@@ -325,6 +326,7 @@ export default function MemberPageView({ page, preview = false, onLinkClick, onS
 
       <footer className="mt-14 text-center">
         <MemberPagePromo language={page.language} preview={preview} madeWith={t.madeWith} />
+        <ReportPageLink slug={page.slug ?? ''} language={page.language} preview={preview} />
       </footer>
       </div>
     </div>

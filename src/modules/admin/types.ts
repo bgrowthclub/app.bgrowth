@@ -669,3 +669,15 @@ export interface AdminPlanProducts {
   // product id → plan id → the paid offer, for plans that don't include it
   pricing?: Record<string, Record<string, AdminPlanOffer>>
 }
+
+/** A visitor's report about a member page (08/11/2026, Portal migration 0081). */
+export interface AdminPageReport {
+  id: string
+  pageId: string
+  reason: string
+  detail: string | null
+  createdAt: string
+  slug: string
+  displayName: string
+  pageStatus: string
+}
