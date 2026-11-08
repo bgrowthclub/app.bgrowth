@@ -343,6 +343,11 @@ export const adminService = {
   async giveMemberPlan(input: { userId: string; planId: string; endsAt: string | null; reason: MemberPlanReason; note: string }) {
     await call('POST', 'member-plans', undefined, input)
   },
+  // Just the pages waiting for a decision — Support sees this, not the
+  // whole page list (08/11/2026).
+  listPageQueue() {
+    return call<{ pages: MemberPage[]; ready: boolean }>('GET', 'page-queue')
+  },
   // The team's decision on a Free member's page (08/11/2026, migration 0079).
   async reviewMemberPage(id: string, action: 'approve' | 'return', note: string) {
     await call('PUT', 'page-review', undefined, { id, action, note })

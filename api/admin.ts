@@ -766,6 +766,17 @@ async function replySupport(req: VercelRequest, db: Db, admin: Admin) {
   const body = str(req.body?.body)
   if (!body) throw new HttpError(400, 'Write your reply.')
   if (body.length > 5000) throw new HttpError(400, 'The reply is too long (5,000 characters max).')
+  return postTeamReply(req, db, admin, id, body)
+}
+
+/**
+ * A reply from the team in a member's conversation: the message, the
+ * conversation's state, and the e-mail unless they are reading it right
+ * now. Lifted out of replySupport on 08/11/2026 so the page review can
+ * answer through the same door — the member then hears about the decision
+ * in the app AND by e-mail, with no second notification system.
+ */
+async function postTeamReply(req: VercelRequest, db: Db, admin: Admin, id: string, body: string, close = false) {
   const { data: conversation, error } = await db
     .from('support_conversations')
     .select('id, subject, customer_read_at, users(email, full_name)')
@@ -781,7 +792,7 @@ async function replySupport(req: VercelRequest, db: Db, admin: Admin) {
   if (msgError) throw msgError
   await db
     .from('support_conversations')
-    .update({ last_sender: 'staff', last_message_at: now.toISOString(), status: 'open' })
+    .update({ last_sender: 'staff', last_message_at: now.toISOString(), status: close ? 'closed' : 'open' })
     .eq('id', id)
 
   // E-mail the member unless they are in the chat right now (opened it in
@@ -4287,7 +4298,7 @@ async function setMemberPageGrant(req: VercelRequest, db: Db) {
  * action — if the owner wants Support to clear the queue, it is one line in
  * SUPPORT_ACTIONS, and her call, not mine.
  */
-async function reviewMemberPage(req: VercelRequest, db: Db) {
+async function reviewMemberPage(req: VercelRequest, db: Db, admin: Admin) {
   const id = String((req.body as Record<string, unknown>)?.id ?? '')
   const action = String((req.body as Record<string, unknown>)?.action ?? '')
   const note = String((req.body as Record<string, unknown>)?.note ?? '').trim().slice(0, 500)
@@ -4295,7 +4306,7 @@ async function reviewMemberPage(req: VercelRequest, db: Db) {
   if (action !== 'approve' && action !== 'return') throw new HttpError(400, 'Approve it or send it back.')
   if (action === 'return' && !note) throw new HttpError(400, 'Tell the member what to change — they only see this note.')
 
-  const { data: page, error: readError } = await db.from('member_pages').select('id, slug, status, display_name').eq('id', id).maybeSingle()
+  const { data: page, error: readError } = await db.from('member_pages').select('id, slug, status, display_name, review_thread_id').eq('id', id).maybeSingle()
   if (readError) throw readError
   if (!page) throw new HttpError(404, 'Page not found.')
   if (page.status !== 'pending') throw new HttpError(409, 'This page isn’t waiting for a decision.')
@@ -4314,7 +4325,51 @@ async function reviewMemberPage(req: VercelRequest, db: Db) {
     .select('*')
     .single()
   if (error) throw error
+
+  // The member hears it where they asked: the ticket they opened when they
+  // pressed publish. postTeamReply writes the message AND e-mails them, so
+  // approving is one action with one answer, not two half-answers.
+  //
+  // A ticket that can't be answered never undoes a decision already taken:
+  // the page is approved or returned either way, and the failure is logged.
+  if (page.review_thread_id) {
+    try {
+      await postTeamReply(
+        req,
+        db,
+        admin,
+        page.review_thread_id as string,
+        action === 'approve'
+          ? `Your page is online: bgrowth.app/p/${page.slug}\n\nShare the link wherever you like. Any change you make goes through this same check before it goes back online.`
+          : `We've sent your page back so you can change something:\n\n${note}\n\nOpen “My Business Page”, make the change and send it again.`,
+        action === 'approve',
+      )
+    } catch (e) {
+      console.error('[page-review] reply failed:', e)
+    }
+  }
+
   return { page: data, slug: page.slug, name: page.display_name }
+}
+
+/**
+ * Just the pages waiting for a decision — the queue, nothing else
+ * (08/11/2026). Its own resource because Admin → Pages is admin-only and
+ * Support may now clear this queue: giving Support the whole page list to
+ * reach three pending ones would hand them every member's page as well.
+ */
+async function pageReviewQueue(db: Db) {
+  const { data, error } = await db
+    .from('member_pages')
+    .select('*')
+    .eq('status', 'pending')
+    .order('submitted_at', { ascending: true })
+  if (error) {
+    // A database without 0079 has no 'pending' page by definition.
+    if (isMissingTable(error) || (error as { code?: string }).code === '42703') return { pages: [], ready: false }
+    throw error
+  }
+  return { pages: await withOwnerEmails(db, data ?? []), ready: true }
 }
 
 const ROUTES: Record<string, Route> = {
@@ -4374,7 +4429,8 @@ const ROUTES: Record<string, Route> = {
   'DELETE bundles': (req, db) => archiveBundle(req, db),
   'GET member-pages': (_req, db) => listMemberPages(db),
   'GET member-page-stats': (req, db) => memberPageStats(req, db),
-  'PUT page-review': (req, db) => reviewMemberPage(req, db),
+  'GET page-queue': (_req, db) => pageReviewQueue(db),
+  'PUT page-review': (req, db, admin) => reviewMemberPage(req, db, admin),
   'GET member-page-signups': (req, db) => memberPageSignups(req, db),
   'DELETE member-page-signups': (req, db) => memberPageSignups(req, db),
   'POST member-pages': (req, db) => createMemberPage(req, db),
@@ -4425,6 +4481,11 @@ const ROUTES: Record<string, Route> = {
 // extend access and trials (to fix a complaint quickly), and read reviews.
 const SUPPORT_ACTIONS = new Set([
   'GET me',
+  // Support clears the page queue too (08/11/2026, the owner's decision).
+  // It is moderation, which is support's work — and the decision is logged
+  // in Activity with their name either way.
+  'GET page-queue',
+  'PUT page-review',
   'GET members',
   'GET member',
   'POST confirmation',

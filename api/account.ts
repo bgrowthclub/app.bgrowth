@@ -1039,9 +1039,41 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string; emai
   // update branches below stay one shape. Not queued means not waiting: the
   // submission is cleared, but the team's last note is kept, so someone who
   // was sent back still reads why while they fix it.
-  const review: { submitted_at: string | null; review_note: string | null } = queued
-    ? { submitted_at: new Date().toISOString(), review_note: null }
-    : { submitted_at: null, review_note: (existing?.review_note as string | null) ?? null }
+  // The review arrives as a support ticket (08/11/2026, Portal migration
+  // 0080). The Support Center is already the one place the member and the
+  // team talk, and a staff reply already e-mails the member — so the review
+  // borrows it instead of a notification system of its own. The message is
+  // written as the member's because it IS theirs: they pressed publish.
+  //
+  // A ticket that can't be opened must never block the page from reaching
+  // the queue: the page is what matters, the ticket is how we talk about it.
+  let thread: string | null = (existing?.review_thread_id as string | null) ?? null
+  if (queued) {
+    try {
+      const name = pageText(input.display_name, 80) || 'A member'
+      const { data: conv } = await db
+        .from('support_conversations')
+        .insert({ user_id: user.id, subject: `Page review — ${name}` })
+        .select('id')
+        .single()
+      if (conv?.id) {
+        thread = conv.id
+        await db.from('support_messages').insert({
+          conversation_id: conv.id,
+          sender: 'customer',
+          author_id: user.id,
+          author_name: name,
+          body: `I've sent my page for review: bgrowth.app/p/${slug}`,
+        })
+      }
+    } catch (e) {
+      console.error('[my-page] review ticket failed:', e)
+    }
+  }
+
+  const review: { submitted_at: string | null; review_note: string | null; review_thread_id: string | null } = queued
+    ? { submitted_at: new Date().toISOString(), review_note: null, review_thread_id: thread }
+    : { submitted_at: null, review_note: (existing?.review_note as string | null) ?? null, review_thread_id: thread }
   const row = { ...input, ...moved, ...review, slug, user_id: user.id, owner_managed: true, updated_at: new Date().toISOString() }
   const { data, error: saveError } = existing
     ? await db.from('member_pages').update(row).eq('id', existing.id).select('*').single()

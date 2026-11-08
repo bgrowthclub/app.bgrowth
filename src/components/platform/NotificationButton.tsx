@@ -3,6 +3,8 @@ import { Link } from 'react-router-dom'
 import { Bell } from 'lucide-react'
 import Popover from './Popover'
 import EmptyState from '../ui/EmptyState'
+import { supportService } from '../../modules/support/supportService'
+import type { SupportConversationSummary } from '../../modules/support/types'
 import { useIdentity } from '../../modules/identity/IdentityContext'
 import {
   announcementDate,
@@ -24,6 +26,11 @@ export default function NotificationButton() {
   const { user } = useIdentity()
   const [items, setItems] = useState<SiteAnnouncement[]>([])
   const [seenAt, setSeenAt] = useState<string | null>(null)
+  // Replies from the team the member hasn't read (08/11/2026). The bell
+  // showed site announcements only, so a page approved — or sent back —
+  // reached them by e-mail and nowhere in the app. A support call that
+  // fails just means no replies here; it never breaks the bell.
+  const [replies, setReplies] = useState<SupportConversationSummary[]>([])
 
   useEffect(() => {
     if (!user) return
@@ -35,13 +42,19 @@ export default function NotificationButton() {
         setSeenAt(seen)
       })
       .catch(() => undefined)
+    supportService
+      .getState()
+      .then((state) => {
+        if (!cancelled) setReplies((state.conversations ?? []).filter((c) => c.unread))
+      })
+      .catch(() => undefined)
     return () => {
       cancelled = true
     }
   }, [user])
 
   const isNew = (a: SiteAnnouncement) => !seenAt || announcementDate(a) > seenAt
-  const unread = items.some(isNew)
+  const unread = items.some(isNew) || replies.length > 0
 
   return (
     <Popover
@@ -68,7 +81,32 @@ export default function NotificationButton() {
       )}
     >
       <p className="px-1 pb-2 text-[13px] font-semibold text-navy">Notifications</p>
-      {items.length === 0 ? (
+
+      {/* Replies from the team first: a message waiting for an answer beats
+          an announcement nobody has to act on. */}
+      {replies.length > 0 && (
+        <ul className="mb-1 space-y-1">
+          {replies.map((c) => (
+            <li key={c.id} className="rounded-xl px-2 py-2 hover:bg-bg-soft">
+              <div className="flex items-start gap-2">
+                <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
+                <div className="min-w-0">
+                  <p className="text-[13px] font-semibold text-navy">Our team replied</p>
+                  <p className="mt-0.5 truncate text-[12.5px] text-navy/60">{c.subject}</p>
+                  <div className="mt-1 flex items-center gap-3 text-[12px]">
+                    <span className="text-navy/40">{when(c.last_message_at)}</span>
+                    <Link to={`/platform/support?c=${c.id}`} className="font-semibold text-primary">
+                      Read it →
+                    </Link>
+                  </div>
+                </div>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+
+      {items.length === 0 && replies.length === 0 ? (
         <EmptyState title="You're all caught up." description="New activity will show up here." />
       ) : (
         <ul className="max-h-96 space-y-1 overflow-y-auto">

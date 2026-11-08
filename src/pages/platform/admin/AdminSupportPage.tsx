@@ -3,6 +3,8 @@ import { Link, useSearchParams } from 'react-router-dom'
 import { ArrowLeft, Headset, Settings2 } from 'lucide-react'
 import SEO from '../../../components/seo/SEO'
 import SectionHeader from '../../../components/ui/SectionHeader'
+import MemberPageReviewQueue from '../../../components/admin/MemberPageReviewQueue'
+import type { MemberPage } from '../../../modules/find/types'
 import EmptyState from '../../../components/ui/EmptyState'
 import SupportConversationList from '../../../components/support/SupportConversationList'
 import SupportMessageList from '../../../components/support/SupportMessageList'
@@ -25,6 +27,19 @@ function message(err: unknown) {
 // answer come first; replies reach the member on the site and, when they
 // aren't in the chat right now, by e-mail.
 export default function AdminSupportPage() {
+  const [queue, setQueue] = useState<MemberPage[]>([])
+  const loadQueue = () =>
+    adminService
+      .listPageQueue()
+      .then((r) => setQueue(r.pages ?? []))
+      // A queue that can't be read must never take the support inbox down
+      // with it: it just isn't shown.
+      .catch(() => setQueue([]))
+  useEffect(() => {
+    void loadQueue()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const [params, setParams] = useSearchParams()
   const selectedId = params.get('c')
   const tab = params.get('tab') === 'closed' ? 'closed' : 'open'
@@ -137,6 +152,12 @@ export default function AdminSupportPage() {
         description="Talk to members: live chat during support hours, tickets outside them."
         className="mb-6"
       />
+
+      {/* Free members' pages waiting for a decision (08/11/2026). It sits
+          here, above the inbox, because the review ARRIVES as a ticket and
+          Support clears the queue — two screens for one job would mean one
+          of them is the forgotten one. */}
+      <MemberPageReviewQueue pages={queue} onDone={() => void loadQueue()} />
 
       {status === 'loading' && !inbox ? (
         <p className="py-16 text-center text-[14px] text-navy/40">Loading support…</p>
