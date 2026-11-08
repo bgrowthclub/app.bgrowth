@@ -92,6 +92,55 @@ async function captchaOk(req: VercelRequest): Promise<boolean> {
  * reason not to complain. The cost is that it can be spammed, which is why
  * it is one row the team can dismiss, never an automatic takedown.
  */
+/**
+ * The public contact form (08/11/2026). Until now the only way to reach
+ * BGrowth was the Support Center, behind the login — so the person
+ * deciding whether to buy, who is exactly the one worth answering, had no
+ * way to ask anything.
+ *
+ * It is stored AND e-mailed: the table is the record the team works from,
+ * the e-mail is what makes someone notice today. If the e-mail fails the
+ * message is still saved; if the insert fails the e-mail still goes.
+ */
+async function contactMessage(req: VercelRequest, db: Db) {
+  const body = (req.body && typeof req.body === 'object' ? req.body : {}) as Record<string, unknown>
+  const name = str(body.name, 100)
+  const email = str(body.email, 200).toLowerCase()
+  const subject = str(body.subject, 150)
+  const message = str(body.message, 5000)
+  if (!name) throw new HttpError(400, 'Tell us your name.')
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new HttpError(400, 'Write a valid e-mail address.')
+  if (!subject) throw new HttpError(400, 'Add a subject.')
+  if (message.length < 5) throw new HttpError(400, 'Write your message.')
+  if (!(await captchaOk(req))) throw new HttpError(400, 'Please try again.')
+
+  const { error } = await db.from('contact_messages').insert({ name, email, subject, message })
+  if (error) console.error('[contact] insert failed:', error)
+
+  const to = process.env.SUPPORT_NOTIFY_EMAIL || 'support@bgrowth.app'
+  const key = process.env.RESEND_API_KEY
+  if (key) {
+    try {
+      await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${key}`, 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          from: process.env.SUPPORT_FROM_EMAIL || 'BGrowth Support <support@bgrowth.app>',
+          to,
+          subject: `[Contact] ${subject}`,
+          html: `<p><strong>${escapeHtml(name)}</strong> &lt;${escapeHtml(email)}&gt; wrote:</p>
+                 <blockquote style="border-left:3px solid #1061EC;margin:0;padding:4px 12px;color:#0A1B4D">${escapeHtml(message).replace(/\n/g, '<br>')}</blockquote>`,
+          // Replying in the mail client answers the visitor directly.
+          reply_to: email,
+        }),
+      })
+    } catch (err) {
+      console.error('[contact] e-mail failed:', err)
+    }
+  }
+  return { ok: true }
+}
+
 async function pageReport(req: VercelRequest, db: Db) {
   const body = (req.body && typeof req.body === 'object' ? req.body : {}) as Record<string, unknown>
   const asked = str(body.slug, 40).toLowerCase()
@@ -262,6 +311,7 @@ const ALWAYS_OPEN_PATHS = [
   '/reset-password',
   '/verify-email',
   '/newsletter',
+  '/contact',
   '/privacy',
   '/terms',
   '/refund-policy',
@@ -470,6 +520,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     // replaced by the page's own ?…): still answer with the link preview.
     if (!action && req.method === 'GET' && PREVIEW_BOT.test(String(req.headers['user-agent'] ?? ''))) action = 'og'
     if (req.method === 'POST' && action === 'lead') return res.status(200).json(await saveLead(req, db))
+    if (req.method === 'POST' && action === 'contact') return res.status(200).json(await contactMessage(req, db))
     if (req.method === 'POST' && action === 'page-report') return res.status(200).json(await pageReport(req, db))
     if (req.method === 'POST' && action === 'page-signup') return res.status(200).json(await pageSignup(req, db))
     if (req.method === 'POST' && action === 'track') return res.status(200).json(await trackEvent(req, db))

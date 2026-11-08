@@ -20,6 +20,10 @@ export const ALWAYS_OPEN_PATHS = [
   '/reset-password',
   '/verify-email',
   '/newsletter',
+  // The contact form stays open while the site is closed (08/11/2026): a
+  // visitor who lands on "Coming soon" is exactly the person we want to be
+  // able to write to us. It shows nothing — it only takes a message.
+  '/contact',
   '/privacy',
   '/terms',
   '/refund-policy',

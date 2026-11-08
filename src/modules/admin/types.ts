@@ -681,3 +681,13 @@ export interface AdminPageReport {
   displayName: string
   pageStatus: string
 }
+
+/** A message from a visitor with no account (08/11/2026, Portal migration 0083). */
+export interface AdminContactMessage {
+  id: string
+  name: string
+  email: string
+  subject: string
+  message: string
+  created_at: string
+}

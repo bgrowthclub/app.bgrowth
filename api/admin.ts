@@ -4126,6 +4126,13 @@ function describe(key: string, b: Body, r: Record<string, any>): Described {
         area: 'plans',
         summary: `Gave the plan “${r.planName}”${b.endsAt ? ` until ${fmtDay(b.endsAt)}` : ' with no end date'} (${String(b.reason ?? 'other')})`,
       }
+    case 'PUT page-action':
+      return {
+        area: 'pages',
+        summary: b.action === 'suspend' ? `Took the page “${r.name ?? r.slug ?? ''}” off the web` : `Asked the owner of “${r.name ?? r.slug ?? ''}” about their page`,
+      }
+    case 'PATCH contact-messages':
+      return { area: 'support', summary: `Closed a message from ${r.email ?? 'a visitor'}` }
     case 'PATCH page-reports':
       return { area: 'pages', summary: `Dismissed a report about “${r.slug ?? 'a page'}”` }
     case 'PUT page-review':
@@ -4421,6 +4428,123 @@ async function handlePageReport(req: VercelRequest, db: Db, admin: Admin) {
   return { id, slug: page?.slug ?? '' }
 }
 
+/**
+ * Messages from visitors with no account (08/11/2026, Portal migration
+ * 0083). Open ones only — the team works from a list of what is left, and
+ * they are answered by e-mail, not in a thread here.
+ */
+async function listContactMessages(db: Db) {
+  const { data, error } = await db
+    .from('contact_messages')
+    .select('id, name, email, subject, message, created_at')
+    .is('handled_at', null)
+    .order('created_at', { ascending: false })
+    .limit(100)
+  if (error) {
+    if (isMissingTable(error)) return { messages: [], ready: false }
+    throw error
+  }
+  return { messages: data ?? [], ready: true }
+}
+
+/** Mark one as dealt with (the reply itself goes by e-mail). */
+async function handleContactMessage(req: VercelRequest, db: Db, admin: Admin) {
+  const id = str(req.body?.id)
+  if (!id) throw new HttpError(400, 'Which message?')
+  const { data, error } = await db
+    .from('contact_messages')
+    .update({ handled_at: new Date().toISOString(), handled_by: admin.id })
+    .eq('id', id)
+    .select('id, email')
+    .single()
+  if (error) throw error
+  return { id, email: data?.email ?? '' }
+}
+
+/**
+ * Write to the owner of a page, in their support conversation — opening one
+ * if the page has none (a page published before the review existed, or one
+ * the team made and handed over). Returns false when there is nobody to
+ * write to: a page with no account behind it.
+ */
+async function messageOwner(req: VercelRequest, db: Db, admin: Admin, page: { id: string; user_id: string | null; display_name: string; review_thread_id: string | null }, body: string) {
+  if (!page.user_id) return false
+  let thread = page.review_thread_id
+  if (!thread) {
+    const { data: conv, error } = await db
+      .from('support_conversations')
+      .insert({ user_id: page.user_id, subject: `Your page — ${page.display_name}` })
+      .select('id')
+      .single()
+    if (error || !conv?.id) return false
+    thread = conv.id
+    await db.from('member_pages').update({ review_thread_id: thread }).eq('id', page.id)
+  }
+  if (!thread) return false
+  await postTeamReply(req, db, admin, thread, body)
+  return true
+}
+
+/**
+ * What the team does about a reported page (08/11/2026), at two speeds —
+ * the owner's decision:
+ *
+ *  - 'suspend': something clear-cut (adult, illegal, an obvious scam). The
+ *    page comes off the web NOW and the owner is told immediately after,
+ *    with the reason. Never silently: a takedown nobody explains becomes an
+ *    angry ticket a day later, and the member deserves to know anyway.
+ *  - 'ask': something arguable ("is this misleading?"). The page stays up
+ *    and the owner is asked about it. The conversation is then the thread
+ *    where it is settled.
+ *
+ * Taking a page down is deliberately NOT on the report-dismissal screen's
+ * quiet path: it is its own action, with its own reason, written to
+ * Activity.
+ */
+async function actOnReportedPage(req: VercelRequest, db: Db, admin: Admin) {
+  const id = str(req.body?.id)
+  const action = str(req.body?.action)
+  const note = str(req.body?.note).slice(0, 1000)
+  if (!id) throw new HttpError(400, 'Which page?')
+  if (action !== 'suspend' && action !== 'ask') throw new HttpError(400, 'Suspend it or ask the owner.')
+  if (!note) throw new HttpError(400, 'Say why — the owner only sees this.')
+
+  const { data: page, error } = await db
+    .from('member_pages')
+    .select('id, slug, display_name, status, user_id, review_thread_id')
+    .eq('id', id)
+    .maybeSingle()
+  if (error) throw error
+  if (!page) throw new HttpError(404, 'Page not found.')
+
+  if (action === 'suspend') {
+    const { error: upError } = await db
+      .from('member_pages')
+      .update({ status: 'draft', review_note: note, reviewed_at: new Date().toISOString(), submitted_at: null })
+      .eq('id', id)
+    if (upError) throw upError
+  }
+
+  // Telling them is not optional, but a failure here must not leave the
+  // page online after we decided it should not be.
+  let told = false
+  try {
+    told = await messageOwner(
+      req,
+      db,
+      admin,
+      page as any,
+      action === 'suspend'
+        ? `We've taken your page bgrowth.app/p/${page.slug} off the web while we look into something:\n\n${note}\n\nNothing was deleted — open “My Business Page”, make the change and send it again. Reply here if you think we got this wrong.`
+        : `A question about your page bgrowth.app/p/${page.slug}:\n\n${note}\n\nYour page is still online. Reply here and we'll sort it out together.`,
+    )
+  } catch (e) {
+    console.error('[page-action] could not tell the owner:', e)
+  }
+
+  return { id, slug: page.slug, name: page.display_name, action, told }
+}
+
 const ROUTES: Record<string, Route> = {
   'GET me': async (_req, _db, admin) => ({ admin }),
   'GET members': (req, db) => listMembers(req, db),
@@ -4480,7 +4604,10 @@ const ROUTES: Record<string, Route> = {
   'GET member-page-stats': (req, db) => memberPageStats(req, db),
   'GET page-queue': (_req, db) => pageReviewQueue(db),
   'GET page-reports': (_req, db) => listPageReports(db),
+  'GET contact-messages': (_req, db) => listContactMessages(db),
+  'PATCH contact-messages': (req, db, admin) => handleContactMessage(req, db, admin),
   'PATCH page-reports': (req, db, admin) => handlePageReport(req, db, admin),
+  'PUT page-action': (req, db, admin) => actOnReportedPage(req, db, admin),
   'PUT page-review': (req, db, admin) => reviewMemberPage(req, db, admin),
   'GET member-page-signups': (req, db) => memberPageSignups(req, db),
   'DELETE member-page-signups': (req, db) => memberPageSignups(req, db),
@@ -4539,6 +4666,10 @@ const SUPPORT_ACTIONS = new Set([
   'PUT page-review',
   'GET page-reports',
   'PATCH page-reports',
+  'GET contact-messages',
+  'PATCH contact-messages',
+  // Support may ask an owner about a page; taking one down is admin work.
+  'PUT page-action',
   'GET members',
   'GET member',
   'POST confirmation',

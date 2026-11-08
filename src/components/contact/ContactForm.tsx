@@ -1,6 +1,7 @@
-import { FormEvent } from 'react'
+import { FormEvent, useState } from 'react'
 import { ArrowRight } from 'lucide-react'
 import Button from '../ui/Button'
+import { getCaptchaToken } from '../../lib/captcha'
 
 export const CONTACT_CATEGORIES = ['General Questions', 'Support', 'Sales', 'Partnerships', 'Business Opportunities', 'Media']
 
@@ -13,11 +14,54 @@ interface Props {
 }
 
 export default function ContactForm({ category, onCategoryChange }: Props) {
-  const handleSubmit = (e: FormEvent<HTMLFormElement>) => {
+  const [sent, setSent] = useState(false)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  // Until 08/11/2026 this did NOTHING: pressing Send ran preventDefault and
+  // stopped there. The page looked complete, the visitor got no error and no
+  // thank-you, and the message reached nobody — worse than having no form,
+  // because it looks like someone is listening.
+  const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
-    // TODO: no Contact API exists yet. Once it does, submit the FormData
-    // here (name, email, subject, category, message) and render the real
-    // success/error result instead of doing nothing.
+    const data = new FormData(e.currentTarget)
+    setBusy(true)
+    setError(null)
+    try {
+      const captchaToken = await getCaptchaToken('contact')
+      const res = await fetch('/api/ingles?action=contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: String(data.get('name') ?? ''),
+          email: String(data.get('email') ?? ''),
+          // The category is part of the subject so the team sees what it is
+          // about in the e-mail's own subject line, without opening anything.
+          subject: `[${String(data.get('category') ?? 'General')}] ${String(data.get('subject') ?? '')}`,
+          message: String(data.get('message') ?? ''),
+          captchaToken,
+        }),
+      })
+      const body = (await res.json().catch(() => ({}))) as { error?: string }
+      if (!res.ok) throw new Error(body.error || 'We couldn’t send your message. Please try again.')
+      setSent(true)
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'We couldn’t send your message. Please try again.')
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  if (sent) {
+    return (
+      <div className="rounded-xl3 border border-emerald-200 bg-emerald-50/70 p-6 sm:p-8">
+        <h3 className="font-display text-lg font-bold text-emerald-900">Your message is on its way.</h3>
+        <p className="mt-2 text-[14.5px] leading-relaxed text-emerald-900/80">
+          A real person reads these, and we usually reply within one or two business days. If you don’t hear from us,
+          check your spam folder before writing again — that is where we tend to end up.
+        </p>
+      </div>
+    )
   }
 
   return (
@@ -82,8 +126,10 @@ export default function ContactForm({ category, onCategoryChange }: Props) {
         </div>
       </div>
 
-      <Button type="submit" className="mt-6 w-full sm:w-auto" icon={<ArrowRight size={15} />}>
-        Send Message
+      {error && <p className="mt-5 rounded-2xl bg-red-50 px-4 py-3 text-[13.5px] text-red-600">{error}</p>}
+
+      <Button type="submit" disabled={busy} className="mt-6 w-full sm:w-auto" icon={busy ? undefined : <ArrowRight size={15} />}>
+        {busy ? 'Sending…' : 'Send Message'}
       </Button>
     </form>
   )

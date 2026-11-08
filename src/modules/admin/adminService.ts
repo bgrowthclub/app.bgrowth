@@ -17,7 +17,7 @@ import type {
   NewGrantInput, AdminCatalogCategories, AdminCategory,
   AdminNewsletterCampaign, AdminNewsletterDraft, AdminNewsletterOverview, AdminReview, AdminMemberDashboard, DashboardPeriod, AdminDeletionRequest, AdminCatalogHealth, AdminSiteSearches, AdminProductMembers,
   AdminBundle, AdminBundleDraft, AdminBundlesOverview,
-  AdminTeamMember, AdminActivityPage, AdminMemberPageDraft, AdminMemberPagesOverview, AdminPageReport,
+  AdminTeamMember, AdminActivityPage, AdminMemberPageDraft, AdminMemberPagesOverview, AdminPageReport, AdminContactMessage,
   AdminWixContactsOverview, WixContactGroup,
   AdminPlan, AdminPlanDraft, AdminPlansOverview, AdminMemberPlans, MemberPlanReason, AdminPlanSubscribers,
   AdminCouponsOverview, AdminCouponDraft, AdminPlanProducts } from './types'
@@ -348,8 +348,19 @@ export const adminService = {
   listPageQueue() {
     return call<{ pages: MemberPage[]; ready: boolean }>('GET', 'page-queue')
   },
+  listContactMessages() {
+    return call<{ messages: AdminContactMessage[]; ready: boolean }>('GET', 'contact-messages')
+  },
+  async closeContactMessage(id: string) {
+    await call('PATCH', 'contact-messages', undefined, { id })
+  },
   listPageReports() {
     return call<{ reports: AdminPageReport[]; ready: boolean }>('GET', 'page-reports')
+  },
+  // Two speeds on a reported page (08/11/2026): take it down now, or ask
+  // the owner about it and leave it online.
+  async actOnReportedPage(pageId: string, action: 'suspend' | 'ask', note: string) {
+    return call<{ told: boolean }>('PUT', 'page-action', undefined, { id: pageId, action, note })
   },
   async dismissPageReport(id: string) {
     await call('PATCH', 'page-reports', undefined, { id })

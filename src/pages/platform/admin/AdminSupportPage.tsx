@@ -5,6 +5,7 @@ import SEO from '../../../components/seo/SEO'
 import SectionHeader from '../../../components/ui/SectionHeader'
 import MemberPageReviewQueue from '../../../components/admin/MemberPageReviewQueue'
 import MemberPageReports from '../../../components/admin/MemberPageReports'
+import ContactMessages from '../../../components/admin/ContactMessages'
 import type { MemberPage } from '../../../modules/find/types'
 import EmptyState from '../../../components/ui/EmptyState'
 import SupportConversationList from '../../../components/support/SupportConversationList'
@@ -160,6 +161,7 @@ export default function AdminSupportPage() {
           of them is the forgotten one. */}
       <MemberPageReviewQueue pages={queue} onDone={() => void loadQueue()} />
       <MemberPageReports />
+      <ContactMessages />
 
       {status === 'loading' && !inbox ? (
         <p className="py-16 text-center text-[14px] text-navy/40">Loading support…</p>
