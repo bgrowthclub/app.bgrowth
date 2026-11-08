@@ -8,7 +8,7 @@ import MemberPageView from './MemberPageView'
 import ResponsiveFrame from '../ui/ResponsiveFrame'
 import { shrinkImage } from '../../lib/shrinkImage'
 import { MEMBER_PAGE_LABELS, WHATSAPP_JOIN_RE, videoEmbed } from '../../modules/find/memberPageService'
-import { BLOCK_TYPES, LEGACY_BLOCKS, PAGE_BACKGROUNDS, PAGE_COLORS, SINGLE_BLOCK_TYPES, blockId, memberPageTemplates, mergeDuplicateSections, switchTemplateBlocks, templateBlocks, templatePreview } from '../../modules/find/memberPageTemplates'
+import { BLOCK_TYPES, LEGACY_BLOCKS, PAGE_BACKGROUNDS, PAGE_COLORS, SINGLE_BLOCK_TYPES, blockId, fitBlocks, memberPageTemplates, mergeDuplicateSections, switchTemplateBlocks, templateBlocks, templatePreview } from '../../modules/find/memberPageTemplates'
 import type {
   MemberPage,
   MemberPageBlock,
@@ -79,13 +79,6 @@ function toSlug(text: string) {
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-+|-+$/g, '')
     .slice(0, 40)
-}
-
-// Another model's sections, keeping what was written; a Pro page (keepExtra
-// false) gets exactly the model's sections.
-function fitBlocks(templateId: string, language: MemberPage['language'], current: MemberPageBlock[], keepExtra: boolean) {
-  const next = switchTemplateBlocks(templateId, language, current)
-  return keepExtra ? next : next.slice(0, templateBlocks(templateId, language).length)
 }
 
 const PRODUCT_CATEGORY_OPTIONS: MemberPageProductCategory[] = ['car', 'work', 'home', 'tech', 'travel', 'finance', 'learning', 'other']

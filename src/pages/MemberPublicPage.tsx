@@ -4,14 +4,16 @@ import SEO from '../components/seo/SEO'
 import MemberPageView from '../components/find/MemberPageView'
 import {
   getPublishedMemberPage,
+  getMemberPageViewRules,
   isMemberPageIndexable,
   trackMemberPageCategory,
   trackMemberPageClick,
   trackMemberPageSearch,
   trackMemberPageView,
 } from '../modules/find/memberPageService'
+import type { MemberPageViewRules } from '../modules/find/memberPageService'
 import type { MemberPage } from '../modules/find/types'
-import { PAGE_BACKGROUNDS } from '../modules/find/memberPageTemplates'
+import { PAGE_BACKGROUNDS, pageUnderPlan } from '../modules/find/memberPageTemplates'
 
 // /p/:slug — a member's public page (BGrowth Find™, Portal migration 0044).
 // Rendered "bare" by AppLayout: the member's page, not BGrowth's, so no
@@ -23,6 +25,10 @@ export default function MemberPublicPage() {
   // undefined while the answer is in flight: nothing is written to the head
   // until it lands, so a page is never briefly marked the wrong way.
   const [indexable, setIndexable] = useState<boolean | undefined>(undefined)
+  // Which model, and how much of it, the owner's plan allows today
+  // (08/11/2026). undefined = still asking; null = no answer, draw the page
+  // as stored.
+  const [rules, setRules] = useState<MemberPageViewRules | null | undefined>(undefined)
 
   useEffect(() => {
     let cancelled = false
@@ -33,7 +39,16 @@ export default function MemberPublicPage() {
         setPage(p)
         // An old address redirects below; the new one counts the visit.
         if (p && p.slug === slug.toLowerCase()) trackMemberPageView(p.slug)
-        if (p) void isMemberPageIndexable(p.id).then((ok: boolean) => !cancelled && setIndexable(ok))
+        if (p) {
+          void getMemberPageViewRules(p.id).then((r) => {
+            if (cancelled) return
+            setRules(r)
+            // 0082 answers both questions at once; the older call is the
+            // fallback for a database that only has 0081.
+            if (r) setIndexable(r.indexable)
+            else void isMemberPageIndexable(p.id).then((ok: boolean) => !cancelled && setIndexable(ok))
+          })
+        }
       })
       .catch(() => {
         if (!cancelled) setPage(null)
@@ -58,8 +73,16 @@ export default function MemberPublicPage() {
         </div>
       </div>
     )
-  if (page === undefined) return <div className="min-h-screen bg-bg-soft" />
+  // Wait for the plan rules before drawing a page its owner manages: the
+  // alternative is a flash of the full page before it is trimmed, which is
+  // precisely the content their plan no longer includes (08/11/2026). A
+  // team-made page is not governed by a plan and draws at once.
+  if (page === undefined || (page.owner_managed && rules === undefined)) return <div className="min-h-screen bg-bg-soft" />
   if (page.slug !== slug.toLowerCase()) return <Navigate to={`/p/${page.slug}${window.location.search}`} replace />
+
+  // The page as the owner's plan allows it today. Nothing was changed in
+  // the database — put the plan back and the page comes back whole.
+  const shown = pageUnderPlan(page, rules ?? null)
 
   // The page's own background tint fills the whole window (default: soft grey).
   const background = PAGE_BACKGROUNDS.find((c) => c.id === page.theme?.background)
@@ -73,7 +96,7 @@ export default function MemberPublicPage() {
         noIndex={indexable === false}
       />
       <MemberPageView
-        page={page}
+        page={shown}
         onLinkClick={(target) => trackMemberPageClick(page.slug, target)}
         onSearch={(query, found) => trackMemberPageSearch(page.slug, query, found)}
         onCategory={(category) => trackMemberPageCategory(page.slug, category)}

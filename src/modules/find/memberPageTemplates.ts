@@ -64,6 +64,56 @@ export const PAGE_BACKGROUNDS: { id: MemberPageBackground; label: string; hex: s
 // one of each per page — a second copy would only repeat the same items.
 export const SINGLE_BLOCK_TYPES: MemberPageBlockType[] = ['hero', 'highlights', 'services', 'about', 'products', 'signup']
 
+/**
+ * Another model's sections, keeping what was written. keepExtra false — a
+ * "part of the page" plan — gets exactly the model's sections and nothing
+ * more.
+ *
+ * It used to live inside MemberPageBuilder. It moved here on 08/11/2026
+ * because the PUBLIC page needs the same rule: a page is shown under the
+ * plan its owner has today, so an Enterprise page whose owner dropped to
+ * Pro, Starter or Free is fitted to the model their plan allows. Two copies
+ * of this would have meant the editor and the web disagreeing about what
+ * the page is.
+ */
+export function fitBlocks(templateId: string, language: MemberPage['language'], current: MemberPageBlock[], keepExtra: boolean) {
+  const next = switchTemplateBlocks(templateId, language, current)
+  return keepExtra ? next : next.slice(0, templateBlocks(templateId, language).length)
+}
+
+/**
+ * The page as the public should see it under its owner's plan TODAY.
+ *
+ * NOTHING IS CHANGED IN THE DATABASE. The member's own content stays whole;
+ * this only decides what is drawn. Going back up a plan brings the page
+ * back exactly as it was written — which is the whole reason it works this
+ * way instead of converting the page on downgrade.
+ */
+export function pageUnderPlan(
+  page: MemberPage,
+  rules: { template?: string | null; level?: string | null } | null,
+): MemberPage {
+  // A page the team made is not governed by the member's plan.
+  if (!rules || !page.owner_managed) return page
+  const template = rules.template || page.template || 'professional'
+  const changed = template !== (page.template ?? '')
+  // 'partial' means the model's sections as they are, so a page that drifted
+  // (or was built on a higher plan) is fitted back to them.
+  if (!changed && rules.level !== 'partial') return page
+
+  const own = page.blocks ?? []
+  const fitted = fitBlocks(template, page.language, own, false)
+  // A section the member chose to HIDE must stay hidden. Fitting rebuilds
+  // the list from the model, and without this a downgrade would publish
+  // something they had deliberately taken down.
+  const hidden = new Set(own.filter((b) => b.hidden).map((b) => b.type))
+  return {
+    ...page,
+    template,
+    blocks: fitted.map((b) => (hidden.has(b.type) ? { ...b, hidden: true } : b)),
+  }
+}
+
 /** The buttons one contact block shows: its own, or the page's (older pages). */
 export function blockLinks(page: { links: MemberPageLink[] }, block: MemberPageBlock): MemberPageLink[] {
   return block.data?.links ?? page.links

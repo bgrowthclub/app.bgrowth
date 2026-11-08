@@ -299,6 +299,29 @@ async function accountCall<T>(method: 'GET' | 'PUT' | 'POST' | 'DELETE', resourc
  * is "yes": that is exactly how every page behaved before this existed, so
  * a glitch never quietly drops a paying member out of Google.
  */
+export interface MemberPageViewRules {
+  template: string | null
+  level: string | null
+  indexable: boolean
+}
+
+/**
+ * How this page must be shown under its owner's plan today (08/11/2026,
+ * Portal migration 0082): which model, how much of it, and whether search
+ * engines may list it.
+ *
+ * On any error, or a database without 0082, the answer is null and the page
+ * is drawn exactly as it is stored — which is how it behaved before this
+ * existed. A glitch must never silently strip someone's page.
+ */
+export async function getMemberPageViewRules(pageId: string): Promise<MemberPageViewRules | null> {
+  if (!supabase) return null
+  const { data, error } = await supabase.rpc('member_page_view_rules', { p_page: pageId })
+  if (error) return null
+  const row = (Array.isArray(data) ? data[0] : data) as MemberPageViewRules | undefined
+  return row ?? null
+}
+
 export async function isMemberPageIndexable(pageId: string): Promise<boolean> {
   if (!supabase) return true
   const { data, error } = await supabase.rpc('member_page_indexable', { p_page: pageId })
