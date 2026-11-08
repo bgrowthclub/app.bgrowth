@@ -8,6 +8,7 @@ import ReportPageLink from './ReportPageLink'
 import type { CSSProperties } from 'react'
 import { MEMBER_PAGE_LABELS, memberLinkHref, memberLinkLabel, videoEmbed } from '../../modules/find/memberPageService'
 import { PAGE_BACKGROUNDS, PAGE_COLORS, blockLinks, pageBlocks, pageSkin } from '../../modules/find/memberPageTemplates'
+import { isUsableLink } from '../../modules/find/memberPageService'
 import type { MemberPage, MemberPageBlock, MemberPageProductCategory } from '../../modules/find/types'
 
 const ICONS = MEMBER_LINK_ICONS
@@ -46,7 +47,8 @@ export default function MemberPageView({ page, preview = false, onLinkClick, onS
   const t = MEMBER_PAGE_LABELS[page.language] ?? MEMBER_PAGE_LABELS.en
   // The page's own first button — what the "cta" block opens. A contact
   // block has its own buttons (27/10/2026) and reads them below.
-  const [pagePrimary] = page.links
+  // A button that goes nowhere is worse than no button (08/11/2026).
+  const [pagePrimary] = page.links.filter((l) => isUsableLink(l.type, l.url))
   const linkProps = (type: string, url: string, target: string) =>
     preview
       ? { href: '#', onClick: (e: React.MouseEvent) => e.preventDefault() }

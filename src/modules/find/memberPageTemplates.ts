@@ -1,3 +1,4 @@
+import { isUsableLink } from './memberPageService'
 import type { MemberPage, MemberPageBackground, MemberPageBlock, MemberPageBlockType, MemberPageColor, MemberPageLink } from './types'
 
 // Ready-made member pages ("My Business Page"): four models — four looks of
@@ -114,9 +115,15 @@ export function pageUnderPlan(
   }
 }
 
-/** The buttons one contact block shows: its own, or the page's (older pages). */
+/**
+ * The buttons one contact block shows: its own, or the page's (older pages).
+ * Buttons that go nowhere are dropped here, in the one place every view
+ * asks for them (08/11/2026) — a page saved before today may carry a link
+ * that is only "https://", and a good-looking button that does nothing on
+ * click is worse than no button at all.
+ */
 export function blockLinks(page: { links: MemberPageLink[] }, block: MemberPageBlock): MemberPageLink[] {
-  return block.data?.links ?? page.links
+  return (block.data?.links ?? page.links).filter((l) => isUsableLink(l.type, l.url))
 }
 
 let seq = 0

@@ -8,6 +8,7 @@ import ReportPageLink from './ReportPageLink'
 import { usePageTexts } from '../../lib/usePageTexts'
 import { MEMBER_PAGE_LABELS, memberLinkHref, memberLinkLabel, videoEmbed } from '../../modules/find/memberPageService'
 import { PAGE_BACKGROUNDS, PAGE_COLORS, blockLinks, pageBlocks } from '../../modules/find/memberPageTemplates'
+import { isUsableLink } from '../../modules/find/memberPageService'
 import type { MemberPageSkin } from '../../modules/find/memberPageTemplates'
 import type { MemberPage, MemberPageBlock, MemberPageHighlight, MemberPageLink, MemberPageProductCategory } from '../../modules/find/types'
 
@@ -99,7 +100,9 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
     ...(color ? { '--color-primary-rgb': color.rgb, '--color-primary-accent-rgb': color.rgb, '--color-primary': `rgb(${color.rgb})`, '--color-primary-accent': `rgb(${color.rgb})` } : {}),
     ...(background ? { backgroundColor: background.hex } : {}),
   } as CSSProperties
-  const [primary, secondary] = page.links
+  // A button that goes nowhere is worse than no button (08/11/2026).
+  const usableLinks = page.links.filter((l) => isUsableLink(l.type, l.url))
+  const [primary, secondary] = usableLinks
   // Affiliate Picks shows the standard affiliate note in the hero, before the
   // picks — unless the member switched it off in the products section.
   const siteText = usePageTexts()
@@ -180,10 +183,10 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
               {headline && <p className="mt-4 text-[17px] text-white/80">{name}</p>}
               {buttons(true)}
             </div>
-            {page.links.length > 0 && (
+            {usableLinks.length > 0 && (
               <div className="rounded-2xl bg-white p-6 text-navy shadow-softer">
                 <p className="font-display text-xl font-bold">{t.contact}</p>
-                <div className="mt-4 grid gap-2">{page.links.slice(0, 5).map((l, i) => button(l, i === 0 ? 'solid' : 'outline'))}</div>
+                <div className="mt-4 grid gap-2">{usableLinks.slice(0, 5).map((l, i) => button(l, i === 0 ? 'solid' : 'outline'))}</div>
               </div>
             )}
           </div>

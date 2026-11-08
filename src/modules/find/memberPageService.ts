@@ -82,6 +82,24 @@ export const MEMBER_PAGE_LABELS = {
 } as const
 
 // A link as something a phone can open: e-mail → mailto:, WhatsApp → wa.me.
+/**
+ * Would this button actually go somewhere? (08/11/2026.) A web address that
+ * is only a scheme — "https://" — used to save fine and draw a button that
+ * did nothing on click. Saving is now refused, but pages saved before today
+ * already carry those, so the views drop them instead of showing a dead
+ * button. A phone or WhatsApp with no digits is the same mistake.
+ */
+export function isUsableLink(type: string, url: string): boolean {
+  const value = (url ?? '').trim()
+  if (!value) return false
+  if (type === 'email') return /[^\s@]+@[^\s@]+\.[^\s@]+/.test(value)
+  if (type === 'phone' || type === 'whatsapp') {
+    return /^https?:\/\//i.test(value) ? /^https?:\/\/[^/\s.]+\.[^/\s]/i.test(value) : value.replace(/\D/g, '').length >= 8
+  }
+  const full = /^https?:\/\//i.test(value) ? value : `https://${value}`
+  return /^https?:\/\/[^/\s.]+\.[^/\s]/i.test(full)
+}
+
 export function memberLinkHref(type: string, url: string): string {
   const value = url.trim()
   if (type === 'email') return value.startsWith('mailto:') ? value : `mailto:${value}`

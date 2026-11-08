@@ -824,6 +824,13 @@ function readMyPage(b: Record<string, any>) {
     if (type === 'whatsapp_group' && !/^https:\/\/(chat\.whatsapp\.com\/|(www\.)?whatsapp\.com\/channel\/)\S+$/i.test(url)) {
       throw new HttpError(400, 'Paste the full link: a group invite (https://chat.whatsapp.com/…) or a channel (https://whatsapp.com/channel/…).')
     }
+    // A web address has to have something after the scheme (08/11/2026).
+    // "https://" on its own passed every check, saved, and drew a perfectly
+    // good-looking button that went nowhere when clicked — the kind of
+    // thing nobody notices until a customer does.
+    if (/^https?:\/\//i.test(url) && !/^https?:\/\/[^/\s.]+\.[^/\s]/i.test(url)) {
+      throw new HttpError(400, `“${url}” isn’t a complete address — it needs the site too, like https://example.com.`)
+    }
     if ((type === 'whatsapp' || type === 'phone') && !/^https?:\/\//.test(url) && url.replace(/\D/g, '').length < 8) {
       throw new HttpError(400, 'Write the WhatsApp number with country code (for example +1 555 123 4567).')
     }
