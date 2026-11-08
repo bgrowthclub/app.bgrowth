@@ -30,7 +30,10 @@ function price(regular: number | null, sale: number | null, per: string) {
 export function planBenefits(plan: Pick<AdminPlan, 'entitlements'>): string[] {
   const e = plan.entitlements ?? {}
   const out: string[] = []
-  if (e.memberPage) out.push(e.memberPage === 'full' ? 'Member page (all)' : 'Member page (part)')
+  if (e.memberPage) {
+    const pages = e.pages && e.pages > 1 ? `${e.pages} pages` : 'Member page'
+    out.push(`${pages} (${e.memberPage === 'full' ? 'all' : 'part'})`)
+  }
   if (e.prioritySupport) out.push('Priority support')
   if (e.pageInsights) out.push('Page insights')
   if (e.includesAll) out.push('Every product included')

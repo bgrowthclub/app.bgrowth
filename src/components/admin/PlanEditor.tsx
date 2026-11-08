@@ -178,6 +178,26 @@ export default function PlanEditor({ plan, nextRank, yearlyDiscountPercent, onSa
             <span className="mt-1 block text-[12px] text-navy/40">Part: a ready-made model as it is, one featured item, no numbers. Whole: sections, look, address, numbers.</span>
           </label>
           {ent.memberPage && (
+            <label className="block">
+              <span className="text-[13px] font-semibold text-navy">How many pages this plan gives</span>
+              <input
+                className={`${INPUT} mt-1 max-w-[120px]`}
+                type="number"
+                min={1}
+                max={10}
+                value={ent.pages ?? ''}
+                placeholder="1"
+                onChange={(e) => {
+                  const n = Math.round(Number(e.target.value))
+                  setEnt({ ...ent, pages: Number.isFinite(n) && n > 0 ? Math.min(10, n) : undefined })
+                }}
+              />
+              <span className="mt-1 block text-[12px] text-navy/40">
+                Empty = 1. The team can give one member more in Admin → Members, on top of this.
+              </span>
+            </label>
+          )}
+          {ent.memberPage && (
             <div>
               <span className="text-[13px] font-semibold text-navy">Page models this plan allows</span>
               <span className="mb-2 block text-[12px] text-navy/40">None ticked = all models.</span>

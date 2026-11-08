@@ -101,6 +101,15 @@ export interface MemberPageBlockData {
   links?: MemberPageLink[]
 }
 
+/** One line of the member's list of pages (07/11/2026). */
+export interface MemberPageSummary {
+  id: string
+  slug: string
+  display_name: string
+  status: 'draft' | 'published'
+  updated_at?: string | null
+}
+
 export interface MemberPageBlock {
   id: string
   type: MemberPageBlockType

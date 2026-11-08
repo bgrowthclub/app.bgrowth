@@ -699,6 +699,21 @@ async function memberPageInsights(db: Db, userId: string): Promise<boolean> {
   return (plans ?? []).some((ent) => ent.pageInsights === true)
 }
 
+// How many pages this member may have (07/11/2026): the plan's number plus
+// the team's grant. portal.member_page_allowance() (Portal migration 0077)
+// is the one place that rule lives, so the site and the database can never
+// disagree about it.
+//
+// Before 0077 is applied the function doesn't exist: we then fall back to
+// the old behaviour — one page for a plan that includes one — so the site
+// keeps working while the migration waits.
+async function memberPageAllowance(db: Db, userId: string): Promise<number> {
+  const { data, error } = await db.rpc('member_page_allowance', { p_user: userId })
+  if (!error && typeof data === 'number') return Math.max(0, data)
+  const plans = await livePlanEntitlements(db, userId)
+  return (plans ?? []).some((ent) => ent.memberPage === 'partial' || ent.memberPage === 'full') ? 1 : 0
+}
+
 function slugFrom(text: string) {
   return text
     .normalize('NFD')
@@ -790,24 +805,41 @@ function readMyPage(b: Record<string, any>) {
 
 async function myPageAction(req: VercelRequest, db: Db, user: { id: string }, resource: string) {
   const level = await memberPageLevel(db, user.id)
-  const { data: existing, error } = await db
+  // Every page this member owns, oldest first (07/11/2026 — a plan can give
+  // more than one). Which one a request is about comes from ?page=<id> or
+  // the body's id; with neither, it is the first, exactly as it was when a
+  // member could only ever have one.
+  const { data: owned, error } = await db
     .from('member_pages')
     .select('*')
     .eq('user_id', user.id)
     .order('created_at')
-    .limit(1)
-    .maybeSingle()
   if (error) {
     const code = (error as { code?: string }).code
     if (code === '42703' || code === '42P01' || code === 'PGRST205') throw new HttpError(503, 'Your page isn’t available yet (database update pending).')
     throw error
   }
 
+  const pages = (owned ?? []) as any[]
+  const wantedId = pageText((req.query as Record<string, unknown>)?.page, 60) || pageText(req.body?.id, 60)
+  // An id that isn't this member's is not an error to explain — it simply
+  // addresses nothing, and the request falls back to their first page.
+  const existing = (wantedId ? pages.find((p) => p.id === wantedId) : undefined) ?? pages[0]
+
   const templates = level ? await memberPageTemplates(db, user.id) : null
   const selfService = await memberPagesSelfService(db)
   if (resource === 'my-page' && req.method === 'GET') {
     const insights = existing?.insights_granted === true || (await memberPageInsights(db, user.id))
-    return { level, templates, selfService, insights, page: existing ?? null }
+    return {
+      level,
+      templates,
+      selfService,
+      insights,
+      allowance: await memberPageAllowance(db, user.id),
+      // The light list the screen draws before anything is opened.
+      pages: pages.map((p) => ({ id: p.id, slug: p.slug, display_name: p.display_name, status: p.status, updated_at: p.updated_at })),
+      page: existing ?? null,
+    }
   }
   // The page's e-mail list (Sprint 139, Portal migration 0065) — the owner's,
   // including a page the team made for them.
@@ -894,6 +926,22 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string }, re
     const base = slugFrom(input.display_name).slice(0, 34) || 'page'
     slug = base.length >= 3 ? base : `${base}-page`
     for (let n = 2; RESERVED_PAGE_SLUGS.has(slug) || (await slugTaken(db, slug)); n += 1) slug = `${base}-${n}`
+  }
+
+  if (!existing) {
+    // A new page: only while they are under what their plan and the team
+    // allow. Checked here and not in the database because a subscriber
+    // never writes to member_pages directly — every save comes through
+    // this function with the service role.
+    const allowance = await memberPageAllowance(db, user.id)
+    if (pages.length >= allowance) {
+      throw new HttpError(
+        403,
+        allowance <= 1
+          ? 'Your plan includes one page. Choose a plan with more, or ask us for another one.'
+          : `Your plan includes ${allowance} pages, and you already have ${pages.length}.`,
+      )
+    }
   }
 
   const moved = existing ? await previousSlugsAfter(db, existing.id, existing.slug, slug) : {}

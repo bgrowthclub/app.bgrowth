@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
-import { Check, Copy, ExternalLink, MessageCircle, Palette, Rocket, Share2, Sparkles } from 'lucide-react'
+import { Check, Copy, ExternalLink, MessageCircle, Palette, Plus, Rocket, Share2, Sparkles } from 'lucide-react'
 import SEO from '../../components/seo/SEO'
 import mypageHero from '../../assets/mypage-hero.webp'
 import Button from '../../components/ui/Button'
@@ -9,11 +9,11 @@ import MemberPageBuilder from '../../components/find/MemberPageBuilder'
 import MemberPageSignupsList from '../../components/find/MemberPageSignupsList'
 import { useIdentity } from '../../modules/identity/IdentityContext'
 import { getMyMemberPageStats, myPageService } from '../../modules/find/memberPageService'
-import type { MemberPage, MemberPageLevel, MemberPageStats } from '../../modules/find/types'
+import type { MemberPage, MemberPageLevel, MemberPageStats, MemberPageSummary } from '../../modules/find/types'
 
 const TEXT = {
-  en: { titleLead: 'My', titleAccent: 'Business', titleTail: 'Page', title: 'My Business Page', description: 'A simple professional page for your business — share it anywhere.', open: 'Open', edit: 'Edit', numbers: 'Numbers', contacts: 'Contacts', copy: 'Copy link', copied: 'Copied', share: 'Share', whatsapp: 'WhatsApp', live: 'Live', draft: 'Draft', draftAddress: 'Once you publish, it will be at' },
-  pt: { titleLead: 'Minha', titleAccent: 'página', titleTail: 'de negócio', title: 'Minha página de negócio', description: 'Uma página profissional simples para o seu negócio — compartilhe onde quiser.', open: 'Abrir', edit: 'Editar', numbers: 'Números', contacts: 'Contatos', copy: 'Copiar link', copied: 'Copiado', share: 'Compartilhar', whatsapp: 'WhatsApp', live: 'No ar', draft: 'Rascunho', draftAddress: 'Quando você publicar, ela fica em' },
+  en: { titleLead: 'My', titleAccent: 'Business', titleTail: 'Page', title: 'My Business Page', description: 'A simple professional page for your business — share it anywhere.', open: 'Open', edit: 'Edit', numbers: 'Numbers', contacts: 'Contacts', copy: 'Copy link', copied: 'Copied', share: 'Share', whatsapp: 'WhatsApp', live: 'Live', draft: 'Draft', draftAddress: 'Once you publish, it will be at', newPage: 'New page', allUsed: (n: number) => `${n} of ${n} pages used` },
+  pt: { titleLead: 'Minha', titleAccent: 'página', titleTail: 'de negócio', title: 'Minha página de negócio', description: 'Uma página profissional simples para o seu negócio — compartilhe onde quiser.', open: 'Abrir', edit: 'Editar', numbers: 'Números', contacts: 'Contatos', copy: 'Copiar link', copied: 'Copiado', share: 'Compartilhar', whatsapp: 'WhatsApp', live: 'No ar', draft: 'Rascunho', draftAddress: 'Quando você publicar, ela fica em', newPage: 'Nova página', allUsed: (n: number) => `${n} de ${n} páginas usadas` },
 }
 
 // The page's address with copy and share buttons.
@@ -155,6 +155,12 @@ export default function MyPagePage() {
   // What visitors looked for (01/11/2026): their plan includes it, or the
   // team switched it on for this page.
   const [insights, setInsights] = useState(false)
+  // Several pages per member (07/11/2026): the list, how many the plan and
+  // the team's grant allow, and which one is open. `creating` is the state
+  // between pressing "New page" and the first save, when there is no id yet.
+  const [pages, setPages] = useState<MemberPageSummary[]>([])
+  const [allowance, setAllowance] = useState(1)
+  const [creating, setCreating] = useState(false)
   const [tab, setTab] = useState<'edit' | 'numbers' | 'contacts'>('edit')
   const [days, setDays] = useState(30)
   const [stats, setStats] = useState<MemberPageStats | null>(null)
@@ -170,6 +176,8 @@ export default function MyPagePage() {
         setTemplates(r.templates ?? null)
         setSelfService(r.selfService === true)
         setInsights(r.insights === true)
+        setPages(r.pages ?? (r.page ? [{ id: r.page.id, slug: r.page.slug, display_name: r.page.display_name, status: r.page.status }] : []))
+        setAllowance(typeof r.allowance === 'number' ? r.allowance : 1)
         setPage(r.page)
       })
       .catch((err) => {
@@ -177,6 +185,23 @@ export default function MyPagePage() {
         setPage(null)
       })
   }, [user])
+
+  const openPage = (id: string) => {
+    setCreating(false)
+    setPage(undefined)
+    setError(null)
+    setNotice(null)
+    myPageService
+      .get(id)
+      .then((r) => {
+        setInsights(r.insights === true)
+        setPage(r.page)
+      })
+      .catch((err) => {
+        setError(err instanceof Error ? err.message : 'Couldn’t load that page.')
+        setPage(null)
+      })
+  }
 
   const teamPage = page ? !page.owner_managed : Boolean(linked)
   const statsPageId = page?.id ?? linked?.id
@@ -232,6 +257,48 @@ export default function MyPagePage() {
       {notice && <p className="mb-6 rounded-xl bg-emerald-50 px-4 py-3 text-[13.5px] text-emerald-700">{notice}</p>}
       {error && <p className="mb-6 text-[14px] text-red-500">{error}</p>}
 
+      {/* The member's pages (07/11/2026). It only appears when there is
+          something to choose between — one page and one allowed is the
+          case nearly everyone is in, and a switcher there would be noise. */}
+      {canEdit && (pages.length > 1 || allowance > 1) && (
+        <div className="mb-6 flex flex-wrap items-center gap-2">
+          {pages.map((p) => {
+            const open = !creating && page?.id === p.id
+            return (
+              <button
+                key={p.id}
+                type="button"
+                onClick={() => openPage(p.id)}
+                className={`inline-flex items-center gap-2 rounded-full px-4 py-1.5 text-[13px] font-semibold transition-colors ${
+                  open ? 'bg-primary text-white' : 'bg-bg-soft text-navy/65 hover:text-navy'
+                }`}
+              >
+                <span className={`h-1.5 w-1.5 rounded-full ${p.status === 'published' ? 'bg-emerald-500' : 'bg-amber-500'}`} aria-hidden />
+                {p.display_name || p.slug}
+              </button>
+            )
+          })}
+          {pages.length < allowance ? (
+            <button
+              type="button"
+              onClick={() => {
+                setCreating(true)
+                setPage(null)
+                setNotice(null)
+                setError(null)
+              }}
+              className={`inline-flex items-center gap-1.5 rounded-full px-4 py-1.5 text-[13px] font-semibold transition-colors ${
+                creating ? 'bg-primary text-white' : 'border border-dashed border-navy/20 text-navy/55 hover:border-primary/40 hover:text-navy'
+              }`}
+            >
+              <Plus size={14} aria-hidden /> {t.newPage}
+            </button>
+          ) : (
+            <span className="text-[12.5px] text-navy/40">{t.allUsed(allowance)}</span>
+          )}
+        </div>
+      )}
+
       {tabs.length > 1 && (
         <div className="mb-6 flex gap-2">
           {tabs.map((id) => (
@@ -256,8 +323,13 @@ export default function MyPagePage() {
           readOnly={!selfService}
           upload={(dataUrl) => myPageService.uploadImage(dataUrl)}
           onSave={async (draft) => {
-            const saved = await myPageService.save(draft)
+            const saved = await myPageService.save(draft, creating ? undefined : page?.id)
+            setCreating(false)
             setPage(saved)
+            setPages((list) => {
+              const line = { id: saved.id, slug: saved.slug, display_name: saved.display_name, status: saved.status }
+              return list.some((p) => p.id === saved.id) ? list.map((p) => (p.id === saved.id ? line : p)) : [...list, line]
+            })
             setNotice(saved.status === 'published' ? `Your page is live at bgrowth.app/p/${saved.slug}.` : 'Saved as a draft — publish it when you’re ready.')
             window.scrollTo({ top: 0, behavior: 'smooth' })
           }}

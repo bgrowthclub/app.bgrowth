@@ -1,5 +1,5 @@
 import { supabase } from '../identity/supabase/supabaseClient'
-import type { MemberPage, MemberPageDraft, MemberPageLevel, MemberPageSignup, MemberPageStats } from './types'
+import type { MemberPage, MemberPageDraft, MemberPageLevel, MemberPageSignup, MemberPageStats, MemberPageSummary } from './types'
 
 // Reads a published member page (row-level security only returns
 // published ones). Writes go through api/admin.ts.
@@ -291,7 +291,9 @@ async function accountCall<T>(method: 'GET' | 'PUT' | 'POST' | 'DELETE', resourc
 }
 
 export const myPageService = {
-  get() {
+  // Without an id: the member's first page, plus the list and how many they
+  // may have (07/11/2026). With one: that page opened for editing.
+  get(id?: string) {
     return accountCall<{
       level: MemberPageLevel | null
       templates?: string[] | null
@@ -299,11 +301,16 @@ export const myPageService = {
       // What visitors looked for: the plan includes it, or the team switched
       // it on for this page (01/11/2026).
       insights?: boolean
+      // How many pages the plan plus the team's grant allow.
+      allowance?: number
+      pages?: MemberPageSummary[]
       page: MemberPage | null
-    }>('GET', 'my-page')
+    }>('GET', id ? `my-page&page=${encodeURIComponent(id)}` : 'my-page')
   },
-  async save(draft: MemberPageDraft) {
-    return (await accountCall<{ page: MemberPage }>('PUT', 'my-page', draft)).page
+  // `id` says which page is being saved; without it, a new one is created
+  // (the endpoint refuses it past the allowance).
+  async save(draft: MemberPageDraft, id?: string) {
+    return (await accountCall<{ page: MemberPage }>('PUT', 'my-page', id ? { ...draft, id } : draft)).page
   },
   async uploadImage(dataUrl: string) {
     return (await accountCall<{ url: string }>('POST', 'my-page-image', { dataUrl })).url

@@ -4115,6 +4115,11 @@ function describe(key: string, b: Body, r: Record<string, any>): Described {
         area: 'plans',
         summary: `Gave the plan “${r.planName}”${b.endsAt ? ` until ${fmtDay(b.endsAt)}` : ' with no end date'} (${String(b.reason ?? 'other')})`,
       }
+    case 'PUT member-page-grant':
+      return {
+        area: 'pages',
+        summary: Number(b.extraPages) > 0 ? `Gave ${Number(b.extraPages)} extra page(s) to ${r.email ?? 'a member'}` : `Took back the extra pages of ${r.email ?? 'a member'}`,
+      }
     case 'PATCH member-plans':
       return { area: 'plans', summary: b.action === 'end' ? `Ended the plan “${r.planName}” given by the team` : `Changed the end date of the plan “${r.planName}”${b.endsAt ? ` to ${fmtDay(b.endsAt)}` : ' (no end date)'}` }
     case 'PUT plan-products': {
@@ -4239,6 +4244,35 @@ async function listActivity(req: VercelRequest, db: Db) {
 // ---------------------------------------------------------------------------
 type Route = (req: VercelRequest, db: Db, admin: Admin) => Promise<Record<string, any>>
 
+/**
+ * Pages the team granted this member on top of their plan (07/11/2026,
+ * Portal migration 0077). The owner's rule: Free gets one page, and the
+ * team may hand a Free or Starter member a second one.
+ *
+ * Admin-only and logged in Activity, like every other thing the team gives
+ * away. A database without 0077 says so plainly instead of failing with a
+ * column error nobody can read.
+ */
+async function setMemberPageGrant(req: VercelRequest, db: Db) {
+  const userId = String((req.query as Record<string, unknown>)?.id ?? '')
+  if (!userId) throw new HttpError(400, 'Which member?')
+  const wanted = Math.round(Number((req.body as Record<string, unknown>)?.extraPages))
+  if (!Number.isFinite(wanted) || wanted < 0 || wanted > 10) throw new HttpError(400, 'Extra pages must be a whole number from 0 to 10.')
+
+  const { data, error } = await db
+    .from('users')
+    .update({ extra_member_pages: wanted })
+    .eq('id', userId)
+    .select('id, email, extra_member_pages')
+    .single()
+  if (error) {
+    const code = (error as { code?: string }).code
+    if (code === '42703') throw new HttpError(503, 'The database update for extra pages (0077) hasn’t been applied yet.')
+    throw error
+  }
+  return { extraPages: data?.extra_member_pages ?? wanted, email: data?.email ?? '' }
+}
+
 const ROUTES: Record<string, Route> = {
   'GET me': async (_req, _db, admin) => ({ admin }),
   'GET members': (req, db) => listMembers(req, db),
@@ -4333,6 +4367,7 @@ const ROUTES: Record<string, Route> = {
   'GET member-plans': (req, db) => listMemberPlans(req, db),
   'POST member-plans': (req, db, admin) => giveMemberPlan(req, db, admin),
   'PATCH member-plans': (req, db) => changeMemberPlan(req, db),
+  'PUT member-page-grant': (req, db) => setMemberPageGrant(req, db),
   'GET team': (_req, db) => listTeam(db),
   'POST team': (req, db) => addTeamMember(req, db),
   'PATCH team': (req, db, admin) => updateTeamMember(req, db, admin),

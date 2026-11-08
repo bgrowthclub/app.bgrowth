@@ -8,6 +8,7 @@ import AdminLicenseRow from '../../../components/admin/AdminLicenseRow'
 import AdminGrantRow from '../../../components/admin/AdminGrantRow'
 import GiveAccessForm from '../../../components/admin/GiveAccessForm'
 import MemberPlanCard from '../../../components/admin/MemberPlanCard'
+import MemberPageGrantCard from '../../../components/admin/MemberPageGrantCard'
 import { useIdentity } from '../../../modules/identity/IdentityContext'
 import { isFullAdmin } from '../../../modules/admin/permissions'
 import type { GiveAccessValues } from '../../../components/admin/GiveAccessForm'
@@ -187,6 +188,7 @@ export default function AdminMemberPage() {
       {notice && <p className="rounded-xl bg-emerald-50 px-4 py-3 text-[13px] text-emerald-700">{notice}</p>}
 
       {fullAdmin && <MemberPlanCard userId={member.id} />}
+      {fullAdmin && <MemberPageGrantCard userId={member.id} current={Number((member as { extra_member_pages?: number }).extra_member_pages ?? 0)} />}
 
       <section>
         <div className="mb-3 flex items-center justify-between gap-3">

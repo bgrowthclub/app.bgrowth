@@ -61,6 +61,12 @@ export interface PlanEntitlements {
   memberPage?: 'partial' | 'full'
   // Which page models it allows (ids from memberPageTemplates); none = all.
   pageTemplates?: string[]
+  // How many pages the member may have (07/11/2026): Free 1, Pro 2,
+  // Enterprise 3, as the owner decided. Absent means 1 whenever memberPage
+  // is set — so a plan written before this kept exactly what it promised.
+  // The team can add one more per person (portal.users.extra_member_pages,
+  // Portal migration 0077, which sums the two).
+  pages?: number
   prioritySupport?: boolean
   // The page's own thermometer (01/11/2026): the owner sees what visitors
   // looked for on it, including the searches that found nothing. The plain
