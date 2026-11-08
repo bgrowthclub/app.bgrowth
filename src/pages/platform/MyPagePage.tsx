@@ -160,6 +160,8 @@ export default function MyPagePage() {
   // between pressing "New page" and the first save, when there is no id yet.
   const [pages, setPages] = useState<MemberPageSummary[]>([])
   const [allowance, setAllowance] = useState(1)
+  // How many contact buttons the plan shows (null = no limit).
+  const [linkLimit, setLinkLimit] = useState<number | null>(null)
   const [creating, setCreating] = useState(false)
   const [tab, setTab] = useState<'edit' | 'numbers' | 'contacts'>('edit')
   const [days, setDays] = useState(30)
@@ -178,6 +180,7 @@ export default function MyPagePage() {
         setInsights(r.insights === true)
         setPages(r.pages ?? (r.page ? [{ id: r.page.id, slug: r.page.slug, display_name: r.page.display_name, status: r.page.status }] : []))
         setAllowance(typeof r.allowance === 'number' ? r.allowance : 1)
+        setLinkLimit(typeof r.linkLimit === 'number' ? r.linkLimit : null)
         setPage(r.page)
       })
       .catch((err) => {
@@ -320,6 +323,7 @@ export default function MyPagePage() {
           mode={level}
           page={page}
           allowedTemplates={templates}
+          maxLinks={linkLimit}
           readOnly={!selfService}
           upload={(dataUrl) => myPageService.uploadImage(dataUrl)}
           onSave={async (draft) => {

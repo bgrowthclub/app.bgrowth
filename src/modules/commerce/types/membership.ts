@@ -67,6 +67,10 @@ export interface PlanEntitlements {
   // The team can add one more per person (portal.users.extra_member_pages,
   // Portal migration 0077, which sums the two).
   pages?: number
+  // How many contact buttons the page may carry (08/11/2026). It is what
+  // makes the Free "Simple page" simple — a photo, a name and two or three
+  // links — without a model that hard-codes the number. Absent = no limit.
+  pageLinks?: number
   prioritySupport?: boolean
   // The page's own thermometer (01/11/2026): the owner sees what visitors
   // looked for on it, including the searches that found nothing. The plain

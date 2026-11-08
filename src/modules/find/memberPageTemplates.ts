@@ -433,6 +433,26 @@ export function memberPageTemplates(lang: Lang): MemberPageTemplate[] {
       },
     },
     {
+      // The Free model (08/11/2026, the owner's decision): a photo, a name,
+      // a line, and two or three links. Deliberately the smallest page the
+      // system can draw — someone who pays nothing still gets something
+      // real, and there is almost nothing to get wrong.
+      //
+      // How FEW links is not written here: it is `pageLinks` on the plan,
+      // so the team can change it without a release.
+      id: 'simple',
+      name: { en: 'Simple page', pt: 'Página simples' },
+      description: {
+        en: 'Your photo, your name and a few links. The quickest page there is — and the easiest to keep up to date.',
+        pt: 'Sua foto, seu nome e alguns links. A página mais rápida de fazer — e a mais fácil de manter em dia.',
+      },
+      color: 'blue',
+      blocks: [b('hero'), b('contact')],
+      example: {
+        headline: L('What I do, in one line', 'O que eu faço, em uma linha'),
+      },
+    },
+    {
       id: 'blank',
       name: { en: 'Blank', pt: 'Em branco' },
       description: { en: 'Just the top and contacts — build the rest your way.', pt: 'Só o topo e os contatos — monte o resto do seu jeito.' },
@@ -452,7 +472,7 @@ const SKINS: MemberPageSkin[] = ['professional', 'local', 'creative', 'personal'
 // A model whose look belongs to ANOTHER model: 'payments' is a page of big
 // stacked buttons, which is exactly the Link Page look, so it borrows it
 // rather than duplicating a skin.
-const BORROWED_SKIN: Record<string, MemberPageSkin> = { payments: 'links' }
+const BORROWED_SKIN: Record<string, MemberPageSkin> = { payments: 'links', simple: 'links' }
 export function pageSkin(template: string | null | undefined): MemberPageSkin | null {
   const id = template ?? ''
   if (BORROWED_SKIN[id]) return BORROWED_SKIN[id]

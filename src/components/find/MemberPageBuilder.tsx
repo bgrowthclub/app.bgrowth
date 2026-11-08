@@ -40,6 +40,11 @@ interface Props {
   extra?: ReactNode
   // The models the member's plan allows (null/undefined = all).
   allowedTemplates?: string[] | null
+  // How many contact buttons the plan allows (08/11/2026). null/undefined =
+  // no limit from the plan. It is the server that decides — api/account.ts
+  // trims the list on save — so this only stops the button being offered,
+  // which is kinder than letting someone add a tenth and lose it.
+  maxLinks?: number | null
   // Look only: nothing can be changed or saved (subscribers before launch).
   readOnly?: boolean
 }
@@ -152,7 +157,7 @@ const TEMPLATE_ICONS: Record<string, LucideIcon> = {
   blank: LayoutTemplate,
 }
 
-export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel, extra, allowedTemplates, readOnly = false }: Props) {
+export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel, extra, allowedTemplates, maxLinks, readOnly = false }: Props) {
   const allowed = (id: string) => !allowedTemplates || allowedTemplates.includes(id)
   const free = mode !== 'partial'
   const [language, setLanguage] = useState<MemberPage['language']>(page?.language ?? 'en')
@@ -191,6 +196,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
   const [error, setError] = useState<string | null>(null)
   const published = page?.status === 'published'
   const maxHighlights = free ? 8 : 1
+  const linkCap = Math.max(1, Math.min(12, maxLinks ?? 12))
   const maxProducts = free ? 60 : 12
   const templates = memberPageTemplates(language)
 
@@ -400,7 +406,12 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                 </Row>
               ))}
             </div>
-            <Add label="Add a button" disabled={mine.length >= 12} onClick={() => setMine([...mine, { type: mine.length === 0 ? 'whatsapp' : 'instagram', label: '', url: '' }])} />
+            <Add label="Add a button" disabled={mine.length >= linkCap} onClick={() => setMine([...mine, { type: mine.length === 0 ? 'whatsapp' : 'instagram', label: '', url: '' }])} />
+            {mine.length >= linkCap && linkCap < 12 && (
+              <p className="mt-2 text-[12.5px] text-navy/45">
+                Your plan shows {linkCap} button{linkCap === 1 ? '' : 's'}. A higher plan shows more.
+              </p>
+            )}
           </div>
         )
       }

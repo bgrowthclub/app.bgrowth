@@ -303,6 +303,8 @@ export const myPageService = {
       insights?: boolean
       // How many pages the plan plus the team's grant allow.
       allowance?: number
+      // Contact buttons the plan shows (null = no limit).
+      linkLimit?: number | null
       pages?: MemberPageSummary[]
       page: MemberPage | null
     }>('GET', id ? `my-page&page=${encodeURIComponent(id)}` : 'my-page')

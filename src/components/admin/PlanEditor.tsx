@@ -198,6 +198,26 @@ export default function PlanEditor({ plan, nextRank, yearlyDiscountPercent, onSa
             </label>
           )}
           {ent.memberPage && (
+            <label className="block">
+              <span className="text-[13px] font-semibold text-navy">How many contact buttons the page shows</span>
+              <input
+                className={`${INPUT} mt-1 max-w-[120px]`}
+                type="number"
+                min={1}
+                max={12}
+                value={ent.pageLinks ?? ''}
+                placeholder="No limit"
+                onChange={(e) => {
+                  const n = Math.round(Number(e.target.value))
+                  setEnt({ ...ent, pageLinks: Number.isFinite(n) && n > 0 ? Math.min(12, n) : undefined })
+                }}
+              />
+              <span className="mt-1 block text-[12px] text-navy/40">
+                Empty = no limit. This is what keeps the Free “Simple page” simple — a photo, a name and a few links.
+              </span>
+            </label>
+          )}
+          {ent.memberPage && (
             <div>
               <span className="text-[13px] font-semibold text-navy">Page models this plan allows</span>
               <span className="mb-2 block text-[12px] text-navy/40">None ticked = all models.</span>

@@ -672,6 +672,23 @@ async function livePlanEntitlements(db: Db, userId: string): Promise<any[] | nul
     if (row.starts_at > now || (row.ends_at && row.ends_at <= now)) continue
     out.push((Array.isArray(row.membership_plans) ? row.membership_plans[0] : row.membership_plans)?.entitlements ?? {})
   }
+  // Nobody subscribed is on the Free plan — and "Free" is only a fallback
+  // label: such a member has no member_plans row at all, so until
+  // 08/11/2026 the Free plan's own entitlements were saved and read by
+  // nobody. This is the same rule as portal.member_live_entitlements()
+  // (Portal migration 0078), copied because a function must not import from
+  // src/ or from the database (CLAUDE.md §13) — change both.
+  if (out.length === 0) {
+    const { data: free } = await db
+      .from('membership_plans')
+      .select('entitlements')
+      .eq('is_free', true)
+      .eq('status', 'active')
+      .order('rank')
+      .limit(1)
+      .maybeSingle()
+    if (free?.entitlements) out.push(free.entitlements)
+  }
   return out
 }
 
@@ -687,6 +704,22 @@ async function memberPageTemplates(db: Db, userId: string): Promise<string[] | n
     ent.pageTemplates.forEach((t: string) => allowed.add(t))
   }
   return [...allowed]
+}
+
+// How many contact buttons the member's page may carry (08/11/2026): the
+// most generous live plan wins, and no number anywhere means no limit. This
+// is what keeps the Free "Simple page" simple without a model that hard-
+// codes it. Mirrored in the builder, which stops offering the button — this
+// is the side that decides.
+async function memberPageLinkLimit(db: Db, userId: string): Promise<number | null> {
+  const plans = await livePlanEntitlements(db, userId)
+  if (!plans || !plans.length) return null
+  let limit: number | null = null
+  for (const ent of plans) {
+    if (typeof ent.pageLinks !== 'number' || !Number.isFinite(ent.pageLinks)) return null
+    limit = limit === null ? ent.pageLinks : Math.max(limit, ent.pageLinks)
+  }
+  return limit === null ? null : Math.max(0, Math.round(limit))
 }
 
 // Whether the owner sees what visitors looked for on their page (01/11/2026):
@@ -836,6 +869,7 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string }, re
       selfService,
       insights,
       allowance: await memberPageAllowance(db, user.id),
+      linkLimit: await memberPageLinkLimit(db, user.id),
       // The light list the screen draws before anything is opened.
       pages: pages.map((p) => ({ id: p.id, slug: p.slug, display_name: p.display_name, status: p.status, updated_at: p.updated_at })),
       page: existing ?? null,
@@ -885,6 +919,13 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string }, re
   const input = readMyPage((req.body ?? {}) as Record<string, any>)
   if (templates && !templates.includes(input.template)) throw new HttpError(403, 'Your plan doesn’t include this model — choose another one or see the plans in Account → Membership.')
   let slug = existing?.slug as string | undefined
+
+  // The cap applies whatever the level is: it comes from the plan, not from
+  // how much of the page the member may rearrange.
+  const linkLimit = await memberPageLinkLimit(db, user.id)
+  if (linkLimit !== null && Array.isArray(input.links) && input.links.length > linkLimit) {
+    input.links = input.links.slice(0, linkLimit)
+  }
 
   if (level === 'partial') {
     // A model's blocks as they are; the model's color; one featured item.
