@@ -4,6 +4,7 @@ import SEO from '../components/seo/SEO'
 import MemberPageView from '../components/find/MemberPageView'
 import {
   getPublishedMemberPage,
+  isMemberPageIndexable,
   trackMemberPageCategory,
   trackMemberPageClick,
   trackMemberPageSearch,
@@ -18,6 +19,10 @@ import { PAGE_BACKGROUNDS } from '../modules/find/memberPageTemplates'
 export default function MemberPublicPage() {
   const { slug = '' } = useParams()
   const [page, setPage] = useState<MemberPage | null | undefined>(undefined)
+  // May search engines list it? Free and Starter pages stay out (08/11/2026).
+  // undefined while the answer is in flight: nothing is written to the head
+  // until it lands, so a page is never briefly marked the wrong way.
+  const [indexable, setIndexable] = useState<boolean | undefined>(undefined)
 
   useEffect(() => {
     let cancelled = false
@@ -28,6 +33,7 @@ export default function MemberPublicPage() {
         setPage(p)
         // An old address redirects below; the new one counts the visit.
         if (p && p.slug === slug.toLowerCase()) trackMemberPageView(p.slug)
+        if (p) void isMemberPageIndexable(p.id).then((ok: boolean) => !cancelled && setIndexable(ok))
       })
       .catch(() => {
         if (!cancelled) setPage(null)
@@ -64,6 +70,7 @@ export default function MemberPublicPage() {
         description={page.headline ?? `${page.display_name} on BGrowth`}
         path={`/p/${page.slug}`}
         ogImage={page.photo_url ?? undefined}
+        noIndex={indexable === false}
       />
       <MemberPageView
         page={page}

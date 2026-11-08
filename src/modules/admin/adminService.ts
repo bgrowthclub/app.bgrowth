@@ -343,6 +343,10 @@ export const adminService = {
   async giveMemberPlan(input: { userId: string; planId: string; endsAt: string | null; reason: MemberPlanReason; note: string }) {
     await call('POST', 'member-plans', undefined, input)
   },
+  // The team's decision on a Free member's page (08/11/2026, migration 0079).
+  async reviewMemberPage(id: string, action: 'approve' | 'return', note: string) {
+    await call('PUT', 'page-review', undefined, { id, action, note })
+  },
   // Pages the team grants on top of the plan (07/11/2026, migration 0077).
   async setMemberPageGrant(userId: string, extraPages: number) {
     return (await call<{ extraPages: number }>('PUT', 'member-page-grant', { id: userId }, { extraPages })).extraPages

@@ -71,6 +71,11 @@ export interface PlanEntitlements {
   // makes the Free "Simple page" simple — a photo, a name and two or three
   // links — without a model that hard-codes the number. Absent = no limit.
   pageLinks?: number
+  // Keep this plan's pages out of search engines (08/11/2026: Free and
+  // Starter, by the owner's decision). NEGATIVE on purpose — a positive
+  // "may be indexed" would have dropped every plan written before today
+  // out of Google until someone ticked each one.
+  pageNoIndex?: boolean
   prioritySupport?: boolean
   // The page's own thermometer (01/11/2026): the owner sees what visitors
   // looked for on it, including the searches that found nothing. The plain

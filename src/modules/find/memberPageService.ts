@@ -290,6 +290,22 @@ async function accountCall<T>(method: 'GET' | 'PUT' | 'POST' | 'DELETE', resourc
   return json
 }
 
+/**
+ * May this page be listed in search? Free and Starter pages are kept out
+ * (08/11/2026, the owner's decision) — the rule lives in
+ * portal.member_page_indexable(), so the site can't disagree with it.
+ *
+ * On any error, or on a database that hasn't had 0079 applied, the answer
+ * is "yes": that is exactly how every page behaved before this existed, so
+ * a glitch never quietly drops a paying member out of Google.
+ */
+export async function isMemberPageIndexable(pageId: string): Promise<boolean> {
+  if (!supabase) return true
+  const { data, error } = await supabase.rpc('member_page_indexable', { p_page: pageId })
+  if (error || typeof data !== 'boolean') return true
+  return data
+}
+
 export const myPageService = {
   // Without an id: the member's first page, plus the list and how many they
   // may have (07/11/2026). With one: that page opened for editing.

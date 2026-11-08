@@ -4115,6 +4115,11 @@ function describe(key: string, b: Body, r: Record<string, any>): Described {
         area: 'plans',
         summary: `Gave the plan “${r.planName}”${b.endsAt ? ` until ${fmtDay(b.endsAt)}` : ' with no end date'} (${String(b.reason ?? 'other')})`,
       }
+    case 'PUT page-review':
+      return {
+        area: 'pages',
+        summary: b.action === 'approve' ? `Approved the page “${r.name ?? r.slug ?? ''}”` : `Sent the page “${r.name ?? r.slug ?? ''}” back to its owner`,
+      }
     case 'PUT member-page-grant':
       return {
         area: 'pages',
@@ -4273,6 +4278,45 @@ async function setMemberPageGrant(req: VercelRequest, db: Db) {
   return { extraPages: data?.extra_member_pages ?? wanted, email: data?.email ?? '' }
 }
 
+/**
+ * The team's decision on a Free member's page (08/11/2026, Portal migration
+ * 0079). Approving puts it online; sending it back returns it to a draft
+ * with a note the member reads on their own screen.
+ *
+ * Admin-only. Publishing to bgrowth.app under our name is not a support
+ * action — if the owner wants Support to clear the queue, it is one line in
+ * SUPPORT_ACTIONS, and her call, not mine.
+ */
+async function reviewMemberPage(req: VercelRequest, db: Db) {
+  const id = String((req.body as Record<string, unknown>)?.id ?? '')
+  const action = String((req.body as Record<string, unknown>)?.action ?? '')
+  const note = String((req.body as Record<string, unknown>)?.note ?? '').trim().slice(0, 500)
+  if (!id) throw new HttpError(400, 'Which page?')
+  if (action !== 'approve' && action !== 'return') throw new HttpError(400, 'Approve it or send it back.')
+  if (action === 'return' && !note) throw new HttpError(400, 'Tell the member what to change — they only see this note.')
+
+  const { data: page, error: readError } = await db.from('member_pages').select('id, slug, status, display_name').eq('id', id).maybeSingle()
+  if (readError) throw readError
+  if (!page) throw new HttpError(404, 'Page not found.')
+  if (page.status !== 'pending') throw new HttpError(409, 'This page isn’t waiting for a decision.')
+
+  const { data, error } = await db
+    .from('member_pages')
+    .update({
+      status: action === 'approve' ? 'published' : 'draft',
+      submitted_at: null,
+      reviewed_at: new Date().toISOString(),
+      review_note: action === 'return' ? note : null,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', id)
+    .eq('status', 'pending')
+    .select('*')
+    .single()
+  if (error) throw error
+  return { page: data, slug: page.slug, name: page.display_name }
+}
+
 const ROUTES: Record<string, Route> = {
   'GET me': async (_req, _db, admin) => ({ admin }),
   'GET members': (req, db) => listMembers(req, db),
@@ -4330,6 +4374,7 @@ const ROUTES: Record<string, Route> = {
   'DELETE bundles': (req, db) => archiveBundle(req, db),
   'GET member-pages': (_req, db) => listMemberPages(db),
   'GET member-page-stats': (req, db) => memberPageStats(req, db),
+  'PUT page-review': (req, db) => reviewMemberPage(req, db),
   'GET member-page-signups': (req, db) => memberPageSignups(req, db),
   'DELETE member-page-signups': (req, db) => memberPageSignups(req, db),
   'POST member-pages': (req, db) => createMemberPage(req, db),

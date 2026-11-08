@@ -717,6 +717,21 @@ async function memberPageTemplates(db: Db, userId: string): Promise<string[] | n
   return [...allowed]
 }
 
+// Is this member on the Free plan — that is, paying for nothing right now?
+// "Free" is the absence of a live row in member_plans, not a row of its own
+// (see livePlanEntitlements). A query error answers "not free", so a glitch
+// never silently sends a paying member's page into the review queue.
+async function onFreePlan(db: Db, userId: string): Promise<boolean> {
+  const now = new Date().toISOString()
+  const { data, error } = await db
+    .from('member_plans')
+    .select('starts_at, ends_at')
+    .eq('user_id', userId)
+    .in('status', ['active', 'trialing', 'past_due'])
+  if (error) return false
+  return !(data ?? []).some((row: any) => row.starts_at <= now && (!row.ends_at || row.ends_at > now))
+}
+
 // How many contact buttons the member's page may carry (08/11/2026): the
 // most generous live plan wins, and no number anywhere means no limit. This
 // is what keeps the Free "Simple page" simple without a model that hard-
@@ -989,6 +1004,20 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string; emai
     throw new HttpError(403, 'Confirm your e-mail address before putting your page online — check your inbox for our message.')
   }
 
+  // A Free member's page is looked at by the team before anyone can open it
+  // (08/11/2026, the owner's decision; Portal migration 0079). A paying
+  // member publishes straight away, as they always have.
+  //
+  // Every publish goes through the queue, not only the first: otherwise the
+  // oldest trick in the book works — publish something clean, get approved,
+  // then swap the content. The page is off the web while it waits, which is
+  // the price of not keeping two versions of it.
+  let queued = false
+  if (input.status === 'published' && (await onFreePlan(db, user.id))) {
+    input.status = 'pending'
+    queued = true
+  }
+
   if (!existing) {
     // A new page: only while they are under what their plan and the team
     // allow. Checked here and not in the database because a subscriber
@@ -1006,12 +1035,25 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string; emai
   }
 
   const moved = existing ? await previousSlugsAfter(db, existing.id, existing.slug, slug) : {}
-  const row = { ...input, ...moved, slug, user_id: user.id, owner_managed: true, updated_at: new Date().toISOString() }
+  // Both keys are always written, with the same types, so the insert and the
+  // update branches below stay one shape. Not queued means not waiting: the
+  // submission is cleared, but the team's last note is kept, so someone who
+  // was sent back still reads why while they fix it.
+  const review: { submitted_at: string | null; review_note: string | null } = queued
+    ? { submitted_at: new Date().toISOString(), review_note: null }
+    : { submitted_at: null, review_note: (existing?.review_note as string | null) ?? null }
+  const row = { ...input, ...moved, ...review, slug, user_id: user.id, owner_managed: true, updated_at: new Date().toISOString() }
   const { data, error: saveError } = existing
     ? await db.from('member_pages').update(row).eq('id', existing.id).select('*').single()
     : await db.from('member_pages').insert(row).select('*').single()
-  if (saveError) throw saveError
-  return { page: data }
+  if (saveError) {
+    const code = (saveError as { code?: string }).code
+    // The database hasn't learnt 'pending' yet (0079 not applied): say so
+    // instead of a constraint error nobody can read.
+    if (code === '23514' || code === '42703') throw new HttpError(503, 'Putting a page online is briefly unavailable (database update pending). Your draft is safe.')
+    throw saveError
+  }
+  return { page: data, queued }
 }
 
 /* ------------------------------------------------- BGrowth Academy™ ---- */

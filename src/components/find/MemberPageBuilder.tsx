@@ -192,7 +192,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
   const [candidate, setCandidate] = useState<string | null>(null)
   const [device, setDevice] = useState<'desktop' | 'mobile'>('mobile')
   const [uploading, setUploading] = useState<string | null>(null)
-  const [saving, setSaving] = useState<'draft' | 'published' | null>(null)
+  const [saving, setSaving] = useState<MemberPage['status'] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const published = page?.status === 'published'
   const maxHighlights = free ? 8 : 1

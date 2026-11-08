@@ -9,6 +9,7 @@ import AdminMemberPageRow from '../../../components/admin/AdminMemberPageRow'
 import MemberPageBuilder from '../../../components/find/MemberPageBuilder'
 import { INPUT } from '../../../components/admin/styles'
 import AdminMemberPageStats from '../../../components/admin/AdminMemberPageStats'
+import MemberPageReviewQueue from '../../../components/admin/MemberPageReviewQueue'
 import { CARD, SMALL_BUTTON } from '../../../components/admin/styles'
 import { adminService } from '../../../modules/admin/adminService'
 import type { AdminMemberPageDraft, AdminMemberPagesOverview } from '../../../modules/admin/types'
@@ -42,11 +43,15 @@ export default function AdminMemberPagesPage() {
     setInsightsGranted(editing && editing !== 'new' ? Boolean(editing.insights_granted) : false)
   }, [editing])
 
-  useEffect(() => {
+  const reload = () =>
     adminService
       .listMemberPages()
       .then(setData)
       .catch((err) => setError(err instanceof Error ? err.message : 'Couldn’t load the pages.'))
+
+  useEffect(() => {
+    void reload()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   async function save(draft: AdminMemberPageDraft) {
@@ -233,6 +238,8 @@ export default function AdminMemberPagesPage() {
               </Button>
             </div>
           )}
+
+          <MemberPageReviewQueue pages={data.pages.filter((p) => p.status === 'pending')} onDone={() => void reload()} />
 
           {data.pages.length === 0 ? (
             !editing && <EmptyState icon={SquareUser} title="No pages yet." description="Build the first one — a photo, what they do, and buttons to reach them." />

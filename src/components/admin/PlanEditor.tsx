@@ -242,6 +242,23 @@ export default function PlanEditor({ plan, nextRank, yearlyDiscountPercent, onSa
               </div>
             </div>
           )}
+          {ent.memberPage && (
+            <label className={CHECK}>
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 accent-primary"
+                checked={ent.pageNoIndex === true}
+                onChange={(e) => setEnt({ ...ent, pageNoIndex: e.target.checked || undefined })}
+              />
+              <span>
+                Keep their page out of Google and other search engines
+                <span className="block text-[12px] text-navy/40">
+                  The link still works and still previews when shared — it just isn’t listed in search. Ticked on Free
+                  and Starter keeps thin pages from dragging the whole domain down.
+                </span>
+              </span>
+            </label>
+          )}
           <label className={CHECK}>
             <input
               type="checkbox"

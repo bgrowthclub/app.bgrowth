@@ -18,6 +18,11 @@ interface Props {
   keywords?: string[]
   path: string // e.g. "/workspaces" — used for canonical + og:url
   ogImage?: string
+  // Keep this page out of search results (08/11/2026). Used by a member
+  // page whose owner's plan says so — Free and Starter, by the owner's
+  // decision. undefined while the answer is still being fetched: nothing is
+  // written then, so a page is never briefly marked either way by mistake.
+  noIndex?: boolean
 }
 
 // Admin → Site → SEO (portal.site_content key "seo"), loaded once per visit:
@@ -40,7 +45,7 @@ function upsertMeta(attr: 'name' | 'property', key: string, content: string) {
   tag.setAttribute('content', content)
 }
 
-export default function SEO({ title: builtInTitle, description: builtInDescription, keywords, path, ogImage: pageImage }: Props) {
+export default function SEO({ title: builtInTitle, description: builtInDescription, keywords, path, ogImage: pageImage, noIndex }: Props) {
   const [settings, setSettings] = useState<SeoSettings | null>(null)
   useEffect(() => {
     let cancelled = false
@@ -77,7 +82,14 @@ export default function SEO({ title: builtInTitle, description: builtInDescripti
       document.head.appendChild(canonical)
     }
     canonical.setAttribute('href', `${SITE_URL}${path}`)
-  }, [title, description, keywords, path, ogImage])
+
+    // The tag is removed, not set to "index", when a page doesn't ask to be
+    // hidden: this app never reloads between routes, so a leftover noindex
+    // from the previous page would silently hide the next one.
+    const robots = document.querySelector<HTMLMetaElement>('meta[name="robots"]')
+    if (noIndex) upsertMeta('name', 'robots', 'noindex, nofollow')
+    else robots?.remove()
+  }, [title, description, keywords, path, ogImage, noIndex])
 
   return null
 }

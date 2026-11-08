@@ -12,8 +12,8 @@ import { getMyMemberPageStats, myPageService } from '../../modules/find/memberPa
 import type { MemberPage, MemberPageLevel, MemberPageStats, MemberPageSummary } from '../../modules/find/types'
 
 const TEXT = {
-  en: { titleLead: 'My', titleAccent: 'Business', titleTail: 'Page', title: 'My Business Page', description: 'A simple professional page for your business — share it anywhere.', open: 'Open', edit: 'Edit', numbers: 'Numbers', contacts: 'Contacts', copy: 'Copy link', copied: 'Copied', share: 'Share', whatsapp: 'WhatsApp', live: 'Live', draft: 'Draft', draftAddress: 'Once you publish, it will be at', newPage: 'New page', allUsed: (n: number) => `${n} of ${n} pages used` },
-  pt: { titleLead: 'Minha', titleAccent: 'página', titleTail: 'de negócio', title: 'Minha página de negócio', description: 'Uma página profissional simples para o seu negócio — compartilhe onde quiser.', open: 'Abrir', edit: 'Editar', numbers: 'Números', contacts: 'Contatos', copy: 'Copiar link', copied: 'Copiado', share: 'Compartilhar', whatsapp: 'WhatsApp', live: 'No ar', draft: 'Rascunho', draftAddress: 'Quando você publicar, ela fica em', newPage: 'Nova página', allUsed: (n: number) => `${n} de ${n} páginas usadas` },
+  en: { titleLead: 'My', titleAccent: 'Business', titleTail: 'Page', title: 'My Business Page', description: 'A simple professional page for your business — share it anywhere.', open: 'Open', edit: 'Edit', numbers: 'Numbers', contacts: 'Contacts', copy: 'Copy link', copied: 'Copied', share: 'Share', whatsapp: 'WhatsApp', live: 'Live', draft: 'Draft', draftAddress: 'Once you publish, it will be at', newPage: 'New page', allUsed: (n: number) => `${n} of ${n} pages used`, pending: 'In review', sentBack: 'Our team sent this back:' },
+  pt: { titleLead: 'Minha', titleAccent: 'página', titleTail: 'de negócio', title: 'Minha página de negócio', description: 'Uma página profissional simples para o seu negócio — compartilhe onde quiser.', open: 'Abrir', edit: 'Editar', numbers: 'Números', contacts: 'Contatos', copy: 'Copiar link', copied: 'Copiado', share: 'Compartilhar', whatsapp: 'WhatsApp', live: 'No ar', draft: 'Rascunho', draftAddress: 'Quando você publicar, ela fica em', newPage: 'Nova página', allUsed: (n: number) => `${n} de ${n} páginas usadas`, pending: 'Em análise', sentBack: 'Nosso time devolveu esta página:' },
 }
 
 // The page's address with copy and share buttons.
@@ -61,6 +61,7 @@ function PageHeader({
   language,
   status,
   slug,
+  reviewNote,
 }: {
   name: string
   t: (typeof TEXT)['en']
@@ -68,6 +69,8 @@ function PageHeader({
   // undefined = no page yet; 'draft' = saved but not online.
   status?: MemberPage['status']
   slug?: string
+  // What the team said when it sent the page back (Portal migration 0079).
+  reviewNote?: string | null
 }) {
   const steps = STEPS[language]
   return (
@@ -83,6 +86,10 @@ function PageHeader({
               <span className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-emerald-700">
                 <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" aria-hidden /> {t.live}
               </span>
+            ) : status === 'pending' ? (
+              <span className="inline-flex items-center gap-1.5 rounded-full bg-sky-50 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-sky-700">
+                <span className="h-1.5 w-1.5 rounded-full bg-sky-500" aria-hidden /> {t.pending}
+              </span>
             ) : status === 'draft' ? (
               <span className="inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-2.5 py-0.5 text-[11px] font-bold uppercase tracking-wide text-amber-700">
                 <span className="h-1.5 w-1.5 rounded-full bg-amber-500" aria-hidden /> {t.draft}
@@ -93,6 +100,11 @@ function PageHeader({
             {t.titleLead} <span className="text-primary">{t.titleAccent}</span> {t.titleTail}
           </h1>
           <p className="mt-2 text-[14.5px] text-navy/60">{t.description}</p>
+          {reviewNote && status !== 'pending' && (
+            <p className="mt-3 rounded-xl bg-amber-50 px-4 py-3 text-[13.5px] leading-relaxed text-amber-900">
+              <span className="font-bold">{t.sentBack}</span> {reviewNote}
+            </p>
+          )}
           {status === 'draft' && slug && (
             <p className="mt-2 text-[13.5px] text-navy/50">
               {t.draftAddress} <span className="font-semibold text-navy/70">bgrowth.app/p/{slug}</span>
@@ -238,7 +250,7 @@ export default function MyPagePage() {
   return (
     <div className="mx-auto max-w-6xl">
       <SEO title={t.title} description={t.description} path="/platform/my-page" />
-      <PageHeader name={page?.display_name ?? linked?.displayName ?? user.displayName} t={t} language={language} status={page?.status} slug={slug} />
+      <PageHeader name={page?.display_name ?? linked?.displayName ?? user.displayName} t={t} language={language} status={page?.status} slug={slug} reviewNote={page?.review_note ?? null} />
       {slug && page?.status !== 'draft' && <ShareBar slug={slug} name={page?.display_name ?? linked?.displayName ?? user.displayName} t={t} />}
 
       {!level && page?.owner_managed && (
@@ -276,7 +288,12 @@ export default function MyPagePage() {
                   open ? 'bg-primary text-white' : 'bg-bg-soft text-navy/65 hover:text-navy'
                 }`}
               >
-                <span className={`h-1.5 w-1.5 rounded-full ${p.status === 'published' ? 'bg-emerald-500' : 'bg-amber-500'}`} aria-hidden />
+                <span
+                  className={`h-1.5 w-1.5 rounded-full ${
+                    p.status === 'published' ? 'bg-emerald-500' : p.status === 'pending' ? 'bg-sky-500' : 'bg-amber-500'
+                  }`}
+                  aria-hidden
+                />
                 {p.display_name || p.slug}
               </button>
             )
@@ -334,7 +351,13 @@ export default function MyPagePage() {
               const line = { id: saved.id, slug: saved.slug, display_name: saved.display_name, status: saved.status }
               return list.some((p) => p.id === saved.id) ? list.map((p) => (p.id === saved.id ? line : p)) : [...list, line]
             })
-            setNotice(saved.status === 'published' ? `Your page is live at bgrowth.app/p/${saved.slug}.` : 'Saved as a draft — publish it when you’re ready.')
+            setNotice(
+              saved.status === 'published'
+                ? `Your page is live at bgrowth.app/p/${saved.slug}.`
+                : saved.status === 'pending'
+                  ? 'Sent to our team. We look at every free page before it goes online — you’ll get an e-mail when it’s done, usually within a day.'
+                  : 'Saved as a draft — publish it when you’re ready.',
+            )
             window.scrollTo({ top: 0, behavior: 'smooth' })
           }}
         />

@@ -34,6 +34,7 @@ export function planBenefits(plan: Pick<AdminPlan, 'entitlements'>): string[] {
     const pages = e.pages && e.pages > 1 ? `${e.pages} pages` : 'Member page'
     out.push(`${pages} (${e.memberPage === 'full' ? 'all' : 'part'})`)
   }
+  if (e.pageNoIndex) out.push('Page not in search')
   if (e.prioritySupport) out.push('Priority support')
   if (e.pageInsights) out.push('Page insights')
   if (e.includesAll) out.push('Every product included')

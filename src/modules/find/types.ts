@@ -106,7 +106,7 @@ export interface MemberPageSummary {
   id: string
   slug: string
   display_name: string
-  status: 'draft' | 'published'
+  status: 'draft' | 'pending' | 'published'
   updated_at?: string | null
 }
 
@@ -146,7 +146,7 @@ export interface MemberPage {
   highlights: MemberPageHighlight[]
   links: MemberPageLink[]
   language: 'en' | 'pt'
-  status: 'draft' | 'published'
+  status: 'draft' | 'pending' | 'published'
   template?: string | null
   blocks?: MemberPageBlock[] | null
   theme?: MemberPageTheme | null
@@ -160,6 +160,12 @@ export interface MemberPage {
   // set only by a website admin in Admin → Pages. Never skips publication
   // or plan checks. Absent before 0067.
   is_demo?: boolean
+  // The review of a Free member's page (08/11/2026, Portal migration 0079).
+  // submitted_at: when they asked for it to go public; review_note: what the
+  // team told them when sending it back, shown to its owner.
+  submitted_at?: string | null
+  reviewed_at?: string | null
+  review_note?: string | null
   created_at: string
   updated_at: string
   // Admin → Pages only: the e-mail of the account linked as owner.

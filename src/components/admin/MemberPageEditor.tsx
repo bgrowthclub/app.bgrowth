@@ -91,7 +91,7 @@ export default function MemberPageEditor({ page, onSave, onCancel }: Props) {
   const [services, setServices] = useState<MemberPageService[]>(page?.services ?? [])
   const [highlights, setHighlights] = useState<MemberPageHighlight[]>(page?.highlights ?? [])
   const [uploading, setUploading] = useState<string | null>(null)
-  const [saving, setSaving] = useState<'draft' | 'published' | null>(null)
+  const [saving, setSaving] = useState<MemberPage['status'] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const photoRef = useRef<HTMLInputElement>(null)
   const published = page?.status === 'published'
