@@ -59,6 +59,27 @@ export default function CourseQuiz({ title, questions, answerFor, onAnswer }: Pr
 
 const CARD = 'rounded-xl2 border border-navy/[0.07] bg-white px-4 py-3.5'
 
+// How many goes before the answer is shown (09/11/2026, the owner's
+// decision). It used to reveal on the first wrong click, which ends the
+// thinking the moment it got interesting.
+//
+// A CHOICE question gets at most options.length - 1, because after that many
+// distinct wrong answers only the right one is left and "another go" would
+// be theatre. A true/false question therefore reveals on the first miss,
+// which is honest: with two options, a wrong answer means you didn't know.
+const MAX_TRIES = 3
+function triesFor(question: CourseQuestion) {
+  if (question.kind === 'typed') return MAX_TRIES
+  return Math.max(1, Math.min(MAX_TRIES, question.options.length - 1))
+}
+
+// Two goes at the SAME wrong answer are one mistake, not two — a misclick
+// must not cost someone their last try. So attempts are counted by what was
+// answered, not by how many times the button was pressed.
+function attemptKey(given: GivenAnswer): string {
+  return Array.isArray(given) ? [...given].sort().join('|') : String(given).trim().toLowerCase()
+}
+
 function Question({
   index,
   question,
@@ -72,6 +93,32 @@ function Question({
 }) {
   const done = isAnswered(given)
   const marked = done ? mark(question, given as GivenAnswer) : null
+  // The wrong answers given so far, this visit. Deliberately NOT saved: the
+  // quiz is ungraded and gates nothing, so a reload starting the tries over
+  // costs nobody anything — and saving it would mean changing the shape of
+  // every student's stored progress for a counter that decides nothing.
+  const [tried, setTried] = useState<string[]>([])
+  const limit = triesFor(question)
+  const left = limit - tried.length
+
+  // One door for all three kinds: right answers are recorded at once; a
+  // wrong one is only recorded — and so revealed — when the tries run out.
+  const tryAnswer = (value: GivenAnswer) => {
+    if (mark(question, value).right) {
+      onAnswer(question.id, value)
+      return
+    }
+    const key = attemptKey(value)
+    if (tried.includes(key)) return
+    const next = [...tried, key]
+    setTried(next)
+    if (next.length >= limit) onAnswer(question.id, value)
+  }
+
+  const retry = () => {
+    setTried([])
+    onAnswer(question.id, null)
+  }
 
   return (
     <li className={CARD}>
@@ -84,11 +131,11 @@ function Question({
       )}
 
       {question.kind === 'typed' ? (
-        <TypedAnswer question={question} given={typeof given === 'string' ? given : null} onAnswer={onAnswer} />
+        <TypedAnswer question={question} given={typeof given === 'string' ? given : null} onTry={tryAnswer} tried={tried} left={left} />
       ) : question.kind === 'multi' ? (
-        <MultiAnswer question={question} given={given} onAnswer={onAnswer} />
+        <MultiAnswer question={question} given={given} onTry={tryAnswer} tried={tried} left={left} />
       ) : (
-        <SingleAnswer question={question} given={given} onAnswer={onAnswer} />
+        <SingleAnswer question={question} given={given} onTry={tryAnswer} tried={tried} left={left} />
       )}
 
       {marked && (
@@ -112,7 +159,7 @@ function Question({
           )}
           <button
             type="button"
-            onClick={() => onAnswer(question.id, null)}
+            onClick={retry}
             className="no-print mt-2.5 inline-flex items-center gap-1.5 text-[12.5px] font-semibold text-primary hover:text-navy"
           >
             <RotateCcw size={13} aria-hidden />
@@ -131,41 +178,66 @@ const IDLE = 'border-navy/[0.1] hover:border-primary/40 hover:bg-primary/[0.03]'
 function SingleAnswer({
   question,
   given,
-  onAnswer,
+  onTry,
+  tried,
+  left,
 }: {
   question: Extract<CourseQuestion, { answer: string }>
   given: GivenAnswer | null
-  onAnswer: (questionId: string, given: GivenAnswer | null) => void
+  onTry: (given: GivenAnswer) => void
+  tried: string[]
+  left: number
 }) {
   const picked = typeof given === 'string' ? given : null
+  const revealed = picked !== null
 
   return (
-    <div className="mt-3 space-y-2">
-      {question.options.map((option) => {
-        const chosen = picked === option.id
-        // Once answered, the right option is shown even if they missed it: a
-        // self-check is there to teach, not to keep a secret.
-        const correct = picked !== null && option.id === question.answer
+    <>
+      <div className="mt-3 space-y-2">
+        {question.options.map((option) => {
+          const chosen = picked === option.id
+          // Once answered, the right option is shown even if they missed it:
+          // a self-check is there to teach, not to keep a secret.
+          const correct = revealed && option.id === question.answer
+          // Tried and wrong, with goes still left: marked so they don't go
+          // round in circles, but still clickable, because clicking it again
+          // must not cost a try (see attemptKey).
+          const spent = !revealed && tried.includes(option.id)
 
-        let tone = IDLE
-        if (correct) tone = 'border-emerald-500/50 bg-emerald-50'
-        else if (chosen) tone = 'border-red-500/40 bg-red-50'
-        else if (picked !== null) tone = 'border-navy/[0.07] opacity-60'
+          let tone = IDLE
+          if (correct) tone = 'border-emerald-500/50 bg-emerald-50'
+          else if (chosen || spent) tone = 'border-red-500/40 bg-red-50'
+          else if (revealed) tone = 'border-navy/[0.07] opacity-60'
 
-        return (
-          <button
-            key={option.id}
-            type="button"
-            disabled={picked !== null}
-            onClick={() => onAnswer(question.id, option.id)}
-            className={`${OPTION} ${tone}`}
-          >
-            <Marker correct={correct} wrong={chosen && !correct} />
-            <span>{option.text}</span>
-          </button>
-        )
-      })}
-    </div>
+          return (
+            <button
+              key={option.id}
+              type="button"
+              disabled={revealed}
+              onClick={() => onTry(option.id)}
+              className={`${OPTION} ${tone}`}
+            >
+              <Marker correct={correct} wrong={(chosen && !correct) || spent} />
+              <span>{option.text}</span>
+            </button>
+          )
+        })}
+      </div>
+      <TryAgain tried={tried} left={left} revealed={revealed} />
+    </>
+  )
+}
+
+/** "Not quite — have another go", and how many are left. */
+function TryAgain({ tried, left, revealed }: { tried: string[]; left: number; revealed: boolean }) {
+  if (revealed || tried.length === 0) return null
+  return (
+    <p className="no-print mt-2.5 text-[13px] font-semibold text-navy/60">
+      Not quite — have another go.{' '}
+      <span className="font-normal text-navy/40">
+        {left} {left === 1 ? 'try' : 'tries'} left before we show it.
+      </span>
+    </p>
   )
 }
 
@@ -173,11 +245,15 @@ function SingleAnswer({
 function MultiAnswer({
   question,
   given,
-  onAnswer,
+  onTry,
+  tried,
+  left,
 }: {
   question: Extract<CourseQuestion, { kind: 'multi' }>
   given: GivenAnswer | null
-  onAnswer: (questionId: string, given: GivenAnswer | null) => void
+  onTry: (given: GivenAnswer) => void
+  tried: string[]
+  left: number
 }) {
   const saved = Array.isArray(given) ? given : null
   const [draft, setDraft] = useState<string[]>([])
@@ -223,14 +299,19 @@ function MultiAnswer({
         })}
       </div>
       {saved === null && (
-        <button
-          type="button"
-          disabled={draft.length === 0}
-          onClick={() => onAnswer(question.id, draft)}
-          className="no-print mt-2.5 rounded-xl bg-primary px-4 py-2 text-[13.5px] font-semibold text-white transition-opacity disabled:opacity-40"
-        >
-          Check my answer
-        </button>
+        <>
+          {/* The ticks are kept after a wrong go: they were nearly right,
+              and clearing the lot would make them start from nothing. */}
+          <TryAgain tried={tried} left={left} revealed={false} />
+          <button
+            type="button"
+            disabled={draft.length === 0}
+            onClick={() => onTry(draft)}
+            className="no-print mt-2.5 rounded-xl bg-primary px-4 py-2 text-[13.5px] font-semibold text-white transition-opacity disabled:opacity-40"
+          >
+            Check my answer
+          </button>
+        </>
       )}
     </>
   )
@@ -240,11 +321,15 @@ function MultiAnswer({
 function TypedAnswer({
   question,
   given,
-  onAnswer,
+  onTry,
+  tried,
+  left,
 }: {
   question: Extract<CourseQuestion, { kind: 'typed' }>
   given: string | null
-  onAnswer: (questionId: string, given: GivenAnswer | null) => void
+  onTry: (given: GivenAnswer) => void
+  tried: string[]
+  left: number
 }) {
   const [draft, setDraft] = useState('')
 
@@ -257,27 +342,32 @@ function TypedAnswer({
     )
 
   return (
-    <form
-      className="no-print mt-3 flex flex-wrap gap-2"
-      onSubmit={(e) => {
-        e.preventDefault()
-        if (draft.trim()) onAnswer(question.id, draft.trim())
-      }}
-    >
-      <input
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        placeholder="Type your answer"
-        className="min-w-0 flex-1 rounded-xl border border-navy/[0.12] bg-white px-3.5 py-2.5 text-[14px] text-navy outline-none focus:border-primary/50"
-      />
-      <button
-        type="submit"
-        disabled={!draft.trim()}
-        className="rounded-xl bg-primary px-4 py-2.5 text-[13.5px] font-semibold text-white transition-opacity disabled:opacity-40"
+    <>
+      <TryAgain tried={tried} left={left} revealed={false} />
+      <form
+        className="no-print mt-3 flex flex-wrap gap-2"
+        onSubmit={(e) => {
+          e.preventDefault()
+          // The draft is left alone on a wrong go, so they can edit a word
+          // instead of typing the whole thing again.
+          if (draft.trim()) onTry(draft.trim())
+        }}
       >
-        Check
-      </button>
-    </form>
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          placeholder="Type your answer"
+          className="min-w-0 flex-1 rounded-xl border border-navy/[0.12] bg-white px-3.5 py-2.5 text-[14px] text-navy outline-none focus:border-primary/50"
+        />
+        <button
+          type="submit"
+          disabled={!draft.trim()}
+          className="rounded-xl bg-primary px-4 py-2.5 text-[13.5px] font-semibold text-white transition-opacity disabled:opacity-40"
+        >
+          Check
+        </button>
+      </form>
+    </>
   )
 }
 
