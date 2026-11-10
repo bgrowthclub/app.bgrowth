@@ -8,7 +8,7 @@ import ReportPageLink from './ReportPageLink'
 import { usePageTexts } from '../../lib/usePageTexts'
 import { MEMBER_PAGE_LABELS, memberLinkHref, memberLinkLabel, videoEmbed } from '../../modules/find/memberPageService'
 import { PAGE_BACKGROUNDS, PAGE_COLORS, blockLinks, pageBlocks } from '../../modules/find/memberPageTemplates'
-import { isUsableLink } from '../../modules/find/memberPageService'
+import { isUsableLink, pageButtonProps } from '../../modules/find/memberPageService'
 import type { MemberPageSkin } from '../../modules/find/memberPageTemplates'
 import type { MemberPage, MemberPageBlock, MemberPageHighlight, MemberPageLink, MemberPageProductCategory } from '../../modules/find/types'
 
@@ -141,8 +141,11 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
 
   // With a chosen background the alternate bands become a light shade of it.
   const bandClass = background ? 'bg-navy/[0.025]' : look.band
-  const section = (key: string, children: ReactNode, band = false) => (
-    <section key={key} className={band && bandClass ? bandClass : undefined}>
+  // `anchor` is the block's TYPE, so the hero button can point at
+  // "#services" or "#contact" (10/11/2026). The key stays the block's own
+  // id — two contact blocks on one page would otherwise share a React key.
+  const section = (key: string, children: ReactNode, band = false, anchor?: string) => (
+    <section key={key} id={anchor} className={`${band && bandClass ? bandClass : ''} scroll-mt-6`}>
       <div className={`mx-auto ${look.wide} px-5 ${skin === 'links' ? 'py-6' : 'py-14 md:py-20'}`}>{children}</div>
     </section>
   )
@@ -162,11 +165,49 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
         <MapPin size={15} aria-hidden /> {page.location}
       </p>
     )
+    // The hero's own button (10/11/2026). It used to BE the first contact
+    // button — label, address and all — so a page whose first button had no
+    // address showed a big button that did nothing. Now the hero says where
+    // it goes; with nothing chosen it still falls back to that first contact
+    // button, so no page saved before today changed.
+    const heroData = blocks.find((b) => b.type === 'hero')?.data ?? {}
+    const heroTarget = pageButtonProps(heroData.buttonLink, usableLinks)
+    const heroButton = (variant: 'solid' | 'outline' = 'solid') => {
+      if (!heroTarget) return null
+      const label = heroData.button?.trim() || (primary ? memberLinkLabel(primary, page.language) : '')
+      if (!label) return null
+      const style =
+        variant === 'solid'
+          ? 'bg-primary text-white hover:bg-primary/90'
+          : 'border border-navy/15 bg-white text-navy hover:border-primary/40'
+      return (
+        <a
+          href={heroTarget.href}
+          target={heroTarget.target}
+          rel={heroTarget.rel}
+          onClick={(e) => {
+            if (preview) {
+              e.preventDefault()
+              return
+            }
+            if (!heroTarget.scrollTo) return
+            e.preventDefault()
+            e.currentTarget.ownerDocument.getElementById(heroTarget.scrollTo)?.scrollIntoView({ behavior: 'smooth' })
+          }}
+          className={`inline-flex items-center gap-2 rounded-xl px-6 py-3 text-[15px] font-semibold ${style}`}
+        >
+          {label} <ArrowRight size={17} aria-hidden />
+        </a>
+      )
+    }
+
     const buttons = (light = false) =>
-      primary ? (
+      heroTarget ? (
         <div className="mt-7 flex flex-wrap gap-3">
-          {button(primary, light ? 'solid' : 'solid')}
-          {secondary && button(secondary, 'outline')}
+          {heroButton()}
+          {/* The second contact button keeps its old place beside it, as
+              long as it is not the one the hero already opens. */}
+          {secondary && !heroData.buttonLink && button(secondary, 'outline')}
         </div>
       ) : null
 
@@ -404,6 +445,7 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
             <div className="mx-auto mt-8 flex max-w-3xl flex-wrap justify-center gap-3">{links.map((l, i) => button(l, i === 0 ? 'solid' : 'outline'))}</div>
           </div>,
           band,
+          block.type,
         )
       }
       case 'highlights':
@@ -415,6 +457,7 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
             <div className={`mt-8 grid gap-6 ${page.highlights.length > 1 ? 'md:grid-cols-2' : 'mx-auto max-w-2xl'}`}>{page.highlights.map(highlightCard)}</div>
           </>,
           band,
+          block.type,
         )
       case 'services':
         if (!page.services.length) return null
@@ -470,6 +513,7 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
             )}
           </>,
           band,
+          block.type,
         )
       case 'about':
       case 'text': {
@@ -493,6 +537,7 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
             </div>
           </div>,
           band,
+          block.type,
         )
       }
       case 'testimonials': {
@@ -513,6 +558,7 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
             </div>
           </>,
           band,
+          block.type,
         )
       }
       case 'gallery': {
@@ -529,6 +575,7 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
             </div>
           </>,
           band,
+          block.type,
         )
       }
       case 'area': {
@@ -547,6 +594,7 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
             </div>
           </div>,
           band,
+          block.type,
         )
       }
       case 'faq': {
@@ -566,6 +614,7 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
             </div>
           </div>,
           band,
+          block.type,
         )
       }
       case 'credentials': {
@@ -589,6 +638,7 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
             <p className="mt-4 text-[12.5px] text-navy/45">{t.credentialsNote}</p>
           </>,
           band,
+          block.type,
         )
       }
       case 'signup':
@@ -596,6 +646,7 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
           block.id,
           <MemberPageSignupForm slug={page.slug} ownerName={page.display_name} title={d.title} body={d.body} button={d.button} language={page.language} preview={preview} headingClass={look.h2} />,
           band,
+          block.type,
         )
       case 'products':
         if (!(d.products ?? []).length) return null
@@ -605,8 +656,11 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
         )
       case 'cta': {
         if (!d.title?.trim() && !d.body?.trim()) return null
+        // Where this button goes (10/11/2026): the member's own choice, or
+        // their first contact button, as every page did before.
+        const ctaTarget = pageButtonProps(d.buttonLink, usableLinks)
         return (
-          <section key={block.id}>
+          <section key={block.id} id="cta">
             <div className={`mx-auto ${look.wide} px-5 py-14`}>
               <div
                 className={`px-6 py-12 text-center md:px-12 md:py-16 ${
@@ -619,7 +673,32 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
               >
                 {d.title && <h2 className={`font-display text-3xl font-bold tracking-tight md:text-4xl ${skin === 'creative' ? 'uppercase' : ''}`}>{d.title}</h2>}
                 {d.body && <p className={`mx-auto mt-3 max-w-xl text-[16px] leading-relaxed ${skin === 'personal' || skin === 'creative' ? 'text-navy/65' : 'text-white/85'}`}>{d.body}</p>}
-                {primary && <div className="mt-7 flex justify-center">{button(primary, skin === 'personal' || skin === 'creative' ? 'solid' : 'light', d.button?.trim() || undefined)}</div>}
+                {ctaTarget && (
+                  <div className="mt-7 flex justify-center">
+                    <a
+                      href={ctaTarget.href}
+                      target={ctaTarget.target}
+                      rel={ctaTarget.rel}
+                      onClick={(e) => {
+                        if (preview) {
+                          e.preventDefault()
+                          return
+                        }
+                        if (!ctaTarget.scrollTo) {
+                          if (!d.buttonLink?.trim() && primary) onLinkClick?.(`link:${primary.type}`)
+                          return
+                        }
+                        e.preventDefault()
+                        e.currentTarget.ownerDocument.getElementById(ctaTarget.scrollTo)?.scrollIntoView({ behavior: 'smooth' })
+                      }}
+                      className={`inline-flex items-center gap-2 rounded-xl px-6 py-3 text-[15px] font-semibold ${
+                        skin === 'personal' || skin === 'creative' ? 'bg-primary text-white hover:bg-primary/90' : 'bg-white text-primary hover:opacity-90'
+                      }`}
+                    >
+                      {d.button?.trim() || (primary ? memberLinkLabel(primary, page.language) : t.learnMore)} <ArrowRight size={17} aria-hidden />
+                    </a>
+                  </div>
+                )}
               </div>
             </div>
           </section>

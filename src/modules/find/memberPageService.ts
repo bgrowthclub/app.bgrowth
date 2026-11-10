@@ -1,5 +1,5 @@
 import { supabase } from '../identity/supabase/supabaseClient'
-import type { MemberPage, MemberPageDraft, MemberPageLevel, MemberPageSignup, MemberPageStats, MemberPageSummary } from './types'
+import type { MemberPage, MemberPageDraft, MemberPageLevel, MemberPageLink, MemberPageSignup, MemberPageStats, MemberPageSummary } from './types'
 
 // Reads a published member page (row-level security only returns
 // published ones). Writes go through api/admin.ts.
@@ -98,6 +98,46 @@ export function isUsableLink(type: string, url: string): boolean {
   }
   const full = /^https?:\/\//i.test(value) ? value : `https://${value}`
   return /^https?:\/\/[^/\s.]+\.[^/\s]/i.test(full)
+}
+
+/**
+ * Where a page's hero (or CTA) button goes — the one that used to be stuck
+ * on the first contact button (10/11/2026).
+ *
+ * Returns the anchor's props, or null when there is nothing to open: the
+ * button is then not drawn at all, because a button that goes nowhere is
+ * worse than no button.
+ */
+export function pageButtonProps(
+  buttonLink: string | undefined,
+  links: MemberPageLink[],
+): { href: string; target?: string; rel?: string; scrollTo?: string } | null {
+  const value = (buttonLink ?? '').trim()
+
+  // A section of this page: handled by the view, which scrolls to it.
+  if (value.startsWith('#')) {
+    const id = value.slice(1)
+    return id ? { href: value, scrollTo: id } : null
+  }
+
+  // One named contact button of this page. Named, not indexed: the member
+  // reorders their buttons, and a stored position would quietly start
+  // pointing at a different one.
+  if (value.startsWith('contact:')) {
+    const type = value.slice('contact:'.length)
+    const found = links.find((l) => l.type === type && isUsableLink(l.type, l.url))
+    return found ? { href: memberLinkHref(found.type, found.url), target: '_blank', rel: 'noreferrer' } : null
+  }
+
+  if (value) {
+    if (!isUsableLink('website', value)) return null
+    return { href: memberLinkHref('website', value), target: '_blank', rel: 'noreferrer' }
+  }
+
+  // Nothing chosen: the first contact button that actually works, which is
+  // what every page saved before today did.
+  const first = links.find((l) => isUsableLink(l.type, l.url))
+  return first ? { href: memberLinkHref(first.type, first.url), target: '_blank', rel: 'noreferrer' } : null
 }
 
 export function memberLinkHref(type: string, url: string): string {

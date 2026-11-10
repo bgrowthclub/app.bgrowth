@@ -87,8 +87,16 @@ export interface MemberPageBlockData {
   items?: { title: string; body?: string }[]
   // gallery
   images?: string[]
-  // cta: button text; it opens the page's first contact button
+  // hero and cta: the button's text.
   button?: string
+  // hero and cta: where that button goes (10/11/2026). Until now it always
+  // opened the page's FIRST contact button, which is why a page whose first
+  // button had no address showed a big button that did nothing.
+  //   '#services', '#contact', …  a section of this page
+  //   'https://…'                 another address
+  //   'contact:whatsapp'          one named contact button of this page
+  //   absent                      the first contact button, as before
+  buttonLink?: string
   // products: the recommendations; body = the member's own disclosure
   // (a standard one is always shown too)
   products?: MemberPageProduct[]

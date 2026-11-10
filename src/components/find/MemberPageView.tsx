@@ -8,7 +8,7 @@ import ReportPageLink from './ReportPageLink'
 import type { CSSProperties } from 'react'
 import { MEMBER_PAGE_LABELS, memberLinkHref, memberLinkLabel, videoEmbed } from '../../modules/find/memberPageService'
 import { PAGE_BACKGROUNDS, PAGE_COLORS, blockLinks, pageBlocks, pageSkin } from '../../modules/find/memberPageTemplates'
-import { isUsableLink } from '../../modules/find/memberPageService'
+import { isUsableLink, pageButtonProps } from '../../modules/find/memberPageService'
 import type { MemberPage, MemberPageBlock, MemberPageProductCategory } from '../../modules/find/types'
 
 const ICONS = MEMBER_LINK_ICONS
@@ -291,16 +291,33 @@ export default function MemberPageView({ page, preview = false, onLinkClick, onS
         )
       case 'cta': {
         if (!d.title?.trim() && !d.body?.trim()) return null
+        // Where this button goes (10/11/2026): the member's own choice, or
+        // their first contact button, as every page did before.
+        const ctaTarget = pageButtonProps(d.buttonLink, page.links)
         return (
           <section className="mt-10 rounded-2xl bg-primary px-6 py-8 text-center text-white">
             {d.title && <h2 className="font-display text-xl font-bold">{d.title}</h2>}
             {d.body && <p className="mt-2 text-[15px] leading-relaxed text-white/85">{d.body}</p>}
-            {pagePrimary && (
+            {ctaTarget && (
               <a
-                {...linkProps(pagePrimary.type, pagePrimary.url, `link:${pagePrimary.type}`)}
+                href={ctaTarget.href}
+                target={ctaTarget.target}
+                rel={ctaTarget.rel}
+                onClick={(e) => {
+                  if (preview) {
+                    e.preventDefault()
+                    return
+                  }
+                  if (!ctaTarget.scrollTo) {
+                    if (!d.buttonLink?.trim() && pagePrimary) onLinkClick?.(`link:${pagePrimary.type}`)
+                    return
+                  }
+                  e.preventDefault()
+                  e.currentTarget.ownerDocument.getElementById(ctaTarget.scrollTo)?.scrollIntoView({ behavior: 'smooth' })
+                }}
                 className="mt-5 inline-flex items-center gap-2 rounded-xl bg-white px-5 py-3 text-[15px] font-semibold text-primary transition-opacity hover:opacity-90"
               >
-                {d.button?.trim() || memberLinkLabel(pagePrimary, page.language)} <ArrowRight size={16} aria-hidden />
+                {d.button?.trim() || (pagePrimary ? memberLinkLabel(pagePrimary, page.language) : t.learnMore)} <ArrowRight size={16} aria-hidden />
               </a>
             )}
           </section>
@@ -315,16 +332,25 @@ export default function MemberPageView({ page, preview = false, onLinkClick, onS
     <div style={style} className="w-full">
       {cover && <div className="h-40 w-full bg-cover bg-center sm:h-52" style={{ backgroundImage: `url(${cover})` }} aria-hidden />}
       <div className={`mx-auto w-full max-w-xl px-5 ${cover ? 'pb-12' : 'py-12'}`}>
-        {pageBlocks(page)
-          .filter((block) => !block.hidden)
-          .map((block) => {
-            const node = renderBlock(block)
-            return node ? (
-              <div key={block.id} className={block.type === 'hero' && cover ? '-mt-14' : undefined}>
-                {node}
-              </div>
-            ) : null
-          })}
+        {(() => {
+          // The first section of each kind carries its type as its id, so a
+          // big button set to "goes to this page's X section" can scroll to
+          // it (10/11/2026 — same ids as MemberSiteView).
+          const anchored = new Set<string>()
+          return pageBlocks(page)
+            .filter((block) => !block.hidden)
+            .map((block) => {
+              const node = renderBlock(block)
+              if (!node) return null
+              const anchor = anchored.has(block.type) ? undefined : block.type
+              anchored.add(block.type)
+              return (
+                <div key={block.id} id={anchor} className={block.type === 'hero' && cover ? '-mt-14' : undefined}>
+                  {node}
+                </div>
+              )
+            })
+        })()}
 
       <footer className="mt-14 text-center">
         <MemberPagePromo language={page.language} preview={preview} madeWith={t.madeWith} />

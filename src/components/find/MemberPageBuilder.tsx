@@ -291,6 +291,63 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
     theme: free ? theme : { color: templates.find((t) => t.id === template)?.color, background: theme.background },
   }
 
+  // Where a big button (the one at the top of the page, and the "cta"
+  // section's) goes — 10/11/2026. Until now it always opened the page's
+  // first contact button, so a page whose first button had no address
+  // showed a big button that did nothing. Stored in `buttonLink` and read
+  // back by pageButtonProps() in memberPageService.ts.
+  const buttonDestination = (block: MemberPageBlock) => {
+    const value = (block.data?.buttonLink ?? '').trim()
+    const custom = /^https?:\/\//i.test(value)
+    const sections = blocks.filter((b) => b.type !== 'hero' && b.id !== block.id)
+    const seen = new Set<MemberPageBlockType>()
+    const contacts = pageLinks()
+    return (
+      <>
+        <select
+          value={custom ? '__url' : value}
+          onChange={(e) => {
+            const v = e.target.value
+            setBlockData(block.id, { buttonLink: v === '' ? undefined : v === '__url' ? 'https://' : v })
+          }}
+          className={INPUT}
+          aria-label="Where the button goes"
+        >
+          <option value="">Opens your first contact button (default)</option>
+          {sections.map((b) => {
+            if (seen.has(b.type)) return null
+            seen.add(b.type)
+            return (
+              <option key={b.id} value={`#${b.type}`}>
+                Goes to this page’s “{label(b.type)}” section
+              </option>
+            )
+          })}
+          {contacts.map((l) => (
+            <option key={l.type} value={`contact:${l.type}`}>
+              Opens your “{l.label || l.type}” button
+            </option>
+          ))}
+          <option value="__url">Another address…</option>
+        </select>
+        {custom && (
+          <>
+            <input
+              value={block.data?.buttonLink ?? ''}
+              onChange={(e) => setBlockData(block.id, { buttonLink: e.target.value })}
+              className={INPUT}
+              placeholder="https://…"
+              aria-label="Address the button opens"
+            />
+            {!/^https:\/\/[^\s.]+\.[^\s]/i.test(value) && (
+              <p className="text-[12.5px] text-amber-700">Finish the address (https://…) — until then the button isn’t shown on your page.</p>
+            )}
+          </>
+        )}
+      </>
+    )
+  }
+
   function blockEditor(block: MemberPageBlock) {
     const d = block.data ?? {}
     switch (block.type) {
@@ -304,6 +361,20 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                 <textarea value={d.body ?? ''} onChange={(e) => setBlockData(block.id, { body: e.target.value })} rows={3} maxLength={400} className={INPUT} placeholder={ownCatalog ? 'A sentence about what you sell' : 'A sentence about what you recommend'} aria-label="Intro" />
                 <input value={d.button ?? ''} onChange={(e) => setBlockData(block.id, { button: e.target.value })} maxLength={40} className={INPUT} placeholder={ownCatalog ? 'Button text (e.g. See our products)' : 'Button text (default: See my picks)'} aria-label="Button text" />
                 <p className="text-[12.5px] text-navy/45">The big image on the right is your cover image (or your photo).</p>
+              </>
+            )}
+            {template !== 'picks' && !ownCatalog && (
+              <>
+                <p className="pt-1 text-[12.5px] font-semibold text-navy/60">The big button at the top</p>
+                <input
+                  value={d.button ?? ''}
+                  onChange={(e) => setBlockData(block.id, { button: e.target.value })}
+                  maxLength={40}
+                  className={INPUT}
+                  placeholder="Button text (default: your first contact button’s text)"
+                  aria-label="Button text"
+                />
+                {buttonDestination(block)}
               </>
             )}
           </div>
@@ -537,7 +608,10 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
             <input value={d.title ?? ''} onChange={(e) => setBlockData(block.id, { title: e.target.value })} maxLength={120} className={INPUT} placeholder="Title" aria-label="Title" />
             <textarea value={d.body ?? ''} onChange={(e) => setBlockData(block.id, { body: e.target.value })} rows={block.type === 'text' ? 5 : 3} maxLength={2000} className={INPUT} placeholder={block.type === 'area' ? 'Cities, counties or regions' : 'Text'} aria-label="Text" />
             {block.type === 'cta' && (
-              <input value={d.button ?? ''} onChange={(e) => setBlockData(block.id, { button: e.target.value })} maxLength={40} className={INPUT} placeholder="Button text — opens your first contact button" aria-label="Button text" />
+              <>
+                <input value={d.button ?? ''} onChange={(e) => setBlockData(block.id, { button: e.target.value })} maxLength={40} className={INPUT} placeholder="Button text" aria-label="Button text" />
+                {buttonDestination(block)}
+              </>
             )}
           </div>
         )

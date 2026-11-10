@@ -2637,6 +2637,20 @@ function cleanPageBlocks(value: unknown) {
     if (pageText(d.title, 120)) data.title = pageText(d.title, 120)
     if (pageText(d.body, 2000)) data.body = pageText(d.body, 2000)
     if (pageText(d.button, 40)) data.button = pageText(d.button, 40)
+    // hero and cta: where that button goes (10/11/2026). A section of this
+    // page ('#services'), one of its contact buttons ('contact:whatsapp') or
+    // an https address; anything else is dropped, so the button falls back to
+    // the first contact button, as every page did before. The same rule is in
+    // pageButtonProps() in src/modules/find/memberPageService.ts, which reads
+    // it back — change both (CLAUDE.md §13).
+    const buttonLink = pageText(d.buttonLink, 500)
+    if (
+      (buttonLink.startsWith('#') && PAGE_BLOCK_TYPES.has(buttonLink.slice(1))) ||
+      (buttonLink.startsWith('contact:') && MEMBER_LINK_TYPES.includes(buttonLink.slice('contact:'.length))) ||
+      /^https:\/\/\S+$/.test(buttonLink)
+    ) {
+      data.buttonLink = buttonLink
+    }
     // products: the member switched the standard affiliate note off (Sprint 146).
     if (type === 'products' && d.hideNote === true) data.hideNote = true
     if (Array.isArray(d.items)) {
