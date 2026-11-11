@@ -543,6 +543,10 @@ function cleanPageBlocks(value: unknown) {
     ) {
       data.buttonLink = buttonLink
     }
+    // contact: this block's own buttons (27/10/2026), so a page can carry
+    // several blocks of them, each with its own. Absent = the block shows
+    // the page's list, which is every block saved before that date.
+    if (Array.isArray(d.links)) data.links = cleanPageLinks(d.links)
     // products: the member switched the standard affiliate note off (Sprint 146).
     if (type === 'products' && d.hideNote === true) data.hideNote = true
     if (Array.isArray(d.items)) {
@@ -823,10 +827,12 @@ async function slugUsedBefore(db: Db, slug: string, exceptId?: string) {
   return !error && Boolean(data && data.length)
 }
 
-function readMyPage(b: Record<string, any>) {
-  const displayName = pageText(b.displayName, 80)
-  if (!displayName) throw new HttpError(400, 'Write the name shown on your page.')
-  const links = (Array.isArray(b.links) ? b.links : []).slice(0, 12).flatMap((raw: any) => {
+// One member page button, checked exactly as the page's own list always
+// was. Extracted on 10/11/2026 so a block of buttons (data.links) is checked
+// the same way — until then cleanPageBlocks() dropped those lists outright,
+// so a second block of buttons never survived the save.
+function cleanPageLinks(value: unknown) {
+  return (Array.isArray(value) ? value : []).slice(0, 12).flatMap((raw: any) => {
     const type = MEMBER_LINK_TYPES.includes(raw?.type) ? raw.type : 'other'
     const url = pageText(raw?.url, 300)
     if (!url) return []
@@ -850,6 +856,12 @@ function readMyPage(b: Record<string, any>) {
     }
     return [{ type, label: pageText(raw?.label, 40), url }]
   })
+}
+
+function readMyPage(b: Record<string, any>) {
+  const displayName = pageText(b.displayName, 80)
+  if (!displayName) throw new HttpError(400, 'Write the name shown on your page.')
+  const links = cleanPageLinks(b.links)
   const services = (Array.isArray(b.services) ? b.services : []).slice(0, 12).flatMap((raw: any) => {
     const title = pageText(raw?.title, 100)
     if (!title) return []

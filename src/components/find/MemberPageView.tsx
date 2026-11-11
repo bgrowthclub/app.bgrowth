@@ -293,7 +293,11 @@ export default function MemberPageView({ page, preview = false, onLinkClick, onS
         if (!d.title?.trim() && !d.body?.trim()) return null
         // Where this button goes (10/11/2026): the member's own choice, or
         // their first contact button, as every page did before.
-        const ctaTarget = pageButtonProps(d.buttonLink, page.links)
+        const ctaTarget = pageButtonProps(
+          d.buttonLink,
+          // Every button on the page, wherever its block sits (10/11/2026).
+          [...page.links, ...pageBlocks(page).flatMap((b) => (b.type === 'contact' ? blockLinks(page, b) : []))],
+        )
         return (
           <section className="mt-10 rounded-2xl bg-primary px-6 py-8 text-center text-white">
             {d.title && <h2 className="font-display text-xl font-bold">{d.title}</h2>}

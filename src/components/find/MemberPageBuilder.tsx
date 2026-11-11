@@ -178,6 +178,10 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
   // Read-only now: each contact block keeps its own buttons (27/10/2026)
   // and this is the fallback for a page saved before that.
   const [links] = useState<MemberPageLink[]>(page?.links ?? [])
+  // Which of the page's existing buttons the empty block being edited is
+  // about to take from the others (10/11/2026). Only one block is open at a
+  // time, so one list is enough.
+  const [bringing, setBringing] = useState<string[]>([])
   const [services, setServices] = useState<MemberPageService[]>(page?.services ?? [])
   const [highlights, setHighlights] = useState<MemberPageHighlight[]>(page?.highlights ?? [])
   const [open, setOpen] = useState<string | null>(null)
@@ -301,7 +305,11 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
     const custom = /^https?:\/\//i.test(value)
     const sections = blocks.filter((b) => b.type !== 'hero' && b.id !== block.id)
     const seen = new Set<MemberPageBlockType>()
-    const contacts = pageLinks()
+    // Every button the page has, wherever its block sits — otherwise a
+    // button moved into another section stops being offered as a destination.
+    const contacts = [...pageLinks(), ...contactBlocks().flatMap((b) => blockOwnLinks(b))]
+      .filter((l) => l.url.trim())
+      .filter((l, i, list) => list.findIndex((x) => x.type === l.type) === i)
     return (
       <>
         <select
@@ -346,6 +354,31 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
         )}
       </>
     )
+  }
+
+  // Several blocks of contact buttons, spread around the page (10/11/2026).
+  // A button is MOVED between them — chosen when the block is created, or
+  // sent across later — so nobody has to add it here and delete it there.
+  const contactBlocks = () => blocks.filter((b) => b.type === 'contact')
+  // A block saved before 27/10/2026 has no list of its own and shows the
+  // page's; taking a button out of it has to write that list down first.
+  const blockOwnLinks = (b: MemberPageBlock) => b.data?.links ?? links
+  const sameLink = (a: MemberPageLink, b: MemberPageLink) => a.type === b.type && a.url.trim() === b.url.trim()
+  const moveLinks = (fromId: string, toId: string, moving: MemberPageLink[]) => {
+    if (fromId === toId || !moving.length) return
+    setBlocks((list) =>
+      list.map((b) => {
+        if (b.type !== 'contact') return b
+        const own = b.data?.links ?? links
+        if (b.id === fromId) return { ...b, data: { ...(b.data ?? {}), links: own.filter((l) => !moving.some((m) => sameLink(m, l))) } }
+        if (b.id === toId) return { ...b, data: { ...(b.data ?? {}), links: [...own.filter((l) => !moving.some((m) => sameLink(m, l))), ...moving] } }
+        return b
+      }),
+    )
+  }
+  const contactName = (id: string) => {
+    const i = contactBlocks().findIndex((b) => b.id === id)
+    return i < 0 ? 'Buttons' : `Buttons section ${i + 1}`
   }
 
   function blockEditor(block: MemberPageBlock) {
@@ -444,9 +477,52 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
         const mine = d.links ?? links
         const setMine = (next: MemberPageLink[]) => setBlockData(block.id, { links: next })
         const patch = (i: number, p: Partial<MemberPageLink>) => setMine(mine.map((x, j) => (j === i ? { ...x, ...p } : x)))
+        // The other blocks of buttons on this page, and what they hold:
+        // a new, empty block offers to take some of them.
+        const otherBlocks = contactBlocks().filter((b) => b.id !== block.id)
+        const elsewhere = otherBlocks.flatMap((b) => blockOwnLinks(b).filter((l) => l.url.trim()).map((l) => ({ block: b, link: l })))
+        const key = (l: MemberPageLink) => `${l.type}|${l.url.trim()}`
         return (
           <div>
             <p className="mb-2 text-[12.5px] text-navy/45">The first button is the big one. Add another block of buttons wherever you want them on the page.</p>
+
+            {mine.length === 0 && elsewhere.length > 0 && (
+              <div className="mb-3 rounded-xl border border-primary/25 bg-primary/[0.04] p-3">
+                <p className="text-[13px] font-semibold text-navy">Bring buttons here</p>
+                <p className="mt-0.5 text-[12.5px] text-navy/55">Tick the ones that belong in this part of the page. They leave the section they are in now — you don’t have to delete them there.</p>
+                <div className="mt-2.5 space-y-1.5">
+                  {elsewhere.map(({ block: from, link }) => (
+                    <label key={key(link)} className="flex items-start gap-2 text-[13px] text-navy/75">
+                      <input
+                        type="checkbox"
+                        className="mt-0.5"
+                        checked={bringing.includes(key(link))}
+                        onChange={(e) => setBringing((l) => (e.target.checked ? [...l, key(link)] : l.filter((x) => x !== key(link))))}
+                      />
+                      <span>
+                        {link.label?.trim() || LINK_TYPES.find((t) => t.id === link.type)?.label || link.type}
+                        <span className="block text-[12px] text-navy/40">now in “{contactName(from.id)}”</span>
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  disabled={bringing.length === 0}
+                  onClick={() => {
+                    otherBlocks.forEach((from) => {
+                      const moving = blockOwnLinks(from).filter((l) => bringing.includes(key(l)))
+                      if (moving.length) moveLinks(from.id, block.id, moving)
+                    })
+                    setBringing([])
+                  }}
+                  className={`${SMALL_BUTTON} mt-3 bg-primary text-white hover:bg-primary/90 disabled:opacity-40`}
+                >
+                  Move {bringing.length || ''} button{bringing.length === 1 ? '' : 's'} here
+                </button>
+              </div>
+            )}
+
             <div className="space-y-2">
               {mine.map((link, i) => (
                 <Row key={i} index={i} total={mine.length} onMove={(dd) => setMine(move(mine, i, dd))} onRemove={() => setMine(mine.filter((_, j) => j !== i))}>
@@ -467,6 +543,23 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                     </p>
                   )}
                   <input value={link.label} onChange={(e) => patch(i, { label: e.target.value })} maxLength={40} className={INPUT} placeholder="Button text (optional)" aria-label="Button text" />
+                  {otherBlocks.length > 0 && (
+                    <select
+                      value=""
+                      onChange={(e) => {
+                        if (e.target.value) moveLinks(block.id, e.target.value, [link])
+                      }}
+                      className={`${INPUT} text-[13px]`}
+                      aria-label="Move this button to another section"
+                    >
+                      <option value="">Move this button to…</option>
+                      {otherBlocks.map((b) => (
+                        <option key={b.id} value={b.id}>
+                          {contactName(b.id)}
+                        </option>
+                      ))}
+                    </select>
+                  )}
                 </Row>
               ))}
             </div>
@@ -965,7 +1058,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                 return (
                   <div key={block.id} className={`rounded-xl border ${block.hidden ? 'border-dashed border-navy/15 bg-bg-soft/50' : 'border-navy/[0.08] bg-white'}`}>
                     <div className="flex items-center gap-2 px-3 py-2.5">
-                      <button type="button" onClick={() => setOpen(isOpen ? null : block.id)} className="flex min-w-0 flex-1 items-center gap-2 text-left">
+                      <button type="button" onClick={() => { setBringing([]); setOpen(isOpen ? null : block.id) }} className="flex min-w-0 flex-1 items-center gap-2 text-left">
                         {isOpen ? <ChevronDown size={16} className="shrink-0 text-navy/40" /> : <ChevronRight size={16} className="shrink-0 text-navy/40" />}
                         <span className={`truncate text-[14px] font-semibold ${block.hidden ? 'text-navy/40' : 'text-navy'}`}>{block.data?.title || label(block.type)}</span>
                         {block.data?.title && <span className="hidden text-[12px] text-navy/35 sm:inline">{label(block.type)}</span>}
@@ -1030,6 +1123,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                 onClick={() => {
                   const id = blockId()
                   setBlocks((l) => [...l.slice(0, -1), { id, type: 'signup' }, ...l.slice(-1)])
+                  setBringing([])
                   setOpen(id)
                 }}
               />
@@ -1061,7 +1155,8 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                             ...(t.type === 'contact' && l.some((b) => b.type === 'contact') ? { data: { links: [] } } : {}),
                           },
                         ])
-                        setOpen(id)
+                        setBringing([])
+                  setOpen(id)
                         setAdding(false)
                       }}
                       className="rounded-xl border border-navy/10 px-3 py-2.5 text-left transition-colors hover:border-primary/40 hover:bg-bg-soft disabled:cursor-not-allowed disabled:opacity-45 disabled:hover:border-navy/10 disabled:hover:bg-transparent"

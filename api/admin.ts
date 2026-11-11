@@ -2623,6 +2623,30 @@ const pageUrl = (v: unknown) => {
 
 const PRODUCT_CATEGORIES = new Set(['car', 'work', 'home', 'tech', 'travel', 'finance', 'learning', 'other'])
 
+// One member page button, checked exactly as the page's own list always
+// was. Extracted on 10/11/2026 so a block of buttons (data.links) is checked
+// the same way — until then cleanPageBlocks() dropped those lists outright,
+// so a second block of buttons never survived the save.
+function cleanPageLinks(value: unknown) {
+  return (Array.isArray(value) ? value : []).slice(0, 12).flatMap((raw: any) => {
+    const type = MEMBER_LINK_TYPES.includes(raw?.type) ? raw.type : 'other'
+    const url = cleanText(raw?.url, 300)
+    if (!url) return []
+    if (type === 'email' && !/^(mailto:)?[^\s@]+@[^\s@]+\.[^\s@]+$/.test(url)) throw new HttpError(400, `“${url}” isn’t an e-mail address.`)
+    // A WhatsApp group is its invite link (Sprint 134).
+    // A group invite OR a channel (03/11/2026). The same rule is in
+    // src/modules/find/memberPageService.ts (WHATSAPP_JOIN_RE) — a function
+    // must not import from src/; change both.
+    if (type === 'whatsapp_group' && !/^https:\/\/(chat\.whatsapp\.com\/|(www\.)?whatsapp\.com\/channel\/)\S+$/i.test(url)) {
+      throw new HttpError(400, 'Paste the full link: a group invite (https://chat.whatsapp.com/…) or a channel (https://whatsapp.com/channel/…).')
+    }
+    if ((type === 'whatsapp' || type === 'phone') && !/^https?:\/\//.test(url) && url.replace(/\D/g, '').length < 8) {
+      throw new HttpError(400, 'Write the WhatsApp number with country code (for example +1 555 123 4567).')
+    }
+    return [{ type, label: cleanText(raw?.label, 40), url }]
+  })
+}
+
 function cleanPageBlocks(value: unknown) {
   if (!Array.isArray(value)) return null
   const seen = new Set<string>()
@@ -2651,6 +2675,10 @@ function cleanPageBlocks(value: unknown) {
     ) {
       data.buttonLink = buttonLink
     }
+    // contact: this block's own buttons (27/10/2026), so a page can carry
+    // several blocks of them, each with its own. Absent = the block shows
+    // the page's list, which is every block saved before that date.
+    if (Array.isArray(d.links)) data.links = cleanPageLinks(d.links)
     // products: the member switched the standard affiliate note off (Sprint 146).
     if (type === 'products' && d.hideNote === true) data.hideNote = true
     if (Array.isArray(d.items)) {
@@ -2699,23 +2727,7 @@ function readMemberPageInput(req: VercelRequest) {
   if (RESERVED_PAGE_SLUGS.has(slug)) throw new HttpError(400, 'This address is reserved — choose another one.')
   const photoUrl = cleanUrl(b.photoUrl, 'The photo') || null
 
-  const links = (Array.isArray(b.links) ? b.links : []).slice(0, 12).flatMap((raw: any) => {
-    const type = MEMBER_LINK_TYPES.includes(raw?.type) ? raw.type : 'other'
-    const url = cleanText(raw?.url, 300)
-    if (!url) return []
-    if (type === 'email' && !/^(mailto:)?[^\s@]+@[^\s@]+\.[^\s@]+$/.test(url)) throw new HttpError(400, `“${url}” isn’t an e-mail address.`)
-    // A WhatsApp group is its invite link (Sprint 134).
-    // A group invite OR a channel (03/11/2026). The same rule is in
-    // src/modules/find/memberPageService.ts (WHATSAPP_JOIN_RE) — a function
-    // must not import from src/; change both.
-    if (type === 'whatsapp_group' && !/^https:\/\/(chat\.whatsapp\.com\/|(www\.)?whatsapp\.com\/channel\/)\S+$/i.test(url)) {
-      throw new HttpError(400, 'Paste the full link: a group invite (https://chat.whatsapp.com/…) or a channel (https://whatsapp.com/channel/…).')
-    }
-    if ((type === 'whatsapp' || type === 'phone') && !/^https?:\/\//.test(url) && url.replace(/\D/g, '').length < 8) {
-      throw new HttpError(400, 'Write the WhatsApp number with country code (for example +1 555 123 4567).')
-    }
-    return [{ type, label: cleanText(raw?.label, 40), url }]
-  })
+  const links = cleanPageLinks(b.links)
   const services = (Array.isArray(b.services) ? b.services : []).slice(0, 12).flatMap((raw: any) => {
     const title = cleanText(raw?.title, 100)
     if (!title) return []

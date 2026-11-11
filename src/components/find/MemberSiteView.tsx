@@ -102,6 +102,12 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
   } as CSSProperties
   // A button that goes nowhere is worse than no button (08/11/2026).
   const usableLinks = page.links.filter((l) => isUsableLink(l.type, l.url))
+  // Every button on the page, wherever its block sits (10/11/2026): a big
+  // button set to "opens your WhatsApp" must still find it after the member
+  // moves that button into another section.
+  const allLinks = [...usableLinks, ...pageBlocks(page).flatMap((b) => (b.type === 'contact' ? blockLinks(page, b) : []))].filter(
+    (l, i, list) => list.findIndex((x) => x.type === l.type && x.url === l.url) === i,
+  )
   const [primary, secondary] = usableLinks
   // Affiliate Picks shows the standard affiliate note in the hero, before the
   // picks — unless the member switched it off in the products section.
@@ -171,7 +177,7 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
     // it goes; with nothing chosen it still falls back to that first contact
     // button, so no page saved before today changed.
     const heroData = blocks.find((b) => b.type === 'hero')?.data ?? {}
-    const heroTarget = pageButtonProps(heroData.buttonLink, usableLinks)
+    const heroTarget = pageButtonProps(heroData.buttonLink, allLinks)
     const heroButton = (variant: 'solid' | 'outline' = 'solid') => {
       if (!heroTarget) return null
       const label = heroData.button?.trim() || (primary ? memberLinkLabel(primary, page.language) : '')
@@ -658,7 +664,7 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
         if (!d.title?.trim() && !d.body?.trim()) return null
         // Where this button goes (10/11/2026): the member's own choice, or
         // their first contact button, as every page did before.
-        const ctaTarget = pageButtonProps(d.buttonLink, usableLinks)
+        const ctaTarget = pageButtonProps(d.buttonLink, allLinks)
         return (
           <section key={block.id} id="cta">
             <div className={`mx-auto ${look.wide} px-5 py-14`}>
