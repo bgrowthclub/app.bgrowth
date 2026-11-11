@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Check, RotateCcw, X } from 'lucide-react'
 import { isAnswerable, isAnswered, mark, score } from '../../modules/academy/quiz'
 import type { GivenAnswer } from '../../modules/academy/quiz'
@@ -98,6 +98,19 @@ function Question({
   // costs nobody anything — and saving it would mean changing the shape of
   // every student's stored progress for a counter that decides nothing.
   const [tried, setTried] = useState<string[]>([])
+  // The wrong answer just given, marked red for a moment and then put back
+  // the way it was (11/11/2026, the owner's decision). It used to stay red
+  // for the rest of the question, so by the third go the card was a list of
+  // crossed-out answers — which reads like a verdict on a self-check that
+  // grades nothing.
+  // `n` counts the presses, so answering the SAME wrong option twice starts
+  // the moment again instead of doing nothing.
+  const [flash, setFlash] = useState<{ key: string; n: number } | null>(null)
+  useEffect(() => {
+    if (!flash) return
+    const id = setTimeout(() => setFlash(null), 1200)
+    return () => clearTimeout(id)
+  }, [flash])
   const limit = triesFor(question)
   const left = limit - tried.length
 
@@ -109,6 +122,10 @@ function Question({
       return
     }
     const key = attemptKey(value)
+    // The flash happens even on a repeat of the same wrong answer: the
+    // student still pressed something and deserves an answer, it just
+    // doesn't cost them a try.
+    setFlash((f) => ({ key, n: (f?.n ?? 0) + 1 }))
     if (tried.includes(key)) return
     const next = [...tried, key]
     setTried(next)
@@ -117,6 +134,7 @@ function Question({
 
   const retry = () => {
     setTried([])
+    setFlash(null)
     onAnswer(question.id, null)
   }
 
@@ -135,7 +153,7 @@ function Question({
       ) : question.kind === 'multi' ? (
         <MultiAnswer question={question} given={given} onTry={tryAnswer} tried={tried} left={left} />
       ) : (
-        <SingleAnswer question={question} given={given} onTry={tryAnswer} tried={tried} left={left} />
+        <SingleAnswer question={question} given={given} onTry={tryAnswer} tried={tried} left={left} flash={flash?.key ?? null} />
       )}
 
       {marked && (
@@ -181,12 +199,15 @@ function SingleAnswer({
   onTry,
   tried,
   left,
+  flash,
 }: {
   question: Extract<CourseQuestion, { answer: string }>
   given: GivenAnswer | null
   onTry: (given: GivenAnswer) => void
   tried: string[]
   left: number
+  /** The option just answered wrong: red for a moment, then normal again. */
+  flash: string | null
 }) {
   const picked = typeof given === 'string' ? given : null
   const revealed = picked !== null
@@ -199,10 +220,11 @@ function SingleAnswer({
           // Once answered, the right option is shown even if they missed it:
           // a self-check is there to teach, not to keep a secret.
           const correct = revealed && option.id === question.answer
-          // Tried and wrong, with goes still left: marked so they don't go
-          // round in circles, but still clickable, because clicking it again
-          // must not cost a try (see attemptKey).
-          const spent = !revealed && tried.includes(option.id)
+          // Just answered and wrong, with goes still left: red for a moment
+          // and then back to normal, so the question stays a question
+          // instead of becoming a list of crossed-out answers. It is still
+          // clickable, and clicking it again doesn't cost a try (attemptKey).
+          const spent = !revealed && flash === option.id
 
           let tone = IDLE
           if (correct) tone = 'border-emerald-500/50 bg-emerald-50'
