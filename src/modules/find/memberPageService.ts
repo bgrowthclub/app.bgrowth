@@ -196,6 +196,10 @@ export interface VideoEmbed {
   src: string
   // Vertical videos (TikTok, Reels, Shorts) take a taller frame.
   vertical: boolean
+  // Which player it is (10/11/2026). Instagram's box is not just the video:
+  // it carries the profile, the likes and the comment field, so a 9/16 frame
+  // cuts it off and it scrolls inside itself. Whoever draws it needs to know.
+  platform?: 'youtube' | 'tiktok' | 'instagram'
 }
 
 // Turns a YouTube, TikTok or Instagram link into the address of its player.
@@ -210,20 +214,20 @@ export function videoEmbed(link: string): VideoEmbed | null {
   const host = url.hostname.replace(/^(www\.|m\.)/, '')
   if (host === 'youtu.be') {
     const id = url.pathname.slice(1).split('/')[0]
-    return id ? { src: `https://www.youtube-nocookie.com/embed/${id}`, vertical: false } : null
+    return id ? { src: `https://www.youtube-nocookie.com/embed/${id}`, vertical: false, platform: 'youtube' } : null
   }
   if (host === 'youtube.com') {
     const shorts = url.pathname.match(/^\/(shorts|embed|live)\/([\w-]+)/)
     const id = shorts?.[2] ?? url.searchParams.get('v')
-    return id ? { src: `https://www.youtube-nocookie.com/embed/${id}`, vertical: shorts?.[1] === 'shorts' } : null
+    return id ? { src: `https://www.youtube-nocookie.com/embed/${id}`, vertical: shorts?.[1] === 'shorts', platform: 'youtube' } : null
   }
   if (host === 'tiktok.com') {
     const id = url.pathname.match(/\/video\/(\d+)/)?.[1]
-    return id ? { src: `https://www.tiktok.com/embed/v2/${id}`, vertical: true } : null
+    return id ? { src: `https://www.tiktok.com/embed/v2/${id}`, vertical: true, platform: 'tiktok' } : null
   }
   if (host === 'instagram.com') {
     const m = url.pathname.match(/^\/(p|reel|reels|tv)\/([\w-]+)/)
-    return m ? { src: `https://www.instagram.com/${m[1] === 'reels' ? 'reel' : m[1]}/${m[2]}/embed`, vertical: true } : null
+    return m ? { src: `https://www.instagram.com/${m[1] === 'reels' ? 'reel' : m[1]}/${m[2]}/embed`, vertical: true, platform: 'instagram' } : null
   }
   return null
 }

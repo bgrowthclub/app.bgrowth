@@ -385,18 +385,46 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
     )
   }
 
-  function highlightCard(h: MemberPageHighlight, i: number) {
+  function highlightCard(h: MemberPageHighlight, i: number, alone = false) {
     const video = h.video ? videoEmbed(h.video) : null
+    // Instagram's box is the profile, the video, the likes and the comment
+    // field. A 9/16 frame cuts it off and it scrolls inside itself, which is
+    // what it did until 10/11/2026 — so it gets the height it actually asks
+    // for instead of a video-shaped one.
+    const frame =
+      video?.platform === 'instagram'
+        ? 'h-[680px] w-full max-w-[340px]'
+        : video?.vertical
+          ? 'aspect-[9/16] max-h-[560px] w-full max-w-[315px]'
+          : 'aspect-video w-full'
     const media = video ? (
-      <div className={`mx-auto bg-navy ${video.vertical ? 'aspect-[9/16] max-h-[560px] w-full max-w-[315px]' : 'aspect-video w-full'}`}>
+      <div className={`mx-auto overflow-hidden ${video.platform === 'instagram' ? 'bg-white' : 'bg-navy'} ${skin === 'creative' ? '' : 'rounded-xl'} ${frame}`}>
         <iframe src={video.src} title={h.title} className="h-full w-full" allow="accelerometer; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen loading="lazy" />
       </div>
     ) : h.image ? (
       <img src={h.image} alt="" className={`w-full object-cover ${skin === 'creative' ? 'aspect-[4/3]' : 'aspect-video'}`} />
     ) : null
+    // On its own, a featured item reads better beside its text than above it:
+    // a vertical video left half the screen empty on both sides (10/11/2026).
+    if (alone && media) {
+      return (
+        <div key={h.title + i} className={`${skin === 'creative' ? '' : `${look.card} p-5 md:p-7`} md:flex md:items-center md:gap-8`}>
+          <div className="md:shrink-0">{media}</div>
+          <div className={`flex flex-col ${skin === 'creative' ? 'pt-3' : 'pt-5 md:pt-0'}`}>
+            <p className={`font-semibold text-navy ${skin === 'creative' ? 'text-[13px] uppercase tracking-wide' : 'text-[19px] md:text-[22px]'}`}>{h.title}</p>
+            {h.description && <p className="mt-2 text-[15px] leading-relaxed text-navy/60">{h.description}</p>}
+            {h.url && (
+              <a {...linkProps('website', h.url, `featured:${h.title}`)} className="mt-4 inline-flex items-center gap-1.5 self-start text-[15px] font-semibold text-primary hover:underline">
+                {h.cta?.trim() || t.learnMore} <ArrowRight size={16} aria-hidden />
+              </a>
+            )}
+          </div>
+        </div>
+      )
+    }
     return (
       <div key={h.title + i} className={`flex h-full flex-col overflow-hidden ${skin === 'creative' ? '' : look.card}`}>
-        {media}
+        <div className={video ? 'p-4 pb-0' : undefined}>{media}</div>
         <div className={`flex flex-1 flex-col ${skin === 'creative' ? 'pt-3' : 'p-5'}`}>
           <p className={`font-semibold text-navy ${skin === 'creative' ? 'text-[13px] uppercase tracking-wide' : 'text-[17px]'}`}>{h.title}</p>
           {h.description && <p className="mt-1 text-[14.5px] leading-relaxed text-navy/60">{h.description}</p>}
@@ -460,7 +488,15 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
           block.id,
           <>
             <h2 className={look.h2}>{t.highlights}</h2>
-            <div className={`mt-8 grid gap-6 ${page.highlights.length > 1 ? 'md:grid-cols-2' : 'mx-auto max-w-2xl'}`}>{page.highlights.map(highlightCard)}</div>
+            {page.highlights.length === 1 ? (
+              <div className="mx-auto mt-8 max-w-4xl">{highlightCard(page.highlights[0], 0, true)}</div>
+            ) : (
+              // Two side by side; from three on, three in a row on a wide
+              // screen — vertical videos are narrow, so two left big gaps.
+              <div className={`mt-8 grid gap-6 md:grid-cols-2 ${page.highlights.length > 2 ? 'lg:grid-cols-3' : ''}`}>
+                {page.highlights.map((h, i) => highlightCard(h, i))}
+              </div>
+            )}
           </>,
           band,
           block.type,

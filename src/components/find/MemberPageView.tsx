@@ -130,7 +130,12 @@ export default function MemberPageView({ page, preview = false, onLinkClick, onS
                 // A video plays in place, so the card isn't a link itself.
                 return (
                   <div key={h.title} className="overflow-hidden rounded-2xl border border-navy/[0.08] bg-white shadow-softer">
-                    <div className={`mx-auto bg-navy ${video.vertical ? 'aspect-[9/16] max-h-[560px] max-w-[315px]' : 'aspect-video w-full'}`}>
+                    {/* Instagram's box carries the profile, likes and comment
+                        field as well as the video, so a 9/16 frame made it
+                        scroll inside itself (10/11/2026). */}
+                    <div
+                      className={`mx-auto ${video.platform === 'instagram' ? 'h-[680px] w-full max-w-[340px] bg-white' : `bg-navy ${video.vertical ? 'aspect-[9/16] max-h-[560px] max-w-[315px]' : 'aspect-video w-full'}`}`}
+                    >
                       <iframe
                         src={video.src}
                         title={h.title}
