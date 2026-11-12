@@ -385,7 +385,7 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
     )
   }
 
-  function highlightCard(h: MemberPageHighlight, i: number, alone = false) {
+  function highlightCard(h: MemberPageHighlight, i: number) {
     const video = h.video ? videoEmbed(h.video) : null
     // Instagram's box is the profile, the video, the likes and the comment
     // field. A 9/16 frame cuts it off and it scrolls inside itself, which is
@@ -393,7 +393,7 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
     // for instead of a video-shaped one.
     const frame =
       video?.platform === 'instagram'
-        ? 'h-[680px] w-full max-w-[340px]'
+        ? 'h-[580px] w-full max-w-[340px]'
         : video?.vertical
           ? 'aspect-[9/16] max-h-[560px] w-full max-w-[315px]'
           : 'aspect-video w-full'
@@ -404,24 +404,6 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
     ) : h.image ? (
       <img src={h.image} alt="" className={`w-full object-cover ${skin === 'creative' ? 'aspect-[4/3]' : 'aspect-video'}`} />
     ) : null
-    // On its own, a featured item reads better beside its text than above it:
-    // a vertical video left half the screen empty on both sides (10/11/2026).
-    if (alone && media) {
-      return (
-        <div key={h.title + i} className={`${skin === 'creative' ? '' : `${look.card} p-5 md:p-7`} md:flex md:items-center md:gap-8`}>
-          <div className="md:shrink-0">{media}</div>
-          <div className={`flex flex-col ${skin === 'creative' ? 'pt-3' : 'pt-5 md:pt-0'}`}>
-            <p className={`font-semibold text-navy ${skin === 'creative' ? 'text-[13px] uppercase tracking-wide' : 'text-[19px] md:text-[22px]'}`}>{h.title}</p>
-            {h.description && <p className="mt-2 text-[15px] leading-relaxed text-navy/60">{h.description}</p>}
-            {h.url && (
-              <a {...linkProps('website', h.url, `featured:${h.title}`)} className="mt-4 inline-flex items-center gap-1.5 self-start text-[15px] font-semibold text-primary hover:underline">
-                {h.cta?.trim() || t.learnMore} <ArrowRight size={16} aria-hidden />
-              </a>
-            )}
-          </div>
-        </div>
-      )
-    }
     return (
       <div key={h.title + i} className={`flex h-full flex-col overflow-hidden ${skin === 'creative' ? '' : look.card}`}>
         <div className={video ? 'p-4 pb-0' : undefined}>{media}</div>
@@ -488,15 +470,17 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
           block.id,
           <>
             <h2 className={look.h2}>{t.highlights}</h2>
-            {page.highlights.length === 1 ? (
-              <div className="mx-auto mt-8 max-w-4xl">{highlightCard(page.highlights[0], 0, true)}</div>
-            ) : (
-              // Two side by side; from three on, three in a row on a wide
-              // screen — vertical videos are narrow, so two left big gaps.
-              <div className={`mt-8 grid gap-6 md:grid-cols-2 ${page.highlights.length > 2 ? 'lg:grid-cols-3' : ''}`}>
-                {page.highlights.map((h, i) => highlightCard(h, i))}
-              </div>
-            )}
+            {/* Up to three in a row (11/11/2026, the owner's decision): a
+                vertical video is narrow, so one on its own used to leave the
+                screen empty on both sides. Fewer than three are centred at
+                the width they actually need instead of being stretched. */}
+            <div
+              className={`mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 ${
+                page.highlights.length === 1 ? 'mx-auto max-w-sm sm:grid-cols-1 lg:grid-cols-1' : page.highlights.length === 2 ? 'mx-auto max-w-3xl lg:grid-cols-2' : ''
+              }`}
+            >
+              {page.highlights.map((h, i) => highlightCard(h, i))}
+            </div>
           </>,
           band,
           block.type,
