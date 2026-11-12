@@ -116,12 +116,20 @@ export default function MemberProductPicks({ products, title, note, hideNote = f
         <div className="flex min-w-0 flex-1 flex-col p-3 sm:p-4">
           <p className="font-semibold leading-snug text-navy">{p.title}</p>
           {p.description && <p className="mt-1 line-clamp-3 text-[13.5px] leading-relaxed text-navy/60">{p.description}</p>}
-          <a
-            {...open(p)}
-            className="mt-auto inline-flex items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-primary px-3 py-2.5 text-[13px] font-semibold sm:text-[14px] text-white transition-colors hover:bg-primary/90 [&:not(:first-child)]:mt-4"
-          >
-            {p.cta?.trim() || t.seeProduct} <ExternalLink size={14} aria-hidden />
-          </a>
+          {/* mt-auto puts every button on the bottom line of its card, so a
+              row of cards has one line of buttons however long the titles
+              are, and the wrapper's pt-4 keeps it off the text above.
+              Until 11/11/2026 an "[&:not(:first-child)]:mt-4" sat on the
+              button and beat its own mt-auto, so each one hung just under
+              its own title and the row looked ragged. */}
+          <div className="mt-auto pt-4">
+            <a
+              {...open(p)}
+              className="inline-flex w-full items-center justify-center gap-1.5 whitespace-nowrap rounded-xl bg-primary px-3 py-2.5 text-[13px] font-semibold text-white transition-colors hover:bg-primary/90 sm:text-[14px]"
+            >
+              {p.cta?.trim() || t.seeProduct} <ExternalLink size={14} aria-hidden />
+            </a>
+          </div>
         </div>
       </div>
     )
@@ -137,7 +145,11 @@ export default function MemberProductPicks({ products, title, note, hideNote = f
           <h2 className={`${h2} flex items-center gap-2`}>
             <Star size={22} className="fill-primary text-primary" aria-hidden /> {t.topPicks}
           </h2>
-          <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">{favorites.map((p, i) => card(p, i, true))}</div>
+          {/* auto-fill fits the column the page actually gives us: the
+            one-column member page was showing two 110px-wide cards, with
+            three-line titles and chopped text, because sm:/lg: read the
+            window and not the container (11/11/2026). */}
+        <div className="mt-6 grid grid-cols-[repeat(auto-fill,minmax(240px,1fr))] gap-4">{favorites.map((p, i) => card(p, i, true))}</div>
         </div>
       )}
 
@@ -173,7 +185,7 @@ export default function MemberProductPicks({ products, title, note, hideNote = f
         </div>
       )}
       {shown.length ? (
-        <div className="mt-6 grid grid-cols-2 gap-3 sm:gap-4 lg:grid-cols-4">{shown.map((p, i) => card(p, i))}</div>
+        <div className="mt-6 grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-3 sm:gap-4">{shown.map((p, i) => card(p, i))}</div>
       ) : (
         <p className="mt-6 text-[14px] text-navy/50">{t.noPicks}</p>
       )}
