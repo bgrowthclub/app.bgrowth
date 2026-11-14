@@ -412,6 +412,22 @@ export function memberPageTemplates(lang: Lang): MemberPageTemplate[] {
       example: { headline: L('Quality products at fair prices', 'Produtos de qualidade com preço justo') },
     },
     {
+      // Personal Card (14/11/2026, the owner's choice, after BOWWE): a link
+      // page led by a big photo of the person, with the name and what they
+      // do written over it, and one big button per link below. For people
+      // whose face is the brand — agents, consultants, coaches, notaries.
+      // It is the Link Page's narrow column with its own top (skin 'card').
+      id: 'card',
+      name: { en: 'Personal Card', pt: 'Cartão pessoal' },
+      description: {
+        en: 'For people whose face is the brand — agents, consultants, coaches, notaries. A big photo of you with your name over it, and one big button for each way to reach you.',
+        pt: 'Para quem é a própria marca — corretores, consultores, coaches, notaries. Uma foto grande sua com o nome por cima e um botão grande para cada forma de falar com você.',
+      },
+      color: 'navy',
+      blocks: [b('hero'), b('contact'), b('about')],
+      example: { headline: L('Real estate agent · Orlando', 'Corretor de imóveis · Orlando') },
+    },
+    {
       // Payment LINKS, never bank details (decided with the owner,
       // 07/11/2026). A public page showing an account number is what a
       // scammer clones: copy the page, swap the account, send it to the
@@ -583,8 +599,8 @@ export function memberPageTemplates(lang: Lang): MemberPageTemplate[] {
 // cleaning, notary, teacher, creator, blank) keep the simple one-column page.
 // 'links' (Link Page) since the 11th model: a short, phone-first page of
 // stacked buttons — logo, name, a line about the business and its links.
-export type MemberPageSkin = 'professional' | 'local' | 'service' | 'creative' | 'personal' | 'affiliate' | 'picks' | 'links'
-const SKINS: MemberPageSkin[] = ['professional', 'local', 'service', 'creative', 'personal', 'affiliate', 'picks', 'links']
+export type MemberPageSkin = 'professional' | 'local' | 'service' | 'creative' | 'personal' | 'affiliate' | 'picks' | 'links' | 'card'
+const SKINS: MemberPageSkin[] = ['professional', 'local', 'service', 'creative', 'personal', 'affiliate', 'picks', 'links', 'card']
 // A model whose look belongs to ANOTHER model: 'payments' is a page of big
 // stacked buttons, which is exactly the Link Page look, so it borrows it
 // rather than duplicating a skin.
@@ -705,6 +721,7 @@ const SAMPLE: Record<string, { name: string; location: { en: string; pt: string 
     location: { en: 'USA Lifestyle & Resources', pt: 'Vida nos EUA e recursos' },
     bio: { en: 'I only share what I actually use.', pt: 'Só indico o que eu realmente uso.' },
   },
+  card: { name: 'Daniel Moreira', location: { en: 'Orlando, FL', pt: 'Orlando, FL' }, bio: { en: 'Helping families find the right home for twelve years.', pt: 'Ajudando famílias a encontrar a casa certa há doze anos.' } },
   links: { name: 'Sunny Imports', location: { en: 'Orlando, FL', pt: 'Orlando, FL' }, bio: { en: 'Electronics and accessories, delivered fast.', pt: 'Eletrônicos e acessórios, com entrega rápida.' } },
   cleaning: { name: 'Sparkle Cleaning', location: { en: 'Orlando, FL', pt: 'Orlando, FL' }, bio: { en: 'Careful, on-time cleaning for homes and offices.', pt: 'Limpeza cuidadosa e pontual para casas e escritórios.' } },
   notary: { name: 'Paula Lima', location: { en: 'Tampa, FL · Mobile', pt: 'Tampa, FL · Móvel' }, bio: { en: 'Mobile notary — I come to you.', pt: 'Notary móvel — eu vou até você.' } },

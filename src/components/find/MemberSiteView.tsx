@@ -85,6 +85,14 @@ const LOOK: Record<MemberPageSkin, { page: string; band: string; h2: string; car
     card: 'rounded-2xl bg-white shadow-softer',
     wide: 'max-w-xl',
   },
+  // Personal Card: the Link Page's column, with a big photo on top.
+  card: {
+    page: 'bg-bg-soft text-navy',
+    band: '',
+    h2: 'text-center font-display text-xl font-bold tracking-tight text-navy',
+    card: 'rounded-2xl bg-white shadow-softer',
+    wide: 'max-w-xl',
+  },
 }
 
 function initials(name: string) {
@@ -102,6 +110,8 @@ function initials(name: string) {
 export default function MemberSiteView({ page, skin, preview = false, onLinkClick, onSearch, onCategory }: Props) {
   const t = MEMBER_PAGE_LABELS[page.language] ?? MEMBER_PAGE_LABELS.en
   const look = LOOK[skin]
+  // The one-column looks: Link Page and Personal Card share everything but the top.
+  const narrow = skin === 'links' || skin === 'card'
   const color = PAGE_COLORS.find((c) => c.id === page.theme?.color)
   // The page's own background tint (any plan); none = the look's default.
   const background = PAGE_BACKGROUNDS.find((c) => c.id === page.theme?.background)
@@ -169,7 +179,7 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
   // id — two contact blocks on one page would otherwise share a React key.
   const section = (key: string, children: ReactNode, band = false, anchor?: string) => (
     <section key={key} id={anchor} className={`${band && bandClass ? bandClass : ''} ${skin === 'service' ? 'scroll-mt-20' : 'scroll-mt-6'}`}>
-      <div className={`mx-auto ${look.wide} px-5 ${skin === 'links' ? 'py-6' : skin === 'service' ? 'py-16 md:py-24' : 'py-14 md:py-20'}`}>{children}</div>
+      <div className={`mx-auto ${look.wide} px-5 ${narrow ? 'py-6' : skin === 'service' ? 'py-16 md:py-24' : 'py-14 md:py-20'}`}>{children}</div>
     </section>
   )
 
@@ -491,6 +501,28 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
       )
     }
 
+    if (skin === 'card') {
+      const small = heroData.title || page.location
+      return (
+        <section key="hero">
+          <div className={`mx-auto ${look.wide} px-5 pt-6 md:pt-10`}>
+            <div className="relative overflow-hidden rounded-3xl bg-navy shadow-softer">
+              {page.photo_url ? (
+                <img src={page.photo_url} alt={name} className="aspect-[4/5] max-h-[640px] w-full object-cover" />
+              ) : (
+                <span className="grid aspect-[4/5] max-h-[640px] w-full place-items-center bg-grad-primary font-display text-7xl font-bold text-white">{initials(name)}</span>
+              )}
+              <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-navy/90 via-navy/50 to-transparent px-6 pb-6 pt-28 text-white">
+                {small && <p className="text-[12px] font-bold uppercase tracking-[0.18em] text-white/75">{small}</p>}
+                <h1 className="mt-1 font-display text-3xl font-bold leading-tight tracking-tight md:text-4xl">{name}</h1>
+                {headline && <p className="mt-1.5 text-[16px] leading-snug text-white/85">{headline}</p>}
+              </div>
+            </div>
+          </div>
+        </section>
+      )
+    }
+
     if (skin === 'links') {
       return (
         <section key="hero">
@@ -618,7 +650,7 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
         const links = blockLinks(page, block)
         if (!links.length) return null
         // Link Page: one full-width button per link, in the order chosen.
-        if (skin === 'links') {
+        if (narrow) {
           return section(
             block.id,
             <div className="flex flex-col gap-3">
@@ -684,7 +716,7 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
             <h2 className={look.h2}>{t.highlights}</h2>
             {/* Not on the Link Page look: its one narrow column has no room
                 for a side-by-side. */}
-            {page.highlights.length === 1 && skin !== 'links' ? (
+            {page.highlights.length === 1 && !narrow ? (
               <div className="mt-8">{singleHighlight(page.highlights[0])}</div>
             ) : (
             <>
@@ -797,7 +829,7 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
           block.id,
           <div
             className={`grid ${
-              skin === 'links'
+              narrow
                 ? 'gap-3 rounded-2xl bg-white p-6 text-center shadow-softer'
                 : `gap-8 ${skin === 'personal' && block.type === 'about' && page.photo_url ? 'md:grid-cols-[minmax(0,1fr)_minmax(0,1.4fr)] md:items-center' : 'md:grid-cols-[minmax(0,1fr)_minmax(0,2fr)]'}`
             }`}

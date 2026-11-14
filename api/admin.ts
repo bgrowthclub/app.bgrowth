@@ -2621,7 +2621,7 @@ const PAGE_COLORS = new Set(['blue', 'teal', 'green', 'purple', 'rose', 'orange'
 // lacked 'picks', 'payments' and 'simple', so a page of one of those saved
 // from Admin → Pages lost its model.
 const PAGE_TEMPLATES = new Set([
-  'professional', 'local', 'service', 'creative', 'personal', 'affiliate', 'picks', 'links', 'payments',
+  'professional', 'local', 'service', 'creative', 'personal', 'affiliate', 'picks', 'links', 'card', 'payments',
   'cleaning', 'notary', 'teacher', 'creator', 'simple', 'blank',
 ])
 // Background tints (light only — dark text stays readable), open to every plan.

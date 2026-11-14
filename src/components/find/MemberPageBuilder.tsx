@@ -407,6 +407,12 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
         return (
           <div className="space-y-2">
             <p className="text-[13px] text-navy/55">Shows your photo, name, what you do and where — edit them in “Basics” above.</p>
+            {template === 'card' && (
+              <>
+                <input value={d.title ?? ''} onChange={(e) => setBlockData(block.id, { title: e.target.value })} maxLength={80} className={INPUT} placeholder="Small line above your name (default: your city)" aria-label="Small line" />
+                <p className="text-[12.5px] text-navy/45">Your photo fills the top of the page, so use a clear, upright photo of you (portrait works best).</p>
+              </>
+            )}
             {(template === 'picks' || ownCatalog) && (
               <>
                 <input value={d.title ?? ''} onChange={(e) => setBlockData(block.id, { title: e.target.value })} maxLength={120} className={INPUT} placeholder={ownCatalog ? 'Small line above the title (e.g. Products · Services)' : 'Small line above the title (e.g. Tools · Products · Resources)'} aria-label="Small line" />
@@ -435,7 +441,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                 <Add label="Add a fact" disabled={(d.items ?? []).length >= 3} onClick={() => setBlockData(block.id, { items: [...(d.items ?? []), { title: '', body: '' }] })} />
               </>
             )}
-            {template !== 'picks' && !ownCatalog && (
+            {template !== 'picks' && !ownCatalog && template !== 'card' && (
               <>
                 <p className="pt-1 text-[12.5px] font-semibold text-navy/60">The big button at the top</p>
                 <input

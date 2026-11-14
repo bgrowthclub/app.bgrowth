@@ -438,6 +438,11 @@ This repo is a **static, client-only MVP**:
   "Tell the owners" sends each owner one message in their Support
   conversation (`messageOwner`), which also e-mails them; a team-made page
   with no account can't be told. Four places read the key — keep them in step.
+  Since Sprint 252 there is a **Personal Card** model (`card`, decided by the
+  owner 14/11/2026 after BOWWE): the Link Page's narrow column (`narrow` in
+  `MemberSiteView` covers both) with its own top — the page photo large and
+  upright, the name, headline and a small line (`hero` `data.title`, else the
+  location) written over its lower edge. In the three model-id copies.
   **Since Sprint 183 one table says what every plan does with every
   product** (approved by the owner 01/11/2026; Portal migration 0075):
   Admin → Plans → **Included** is now a product × plan grid where each cell
