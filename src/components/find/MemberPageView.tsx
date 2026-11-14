@@ -4,6 +4,7 @@ import MemberSiteView from './MemberSiteView'
 import MemberProductPicks from './MemberProductPicks'
 import MemberPageSignupForm from './MemberPageSignupForm'
 import MemberPagePromo from './MemberPagePromo'
+import MemberFloatingButton from './MemberFloatingButton'
 import ReportPageLink from './ReportPageLink'
 import type { CSSProperties } from 'react'
 import { MEMBER_PAGE_LABELS, memberLinkHref, memberLinkLabel, videoEmbed } from '../../modules/find/memberPageService'
@@ -40,7 +41,18 @@ function initials(name: string) {
 // subscriber's editor. Since Sprint 127 it draws the page's blocks in order
 // (hidden and empty ones skipped) in the page's color; a page without blocks
 // keeps the original layout (top, contacts, featured, services, about).
-export default function MemberPageView({ page, preview = false, onLinkClick, onSearch, onCategory }: Props) {
+// The page, plus the floating button the member may have turned on — kept
+// outside both looks so each draws it the same way.
+export default function MemberPageView(props: Props) {
+  return (
+    <>
+      <MemberPageBody {...props} />
+      <MemberFloatingButton page={props.page} preview={props.preview} onLinkClick={props.onLinkClick} />
+    </>
+  )
+}
+
+function MemberPageBody({ page, preview = false, onLinkClick, onSearch, onCategory }: Props) {
   // The four models (Sprint 128) have their own full-width looks.
   const skin = pageSkin(page.template)
   if (skin) return <MemberSiteView page={page} skin={skin} preview={preview} onLinkClick={onLinkClick} onSearch={onSearch} onCategory={onCategory} />

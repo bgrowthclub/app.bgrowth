@@ -581,6 +581,10 @@ function cleanPageTheme(value: unknown) {
   const cover = pageUrl(v.cover)
   if (cover) theme.cover = cover
   if (typeof v.background === 'string' && PAGE_BACKGROUNDS.has(v.background)) theme.background = v.background
+  // The floating button (14/11/2026): one of the page's own buttons, by type.
+  if (typeof v.floating === 'string' && v.floating.startsWith('contact:') && MEMBER_LINK_TYPES.includes(v.floating.slice('contact:'.length))) {
+    theme.floating = v.floating
+  }
   return theme
 }
 
@@ -1037,7 +1041,11 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string; emai
       return hidden && b.type !== 'hero' ? { ...block, hidden: true } : block
     }) as typeof input.blocks
     // The model's color; the background tint is open to every plan.
-    input.theme = { color: TEMPLATE_COLORS[template] ?? input.theme.color, ...(input.theme.background ? { background: input.theme.background } : {}) }
+    input.theme = {
+      color: TEMPLATE_COLORS[template] ?? input.theme.color,
+      ...(input.theme.background ? { background: input.theme.background } : {}),
+      ...(input.theme.floating ? { floating: input.theme.floating } : {}),
+    }
     input.highlights = input.highlights.slice(0, 1)
     // Pro: up to 12 product picks (Enterprise: 60).
     input.blocks = (input.blocks ?? []).map((b: any) =>

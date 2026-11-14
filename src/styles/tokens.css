@@ -15,6 +15,8 @@
   --color-primary-accent-rgb: 47 128 255;
   --color-navy: #0A1B4D;
   --color-navy-rgb: 10 27 77;
+  /* WhatsApp's own green, for a member page's floating WhatsApp button (14/11/2026). */
+  --color-whatsapp-rgb: 37 211 102;
 
   /* BGrowth's own blue, fixed. A member page overrides --color-primary with
      the member's chosen color, so anything that must stay BGrowth-blue on

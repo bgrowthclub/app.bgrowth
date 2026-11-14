@@ -9,6 +9,7 @@ export default {
       colors: {
         primary: 'rgb(var(--color-primary-rgb) / <alpha-value>)',
         navy: 'rgb(var(--color-navy-rgb) / <alpha-value>)',
+        whatsapp: 'rgb(var(--color-whatsapp-rgb) / <alpha-value>)',
         accent: 'rgb(var(--color-primary-accent-rgb) / <alpha-value>)',
         bg: 'var(--color-bg)',
         'bg-soft': 'rgb(var(--color-bg-soft-rgb) / <alpha-value>)',

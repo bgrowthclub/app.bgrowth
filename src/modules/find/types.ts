@@ -153,6 +153,10 @@ export interface MemberPageTheme {
   // A wide image behind the top of the page.
   cover?: string
   background?: MemberPageBackground
+  // The button that stays in the corner while visitors scroll (14/11/2026):
+  // 'contact:<type>' — one of the page's own buttons. Absent = none. Open to
+  // every plan, like the background.
+  floating?: string
 }
 
 // What the subscriber's plan lets them do with their page.

@@ -2718,6 +2718,10 @@ function cleanPageTheme(value: unknown) {
   const cover = pageUrl(v.cover)
   if (cover) theme.cover = cover
   if (typeof v.background === 'string' && PAGE_BACKGROUNDS.has(v.background)) theme.background = v.background
+  // The floating button (14/11/2026): one of the page's own buttons, by type.
+  if (typeof v.floating === 'string' && v.floating.startsWith('contact:') && MEMBER_LINK_TYPES.includes(v.floating.slice('contact:'.length))) {
+    theme.floating = v.floating
+  }
   return theme
 }
 

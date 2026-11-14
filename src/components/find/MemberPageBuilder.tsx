@@ -293,7 +293,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
     template: template || null,
     blocks: free ? blocks : blocks.map((b) => ({ ...b, ...(b.type === 'gallery' ? { data: { ...b.data, images: [] } } : {}) })),
     // The background tint is open to every plan; the color follows the model on Pro.
-    theme: free ? theme : { color: templates.find((t) => t.id === template)?.color, background: theme.background },
+    theme: free ? theme : { color: templates.find((t) => t.id === template)?.color, background: theme.background, floating: theme.floating },
   }
 
   // Where a big button (the one at the top of the page, and the "cta"
@@ -1040,6 +1040,29 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                 />
               ))}
             </div>
+          </section>
+
+          {/* The floating button (14/11/2026): off unless turned on, and the
+              member picks which of the page's own buttons it opens. Open to
+              every plan, like the background. */}
+          <section className="space-y-2">
+            <span className={LABEL}>Floating button</span>
+            <select
+              value={theme.floating ?? ''}
+              onChange={(e) => setTheme((t) => ({ ...t, floating: e.target.value || undefined }))}
+              className={INPUT}
+              aria-label="Floating button"
+            >
+              <option value="">Off</option>
+              {allButtons()
+                .filter((l, i, list) => isUsableLink(l.type, l.url) && list.findIndex((x) => x.type === l.type) === i)
+                .map((l) => (
+                  <option key={l.type} value={`contact:${l.type}`}>
+                    Opens your “{l.label.trim() || LINK_TYPES.find((t) => t.id === l.type)?.label || l.type}” button
+                  </option>
+                ))}
+            </select>
+            <p className="text-[12.5px] text-navy/45">A round button in the corner of the page that stays visible while visitors scroll.</p>
           </section>
 
           {free && (
