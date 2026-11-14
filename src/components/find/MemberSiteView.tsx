@@ -514,7 +514,7 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
     )
   }
 
-  function highlightCard(h: MemberPageHighlight, i: number) {
+  function highlightMedia(h: MemberPageHighlight) {
     const video = h.video ? videoEmbed(h.video) : null
     // Instagram's box is the profile, the video, the likes and the comment
     // field. A 9/16 frame cuts it off and it scrolls inside itself, which is
@@ -533,6 +533,37 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
     ) : h.image ? (
       <img src={h.image} alt="" className={`w-full object-cover ${skin === 'creative' ? 'aspect-[4/3]' : 'aspect-video'}`} />
     ) : null
+    return { video, media }
+  }
+
+  // ONE featured item (14/11/2026, the owner's choice): the media on one side
+  // and its title, text and button on the other, across the whole width —
+  // a lone card in the middle of the screen looked like something was
+  // missing. On a phone the text goes under the media, as before.
+  function singleHighlight(h: MemberPageHighlight) {
+    const { video, media } = highlightMedia(h)
+    const narrow = Boolean(video && (video.platform === 'instagram' || video.vertical))
+    return (
+      <div className={`grid items-center gap-8 md:gap-14 ${narrow ? 'md:grid-cols-[340px_minmax(0,1fr)]' : 'md:grid-cols-2'}`}>
+        <div className={skin === 'creative' ? '' : 'overflow-hidden rounded-2xl'}>{media}</div>
+        <div>
+          <p className={`font-display font-bold text-navy ${skin === 'creative' ? 'text-2xl uppercase tracking-tight md:text-3xl' : 'text-2xl md:text-3xl'}`}>{h.title}</p>
+          {h.description && <p className="mt-4 whitespace-pre-line text-[16.5px] leading-relaxed text-navy/65">{h.description}</p>}
+          {h.url && (
+            <a
+              {...linkProps('website', h.url, `featured:${h.title}`)}
+              className="mt-7 inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-[15px] font-semibold text-white transition-colors hover:bg-primary/90"
+            >
+              {h.cta?.trim() || t.learnMore} <ArrowRight size={17} aria-hidden />
+            </a>
+          )}
+        </div>
+      </div>
+    )
+  }
+
+  function highlightCard(h: MemberPageHighlight, i: number) {
+    const { video, media } = highlightMedia(h)
     return (
       <div key={h.title + i} className={`flex h-full flex-col overflow-hidden ${skin === 'creative' ? '' : look.card}`}>
         <div className={video ? 'p-4 pb-0' : undefined}>{media}</div>
@@ -630,6 +661,10 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
           block.id,
           <>
             <h2 className={look.h2}>{t.highlights}</h2>
+            {page.highlights.length === 1 ? (
+              <div className="mt-8">{singleHighlight(page.highlights[0])}</div>
+            ) : (
+            <>
             {/* Up to three in a row (11/11/2026, the owner's decision): a
                 vertical video is narrow, so one on its own used to leave the
                 screen empty on both sides. Fewer than three are centred at
@@ -649,6 +684,8 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
             >
               {page.highlights.map((h, i) => highlightCard(h, i))}
             </div>
+            </>
+            )}
           </>,
           band,
           block.type,

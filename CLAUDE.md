@@ -400,6 +400,9 @@ This repo is a **static, client-only MVP**:
   band (`sideImage`/`stripImage`), as the Business look does on white; Local
   Services no longer stretches the photo over the whole top. Sprint 240's
   framed image in the Business look was undone in Sprint 244.
+  Since Sprint 246 a page with ONE featured item (site looks) shows it as the
+  media on one side and its title, text and button on the other
+  (`singleHighlight`); 2+ items keep the cards, up to three per row.
   **Since Sprint 183 one table says what every plan does with every
   product** (approved by the owner 01/11/2026; Portal migration 0075):
   Admin → Plans → **Included** is now a product × plan grid where each cell
