@@ -401,26 +401,19 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
           </header>
           <section className="relative overflow-hidden bg-gradient-to-br from-primary/[0.08] via-white to-primary/[0.04]">
             {art && (
+              <div className="absolute inset-y-0 right-0 hidden w-1/2 md:block" aria-hidden>
+                <img src={art} alt="" className="h-full w-full object-cover" />
+                <div className="absolute inset-0 bg-gradient-to-r from-white via-white/30 to-transparent" />
+              </div>
+            )}
+            {art && (
               <div className="relative h-48 md:hidden" aria-hidden>
                 <img src={art} alt="" className="h-full w-full object-cover" />
                 <div className="absolute inset-0 bg-gradient-to-t from-white to-transparent" />
               </div>
             )}
-            {/* Text and image share the page's width (14/11/2026). The image
-                used to fill the right half of the SCREEN while the text sat in
-                the centered column, so a wide screen showed an empty band on
-                the left and a long title ran into the picture. */}
-            <div
-              className={`relative mx-auto ${look.wide} px-5 pb-12 pt-6 md:py-20 ${
-                art ? 'md:grid md:grid-cols-[minmax(0,1.15fr)_minmax(0,1fr)] md:items-center md:gap-12' : ''
-              }`}
-            >
-              {art && (
-                <div className="hidden md:order-2 md:block" aria-hidden>
-                  <img src={art} alt="" className="aspect-[4/3] w-full rounded-2xl object-cover shadow-softer" />
-                </div>
-              )}
-              <div className={art ? 'md:order-1' : 'md:max-w-[52%]'}>
+            <div className={`relative mx-auto ${look.wide} px-5 pb-12 pt-6 md:py-20`}>
+              <div className="md:max-w-[52%]">
                 {heroData.title && <p className="text-[12.5px] font-bold uppercase tracking-[0.18em] text-primary">{heroData.title}</p>}
                 <h1 className="mt-3 font-display text-4xl font-bold leading-[1.05] tracking-tight md:text-6xl">{headline || name}</h1>
                 {heroData.body && <p className="mt-4 text-[16.5px] leading-relaxed text-navy/70">{heroData.body}</p>}
