@@ -479,8 +479,16 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
                 screen empty on both sides. Fewer than three are centred at
                 the width they actually need instead of being stretched. */}
             <div
-              className={`mt-8 grid gap-6 sm:grid-cols-2 lg:grid-cols-3 ${
-                page.highlights.length === 1 ? 'mx-auto max-w-sm sm:grid-cols-1 lg:grid-cols-1' : page.highlights.length === 2 ? 'mx-auto max-w-3xl lg:grid-cols-2' : ''
+              // ONE set of column classes per case (14/11/2026). Sprint 232
+              // gave a single item both "1 column" and the base "3 columns",
+              // and the stylesheet picked 3 — three columns squeezed into a
+              // narrow box, so a lone video came out ~100 px wide.
+              className={`mt-8 grid gap-6 ${
+                page.highlights.length === 1
+                  ? 'mx-auto max-w-sm'
+                  : page.highlights.length === 2
+                    ? 'mx-auto max-w-3xl sm:grid-cols-2'
+                    : 'sm:grid-cols-2 lg:grid-cols-3'
               }`}
             >
               {page.highlights.map((h, i) => highlightCard(h, i))}
