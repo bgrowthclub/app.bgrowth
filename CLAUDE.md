@@ -369,6 +369,13 @@ This repo is a **static, client-only MVP**:
   to the page for both kinds of look, outside the page's colored wrapper:
   WhatsApp green (token `--color-whatsapp-rgb`), navy otherwise. A button
   that no longer exists or works draws nothing.
+  Since Sprint 237 (14/11/2026) a link to part of a page lands there:
+  `MemberPublicPage` scrolls to `#<section type>` once the page is drawn
+  (the browser can't, the page arrives after the address is read), and an
+  old address keeps the `#` when it redirects. Contacts (My Business Page and
+  Admin → Pages) shows the e-mail list's own link,
+  `https://bgrowth.app/p/<slug>#signup`, with a copy button — only for a
+  published page with a visible e-mail list section (`signupSlug`).
   **Since Sprint 183 one table says what every plan does with every
   product** (approved by the owner 01/11/2026; Portal migration 0075):
   Admin → Plans → **Included** is now a product × plan grid where each cell

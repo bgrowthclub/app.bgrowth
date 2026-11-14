@@ -177,6 +177,7 @@ export default function AdminMemberPagesPage() {
                 load={() => adminService.listMemberPageSignups(contacts.id)}
                 remove={(id) => adminService.removeMemberPageSignup(contacts.id, id)}
                 fileName={contacts.slug}
+                signupSlug={contacts.status === 'published' && (contacts.blocks ?? []).some((b) => b.type === 'signup' && !b.hidden) ? contacts.slug : null}
               />
             </div>
           )}

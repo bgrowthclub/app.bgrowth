@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Download, Trash2, Users } from 'lucide-react'
+import { Check, Copy, Download, Trash2, Users } from 'lucide-react'
 import type { MemberPageSignup } from '../../modules/find/types'
 
 interface Props {
@@ -7,6 +7,9 @@ interface Props {
   remove: (id: string) => Promise<void>
   // Used to name the exported file.
   fileName: string
+  // The page's address when it has a visible e-mail list section (14/11/2026):
+  // shows the link that opens the page right at the form, with a copy button.
+  signupSlug?: string | null
 }
 
 const TEXT = {
@@ -16,6 +19,9 @@ const TEXT = {
   export: 'Export CSV',
   remove: 'Remove',
   confirm: 'Remove this contact from the list?',
+  link: 'Sign-up link — opens your page right at the form. Put it in your bio, a post or a message.',
+  copy: 'Copy',
+  copied: 'Copied',
 }
 
 function csvCell(value: string) {
@@ -24,8 +30,11 @@ function csvCell(value: string) {
 
 // A page's e-mail list (Sprint 139): the owner's in My Business Page →
 // Contacts, the team's in Admin → Pages.
-export default function MemberPageSignupsList({ load, remove, fileName }: Props) {
+export default function MemberPageSignupsList({ load, remove, fileName, signupSlug }: Props) {
   const [rows, setRows] = useState<MemberPageSignup[] | null>(null)
+  const [copied, setCopied] = useState(false)
+  // Always bgrowth.app, never the address the person happens to be on.
+  const signupLink = signupSlug ? `https://bgrowth.app/p/${encodeURIComponent(signupSlug)}#signup` : null
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -79,6 +88,27 @@ export default function MemberPageSignupsList({ load, remove, fileName }: Props)
           </button>
         )}
       </div>
+
+      {signupLink && (
+        <div className="mt-4 rounded-xl bg-bg-soft px-4 py-3">
+          <p className="text-[12.5px] text-navy/55">{TEXT.link}</p>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            <code className="min-w-0 flex-1 truncate text-[13px] font-semibold text-primary">{signupLink.replace('https://', '')}</code>
+            <button
+              type="button"
+              onClick={() => {
+                void navigator.clipboard?.writeText(signupLink).then(() => {
+                  setCopied(true)
+                  window.setTimeout(() => setCopied(false), 2000)
+                })
+              }}
+              className="inline-flex items-center gap-1.5 rounded-xl border border-navy/10 bg-white px-3 py-2 text-[13px] font-semibold text-navy/70 hover:border-primary/40"
+            >
+              {copied ? <Check size={15} /> : <Copy size={15} />} {copied ? TEXT.copied : TEXT.copy}
+            </button>
+          </div>
+        </div>
+      )}
 
       {error && <p className="mt-4 text-[13.5px] text-red-500">{error}</p>}
       {!rows && !error && <p className="mt-4 text-[13.5px] text-navy/40">Loading…</p>}

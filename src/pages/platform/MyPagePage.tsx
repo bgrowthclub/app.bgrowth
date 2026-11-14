@@ -389,7 +389,12 @@ export default function MyPagePage() {
       ) : activeTab === 'numbers' ? (
         <MemberPageStatsView stats={stats} days={days} onDays={setDays} language={language} error={null} insights={insights} />
       ) : activeTab === 'contacts' ? (
-        <MemberPageSignupsList load={() => myPageService.signups()} remove={(id) => myPageService.removeSignup(id)} fileName={slug ?? 'page'} />
+        <MemberPageSignupsList
+          load={() => myPageService.signups()}
+          remove={(id) => myPageService.removeSignup(id)}
+          fileName={slug ?? 'page'}
+          signupSlug={page?.status === 'published' && (page.blocks ?? []).some((b) => b.type === 'signup' && !b.hidden) ? page.slug : null}
+        />
       ) : null}
     </div>
   )

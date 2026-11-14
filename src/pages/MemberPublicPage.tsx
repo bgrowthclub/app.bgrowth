@@ -58,6 +58,25 @@ export default function MemberPublicPage() {
     }
   }, [slug])
 
+  // A link to a part of the page — /p/name#signup, the e-mail list's own
+  // link (14/11/2026) — lands on it. The browser can't do this by itself
+  // here: the page arrives after the address is read, so the section isn't
+  // there yet. Try for about a second, once the page is drawn.
+  const ready = page !== undefined && page !== null && !(page.owner_managed && rules === undefined)
+  useEffect(() => {
+    const id = decodeURIComponent(window.location.hash.slice(1))
+    if (!ready || !id) return
+    let tries = 0
+    let frame = 0
+    const look = () => {
+      const target = document.getElementById(id)
+      if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' })
+      else if (tries++ < 60) frame = window.requestAnimationFrame(look)
+    }
+    frame = window.requestAnimationFrame(look)
+    return () => window.cancelAnimationFrame(frame)
+  }, [ready])
+
   // Not published (draft, removed, or the owner's plan has no page): say so
   // here instead of sending the visitor to the home page.
   if (page === null)
@@ -78,7 +97,7 @@ export default function MemberPublicPage() {
   // precisely the content their plan no longer includes (08/11/2026). A
   // team-made page is not governed by a plan and draws at once.
   if (page === undefined || (page.owner_managed && rules === undefined)) return <div className="min-h-screen bg-bg-soft" />
-  if (page.slug !== slug.toLowerCase()) return <Navigate to={`/p/${page.slug}${window.location.search}`} replace />
+  if (page.slug !== slug.toLowerCase()) return <Navigate to={`/p/${page.slug}${window.location.search}${window.location.hash}`} replace />
 
   // The page as the owner's plan allows it today. Nothing was changed in
   // the database — put the plan back and the page comes back whole.
