@@ -2468,7 +2468,11 @@ async function archiveBundle(req: VercelRequest, db: Db) {
 // builds them here. Visitors read published pages straight from Supabase
 // (row-level security); every write comes through here.
 // ---------------------------------------------------------------------------
-const MEMBER_LINK_TYPES = ['whatsapp', 'whatsapp_group', 'phone', 'booking', 'email', 'instagram', 'tiktok', 'youtube', 'website', 'other']
+const MEMBER_LINK_TYPES = ['whatsapp', 'whatsapp_group', 'phone', 'booking', 'email', 'instagram', 'tiktok', 'youtube', 'website', 'save_contact', 'other']
+// "Save contact" (14/11/2026) has no address of its own: its url is always
+// this marker. THE SAME MARKER is SAVE_CONTACT_URL in
+// src/modules/find/memberPageService.ts — change all three.
+const SAVE_CONTACT_URL = 'contact-card'
 const PAGE_SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/
 // Addresses the site itself uses at the top level of /p/ — kept free.
 const RESERVED_PAGE_SLUGS = new Set(['admin', 'bgrowth', 'support', 'help', 'api', 'new', 'edit', 'settings'])
@@ -2630,6 +2634,7 @@ const PRODUCT_CATEGORIES = new Set(['car', 'work', 'home', 'tech', 'travel', 'fi
 function cleanPageLinks(value: unknown) {
   return (Array.isArray(value) ? value : []).slice(0, 12).flatMap((raw: any) => {
     const type = MEMBER_LINK_TYPES.includes(raw?.type) ? raw.type : 'other'
+    if (type === 'save_contact') return [{ type, label: cleanText(raw?.label, 40), url: SAVE_CONTACT_URL }]
     const url = cleanText(raw?.url, 300)
     if (!url) return []
     if (type === 'email' && !/^(mailto:)?[^\s@]+@[^\s@]+\.[^\s@]+$/.test(url)) throw new HttpError(400, `“${url}” isn’t an e-mail address.`)

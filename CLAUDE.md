@@ -343,6 +343,19 @@ This repo is a **static, client-only MVP**:
   unchanged and the editor asks the person to review it ("Please review…",
   also next to Save). Nothing hidden becomes visible and nothing with
   content is deleted without the person doing it.
+  **Since Sprint 233 a member page can have a "Save contact" button**
+  (approved by the owner 14/11/2026; no migration): contact button type
+  `save_contact`, with no address of its own — its url is the marker
+  `SAVE_CONTACT_URL` ('contact-card', copied in api/account.ts and
+  api/admin.ts; change all three). It opens, in the same tab,
+  `api/ingles.ts?action=vcard&slug=` — a vCard (name, first phone or
+  WhatsApp, e-mail, the page's address, website, location, headline) made
+  from the page's own buttons, served as text/vcard because an iPhone only
+  offers "Create New Contact" for a real address. It answers only for a page
+  the public can read (published, plan still covers it, inside the allowance,
+  open while the site is closed — the 0081 read policy, checked by hand
+  because the function uses the service role) AND that carries the button.
+  No photo in the card yet.
   **Since Sprint 183 one table says what every plan does with every
   product** (approved by the owner 01/11/2026; Portal migration 0075):
   Admin → Plans → **Included** is now a product × plan grid where each cell

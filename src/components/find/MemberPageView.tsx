@@ -52,7 +52,11 @@ export default function MemberPageView({ page, preview = false, onLinkClick, onS
   const linkProps = (type: string, url: string, target: string) =>
     preview
       ? { href: '#', onClick: (e: React.MouseEvent) => e.preventDefault() }
-      : { href: memberLinkHref(type, url), target: '_blank', rel: 'noreferrer', onClick: () => onLinkClick?.(target) }
+      : type === 'save_contact'
+        ? // A contact card opens in the same tab: that's where a phone shows
+          // "Create new contact" (14/11/2026).
+          { href: memberLinkHref(type, url, page.slug), onClick: () => onLinkClick?.(target) }
+        : { href: memberLinkHref(type, url), target: '_blank', rel: 'noreferrer', onClick: () => onLinkClick?.(target) }
 
   const color = PAGE_COLORS.find((c) => c.id === page.theme?.color)
   const background = PAGE_BACKGROUNDS.find((c) => c.id === page.theme?.background)
@@ -302,6 +306,7 @@ export default function MemberPageView({ page, preview = false, onLinkClick, onS
           d.buttonLink,
           // Every button on the page, wherever its block sits (10/11/2026).
           [...page.links, ...pageBlocks(page).flatMap((b) => (b.type === 'contact' ? blockLinks(page, b) : []))],
+          page.slug,
         )
         return (
           <section className="mt-10 rounded-2xl bg-primary px-6 py-8 text-center text-white">

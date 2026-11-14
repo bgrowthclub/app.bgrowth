@@ -3,7 +3,21 @@
 // Subscriptions exist; until then the team builds pages in Admin → Pages.
 
 // 'phone' (call) and 'booking' (a scheduling link) since Sprint 128.
-export type MemberPageLinkType = 'whatsapp' | 'whatsapp_group' | 'phone' | 'booking' | 'email' | 'instagram' | 'tiktok' | 'youtube' | 'website' | 'other'
+// 'save_contact' (14/11/2026): saves the page's name, phone, e-mail and
+// address to the visitor's phone. It has no address of its own — its url is
+// the fixed marker SAVE_CONTACT_URL — and opens /api/ingles?action=vcard.
+export type MemberPageLinkType =
+  | 'whatsapp'
+  | 'whatsapp_group'
+  | 'phone'
+  | 'booking'
+  | 'email'
+  | 'instagram'
+  | 'tiktok'
+  | 'youtube'
+  | 'website'
+  | 'save_contact'
+  | 'other'
 
 export interface MemberPageLink {
   type: MemberPageLinkType

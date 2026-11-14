@@ -89,7 +89,16 @@ export const MEMBER_PAGE_LABELS = {
  * already carry those, so the views drop them instead of showing a dead
  * button. A phone or WhatsApp with no digits is the same mistake.
  */
+/**
+ * The "Save contact" button has no address to type: the card is made from the
+ * page's other buttons by /api/ingles?action=vcard. Its url is this marker,
+ * so every list that drops buttons without an address keeps it.
+ * THE SAME MARKER IS COPIED in api/account.ts and api/admin.ts — change all three.
+ */
+export const SAVE_CONTACT_URL = 'contact-card'
+
 export function isUsableLink(type: string, url: string): boolean {
+  if (type === 'save_contact') return true
   const value = (url ?? '').trim()
   if (!value) return false
   if (type === 'email') return /[^\s@]+@[^\s@]+\.[^\s@]+/.test(value)
@@ -111,7 +120,14 @@ export function isUsableLink(type: string, url: string): boolean {
 export function pageButtonProps(
   buttonLink: string | undefined,
   links: MemberPageLink[],
+  slug = '',
 ): { href: string; target?: string; rel?: string; scrollTo?: string } | null {
+  // A contact card opens in the same tab: that's where a phone shows
+  // "Create new contact". Everything else opens a new one.
+  const open = (link: MemberPageLink) =>
+    link.type === 'save_contact'
+      ? { href: memberLinkHref(link.type, link.url, slug) }
+      : { href: memberLinkHref(link.type, link.url), target: '_blank', rel: 'noreferrer' }
   const value = (buttonLink ?? '').trim()
 
   // A section of this page: handled by the view, which scrolls to it.
@@ -126,7 +142,7 @@ export function pageButtonProps(
   if (value.startsWith('contact:')) {
     const type = value.slice('contact:'.length)
     const found = links.find((l) => l.type === type && isUsableLink(l.type, l.url))
-    return found ? { href: memberLinkHref(found.type, found.url), target: '_blank', rel: 'noreferrer' } : null
+    return found ? open(found) : null
   }
 
   if (value) {
@@ -137,10 +153,13 @@ export function pageButtonProps(
   // Nothing chosen: the first contact button that actually works, which is
   // what every page saved before today did.
   const first = links.find((l) => isUsableLink(l.type, l.url))
-  return first ? { href: memberLinkHref(first.type, first.url), target: '_blank', rel: 'noreferrer' } : null
+  return first ? open(first) : null
 }
 
-export function memberLinkHref(type: string, url: string): string {
+// `slug` is only needed by the "Save contact" button, whose card is made from
+// the page it sits on.
+export function memberLinkHref(type: string, url: string, slug = ''): string {
+  if (type === 'save_contact') return `/api/ingles?action=vcard&slug=${encodeURIComponent(slug)}`
   const value = url.trim()
   if (type === 'email') return value.startsWith('mailto:') ? value : `mailto:${value}`
   if (type === 'phone') return value.startsWith('tel:') ? value : `tel:${value.replace(/[^\d+]/g, '')}`
@@ -177,6 +196,7 @@ const DEFAULT_LINK_LABELS: Record<string, { en: string; pt: string }> = {
   tiktok: { en: 'TikTok', pt: 'TikTok' },
   youtube: { en: 'YouTube', pt: 'YouTube' },
   website: { en: 'Website', pt: 'Site' },
+  save_contact: { en: 'Save contact', pt: 'Salvar contato' },
   other: { en: 'Link', pt: 'Link' },
 }
 

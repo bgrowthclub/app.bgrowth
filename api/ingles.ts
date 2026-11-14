@@ -497,6 +497,95 @@ async function linkPreview(req: VercelRequest, db: Db) {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8">${tags.join('')}</head><body><h1>${t}</h1><p>${d}</p><p><a href="${escapeHtml(url)}">${escapeHtml(url)}</a></p></body></html>`
 }
 
+// ---------------------------------------------------------- contact card --
+// The "Save contact" button of a member page (14/11/2026): a vCard made from
+// the page's own buttons, so a visitor saves the business to their phone in
+// one tap. Served from here, not built in the browser, because an iPhone only
+// offers "Create New Contact" for a real address answering text/vcard.
+//
+// It answers only for a page the public can read — the same conditions as
+// the read policy on portal.member_pages (Portal migration 0081): published,
+// still covered by its owner's plan, inside the plan's page allowance, and
+// open while the site is closed — and only when that page carries a "Save
+// contact" button: the owner asked for the card, nobody else can.
+// The marker is SAVE_CONTACT_URL in src/modules/find/memberPageService.ts.
+type CardLink = { type?: string; url?: string; label?: string }
+
+function vcardText(value: string) {
+  return value.replace(/\\/g, '\\\\').replace(/\r?\n/g, '\\n').replace(/,/g, '\\,').replace(/;/g, String.raw`\;`)
+}
+
+function cardPhone(link: CardLink): string | null {
+  const url = String(link.url ?? '').trim()
+  if (!url) return null
+  const wa = url.match(/wa\.me\/(\d{8,})/i)
+  const raw = wa ? `+${wa[1]}` : url.replace(/^tel:/i, '')
+  if (/^https?:\/\//i.test(raw)) return null
+  const digits = raw.replace(/[^\d+]/g, '')
+  return digits.replace(/\D/g, '').length >= 8 ? digits : null
+}
+
+async function contactCard(req: VercelRequest, db: Db): Promise<{ file: string; card: string }> {
+  const gone = () => new HttpError(404, 'This page isn’t available.')
+  const asked = str(req.query.slug, 40).toLowerCase()
+  if (!SLUG.test(asked)) throw gone()
+  const slug = await resolveSlug(db, asked)
+  if (!(await pageOpenToVisitors(db, asked, slug))) throw gone()
+  const { data } = await db
+    .from('member_pages')
+    .select('id, slug, display_name, headline, location, links, blocks, user_id, owner_managed')
+    .eq('slug', slug)
+    .eq('status', 'published')
+    .maybeSingle()
+  const page = data as {
+    id: string
+    slug: string
+    display_name: string
+    headline: string | null
+    location: string | null
+    links: CardLink[] | null
+    blocks: { type: string; hidden?: boolean; data?: { links?: CardLink[] } }[] | null
+    user_id: string | null
+    owner_managed: boolean
+  } | null
+  if (!page) throw gone()
+  if (page.owner_managed) {
+    const level = page.user_id ? await db.rpc('member_page_level', { p_user: page.user_id }) : { data: null }
+    if (!level.data) throw gone()
+  }
+  const within = await db.rpc('member_page_within_allowance', { p_page: page.id })
+  if (!within.error && within.data === false) throw gone()
+
+  // The page's buttons: its own list (the top of the page shows it), plus the
+  // list of each contact section that isn't hidden.
+  const links: CardLink[] = [
+    ...(page.links ?? []),
+    ...(page.blocks ?? []).filter((b) => b.type === 'contact' && !b.hidden).flatMap((b) => b.data?.links ?? []),
+  ]
+  if (!links.some((l) => l.type === 'save_contact')) throw gone()
+
+  const phone = links.filter((l) => l.type === 'phone').map(cardPhone).find(Boolean) ?? links.filter((l) => l.type === 'whatsapp').map(cardPhone).find(Boolean) ?? null
+  const email = links.filter((l) => l.type === 'email').map((l) => String(l.url ?? '').replace(/^mailto:/i, '').trim()).find((e) => SIGNUP_EMAIL.test(e)) ?? null
+  const sites = links.filter((l) => l.type === 'website').map((l) => String(l.url ?? '').trim()).filter((u) => /^https?:\/\/\S+$/i.test(u))
+  const name = page.display_name.trim() || page.slug
+
+  const lines = [
+    'BEGIN:VCARD',
+    'VERSION:3.0',
+    `FN:${vcardText(name)}`,
+    `N:;${vcardText(name)};;;`,
+    phone ? `TEL;TYPE=CELL:${phone}` : '',
+    email ? `EMAIL;TYPE=INTERNET:${vcardText(email)}` : '',
+    `URL:${OG_SITE}/p/${page.slug}`,
+    ...sites.slice(0, 2).map((u) => `URL:${vcardText(u)}`),
+    page.location?.trim() ? `ADR;TYPE=WORK:;;${vcardText(page.location.trim())};;;;` : '',
+    page.headline?.trim() ? `NOTE:${vcardText(page.headline.trim())}` : '',
+    'END:VCARD',
+  ].filter(Boolean)
+  const file = name.replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-').slice(0, 60) || 'contact'
+  return { file, card: lines.join('\r\n') + '\r\n' }
+}
+
 // The preview for addresses visitors can't see while the site is closed.
 function comingSoonPreview() {
   const t = escapeHtml('BGrowth — Coming soon')
@@ -534,6 +623,13 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       res.setHeader('Content-Type', 'text/html; charset=utf-8')
       res.setHeader('Cache-Control', 'public, s-maxage=600, stale-while-revalidate=3600')
       return res.status(200).send(html)
+    }
+    if (req.method === 'GET' && action === 'vcard') {
+      const { file, card } = await contactCard(req, db)
+      res.setHeader('Content-Type', 'text/vcard; charset=utf-8')
+      res.setHeader('Content-Disposition', `attachment; filename="${file}.vcf"`)
+      res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600')
+      return res.status(200).send(card)
     }
     if (req.method === 'GET' && action === 'creator') {
       res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600')

@@ -7,7 +7,7 @@ import { CARD, INPUT, LINK_BUTTON, SMALL_BUTTON } from '../admin/styles'
 import MemberPageView from './MemberPageView'
 import ResponsiveFrame from '../ui/ResponsiveFrame'
 import { shrinkImage } from '../../lib/shrinkImage'
-import { MEMBER_PAGE_LABELS, WHATSAPP_JOIN_RE, videoEmbed } from '../../modules/find/memberPageService'
+import { MEMBER_PAGE_LABELS, SAVE_CONTACT_URL, WHATSAPP_JOIN_RE, isUsableLink, videoEmbed } from '../../modules/find/memberPageService'
 import { BLOCK_TYPES, LEGACY_BLOCKS, PAGE_BACKGROUNDS, PAGE_COLORS, SINGLE_BLOCK_TYPES, blockId, fitBlocks, memberPageTemplates, mergeDuplicateSections, switchTemplateBlocks, templateBlocks, templatePreview } from '../../modules/find/memberPageTemplates'
 import type {
   MemberPage,
@@ -68,6 +68,7 @@ const LINK_TYPES: { id: MemberPageLinkType; label: string; placeholder: string }
   { id: 'youtube', label: 'YouTube', placeholder: 'https://youtube.com/@…' },
   { id: 'email', label: 'E-mail', placeholder: 'name@example.com' },
   { id: 'website', label: 'Website', placeholder: 'https://…' },
+  { id: 'save_contact', label: 'Save contact', placeholder: '' },
   { id: 'other', label: 'Other link', placeholder: 'https://…' },
 ]
 
@@ -363,6 +364,8 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
   // A block saved before 27/10/2026 has no list of its own and shows the
   // page's; taking a button out of it has to write that list down first.
   const blockOwnLinks = (b: MemberPageBlock) => b.data?.links ?? links
+  // Every button the page has, wherever its block sits.
+  const allButtons = () => [...pageLinks(), ...contactBlocks().flatMap((b) => blockOwnLinks(b))]
   const sameLink = (a: MemberPageLink, b: MemberPageLink) => a.type === b.type && a.url.trim() === b.url.trim()
   const moveLinks = (fromId: string, toId: string, moving: MemberPageLink[]) => {
     if (fromId === toId || !moving.length) return
@@ -527,15 +530,34 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
               {mine.map((link, i) => (
                 <Row key={i} index={i} total={mine.length} onMove={(dd) => setMine(move(mine, i, dd))} onRemove={() => setMine(mine.filter((_, j) => j !== i))}>
                   <div className="grid gap-2 sm:grid-cols-[130px_minmax(0,1fr)]">
-                    <select value={link.type} onChange={(e) => patch(i, { type: e.target.value as MemberPageLinkType })} className={INPUT} aria-label="Type">
+                    <select
+                      value={link.type}
+                      onChange={(e) => {
+                        const type = e.target.value as MemberPageLinkType
+                        // "Save contact" has no address to type: it gets the
+                        // marker, and loses it again if it becomes something else.
+                        patch(i, type === 'save_contact' ? { type, url: SAVE_CONTACT_URL } : { type, url: link.url === SAVE_CONTACT_URL ? '' : link.url })
+                      }}
+                      className={INPUT}
+                      aria-label="Type"
+                    >
                       {LINK_TYPES.map((t) => (
                         <option key={t.id} value={t.id}>
                           {t.label}
                         </option>
                       ))}
                     </select>
-                    <input value={link.url} onChange={(e) => patch(i, { url: e.target.value })} className={INPUT} placeholder={LINK_TYPES.find((t) => t.id === link.type)?.placeholder} aria-label="Address" />
+                    {link.type === 'save_contact' ? (
+                      <p className="self-center text-[12.5px] leading-snug text-navy/55">
+                        Visitors save your name, phone, e-mail and this page to their phone’s contacts — taken from your other buttons.
+                      </p>
+                    ) : (
+                      <input value={link.url} onChange={(e) => patch(i, { url: e.target.value })} className={INPUT} placeholder={LINK_TYPES.find((t) => t.id === link.type)?.placeholder} aria-label="Address" />
+                    )}
                   </div>
+                  {link.type === 'save_contact' && !allButtons().some((l) => ['phone', 'whatsapp', 'email'].includes(l.type) && isUsableLink(l.type, l.url)) && (
+                    <p className="text-[12.5px] text-amber-700">Add a phone, WhatsApp or e-mail button too — otherwise the card only has your name and this page.</p>
+                  )}
                   {link.type === 'whatsapp_group' && link.url.trim() && !WHATSAPP_JOIN_RE.test(link.url.trim()) && (
                     <p className="text-[12.5px] text-red-500">
                       Paste the full link: a group (WhatsApp → Group info → Invite via link → Copy link) or a channel

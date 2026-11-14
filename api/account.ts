@@ -595,7 +595,11 @@ function cleanPageTheme(value: unknown) {
 //   PUT  ?resource=my-page        { …page } → { page }
 //   POST ?resource=my-page-image  { dataUrl } → { url }
 // ---------------------------------------------------------------------------
-const MEMBER_LINK_TYPES = ['whatsapp', 'whatsapp_group', 'phone', 'booking', 'email', 'instagram', 'tiktok', 'youtube', 'website', 'other']
+const MEMBER_LINK_TYPES = ['whatsapp', 'whatsapp_group', 'phone', 'booking', 'email', 'instagram', 'tiktok', 'youtube', 'website', 'save_contact', 'other']
+// "Save contact" (14/11/2026) has no address of its own: its url is always
+// this marker. THE SAME MARKER is SAVE_CONTACT_URL in
+// src/modules/find/memberPageService.ts — change all three.
+const SAVE_CONTACT_URL = 'contact-card'
 const PAGE_SLUG = /^[a-z0-9]+(-[a-z0-9]+)*$/
 const RESERVED_PAGE_SLUGS = new Set(['admin', 'bgrowth', 'support', 'help', 'api', 'new', 'edit', 'settings'])
 const VIDEO_HOSTS = /^https:\/\/((www|m)\.)?(youtube\.com|youtu\.be|tiktok\.com|instagram\.com)\//i
@@ -834,6 +838,7 @@ async function slugUsedBefore(db: Db, slug: string, exceptId?: string) {
 function cleanPageLinks(value: unknown) {
   return (Array.isArray(value) ? value : []).slice(0, 12).flatMap((raw: any) => {
     const type = MEMBER_LINK_TYPES.includes(raw?.type) ? raw.type : 'other'
+    if (type === 'save_contact') return [{ type, label: pageText(raw?.label, 40), url: SAVE_CONTACT_URL }]
     const url = pageText(raw?.url, 300)
     if (!url) return []
     if (type === 'email' && !/^(mailto:)?[^\s@]+@[^\s@]+\.[^\s@]+$/.test(url)) throw new HttpError(400, `“${url}” isn’t an e-mail address.`)

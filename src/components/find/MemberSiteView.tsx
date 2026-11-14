@@ -122,7 +122,11 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
   const linkProps = (type: string, url: string, target: string) =>
     preview
       ? { href: '#', onClick: (e: MouseEvent) => e.preventDefault() }
-      : { href: memberLinkHref(type, url), target: '_blank', rel: 'noreferrer', onClick: () => onLinkClick?.(target) }
+      : type === 'save_contact'
+        ? // A contact card opens in the same tab: that's where a phone shows
+          // "Create new contact" (14/11/2026).
+          { href: memberLinkHref(type, url, page.slug), onClick: () => onLinkClick?.(target) }
+        : { href: memberLinkHref(type, url), target: '_blank', rel: 'noreferrer', onClick: () => onLinkClick?.(target) }
 
   const button = (link: MemberPageLink, kind: 'solid' | 'outline' | 'light', label?: string) => {
     const Icon = MEMBER_LINK_ICONS[link.type] ?? Link2
@@ -177,7 +181,7 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
     // it goes; with nothing chosen it still falls back to that first contact
     // button, so no page saved before today changed.
     const heroData = blocks.find((b) => b.type === 'hero')?.data ?? {}
-    const heroTarget = pageButtonProps(heroData.buttonLink, allLinks)
+    const heroTarget = pageButtonProps(heroData.buttonLink, allLinks, page.slug)
     const heroButton = (variant: 'solid' | 'outline' = 'solid') => {
       if (!heroTarget) return null
       const label = heroData.button?.trim() || (primary ? memberLinkLabel(primary, page.language) : '')
@@ -684,7 +688,7 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
         if (!d.title?.trim() && !d.body?.trim()) return null
         // Where this button goes (10/11/2026): the member's own choice, or
         // their first contact button, as every page did before.
-        const ctaTarget = pageButtonProps(d.buttonLink, allLinks)
+        const ctaTarget = pageButtonProps(d.buttonLink, allLinks, page.slug)
         return (
           <section key={block.id} id="cta">
             <div className={`mx-auto ${look.wide} px-5 py-14`}>

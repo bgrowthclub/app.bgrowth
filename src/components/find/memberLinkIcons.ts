@@ -1,4 +1,4 @@
-import { CalendarCheck, Globe, Instagram, Link2, Mail, MessageCircle, Music2, Phone, Users, Youtube } from 'lucide-react'
+import { CalendarCheck, Globe, Instagram, Link2, Mail, MessageCircle, Music2, Phone, UserPlus, Users, Youtube } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
 import type { MemberPageLinkType } from '../../modules/find/types'
 
@@ -13,5 +13,6 @@ export const MEMBER_LINK_ICONS: Record<MemberPageLinkType, LucideIcon> = {
   tiktok: Music2,
   youtube: Youtube,
   website: Globe,
+  save_contact: UserPlus,
   other: Link2,
 }
