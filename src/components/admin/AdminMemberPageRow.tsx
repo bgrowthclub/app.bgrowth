@@ -46,7 +46,10 @@ export default function AdminMemberPageRow({ page, onEdit, onNumbers, onContacts
         </span>
       )}
       {releasedEarly && !demo && <span className={pillClass(published ? 'blue' : 'gray')}>{published ? 'Public before launch' : 'Public before launch · publish it to open'}</span>}
-      <div className="flex items-center gap-1">
+      {/* Wraps onto more lines on a phone (14/11/2026): without flex-wrap,
+          Contacts, Edit and Delete were pushed off the right edge of the
+          card and the page couldn't be edited from a phone at all. */}
+      <div className="flex flex-wrap items-center gap-1 [&>*]:whitespace-nowrap">
         {published && (
           <a href={`/p/${encodeURIComponent(page.slug)}`} target="_blank" rel="noreferrer" className={`${LINK_BUTTON} inline-flex items-center gap-1 text-navy/60 hover:bg-bg-soft`}>
             View <ExternalLink size={13} />
