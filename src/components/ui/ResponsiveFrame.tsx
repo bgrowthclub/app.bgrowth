@@ -33,6 +33,11 @@ export default function ResponsiveFrame({ width, children, className = '', maxHe
     document.querySelectorAll('style, link[rel="stylesheet"]').forEach((node) => doc.head.appendChild(node.cloneNode(true)))
     doc.documentElement.className = document.documentElement.className
     doc.body.style.margin = '0'
+    // The frame is always as tall as its content, so it never needs a
+    // scrollbar of its own (14/11/2026). Without this, a scrollbar could
+    // appear, narrow the page by its width, rewrap the text, change the
+    // height, vanish again — and the preview shook without end.
+    doc.documentElement.style.overflow = 'hidden'
     setBody(doc.body)
   }, [])
 
