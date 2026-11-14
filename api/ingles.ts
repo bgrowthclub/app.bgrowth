@@ -593,6 +593,28 @@ function comingSoonPreview() {
   return `<!doctype html><html lang="en"><head><meta charset="utf-8"><title>${t}</title><meta name="robots" content="noindex, nofollow"><meta name="description" content="${d}"><meta property="og:type" content="website"><meta property="og:site_name" content="BGrowth"><meta property="og:title" content="${t}"><meta property="og:description" content="${d}"><meta property="og:url" content="${OG_SITE}"><meta name="twitter:card" content="summary"><meta name="twitter:title" content="${t}"><meta name="twitter:description" content="${d}"></head><body><h1>${t}</h1><p>${d}</p></body></html>`
 }
 
+// A site's icon for a member page's button (14/11/2026): fetched here, so the
+// visitor's browser never calls a third party for it, and cached for a month
+// at Vercel's edge. Only a plain host name is accepted; anything that isn't a
+// real icon answers 404 and the button keeps its own drawn icon
+// (components/find/MemberLinkIcon).
+const ICON_HOST = /^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z]{2,63}$/
+async function siteIcon(req: VercelRequest, res: VercelResponse) {
+  const host = str(req.query.host).toLowerCase()
+  if (!ICON_HOST.test(host)) return res.status(400).json({ ok: false, error: 'Bad host.' })
+  const r = await fetch(`https://www.google.com/s2/favicons?domain=${encodeURIComponent(host)}&sz=64`)
+  const type = r.headers.get('content-type') ?? ''
+  const body = Buffer.from(await r.arrayBuffer())
+  // Google answers 404 (with a generic globe) when the site has no icon.
+  if (!r.ok || !type.startsWith('image/') || body.length > 200_000) {
+    res.setHeader('Cache-Control', 'public, s-maxage=86400')
+    return res.status(404).json({ ok: false, error: 'No icon.' })
+  }
+  res.setHeader('Content-Type', type)
+  res.setHeader('Cache-Control', 'public, max-age=86400, s-maxage=2592000, stale-while-revalidate=604800')
+  return res.status(200).send(body)
+}
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // Public, harmless actions: the course's own Vercel address may call them too.
   res.setHeader('Access-Control-Allow-Origin', '*')
@@ -600,6 +622,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type')
   if (req.method === 'OPTIONS') return res.status(204).end()
   try {
+    if (req.method === 'GET' && str(req.query.action) === 'favicon') return await siteIcon(req, res)
     const url = process.env.SUPABASE_URL
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY
     if (!url || !key) throw new HttpError(500, 'Not configured.')

@@ -409,6 +409,16 @@ This repo is a **static, client-only MVP**:
   (`components/find/MemberEmailChooser`, mounted once by `MemberPageView`
   outside previews, catching every `mailto:` click of the page); a phone opens
   its mail app as before. E-mail links no longer open a new tab.
+  Since Sprint 249 (owner's choice, after Linkfly) the page foot is just the
+  BGrowth pill — logo, name, "Try for free" / "Teste grátis"
+  (`pages.promo.<lang>.button`; the title and sentence fields were removed) —
+  then the small disclaimer and "Report"; hiding the pill on Enterprise is
+  decided, not built. Contact buttons show the linked site's own icon
+  (`components/find/MemberLinkIcon`: WhatsApp, Instagram, TikTok, YouTube, or
+  the host of a website/other/booking link), fetched by
+  `api/ingles.ts?action=favicon&host=` (Google's favicon service, server-side,
+  edge-cached a month; 404 → our drawn icon). Phone, e-mail, Save contact and
+  the floating button keep our icons.
   **Since Sprint 183 one table says what every plan does with every
   product** (approved by the owner 01/11/2026; Portal migration 0075):
   Admin → Plans → **Included** is now a product × plan grid where each cell

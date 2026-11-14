@@ -1,6 +1,7 @@
 import { ArrowRight, BadgeCheck, Link2, MapPin, Quote } from 'lucide-react'
 import type { CSSProperties, MouseEvent, ReactNode } from 'react'
 import { MEMBER_LINK_ICONS } from './memberLinkIcons'
+import MemberLinkIcon from './MemberLinkIcon'
 import MemberProductPicks from './MemberProductPicks'
 import MemberPageSignupForm from './MemberPageSignupForm'
 import MemberPagePromo from './MemberPagePromo'
@@ -142,9 +143,7 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
             { href: memberLinkHref(type, url), onClick: () => onLinkClick?.(target) }
           : { href: memberLinkHref(type, url), target: '_blank', rel: 'noreferrer', onClick: () => onLinkClick?.(target) }
 
-  const button = (link: MemberPageLink, kind: 'solid' | 'outline' | 'light', label?: string) => {
-    const Icon = MEMBER_LINK_ICONS[link.type] ?? Link2
-    const cls =
+  const button = (link: MemberPageLink, kind: 'solid' | 'outline' | 'light', label?: string) => {    const cls =
       kind === 'solid'
         ? 'bg-primary text-white hover:bg-primary/90'
         : kind === 'light'
@@ -158,7 +157,7 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
         {...linkProps(link.type, link.url, `link:${link.type}`)}
         className={`inline-flex items-center justify-center gap-2 px-5 py-3 text-[15px] font-semibold transition-colors ${skin === 'creative' ? 'rounded-none uppercase tracking-wide' : 'rounded-xl'} ${cls}`}
       >
-        <Icon size={17} aria-hidden /> {label ?? memberLinkLabel(link, page.language)}
+        <MemberLinkIcon link={link} size={17} /> {label ?? memberLinkLabel(link, page.language)}
       </a>
     )
   }
@@ -309,16 +308,14 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
               {photo('h-10 w-10 shrink-0 rounded-full !text-sm')}
               <p className="min-w-0 flex-1 truncate font-display text-[15.5px] font-bold">{name}</p>
               <div className="flex shrink-0 gap-2">
-                {allLinks.slice(0, 2).map((l, i) => {
-                  const Icon = MEMBER_LINK_ICONS[l.type] ?? Link2
-                  const green = l.type === 'whatsapp' || l.type === 'whatsapp_group'
+                {allLinks.slice(0, 2).map((l, i) => {                  const green = l.type === 'whatsapp' || l.type === 'whatsapp_group'
                   return (
                     <a
                       key={l.type + l.url}
                       {...linkProps(l.type, l.url, `link:${l.type}`)}
                       className={`${i === 1 ? 'hidden sm:inline-flex' : 'inline-flex'} items-center gap-1.5 rounded-xl px-3.5 py-2 text-[13.5px] font-semibold text-white ${green ? 'bg-whatsapp' : 'bg-primary hover:bg-primary/90'}`}
                     >
-                      <Icon size={15} aria-hidden /> <span className="max-w-[9rem] truncate">{memberLinkLabel(l, page.language)}</span>
+                      <MemberLinkIcon link={l} size={15} /> <span className="max-w-[9rem] truncate">{memberLinkLabel(l, page.language)}</span>
                     </a>
                   )
                 })}
@@ -600,17 +597,15 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
           return section(
             block.id,
             <div className="flex flex-col gap-3">
-              {links.map((l) => {
-                const Icon = MEMBER_LINK_ICONS[l.type] ?? Link2
-                return (
+              {links.map((l) => {                return (
                   <a
                     key={l.type + l.url}
                     {...linkProps(l.type, l.url, `link:${l.type}`)}
                     className="flex min-h-[52px] items-center gap-3 rounded-2xl bg-primary px-5 py-3 text-[15.5px] font-semibold text-white shadow-softer transition-colors hover:bg-primary/90"
                   >
-                    <Icon size={19} className="shrink-0" aria-hidden />
+                    <MemberLinkIcon link={l} size={19} />
                     <span className="flex-1 text-center">{memberLinkLabel(l, page.language)}</span>
-                    <span className="w-[19px] shrink-0" aria-hidden />
+                    <span className="w-7 shrink-0" aria-hidden />
                   </a>
                 )
               })}
@@ -628,9 +623,7 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
                   {d.body && <p className="mt-4 max-w-xl text-[17px] leading-relaxed text-white/70">{d.body}</p>}
                 </div>
                 <div className="grid gap-3">
-                  {links.map((l, i) => {
-                    const Icon = MEMBER_LINK_ICONS[l.type] ?? Link2
-                    const green = l.type === 'whatsapp' || l.type === 'whatsapp_group'
+                  {links.map((l, i) => {                    const green = l.type === 'whatsapp' || l.type === 'whatsapp_group'
                     return (
                       <a
                         key={l.type + l.url}
@@ -639,7 +632,7 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
                           green ? 'bg-whatsapp text-white' : i === 0 ? 'bg-primary text-white hover:bg-primary/90' : 'border border-white/25 text-white hover:bg-white/10'
                         }`}
                       >
-                        <Icon size={19} aria-hidden /> {memberLinkLabel(l, page.language)}
+                        <MemberLinkIcon link={l} size={19} /> {memberLinkLabel(l, page.language)}
                       </a>
                     )
                   })}
@@ -968,11 +961,10 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
       {blocks.map((block, i) => render(block, i))}
       <footer className="border-t border-navy/[0.06]">
         <div className={`mx-auto ${look.wide} px-5 py-8 text-center`}>
-          <p className="text-[12px] text-navy/40">{t.disclaimer}</p>
-          <div className="mt-4">
-            <MemberPagePromo language={page.language} preview={preview} madeWith={t.madeWith} />
-            <ReportPageLink slug={page.slug ?? ''} language={page.language} preview={preview} />
-          </div>
+          {/* The BGrowth pill first, then the small print (14/11/2026). */}
+          <MemberPagePromo language={page.language} preview={preview} madeWith={t.madeWith} />
+          <p className="mt-5 text-[11.5px] text-navy/35">{t.disclaimer}</p>
+          <ReportPageLink slug={page.slug ?? ''} language={page.language} preview={preview} />
         </div>
       </footer>
     </div>

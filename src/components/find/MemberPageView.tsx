@@ -5,6 +5,7 @@ import MemberProductPicks from './MemberProductPicks'
 import MemberPageSignupForm from './MemberPageSignupForm'
 import MemberPagePromo from './MemberPagePromo'
 import MemberEmailChooser from './MemberEmailChooser'
+import MemberLinkIcon from './MemberLinkIcon'
 import MemberFloatingButton from './MemberFloatingButton'
 import ReportPageLink from './ReportPageLink'
 import type { CSSProperties } from 'react'
@@ -115,24 +116,20 @@ function MemberPageBody({ page, preview = false, onLinkClick, onSearch, onCatego
               {...linkProps(primary.type, primary.url, `link:${primary.type}`)}
               className="flex w-full items-center justify-center gap-2 rounded-2xl bg-primary px-5 py-4 text-[16px] font-semibold text-white shadow-softer transition-colors hover:bg-primary/90"
             >
-              {(() => {
-                const Icon = ICONS[primary.type] ?? Link2
-                return <Icon size={19} aria-hidden />
-              })()}
+              <MemberLinkIcon link={primary} size={19} />
               {memberLinkLabel(primary, page.language)}
             </a>
           )}
           {others.length > 0 && (
             <div className="grid grid-cols-2 gap-3">
               {others.map((link) => {
-                const Icon = ICONS[link.type] ?? Link2
                 return (
                   <a
                     key={link.label + link.url}
                     {...linkProps(link.type, link.url, `link:${link.type}`)}
                     className="flex items-center justify-center gap-2 rounded-2xl border border-navy/10 bg-white px-4 py-3.5 text-[14.5px] font-semibold text-navy transition-colors hover:border-primary/30"
                   >
-                    <Icon size={17} aria-hidden /> {memberLinkLabel(link, page.language)}
+                    <MemberLinkIcon link={link} size={17} /> {memberLinkLabel(link, page.language)}
                   </a>
                 )
               })}

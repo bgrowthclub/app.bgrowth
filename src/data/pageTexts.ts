@@ -294,25 +294,25 @@ export const PAGE_TEXT_BLOCKS: PageTextBlock[] = [
       line('soon.button', 'Button', 'Notify me'),
     ],
   },
-  // The invitation above "Powered by BGrowth" on every public member page
-  // (components/find/MemberPagePromo). A page shows the version in its own
-  // language. The link: a page of this site (/…) or an https:// address.
+  // The BGrowth pill at the foot of every public member page
+  // (components/find/MemberPagePromo): our logo and name, and this button
+  // text. A page shows the version in its own language. Since 14/11/2026 the
+  // pill is all there is — the title above it and the sentence under it were
+  // taken out (the owner's choice, after the Linkfly footer), so they are no
+  // longer edited here. The link: a page of this site (/…) or an https://
+  // address.
   {
     page: 'Member pages',
     title: 'Invitation — English pages',
     fields: [
-      line('pages.promo.en.title', 'Title', 'Your business deserves a page of its own.'),
-      para('pages.promo.en.text', 'Sentence', 'Bring your links and contact information together in one simple page.'),
-      line('pages.promo.en.button', 'Button', 'Create your page with BGrowth'),
+      line('pages.promo.en.button', 'Button', 'Try for free'),
     ],
   },
   {
     page: 'Member pages',
     title: 'Invitation — Portuguese pages',
     fields: [
-      line('pages.promo.pt.title', 'Title', 'Seu negócio merece uma página só dele.'),
-      para('pages.promo.pt.text', 'Sentence', 'Reúna seus links e contatos em uma página simples.'),
-      line('pages.promo.pt.button', 'Button', 'Crie sua página com a BGrowth'),
+      line('pages.promo.pt.button', 'Button', 'Teste grátis'),
     ],
   },
   {
