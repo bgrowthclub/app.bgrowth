@@ -395,6 +395,11 @@ This repo is a **static, client-only MVP**:
   Its dark bands take `theme.dark` (`PAGE_DARKS`: black, graphite, wine,
   forest, petrol, plum, brown; none = navy), open to every plan like the
   background, copied as `PAGE_DARKS` in api/account.ts and api/admin.ts.
+  Since Sprint 245 a dark top (Service Business and Local Services) with no
+  cover but a page photo/logo shows it on the right half fading into the
+  band (`sideImage`/`stripImage`), as the Business look does on white; Local
+  Services no longer stretches the photo over the whole top. Sprint 240's
+  framed image in the Business look was undone in Sprint 244.
   **Since Sprint 183 one table says what every plan does with every
   product** (approved by the owner 01/11/2026; Portal migration 0075):
   Admin → Plans → **Included** is now a product × plan grid where each cell

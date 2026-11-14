@@ -178,6 +178,30 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
       <span className={`grid place-items-center bg-grad-primary font-display text-5xl font-bold text-white ${cls}`}>{initials(page.display_name)}</span>
     )
 
+  // A page with no cover but a photo/logo (14/11/2026, the owner's choice):
+  // on a dark top the picture fills the right half and fades into the band,
+  // as the Business look does on white — never stretched over the whole top.
+  // On a phone it is a strip above the text, fading down into the band.
+  const fadeHex = dark?.hex
+  const sideImage = (src: string) => (
+    <div className="absolute inset-y-0 right-0 hidden w-1/2 md:block" aria-hidden>
+      <img src={src} alt="" className="h-full w-full object-cover" />
+      <div
+        className={`absolute inset-0 ${fadeHex ? '' : 'bg-gradient-to-r from-navy via-navy/40 to-transparent'}`}
+        style={fadeHex ? { backgroundImage: `linear-gradient(to right, ${fadeHex}, ${fadeHex}66, transparent)` } : undefined}
+      />
+    </div>
+  )
+  const stripImage = (src: string) => (
+    <div className="relative h-48 md:hidden" aria-hidden>
+      <img src={src} alt="" className="h-full w-full object-cover" />
+      <div
+        className={`absolute inset-0 ${fadeHex ? '' : 'bg-gradient-to-t from-navy to-transparent'}`}
+        style={fadeHex ? { backgroundImage: `linear-gradient(to top, ${fadeHex}, transparent)` } : undefined}
+      />
+    </div>
+  )
+
   function hero() {
     const name = page.display_name
     const headline = page.headline
@@ -233,11 +257,14 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
       ) : null
 
     if (skin === 'local') {
-      const bg = page.theme?.cover || page.photo_url
+      const bg = page.theme?.cover
+      const side = !bg ? page.photo_url : null
       return (
         <section key="hero" className="relative overflow-hidden bg-navy text-white">
           {bg && <div className="absolute inset-0 bg-cover bg-center opacity-40" style={{ backgroundImage: `url(${bg})` }} aria-hidden />}
-          <div className="absolute inset-0 bg-gradient-to-r from-navy via-navy/80 to-navy/30" aria-hidden />
+          {side && sideImage(side)}
+          {side && stripImage(side)}
+          {!side && <div className="absolute inset-0 bg-gradient-to-r from-navy via-navy/80 to-navy/30" aria-hidden />}
           <div className={`relative mx-auto grid ${look.wide} gap-10 px-5 py-16 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] md:items-center md:py-24`}>
             <div>
               {location}
@@ -304,6 +331,11 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
                   style={dark ? { backgroundImage: `linear-gradient(to right, ${dark.hex}, ${dark.hex}d9, ${dark.hex}4d)` } : undefined}
                   aria-hidden
                 />
+              </>
+            ) : page.photo_url ? (
+              <>
+                {sideImage(page.photo_url)}
+                {stripImage(page.photo_url)}
               </>
             ) : (
               <div className="absolute -right-40 -top-40 h-[32rem] w-[32rem] rounded-full bg-primary/40 blur-3xl" aria-hidden />
