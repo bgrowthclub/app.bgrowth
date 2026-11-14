@@ -35,7 +35,7 @@ export default function ArticleShareBar({ title, url }: Props) {
           href={link.href}
           target="_blank"
           rel="noopener noreferrer"
-          aria-label={link.label}
+          title={link.label} aria-label={link.label}
           className="grid h-9 w-9 place-items-center rounded-full border border-navy/10 bg-white text-navy/50 shadow-softer transition-colors hover:border-primary/20 hover:text-navy"
         >
           <link.icon size={15} />
@@ -44,7 +44,7 @@ export default function ArticleShareBar({ title, url }: Props) {
       <button
         type="button"
         onClick={handleCopy}
-        aria-label="Copy link"
+        title="Copy link" aria-label="Copy link"
         className="grid h-9 w-9 place-items-center rounded-full border border-navy/10 bg-white text-navy/50 shadow-softer transition-colors hover:border-primary/20 hover:text-navy"
       >
         {copied ? <Check size={15} className="text-primary" /> : <Link2 size={15} />}

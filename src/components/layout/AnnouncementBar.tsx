@@ -36,7 +36,7 @@ export default function AnnouncementBar({ announcement, onClose }: { announcemen
         <button
           type="button"
           onClick={onClose}
-          aria-label="Close announcement"
+          title="Close announcement" aria-label="Close announcement"
           className="absolute right-3 grid h-7 w-7 place-items-center rounded-full opacity-80 transition-opacity hover:opacity-100 sm:right-6"
         >
           <X size={15} />

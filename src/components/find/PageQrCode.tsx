@@ -58,7 +58,7 @@ export default function PageQrCode({ open, slug, name, labels, onClose }: Props)
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-navy/30 backdrop-blur-sm" onClick={onClose} />
       <div role="dialog" aria-modal="true" aria-labelledby="page-qr-title" className="relative w-full max-w-sm rounded-xl3 border border-navy/[0.06] bg-white p-6 text-center shadow-glow">
-        <button type="button" onClick={onClose} aria-label={labels.close} className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full text-navy/45 hover:bg-bg-soft hover:text-navy">
+        <button type="button" onClick={onClose} title={labels.close} aria-label={labels.close} className="absolute right-3 top-3 grid h-9 w-9 place-items-center rounded-full text-navy/45 hover:bg-bg-soft hover:text-navy">
           <X size={18} />
         </button>
         <h2 id="page-qr-title" className="font-display text-lg font-bold text-navy">

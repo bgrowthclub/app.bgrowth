@@ -136,7 +136,7 @@ export default function JourneyActionCard({ action, access, done, markable, onTo
           onClick={onToggle}
           disabled={!markable}
           aria-pressed={done}
-          aria-label={done ? `Mark “${action.title}” as not done` : `Mark “${action.title}” as done`}
+          title={done ? `Mark “${action.title}” as not done` : `Mark “${action.title}” as done`} aria-label={done ? `Mark “${action.title}” as not done` : `Mark “${action.title}” as done`}
           className={`mt-0.5 grid h-7 w-7 shrink-0 place-items-center rounded-full border-2 transition-colors ${
             done ? 'border-emerald-500 bg-emerald-500 text-white' : markable ? 'border-navy/20 text-transparent hover:border-primary' : 'cursor-not-allowed border-navy/10 bg-navy/[0.03] text-transparent'
           }`}

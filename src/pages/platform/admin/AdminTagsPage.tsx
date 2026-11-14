@@ -191,7 +191,7 @@ export default function AdminTagsPage() {
                     {editing?.id === t.id ? (
                       <form onSubmit={(e) => void rename(e)} className="flex min-w-0 flex-1 items-center gap-2">
                         <input value={editing.name} onChange={(e) => setEditing({ ...editing, name: e.target.value })} maxLength={60} className={`${INPUT} !py-1.5`} autoFocus />
-                        <button type="submit" disabled={busy} aria-label="Save" className={`${LINK_BUTTON} text-primary hover:bg-bg-soft`}>
+                        <button type="submit" disabled={busy} title="Save" aria-label="Save" className={`${LINK_BUTTON} text-primary hover:bg-bg-soft`}>
                           <Check size={15} />
                         </button>
                         <button type="button" onClick={() => setEditing(null)} aria-label="Cancel" className={`${LINK_BUTTON} text-navy/50 hover:bg-bg-soft`}>

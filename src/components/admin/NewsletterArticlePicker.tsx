@@ -64,7 +64,7 @@ export default function NewsletterArticlePicker({ onInsert, onClose }: Props) {
     <div className="border-b border-navy/[0.06] bg-bg-soft/40 p-4">
       <div className="flex items-center justify-between gap-3">
         <p className="text-[13.5px] font-semibold text-navy">Insert articles from Knowledge</p>
-        <button type="button" onClick={onClose} aria-label="Close" className="grid h-8 w-8 place-items-center rounded-lg text-navy/50 hover:bg-white">
+        <button type="button" onClick={onClose} title="Close" aria-label="Close" className="grid h-8 w-8 place-items-center rounded-lg text-navy/50 hover:bg-white">
           <X size={16} />
         </button>
       </div>

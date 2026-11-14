@@ -52,13 +52,13 @@ function ListRow({ index, total, onMove, onRemove, children }: { index: number; 
     <div className="flex items-start gap-2 rounded-xl border border-navy/[0.08] p-3">
       <div className="min-w-0 flex-1 space-y-2">{children}</div>
       <div className="flex shrink-0 flex-col gap-0.5">
-        <button type="button" aria-label="Move up" disabled={index === 0} onClick={() => onMove(-1)} className={`${LINK_BUTTON} !px-1.5 text-navy/50 hover:bg-bg-soft`}>
+        <button type="button" title="Move up" aria-label="Move up" disabled={index === 0} onClick={() => onMove(-1)} className={`${LINK_BUTTON} !px-1.5 text-navy/50 hover:bg-bg-soft`}>
           <ArrowUp size={14} />
         </button>
-        <button type="button" aria-label="Move down" disabled={index === total - 1} onClick={() => onMove(1)} className={`${LINK_BUTTON} !px-1.5 text-navy/50 hover:bg-bg-soft`}>
+        <button type="button" title="Move down" aria-label="Move down" disabled={index === total - 1} onClick={() => onMove(1)} className={`${LINK_BUTTON} !px-1.5 text-navy/50 hover:bg-bg-soft`}>
           <ArrowDown size={14} />
         </button>
-        <button type="button" aria-label="Remove" onClick={onRemove} className={`${LINK_BUTTON} !px-1.5 text-red-500 hover:bg-red-50`}>
+        <button type="button" title="Remove" aria-label="Remove" onClick={onRemove} className={`${LINK_BUTTON} !px-1.5 text-red-500 hover:bg-red-50`}>
           <Trash2 size={14} />
         </button>
       </div>
@@ -139,7 +139,7 @@ export default function MemberPageEditor({ page, onSave, onCancel }: Props) {
     <div className={`${CARD} p-6`}>
       <div className="mb-6 flex items-start justify-between gap-4">
         <h2 className="font-display text-lg font-bold text-navy">{page ? 'Edit page' : 'New page'}</h2>
-        <button type="button" onClick={onCancel} aria-label="Close" className="rounded-lg p-1.5 text-navy/40 hover:bg-bg-soft hover:text-navy">
+        <button type="button" onClick={onCancel} title="Close" aria-label="Close" className="rounded-lg p-1.5 text-navy/40 hover:bg-bg-soft hover:text-navy">
           <X size={18} />
         </button>
       </div>

@@ -24,7 +24,7 @@ export default function UserMenu() {
       trigger={({ open, toggle }) => (
         <button
           onClick={toggle}
-          aria-label={`Account menu — ${displayName}`}
+          title={`Account menu — ${displayName}`} aria-label={`Account menu — ${displayName}`}
           aria-haspopup="true"
           aria-expanded={open}
           className="flex items-center gap-2 rounded-full py-1 pl-1 pr-2.5 transition-colors hover:bg-bg-soft"

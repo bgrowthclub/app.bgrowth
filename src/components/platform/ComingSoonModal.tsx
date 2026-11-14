@@ -34,7 +34,7 @@ export default function ComingSoonModal({ open, onClose }: Props) {
       <div className="relative w-full max-w-sm rounded-xl3 border border-navy/[0.06] bg-white p-8 text-center shadow-glow">
         <button
           onClick={onClose}
-          aria-label="Close"
+          title="Close" aria-label="Close"
           className="absolute right-4 top-4 grid h-8 w-8 place-items-center rounded-full text-navy/30 transition-colors hover:bg-bg-soft hover:text-navy"
         >
           <X size={16} />

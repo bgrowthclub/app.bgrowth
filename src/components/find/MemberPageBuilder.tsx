@@ -98,15 +98,15 @@ function Row({ children, onRemove, onMove, index, total }: { children: ReactNode
       <div className="flex shrink-0 flex-col gap-0.5">
         {onMove && (
           <>
-            <button type="button" aria-label="Move up" disabled={index === 0} onClick={() => onMove(-1)} className={`${SMALL} !px-1.5 text-navy/50 hover:bg-bg-soft`}>
+            <button type="button" title="Move up" aria-label="Move up" disabled={index === 0} onClick={() => onMove(-1)} className={`${SMALL} !px-1.5 text-navy/50 hover:bg-bg-soft`}>
               <ArrowUp size={14} />
             </button>
-            <button type="button" aria-label="Move down" disabled={index === total - 1} onClick={() => onMove(1)} className={`${SMALL} !px-1.5 text-navy/50 hover:bg-bg-soft`}>
+            <button type="button" title="Move down" aria-label="Move down" disabled={index === total - 1} onClick={() => onMove(1)} className={`${SMALL} !px-1.5 text-navy/50 hover:bg-bg-soft`}>
               <ArrowDown size={14} />
             </button>
           </>
         )}
-        <button type="button" aria-label="Remove" onClick={onRemove} className={`${SMALL} !px-1.5 text-red-500 hover:bg-red-50`}>
+        <button type="button" title="Remove" aria-label="Remove" onClick={onRemove} className={`${SMALL} !px-1.5 text-red-500 hover:bg-red-50`}>
           <Trash2 size={14} />
         </button>
       </div>
@@ -762,7 +762,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
               {images.map((src, i) => (
                 <div key={src + i} className="relative">
                   <img src={src} alt="" className="h-16 w-16 rounded-lg object-cover" />
-                  <button type="button" aria-label="Remove photo" onClick={() => setBlockData(block.id, { images: images.filter((_, j) => j !== i) })} className="absolute -right-1.5 -top-1.5 rounded-full bg-white p-0.5 text-red-500 shadow-softer">
+                  <button type="button" title="Remove photo" aria-label="Remove photo" onClick={() => setBlockData(block.id, { images: images.filter((_, j) => j !== i) })} className="absolute -right-1.5 -top-1.5 rounded-full bg-white p-0.5 text-red-500 shadow-softer">
                     <X size={12} />
                   </button>
                 </div>
@@ -986,7 +986,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
           </p>
         </div>
         {onCancel && (
-          <button type="button" onClick={onCancel} aria-label="Close" className="rounded-lg p-1.5 text-navy/40 hover:bg-bg-soft hover:text-navy">
+          <button type="button" onClick={onCancel} title="Close" aria-label="Close" className="rounded-lg p-1.5 text-navy/40 hover:bg-bg-soft hover:text-navy">
             <X size={18} />
           </button>
         )}
@@ -1238,21 +1238,21 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                       )}
                       {free && (
                         <div className="flex shrink-0 items-center gap-0.5">
-                          <button type="button" aria-label="Move up" disabled={i === 0} onClick={() => setBlocks((l) => move(l, i, -1))} className={`${SMALL} !px-1.5 text-navy/50 hover:bg-bg-soft`}>
+                          <button type="button" title="Move up" aria-label="Move up" disabled={i === 0} onClick={() => setBlocks((l) => move(l, i, -1))} className={`${SMALL} !px-1.5 text-navy/50 hover:bg-bg-soft`}>
                             <ArrowUp size={14} />
                           </button>
-                          <button type="button" aria-label="Move down" disabled={i === blocks.length - 1} onClick={() => setBlocks((l) => move(l, i, 1))} className={`${SMALL} !px-1.5 text-navy/50 hover:bg-bg-soft`}>
+                          <button type="button" title="Move down" aria-label="Move down" disabled={i === blocks.length - 1} onClick={() => setBlocks((l) => move(l, i, 1))} className={`${SMALL} !px-1.5 text-navy/50 hover:bg-bg-soft`}>
                             <ArrowDown size={14} />
                           </button>
                           <button
                             type="button"
-                            aria-label={block.hidden ? 'Show' : 'Hide'}
+                            title={block.hidden ? 'Show' : 'Hide'} aria-label={block.hidden ? 'Show' : 'Hide'}
                             onClick={() => setBlocks((l) => l.map((b) => (b.id === block.id ? { ...b, hidden: !b.hidden } : b)))}
                             className={`${SMALL} !px-1.5 text-navy/50 hover:bg-bg-soft`}
                           >
                             {block.hidden ? <EyeOff size={14} /> : <Eye size={14} />}
                           </button>
-                          <button type="button" aria-label="Remove section" onClick={() => setBlocks((l) => l.filter((b) => b.id !== block.id))} className={`${SMALL} !px-1.5 text-red-500 hover:bg-red-50`}>
+                          <button type="button" title="Remove section" aria-label="Remove section" onClick={() => setBlocks((l) => l.filter((b) => b.id !== block.id))} className={`${SMALL} !px-1.5 text-red-500 hover:bg-red-50`}>
                             <Trash2 size={14} />
                           </button>
                         </div>

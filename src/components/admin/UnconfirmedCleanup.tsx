@@ -76,7 +76,7 @@ export default function UnconfirmedCleanup({ onClose }: { onClose: () => void })
             subscription goes too, and they get no e-mail.
           </p>
         </div>
-        <button type="button" onClick={onClose} className="text-navy/40 hover:text-navy" aria-label="Close">
+        <button type="button" onClick={onClose} className="text-navy/40 hover:text-navy" title="Close" aria-label="Close">
           <X size={18} />
         </button>
       </div>

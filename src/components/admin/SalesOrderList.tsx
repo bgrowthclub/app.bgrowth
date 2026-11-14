@@ -30,7 +30,7 @@ function Actions({ sale }: { sale: AdminSale }) {
         <button
           type="button"
           onClick={toggle}
-          aria-label="Order actions"
+          title="Order actions" aria-label="Order actions"
           className="grid h-8 w-8 place-items-center rounded-full text-navy/40 transition-colors hover:bg-bg-soft hover:text-navy"
         >
           <MoreHorizontal size={16} />

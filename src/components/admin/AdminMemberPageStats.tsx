@@ -38,7 +38,7 @@ export default function AdminMemberPageStats({ page, onClose }: { page: MemberPa
             {page.owner_email ? ` · the owner (${page.owner_email}) sees this in My Page` : ' · no owner linked yet'}
           </p>
         </div>
-        <button type="button" onClick={onClose} aria-label="Close" className="rounded-lg p-1.5 text-navy/40 hover:bg-bg-soft hover:text-navy">
+        <button type="button" onClick={onClose} title="Close" aria-label="Close" className="rounded-lg p-1.5 text-navy/40 hover:bg-bg-soft hover:text-navy">
           <X size={18} />
         </button>
       </div>

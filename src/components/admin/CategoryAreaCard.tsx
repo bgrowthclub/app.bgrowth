@@ -96,7 +96,7 @@ export default function CategoryAreaCard({ area, areas, items, counts, busy, onC
             {editingId === c.id ? (
               <form onSubmit={(e) => rename(e, c)} className="flex min-w-0 flex-1 items-center gap-2">
                 <input value={editName} onChange={(e) => setEditName(e.target.value)} className={`${INPUT} !py-1.5`} autoFocus />
-                <button type="submit" disabled={busy || !editName.trim()} aria-label="Save name" className={`${LINK_BUTTON} text-primary hover:bg-bg-soft`}>
+                <button type="submit" disabled={busy || !editName.trim()} title="Save name" aria-label="Save name" className={`${LINK_BUTTON} text-primary hover:bg-bg-soft`}>
                   <Check size={15} />
                 </button>
                 <button type="button" onClick={() => setEditingId(null)} aria-label="Cancel" className={`${LINK_BUTTON} text-navy/50 hover:bg-bg-soft`}>

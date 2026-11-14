@@ -41,7 +41,7 @@ export default function SupportComposer({ placeholder, busy, onSend }: Props) {
       <button
         type="submit"
         disabled={busy || !text.trim()}
-        aria-label="Send"
+        title="Send" aria-label="Send"
         className="grid h-[52px] w-[52px] shrink-0 place-items-center rounded-2xl bg-primary text-white transition-opacity hover:opacity-90 disabled:opacity-40"
       >
         <SendHorizontal size={18} />

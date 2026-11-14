@@ -34,7 +34,7 @@ export default function PreviewDialog({ open, onClose, product }: Props) {
             type="button"
             onClick={onClose}
             className="rounded-lg p-1.5 text-navy/40 hover:bg-bg-soft hover:text-navy"
-            aria-label="Close preview"
+            title="Close preview" aria-label="Close preview"
           >
             <X size={16} />
           </button>

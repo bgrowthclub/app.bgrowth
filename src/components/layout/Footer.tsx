@@ -75,7 +75,7 @@ export default function Footer() {
                   href={nav.socials[s.id]}
                   target="_blank"
                   rel="noopener noreferrer"
-                  aria-label={s.label}
+                  title={s.label} aria-label={s.label}
                   className="grid h-9 w-9 place-items-center rounded-full border border-navy/10 bg-white text-navy/45 transition-colors hover:border-primary/20 hover:text-primary"
                 >
                   {SOCIAL_ICONS[s.id]({ size: 15, strokeWidth: 2 })}

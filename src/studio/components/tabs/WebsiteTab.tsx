@@ -30,7 +30,7 @@ function RemoveButton({ onClick }: { onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      aria-label="Remove"
+      title="Remove" aria-label="Remove"
       className="shrink-0 rounded-lg p-1.5 text-navy/30 hover:bg-bg-soft hover:text-navy/60"
     >
       <X size={14} />

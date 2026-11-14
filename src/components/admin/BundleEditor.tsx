@@ -93,7 +93,7 @@ export default function BundleEditor({ bundle, workspaces, categories, onSave, o
     <div className={`${CARD} space-y-6 p-6`}>
       <div className="flex items-start justify-between gap-4">
         <h2 className="font-display text-lg font-bold text-navy">{bundle ? 'Edit bundle' : 'New bundle'}</h2>
-        <button type="button" onClick={onCancel} aria-label="Close" className="rounded-lg p-1.5 text-navy/40 hover:bg-bg-soft hover:text-navy">
+        <button type="button" onClick={onCancel} title="Close" aria-label="Close" className="rounded-lg p-1.5 text-navy/40 hover:bg-bg-soft hover:text-navy">
           <X size={18} />
         </button>
       </div>

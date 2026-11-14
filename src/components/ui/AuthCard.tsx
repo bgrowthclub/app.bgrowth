@@ -20,7 +20,7 @@ const TAGLINE = 'Knowledge · Workspaces · Real Progress'
 function BrandMark({ size }: { size: 'lg' | 'md' }) {
   const lg = size === 'lg'
   return (
-    <Link to="/" aria-label="BGrowth — back to home" className="inline-flex items-center gap-3">
+    <Link to="/" title="BGrowth — back to home" aria-label="BGrowth — back to home" className="inline-flex items-center gap-3">
       <span
         className={`grid shrink-0 place-items-center overflow-hidden rounded-full bg-white shadow-softer ${lg ? 'h-14 w-14' : 'h-10 w-10'}`}
       >

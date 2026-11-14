@@ -40,7 +40,7 @@ export default function ProductTagsEditor({ tags, all, busy, onChange }: Props) 
       {tags.map((t) => (
         <span key={t.id} className="inline-flex items-center gap-1 rounded-full bg-bg-soft px-2.5 py-1 text-[12px] font-semibold text-primary">
           {t.name}
-          <button type="button" disabled={busy} aria-label={`Remove ${t.name}`} onClick={() => onChange(names.filter((n) => n !== t.name))} className="opacity-60 hover:opacity-100">
+          <button type="button" disabled={busy} title={`Remove ${t.name}`} aria-label={`Remove ${t.name}`} onClick={() => onChange(names.filter((n) => n !== t.name))} className="opacity-60 hover:opacity-100">
             <X size={12} />
           </button>
         </span>

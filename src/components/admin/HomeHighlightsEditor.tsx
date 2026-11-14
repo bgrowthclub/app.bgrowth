@@ -68,13 +68,13 @@ export default function HomeHighlightsEditor({ products, initial, onSave }: Prop
                   <p className="truncate text-[14px] font-semibold text-navy">{p?.name ?? 'Product no longer published'}</p>
                   <p className="text-[12px] text-navy/45">{p ? KIND[p.content_type] ?? p.content_type : 'It will be skipped'}</p>
                 </div>
-                <button type="button" aria-label="Move up" disabled={i === 0} onClick={() => move(i, -1)} className={`${LINK_BUTTON} !px-1.5 text-navy/50 hover:bg-bg-soft`}>
+                <button type="button" title="Move up" aria-label="Move up" disabled={i === 0} onClick={() => move(i, -1)} className={`${LINK_BUTTON} !px-1.5 text-navy/50 hover:bg-bg-soft`}>
                   <ArrowUp size={15} />
                 </button>
-                <button type="button" aria-label="Move down" disabled={i === ids.length - 1} onClick={() => move(i, 1)} className={`${LINK_BUTTON} !px-1.5 text-navy/50 hover:bg-bg-soft`}>
+                <button type="button" title="Move down" aria-label="Move down" disabled={i === ids.length - 1} onClick={() => move(i, 1)} className={`${LINK_BUTTON} !px-1.5 text-navy/50 hover:bg-bg-soft`}>
                   <ArrowDown size={15} />
                 </button>
-                <button type="button" aria-label="Remove" onClick={() => setIds((list) => list.filter((x) => x !== id))} className={`${LINK_BUTTON} !px-1.5 text-red-500 hover:bg-red-50`}>
+                <button type="button" title="Remove" aria-label="Remove" onClick={() => setIds((list) => list.filter((x) => x !== id))} className={`${LINK_BUTTON} !px-1.5 text-red-500 hover:bg-red-50`}>
                   <X size={15} />
                 </button>
               </li>

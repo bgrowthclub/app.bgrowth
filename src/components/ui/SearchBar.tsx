@@ -46,7 +46,7 @@ export default function SearchBar({
       {submitLabel && (
         <button
           type="submit"
-          aria-label={submitLabel}
+          title={submitLabel} aria-label={submitLabel}
           className={`-my-2 -mr-3 grid h-12 w-12 shrink-0 place-items-center rounded-full text-white transition-all duration-300 ${
             hasValue ? 'bg-grad-primary shadow-glow hover:scale-105' : 'bg-navy/15'
           }`}

@@ -21,7 +21,7 @@ export default function TopBar({ onOpenMobileSidebar, menuBadge = false }: Props
       <div className="flex items-center gap-3 px-4 py-3 md:px-6">
         <button
           onClick={onOpenMobileSidebar}
-          aria-label="Open menu"
+          title="Open menu" aria-label="Open menu"
           className="relative grid h-9 w-9 shrink-0 place-items-center rounded-full text-navy md:hidden"
         >
           <Menu size={20} />
