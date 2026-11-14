@@ -458,6 +458,13 @@ This repo is a **static, client-only MVP**:
   Page / Personal Card, too narrow), and an About with no photo shows the
   title on top, its first sentence larger and the rest in one readable
   column (Personal Brand with a page photo keeps its layout).
+  Since Sprint 256 (14/11/2026, plan items 7 and 9) a "part of the page"
+  plan (`mode` partial) SEES what the whole page adds instead of it being
+  hidden: `components/find/PaidFeatureNote` (⚡ + what it is + "See the
+  plans") on the address, look (color/cover), add/reorder sections, gallery,
+  featured items and products, and `components/find/PagePlanCompare` at the
+  top of the editor (a "Your plan | Whole page" table — its lines mirror the
+  editor's and api/account.ts's limits; change them together).
   **Since Sprint 183 one table says what every plan does with every
   product** (approved by the owner 01/11/2026; Portal migration 0075):
   Admin → Plans → **Included** is now a product × plan grid where each cell

@@ -6,6 +6,8 @@ import Button from '../ui/Button'
 import { CARD, INPUT, LINK_BUTTON, SMALL_BUTTON } from '../admin/styles'
 import MemberPageView from './MemberPageView'
 import ResponsiveFrame from '../ui/ResponsiveFrame'
+import PaidFeatureNote from './PaidFeatureNote'
+import PagePlanCompare from './PagePlanCompare'
 import { shrinkImage } from '../../lib/shrinkImage'
 import { MEMBER_PAGE_LABELS, SAVE_CONTACT_URL, WHATSAPP_JOIN_RE, isUsableLink, videoEmbed } from '../../modules/find/memberPageService'
 import { BLOCK_TYPES, LEGACY_BLOCKS, PAGE_BACKGROUNDS, PAGE_COLORS, PAGE_DARKS, SINGLE_BLOCK_TYPES, blockId, fitBlocks, memberPageTemplates, mergeDuplicateSections, pageSkin, switchTemplateBlocks, templateBlocks, templatePreview } from '../../modules/find/memberPageTemplates'
@@ -501,7 +503,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
               </Row>
             ))}
             <Add label="Add a product" disabled={products.length >= maxProducts} onClick={() => setBlockData(block.id, { products: [...products, { title: '', url: '', category: 'other' }] })} />
-            {!free && <p className="text-[12px] text-navy/45">Your plan shows up to {maxProducts} products.</p>}
+            {!free && <PaidFeatureNote>Your plan shows up to {maxProducts} products — up to 60 with the whole page.</PaidFeatureNote>}
             <textarea value={d.body ?? ''} onChange={(e) => setBlockData(block.id, { body: e.target.value })} rows={2} maxLength={600} className={INPUT} placeholder={own ? 'A note about your products (optional)' : 'Your own note about these links (optional)'} aria-label="Your note" />
             {!own && (
               <label className="flex items-start gap-2 text-[13px] text-navy/70">
@@ -645,7 +647,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
       case 'highlights':
         return (
           <div>
-            {!free && <p className="mb-2 text-[12.5px] text-navy/45">Your plan shows one featured photo or video.</p>}
+            {!free && <div className="mb-2"><PaidFeatureNote>Your plan shows one featured photo or video — up to 8 with the whole page.</PaidFeatureNote></div>}
             <div className="space-y-2">
               {highlights.slice(0, maxHighlights).map((h, i) => (
                 <Row key={i} index={i} total={highlights.length} onMove={free ? (dd) => setHighlights((l) => move(l, i, dd)) : undefined} onRemove={() => setHighlights((l) => l.filter((_, j) => j !== i))}>
@@ -759,7 +761,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
       }
       case 'gallery': {
         const images = d.images ?? []
-        if (!free) return <p className="flex items-center gap-2 text-[13px] text-navy/55"><Lock size={14} /> The photo gallery comes with the Enterprise plan.</p>
+        if (!free) return <PaidFeatureNote>The photo gallery comes with the whole page plan.</PaidFeatureNote>
         return (
           <div className="space-y-2">
             <input value={d.title ?? ''} onChange={(e) => setBlockData(block.id, { title: e.target.value })} maxLength={120} className={INPUT} placeholder="Section title" aria-label="Section title" />
@@ -1010,6 +1012,8 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
         </p>
       )}
 
+      {mode === 'partial' && <PagePlanCompare />}
+
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)]">
         {/* Read-only: every field and button on this side is disabled. */}
         <fieldset disabled={readOnly} className={`min-w-0 space-y-7 ${readOnly ? 'opacity-70' : ''}`}>
@@ -1066,7 +1070,10 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                   )}
                   </>
                 ) : (
-                  <p className="py-2.5 text-sm text-navy/60">{page?.slug ? `bgrowth.app/p/${page.slug}` : 'Made from your name when you save'}</p>
+                  <>
+                    <p className="py-2.5 text-sm text-navy/60">{page?.slug ? `bgrowth.app/p/${page.slug}` : 'Made from your name when you save'}</p>
+                    <PaidFeatureNote>Choose your own address</PaidFeatureNote>
+                  </>
                 )}
               </label>
             </div>
@@ -1171,6 +1178,12 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
             <p className="text-[12.5px] text-navy/45">A round button in the corner of the page that stays visible while visitors scroll.</p>
           </section>
 
+          {!free && (
+            <section className="space-y-2">
+              <span className={LABEL}>Look</span>
+              <PaidFeatureNote>Choose any page color and add a cover image</PaidFeatureNote>
+            </section>
+          )}
           {free && (
             <section className="space-y-3">
               <span className={LABEL}>Look</span>
@@ -1268,6 +1281,11 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                 )
               })}
             </div>
+            {!free && (
+              <div className="mt-3">
+                <PaidFeatureNote>Add new sections and change their order</PaidFeatureNote>
+              </div>
+            )}
             {!free && page?.signup_granted && !blocks.some((b) => b.type === 'signup') && (
               <Add
                 label="Add the e-mail list section"
