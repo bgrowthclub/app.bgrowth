@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Navigate } from 'react-router-dom'
-import { Check, Copy, ExternalLink, MessageCircle, Palette, Plus, Rocket, Share2, Sparkles } from 'lucide-react'
+import { Check, Copy, ExternalLink, MessageCircle, Palette, Plus, QrCode, Rocket, Share2, Sparkles } from 'lucide-react'
+import PageQrCode from '../../components/find/PageQrCode'
 import SEO from '../../components/seo/SEO'
 import mypageHero from '../../assets/mypage-hero.webp'
 import Button from '../../components/ui/Button'
@@ -13,13 +14,14 @@ import { getMyMemberPageStats, myPageService } from '../../modules/find/memberPa
 import type { MemberPage, MemberPageLevel, MemberPageStats, MemberPageSummary } from '../../modules/find/types'
 
 const TEXT = {
-  en: { titleLead: 'My', titleAccent: 'Business', titleTail: 'Page', title: 'My Business Page', description: 'A simple professional page for your business — share it anywhere.', open: 'Open', edit: 'Edit', numbers: 'Numbers', contacts: 'Contacts', copy: 'Copy link', copied: 'Copied', share: 'Share', whatsapp: 'WhatsApp', live: 'Live', draft: 'Draft', draftAddress: 'Once you publish, it will be at', newPage: 'New page', allUsed: (n: number) => `${n} of ${n} pages used`, pending: 'In review', sentBack: 'Our team sent this back:' },
-  pt: { titleLead: 'Minha', titleAccent: 'página', titleTail: 'de negócio', title: 'Minha página de negócio', description: 'Uma página profissional simples para o seu negócio — compartilhe onde quiser.', open: 'Abrir', edit: 'Editar', numbers: 'Números', contacts: 'Contatos', copy: 'Copiar link', copied: 'Copiado', share: 'Compartilhar', whatsapp: 'WhatsApp', live: 'No ar', draft: 'Rascunho', draftAddress: 'Quando você publicar, ela fica em', newPage: 'Nova página', allUsed: (n: number) => `${n} de ${n} páginas usadas`, pending: 'Em análise', sentBack: 'Nosso time devolveu esta página:' },
+  en: { titleLead: 'My', titleAccent: 'Business', titleTail: 'Page', title: 'My Business Page', description: 'A simple professional page for your business — share it anywhere.', open: 'Open', edit: 'Edit', numbers: 'Numbers', contacts: 'Contacts', copy: 'Copy link', copied: 'Copied', share: 'Share', whatsapp: 'WhatsApp', live: 'Live', draft: 'Draft', draftAddress: 'Once you publish, it will be at', newPage: 'New page', allUsed: (n: number) => `${n} of ${n} pages used`, pending: 'In review', sentBack: 'Our team sent this back:', qr: 'QR code', qrTitle: 'Your page’s QR code', qrHint: 'Print it on business cards, flyers, your shop window or your car. Anyone who points a phone camera at it opens your page.', qrDownload: 'Download image (PNG)', qrFailed: 'The code couldn’t be drawn. Try again.', close: 'Close' },
+  pt: { titleLead: 'Minha', titleAccent: 'página', titleTail: 'de negócio', title: 'Minha página de negócio', description: 'Uma página profissional simples para o seu negócio — compartilhe onde quiser.', open: 'Abrir', edit: 'Editar', numbers: 'Números', contacts: 'Contatos', copy: 'Copiar link', copied: 'Copiado', share: 'Compartilhar', whatsapp: 'WhatsApp', live: 'No ar', draft: 'Rascunho', draftAddress: 'Quando você publicar, ela fica em', newPage: 'Nova página', allUsed: (n: number) => `${n} de ${n} páginas usadas`, pending: 'Em análise', sentBack: 'Nosso time devolveu esta página:', qr: 'QR code', qrTitle: 'O QR code da sua página', qrHint: 'Imprima em cartões de visita, panfletos, na vitrine ou no carro. Quem apontar a câmera do celular abre a sua página.', qrDownload: 'Baixar imagem (PNG)', qrFailed: 'Não deu para desenhar o código. Tente de novo.', close: 'Fechar' },
 }
 
 // The page's address with copy and share buttons.
 function ShareBar({ slug, name, t }: { slug: string; name: string; t: (typeof TEXT)['en'] }) {
   const [copied, setCopied] = useState(false)
+  const [qrOpen, setQrOpen] = useState(false)
   const url = `${window.location.origin}/p/${encodeURIComponent(slug)}`
   const btn = 'inline-flex items-center gap-1.5 rounded-xl border border-navy/10 bg-white px-3 py-2 text-[13px] font-semibold text-navy/70 hover:border-primary/40 hover:text-navy'
   return (
@@ -47,6 +49,16 @@ function ShareBar({ slug, name, t }: { slug: string; name: string; t: (typeof TE
           <Share2 size={15} /> {t.share}
         </button>
       )}
+      <button type="button" className={btn} onClick={() => setQrOpen(true)}>
+        <QrCode size={15} /> {t.qr}
+      </button>
+      <PageQrCode
+        open={qrOpen}
+        slug={slug}
+        name={name}
+        labels={{ title: t.qrTitle, hint: t.qrHint, download: t.qrDownload, close: t.close, failed: t.qrFailed }}
+        onClose={() => setQrOpen(false)}
+      />
     </div>
   )
 }

@@ -356,6 +356,11 @@ This repo is a **static, client-only MVP**:
   open while the site is closed — the 0081 read policy, checked by hand
   because the function uses the service role) AND that carries the button.
   No photo in the card yet.
+  Since Sprint 235 (14/11/2026) My Business Page's share bar has "QR code"
+  (`components/find/PageQrCode`): the page's QR drawn in the browser by the
+  `qrcode` package (loaded only when opened, its own chunk), downloadable as
+  a 1024 px PNG. It always points at https://bgrowth.app/p/<slug>, never at
+  the address the member is on — a printed code can't be fixed.
   **Since Sprint 183 one table says what every plan does with every
   product** (approved by the owner 01/11/2026; Portal migration 0075):
   Admin → Plans → **Included** is now a product × plan grid where each cell
