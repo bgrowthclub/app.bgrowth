@@ -296,7 +296,19 @@ async function getCreator(req: VercelRequest, db: Db) {
 async function getSiteOpen(db: Db) {
   const { data, error } = await db.from('site_settings').select('value').eq('key', 'site_open').maybeSingle()
   if (error) throw error
-  return { open: data?.value === true, pages: await openPageSlugs(db) }
+  return { open: data?.value === true, pages: await openPageSlugs(db), archivedTemplates: await archivedTemplates(db) }
+}
+
+// Page models being retired (14/11/2026): the editor hides them from the
+// model list. Same key as api/admin.ts (TEMPLATE_ARCHIVE_KEY).
+async function archivedTemplates(db: Db): Promise<string[]> {
+  try {
+    const { data } = await db.from('site_settings').select('value').eq('key', 'page_template_archive').maybeSingle()
+    const value = data?.value && typeof data.value === 'object' ? (data.value as Record<string, unknown>) : {}
+    return Object.keys(value)
+  } catch {
+    return []
+  }
 }
 
 // ---------------------------------------------------------------------------

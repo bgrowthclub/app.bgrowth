@@ -1018,6 +1018,14 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string; emai
   if (req.method !== 'PUT') throw new HttpError(405, 'Use PUT.')
   const input = readMyPage((req.body ?? {}) as Record<string, any>)
   if (templates && !templates.includes(input.template)) throw new HttpError(403, 'Your plan doesn’t include this model — choose another one or see the plans in Account → Membership.')
+  // A model being retired (14/11/2026) can't be newly chosen; a page already
+  // on it keeps saving until its end date. Same key as api/admin.ts.
+  if (input.template && input.template !== existing?.template) {
+    const { data: archived } = await db.from('site_settings').select('value').eq('key', 'page_template_archive').maybeSingle()
+    if (archived?.value && typeof archived.value === 'object' && input.template in (archived.value as Record<string, unknown>)) {
+      throw new HttpError(403, 'This model is being retired — choose another one.')
+    }
+  }
   let slug = existing?.slug as string | undefined
 
   // The cap applies whatever the level is: it comes from the plan, not from

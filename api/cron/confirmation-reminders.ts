@@ -50,6 +50,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   } catch (err) {
     console.error('[cron] publish_scheduled_knowledge failed:', err)
   }
+  // Retired page models (14/11/2026): on its end date every page still on
+  // an archived model moves to the model chosen as its replacement. Only
+  // `template` changes, so texts, buttons, photos and sections all stay.
+  // Same key and rule as api/admin.ts (TEMPLATE_ARCHIVE_KEY) — change both.
+  let pagesMoved = 0
+  try {
+    const db = supabase.schema('portal')
+    const { data: row } = await db.from('site_settings').select('value').eq('key', 'page_template_archive').maybeSingle()
+    const archive = (row?.value && typeof row.value === 'object' ? row.value : {}) as Record<string, { endsAt?: string; replaceWith?: string; finishedAt?: string; moved?: number }>
+    const today = new Date().toISOString().slice(0, 10)
+    let changed = false
+    for (const [model, entry] of Object.entries(archive)) {
+      if (entry.finishedAt || !entry.endsAt || !entry.replaceWith || entry.endsAt > today) continue
+      const { data: moved, error } = await db
+        .from('member_pages')
+        .update({ template: entry.replaceWith, updated_at: new Date().toISOString() })
+        .eq('template', model)
+        .select('id')
+      if (error) {
+        console.error('[cron] retiring page model failed:', model, error.message)
+        continue
+      }
+      archive[model] = { ...entry, finishedAt: new Date().toISOString(), moved: moved?.length ?? 0 }
+      pagesMoved += moved?.length ?? 0
+      changed = true
+    }
+    if (changed) {
+      const { error } = await db
+        .from('site_settings')
+        .upsert({ key: 'page_template_archive', value: archive, updated_at: new Date().toISOString(), updated_by: 'daily job' })
+      if (error) console.error('[cron] saving retired models failed:', error.message)
+    }
+  } catch (err) {
+    console.error('[cron] retiring page models failed:', err)
+  }
+
   const now = Date.now()
   const due: { id: string; email: string; day: number }[] = []
 
@@ -92,5 +128,5 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   console.log(`[confirmation-reminders] due=${due.length} sent=${sent} failed=${failed.length}`)
-  return res.status(200).json({ ok: true, due: due.length, sent, failed: failed.length, released })
+  return res.status(200).json({ ok: true, due: due.length, sent, failed: failed.length, released, pagesMoved })
 }

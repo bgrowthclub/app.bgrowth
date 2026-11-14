@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
 import { ArrowDown, ArrowLeft, ArrowUp, Banknote, Brush, Check, ChevronDown, ChevronRight, Eye, EyeOff, GraduationCap, Home, ImagePlus, LayoutTemplate, Link2, Lock, Monitor, Plus, ShoppingBag, Smartphone, Sparkles, Stamp, Tag, Trash2, UserRound, Video, X } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -197,6 +197,22 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
   const linkCap = Math.max(1, Math.min(12, maxLinks ?? 12))
   const maxProducts = free ? 60 : 12
   const templates = memberPageTemplates(language)
+  // Models being retired (14/11/2026, Admin → Pages → Page models): hidden
+  // from the list, except the one this page is on now. Read from the
+  // site-state answer, which already carries them.
+  const [retiring, setRetiring] = useState<string[]>([])
+  useEffect(() => {
+    let alive = true
+    fetch('/api/ingles?action=site')
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => {
+        if (alive && Array.isArray(d?.archivedTemplates)) setRetiring(d.archivedTemplates as string[])
+      })
+      .catch(() => undefined)
+    return () => {
+      alive = false
+    }
+  }, [])
 
   function pickImage(key: string, size: number, done: (url: string) => void) {
     const input = document.createElement('input')
@@ -869,7 +885,10 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                 the model, not a stock photo: a photo of a camera says
                 nothing about how the page will look. */}
             <div className="grid gap-4 md:grid-cols-2">
-              {[...templates].sort((a, b) => Number(allowed(b.id)) - Number(allowed(a.id))).map((t) => {
+              {[...templates]
+                .filter((t) => !retiring.includes(t.id) || t.id === template)
+                .sort((a, b) => Number(allowed(b.id)) - Number(allowed(a.id)))
+                .map((t) => {
                 const Icon = TEMPLATE_ICONS[t.id] ?? LayoutTemplate
                 const locked = !allowed(t.id)
                 return (

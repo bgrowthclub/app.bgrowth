@@ -9,6 +9,7 @@ import AdminMemberPageRow from '../../../components/admin/AdminMemberPageRow'
 import MemberPageBuilder from '../../../components/find/MemberPageBuilder'
 import { INPUT } from '../../../components/admin/styles'
 import AdminMemberPageStats from '../../../components/admin/AdminMemberPageStats'
+import AdminPageModelsPanel from '../../../components/admin/AdminPageModelsPanel'
 import MemberPageReviewQueue from '../../../components/admin/MemberPageReviewQueue'
 import { CARD, SMALL_BUTTON } from '../../../components/admin/styles'
 import { adminService } from '../../../modules/admin/adminService'
@@ -162,6 +163,8 @@ export default function AdminMemberPagesPage() {
               {data.pages.filter((p) => p.owner_managed).length === 1 ? 'One page is its owner’s' : `${data.pages.filter((p) => p.owner_managed).length} pages are their owners’`}, but “Subscribers build their own page” is off in Admin → Site — they open My Business Page read-only, with “Coming soon”. Their pages stay on the site; only editing is blocked.
             </p>
           )}
+
+          {!editing && <AdminPageModelsPanel />}
 
           {numbers && !editing && <AdminMemberPageStats key={numbers.id} page={numbers} onClose={() => setNumbers(null)} />}
           {contacts && !editing && (

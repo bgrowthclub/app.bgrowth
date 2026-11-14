@@ -3086,6 +3086,106 @@ async function setPageSelfService(req: VercelRequest, db: Db, admin: Admin) {
   return { on }
 }
 
+// ---------------------------------------------------------------------------
+// Retiring a page model (14/11/2026, the owner's decision). A model is
+// archived with an END DATE and a REPLACEMENT: from the moment it is
+// archived nobody can pick it (the editor hides it, api/account.ts refuses
+// it), pages already on it keep working, and on the end date the daily job
+// (api/cron/confirmation-reminders.ts) moves every page still on it to the
+// replacement — only the `template` changes, so every text, button, photo
+// and section stays. The owners are told by a message in their Support
+// conversation, which also e-mails them (postTeamReply), sent from here.
+// Stored in site_settings key `page_template_archive`:
+//   { [modelId]: { endsAt: 'YYYY-MM-DD', replaceWith, archivedAt,
+//                  notifiedAt?, finishedAt?, moved? } }
+// The same key and the move are read by the cron job and api/ingles.ts
+// (action=site → archivedTemplates) and api/account.ts — change all four.
+// ---------------------------------------------------------------------------
+const TEMPLATE_ARCHIVE_KEY = 'page_template_archive'
+type TemplateArchive = Record<string, { endsAt: string; replaceWith: string; archivedAt: string; notifiedAt?: string; finishedAt?: string; moved?: number }>
+
+async function readTemplateArchive(db: Db): Promise<TemplateArchive> {
+  const { data, error } = await db.from('site_settings').select('value').eq('key', TEMPLATE_ARCHIVE_KEY).maybeSingle()
+  if (error || !data?.value || typeof data.value !== 'object') return {}
+  return data.value as TemplateArchive
+}
+
+async function writeTemplateArchive(db: Db, admin: Admin, value: TemplateArchive) {
+  const { error } = await db
+    .from('site_settings')
+    .upsert({ key: TEMPLATE_ARCHIVE_KEY, value, updated_at: new Date().toISOString(), updated_by: admin.email })
+  if (error) throw error
+}
+
+// Every model's pages, for the Admin screen: which pages, and whether each
+// has an owner who can be told.
+async function listPageTemplates(_req: VercelRequest, db: Db) {
+  const [archive, pages] = await Promise.all([
+    readTemplateArchive(db),
+    db.from('member_pages').select('id, slug, display_name, status, template, user_id'),
+  ])
+  if (pages.error) throw pages.error
+  const usage: Record<string, { id: string; slug: string; name: string; status: string; hasOwner: boolean }[]> = {}
+  for (const p of pages.data ?? []) {
+    const key = (p.template as string | null) || 'none'
+    ;(usage[key] ??= []).push({ id: p.id, slug: p.slug, name: p.display_name, status: p.status, hasOwner: Boolean(p.user_id) })
+  }
+  return { archive, usage }
+}
+
+async function archivePageTemplate(req: VercelRequest, db: Db, admin: Admin) {
+  const template = str(req.body?.template)
+  const replaceWith = str(req.body?.replaceWith)
+  const endsAt = str(req.body?.endsAt)
+  if (!PAGE_TEMPLATES.has(template)) throw new HttpError(400, 'Which model?')
+  if (!PAGE_TEMPLATES.has(replaceWith) || replaceWith === template) throw new HttpError(400, 'Choose the model those pages move to.')
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(endsAt) || endsAt <= new Date().toISOString().slice(0, 10)) throw new HttpError(400, 'Choose an end date after today.')
+  const archive = await readTemplateArchive(db)
+  if (archive[replaceWith] && !archive[replaceWith].finishedAt) throw new HttpError(400, 'That model is being retired too — choose another one.')
+  if (archive[template]?.finishedAt) throw new HttpError(409, 'This model was already retired.')
+  archive[template] = { ...archive[template], endsAt, replaceWith, archivedAt: archive[template]?.archivedAt ?? new Date().toISOString() }
+  await writeTemplateArchive(db, admin, archive)
+  return { template, endsAt, replaceWith }
+}
+
+async function unarchivePageTemplate(req: VercelRequest, db: Db, admin: Admin) {
+  const template = str(req.body?.template)
+  const archive = await readTemplateArchive(db)
+  if (!archive[template]) throw new HttpError(404, 'This model is not archived.')
+  if (archive[template].finishedAt) throw new HttpError(409, 'Its pages were already moved; this can no longer be undone here.')
+  delete archive[template]
+  await writeTemplateArchive(db, admin, archive)
+  return { template }
+}
+
+async function notifyPageTemplateOwners(req: VercelRequest, db: Db, admin: Admin) {
+  const template = str(req.body?.template)
+  const message = String(req.body?.message ?? '').trim().slice(0, 4000)
+  if (!message) throw new HttpError(400, 'Write the message.')
+  const archive = await readTemplateArchive(db)
+  if (!archive[template] || archive[template].finishedAt) throw new HttpError(400, 'Archive the model first.')
+  const { data: pages, error } = await db
+    .from('member_pages')
+    .select('id, user_id, display_name, review_thread_id')
+    .eq('template', template)
+  if (error) throw error
+  let sent = 0
+  let noOwner = 0
+  const told = new Set<string>()
+  for (const page of pages ?? []) {
+    // One message per person, even with several pages on this model.
+    if (page.user_id && told.has(page.user_id)) continue
+    const ok = await messageOwner(req, db, admin, page, message)
+    if (ok) {
+      sent += 1
+      told.add(page.user_id)
+    } else noOwner += 1
+  }
+  archive[template] = { ...archive[template], notifiedAt: new Date().toISOString() }
+  await writeTemplateArchive(db, admin, archive)
+  return { template, sent, noOwner }
+}
+
 // Open the site to everyone, or show "Coming soon" to all but the team.
 async function setSiteOpen(req: VercelRequest, db: Db, admin: Admin) {
   const open = req.body?.open === true
@@ -4122,6 +4222,12 @@ function describe(key: string, b: Body, r: Record<string, any>): Described {
       }
     case 'PUT site-open':
       return { area: 'site', summary: r.open ? 'Opened the site to everyone' : 'Closed the site (Coming soon for visitors)' }
+    case 'PUT page-template-archive':
+      return { area: 'pages', summary: `Archived the page model “${r.template}”: its pages move to “${r.replaceWith}” on ${r.endsAt}` }
+    case 'DELETE page-template-archive':
+      return { area: 'pages', summary: `Brought back the page model “${r.template}”` }
+    case 'POST page-template-notify':
+      return { area: 'pages', summary: `Told the owners of “${r.template}” pages it is being retired (${r.sent} told, ${r.noOwner} without an account)` }
     case 'PUT page-self-service':
       return { area: 'pages', summary: r.on ? 'Let subscribers build and publish their own page' : 'Stopped subscribers from editing their own page (team only)' }
     case 'POST announcements':
@@ -4668,6 +4774,10 @@ const ROUTES: Record<string, Route> = {
   'GET site': (_req, db) => siteOverview(db),
   'PUT site-open': (req, db, admin) => setSiteOpen(req, db, admin),
   'PUT page-self-service': (req, db, admin) => setPageSelfService(req, db, admin),
+  'GET page-templates': (req, db) => listPageTemplates(req, db),
+  'PUT page-template-archive': (req, db, admin) => archivePageTemplate(req, db, admin),
+  'DELETE page-template-archive': (req, db, admin) => unarchivePageTemplate(req, db, admin),
+  'POST page-template-notify': (req, db, admin) => notifyPageTemplateOwners(req, db, admin),
   'PUT page-open': (req, db, admin) => setPageOpen(req, db, admin),
   'PUT page-demo': (req, db) => setPageDemo(req, db),
   'POST announcements': (req, db, admin) => createAnnouncement(req, db, admin),

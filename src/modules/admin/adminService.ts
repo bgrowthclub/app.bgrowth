@@ -1,6 +1,7 @@
 import { supabase } from '../identity/supabase/supabaseClient'
 import type { SiteAnnouncement, SiteContentRow } from '../site/types'
 import type {
+  AdminPageTemplates,
   AdminGrant,
   AdminLicense,
   AdminMemberDetail,
@@ -264,6 +265,19 @@ export const adminService = {
   },
   async setSiteOpen(open: boolean) {
     return (await call<{ open: boolean }>('PUT', 'site-open', undefined, { open })).open
+  },
+  // Retiring page models (14/11/2026).
+  getPageTemplates() {
+    return call<AdminPageTemplates>('GET', 'page-templates')
+  },
+  archivePageTemplate(template: string, endsAt: string, replaceWith: string) {
+    return call<{ template: string; endsAt: string; replaceWith: string }>('PUT', 'page-template-archive', undefined, { template, endsAt, replaceWith })
+  },
+  unarchivePageTemplate(template: string) {
+    return call<{ template: string }>('DELETE', 'page-template-archive', undefined, { template })
+  },
+  notifyPageTemplateOwners(template: string, message: string) {
+    return call<{ template: string; sent: number; noOwner: number }>('POST', 'page-template-notify', undefined, { template, message })
   },
   async setPageSelfService(on: boolean) {
     return (await call<{ on: boolean }>('PUT', 'page-self-service', undefined, { on })).on

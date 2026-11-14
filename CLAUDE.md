@@ -424,6 +424,20 @@ This repo is a **static, client-only MVP**:
   for it too); with nothing chosen: the products, else the services, else
   the first contact button. It used to always scroll to the products, so a
   page without products had a button that did nothing.
+  **Since Sprint 251 a page model can be retired on a date** (decided by the
+  owner 14/11/2026; no migration): Admin → Pages → Page models
+  (`components/admin/AdminPageModelsPanel`, resources `page-templates`,
+  `page-template-archive` PUT/DELETE, `page-template-notify`, admin-only,
+  logged in Activity) shows each model's pages and archives one with an END
+  DATE and a REPLACEMENT, kept in `site_settings` key `page_template_archive`.
+  From then on the editor hides it (except on the page already using it —
+  read from `api/ingles.ts?action=site` → `archivedTemplates`) and
+  `api/account.ts` refuses choosing it; on the end date the daily cron
+  (`api/cron/confirmation-reminders.ts`) moves every page still on it to the
+  replacement — only `template` changes, so texts, buttons and photos stay.
+  "Tell the owners" sends each owner one message in their Support
+  conversation (`messageOwner`), which also e-mails them; a team-made page
+  with no account can't be told. Four places read the key — keep them in step.
   **Since Sprint 183 one table says what every plan does with every
   product** (approved by the owner 01/11/2026; Portal migration 0075):
   Admin → Plans → **Included** is now a product × plan grid where each cell

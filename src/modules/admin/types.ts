@@ -484,6 +484,20 @@ export interface AdminSiteProduct {
   content_type: string
 }
 
+// Page models being retired (14/11/2026) — Admin → Pages → Page models.
+export interface AdminPageTemplateArchiveEntry {
+  endsAt: string
+  replaceWith: string
+  archivedAt: string
+  notifiedAt?: string
+  finishedAt?: string
+  moved?: number
+}
+export interface AdminPageTemplates {
+  archive: Record<string, AdminPageTemplateArchiveEntry>
+  usage: Record<string, { id: string; slug: string; name: string; status: string; hasOwner: boolean }[]>
+}
+
 export interface AdminSiteOverview {
   announcements: import('../site/types').SiteAnnouncement[]
   featured: string[]
