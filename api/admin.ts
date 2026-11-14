@@ -2616,7 +2616,14 @@ async function memberPageStats(req: VercelRequest, db: Db) {
 // same cleaning in api/admin.ts and api/account.ts.
 const PAGE_BLOCK_TYPES = new Set(['hero', 'contact', 'highlights', 'services', 'about', 'testimonials', 'gallery', 'text', 'faq', 'area', 'cta', 'credentials', 'products', 'signup'])
 const PAGE_COLORS = new Set(['blue', 'teal', 'green', 'purple', 'rose', 'orange', 'navy'])
-const PAGE_TEMPLATES = new Set(['professional', 'local', 'creative', 'personal', 'affiliate', 'links', 'cleaning', 'notary', 'teacher', 'creator', 'blank'])
+// A COPY of the model ids in src/modules/find/memberPageTemplates.ts (and
+// in api/account.ts) — keep all three in step. Until 14/11/2026 this copy
+// lacked 'picks', 'payments' and 'simple', so a page of one of those saved
+// from Admin → Pages lost its model.
+const PAGE_TEMPLATES = new Set([
+  'professional', 'local', 'service', 'creative', 'personal', 'affiliate', 'picks', 'links', 'payments',
+  'cleaning', 'notary', 'teacher', 'creator', 'simple', 'blank',
+])
 // Background tints (light only — dark text stays readable), open to every plan.
 const PAGE_BACKGROUNDS = new Set(['cream', 'sand', 'mist', 'sky', 'mint', 'blush', 'lavender'])
 const pageText = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '')

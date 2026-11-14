@@ -399,6 +399,24 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                 <p className="text-[12.5px] text-navy/45">The big image on the right is your cover image (or your photo).</p>
               </>
             )}
+            {template === 'service' && (
+              <>
+                <input value={d.title ?? ''} onChange={(e) => setBlockData(block.id, { title: e.target.value })} maxLength={120} className={INPUT} placeholder="Small line above the title (e.g. Body repair · Auto paint)" aria-label="Small line" />
+                <textarea value={d.body ?? ''} onChange={(e) => setBlockData(block.id, { body: e.target.value })} rows={3} maxLength={400} className={INPUT} placeholder="A sentence on what you do and why clients choose you" aria-label="Intro" />
+                <p className="text-[12.5px] text-navy/45">The big picture behind the top is your cover image — use a photo of your work. Your photo or logo goes in the bar at the very top.</p>
+                <p className="pt-1 text-[12.5px] font-semibold text-navy/60">Facts under the button (up to 3)</p>
+                <p className="text-[12.5px] text-navy/45">Only what is true, in your words — e.g. “20+” and “years of experience”. Leave empty to show none.</p>
+                {(d.items ?? []).map((item, i, items) => (
+                  <Row key={i} index={i} total={items.length} onRemove={() => setBlockData(block.id, { items: items.filter((_, j) => j !== i) })}>
+                    <div className="grid gap-2 sm:grid-cols-[120px_minmax(0,1fr)]">
+                      <input value={item.title} onChange={(e) => setBlockData(block.id, { items: items.map((x, j) => (j === i ? { ...x, title: e.target.value } : x)) })} maxLength={20} className={INPUT} placeholder="20+" aria-label="Big text" />
+                      <input value={item.body ?? ''} onChange={(e) => setBlockData(block.id, { items: items.map((x, j) => (j === i ? { ...x, body: e.target.value } : x)) })} maxLength={40} className={INPUT} placeholder="years of experience" aria-label="Small text" />
+                    </div>
+                  </Row>
+                ))}
+                <Add label="Add a fact" disabled={(d.items ?? []).length >= 3} onClick={() => setBlockData(block.id, { items: [...(d.items ?? []), { title: '', body: '' }] })} />
+              </>
+            )}
             {template !== 'picks' && !ownCatalog && (
               <>
                 <p className="pt-1 text-[12.5px] font-semibold text-navy/60">The big button at the top</p>
@@ -488,6 +506,12 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
         return (
           <div>
             <p className="mb-2 text-[12.5px] text-navy/45">The first button is the big one. Add another block of buttons wherever you want them on the page.</p>
+            {template === 'service' && (
+              <div className="mb-3 space-y-2">
+                <input value={d.title ?? ''} onChange={(e) => setBlockData(block.id, { title: e.target.value })} maxLength={120} className={INPUT} placeholder="Title (default: Contact)" aria-label="Contact title" />
+                <input value={d.body ?? ''} onChange={(e) => setBlockData(block.id, { body: e.target.value })} maxLength={300} className={INPUT} placeholder="A line under the title (optional)" aria-label="Contact line" />
+              </div>
+            )}
 
             {mine.length === 0 && elsewhere.length > 0 && (
               <div className="mb-3 rounded-xl border border-primary/25 bg-primary/[0.04] p-3">
@@ -660,8 +684,28 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
             <Add label="Add a service" disabled={services.length >= 12} onClick={() => setServices((l) => [...l, { title: '', description: '', price: '' }])} />
           </div>
         )
-      case 'about':
-        return <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={6} maxLength={3000} className={INPUT} placeholder="Your story, experience, what makes your work different" aria-label="About" />
+      case 'about': {
+        const aboutImage = d.images?.[0]
+        return (
+          <div className="space-y-2">
+            <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={6} maxLength={3000} className={INPUT} placeholder="Your story, experience, what makes your work different" aria-label="About" />
+            {template === 'service' && (
+              // A photo beside the story — you, your team or your shop.
+              <div className="flex flex-wrap items-center gap-3">
+                {aboutImage && <img src={aboutImage} alt="" className="h-14 w-14 rounded-lg object-cover" />}
+                <button type="button" disabled={uploading !== null} onClick={() => pickImage(`a${block.id}`, 1200, (url) => setBlockData(block.id, { images: [url] }))} className={`${SMALL} inline-flex items-center gap-1.5 text-primary hover:bg-bg-soft`}>
+                  <ImagePlus size={14} /> {uploading === `a${block.id}` ? 'Uploading…' : aboutImage ? 'Change photo' : 'Add a photo beside the text'}
+                </button>
+                {aboutImage && (
+                  <button type="button" onClick={() => setBlockData(block.id, { images: [] })} className={`${SMALL} text-red-500 hover:bg-red-50`}>
+                    Remove
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )
+      }
       case 'testimonials':
       case 'credentials':
       case 'faq': {

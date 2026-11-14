@@ -38,6 +38,14 @@ const LOOK: Record<MemberPageSkin, { page: string; band: string; h2: string; car
     card: 'rounded-2xl border border-navy/[0.08] bg-white shadow-softer',
     wide: 'max-w-6xl',
   },
+  // Service Business (14/11/2026): wider, bigger headings, alternate bands.
+  service: {
+    page: 'bg-white text-navy',
+    band: 'bg-bg-soft',
+    h2: 'font-display text-3xl font-bold tracking-tight text-navy md:text-[2.6rem] md:leading-tight',
+    card: 'rounded-2xl border border-navy/[0.08] bg-white shadow-softer',
+    wide: 'max-w-6xl',
+  },
   creative: {
     page: 'bg-[color:var(--color-paper)] text-navy',
     band: 'bg-[color:var(--color-paper)]',
@@ -155,8 +163,8 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
   // "#services" or "#contact" (10/11/2026). The key stays the block's own
   // id — two contact blocks on one page would otherwise share a React key.
   const section = (key: string, children: ReactNode, band = false, anchor?: string) => (
-    <section key={key} id={anchor} className={`${band && bandClass ? bandClass : ''} scroll-mt-6`}>
-      <div className={`mx-auto ${look.wide} px-5 ${skin === 'links' ? 'py-6' : 'py-14 md:py-20'}`}>{children}</div>
+    <section key={key} id={anchor} className={`${band && bandClass ? bandClass : ''} ${skin === 'service' ? 'scroll-mt-20' : 'scroll-mt-6'}`}>
+      <div className={`mx-auto ${look.wide} px-5 ${skin === 'links' ? 'py-6' : skin === 'service' ? 'py-16 md:py-24' : 'py-14 md:py-20'}`}>{children}</div>
     </section>
   )
 
@@ -242,6 +250,84 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
             )}
           </div>
         </section>
+      )
+    }
+
+    if (skin === 'service') {
+      // The cover is the member's photo of their WORK; the logo/photo goes in
+      // the header. No cover = a plain dark top, never the logo blown up.
+      const cover = page.theme?.cover
+      // Up to three facts the member states ("20+ / years of experience").
+      // Nothing is counted or invented: empty = no row.
+      const facts = (heroData.items ?? []).filter((i) => i.title.trim()).slice(0, 3)
+      const ghost = (link: MemberPageLink) => (
+        <a
+          key={link.type + link.url}
+          {...linkProps(link.type, link.url, `link:${link.type}`)}
+          className="inline-flex items-center gap-2 rounded-xl border border-white/30 px-6 py-3 text-[15px] font-semibold text-white transition-colors hover:bg-white/10"
+        >
+          {memberLinkLabel(link, page.language)}
+        </a>
+      )
+      return (
+        <div key="hero">
+          <header className="sticky top-0 z-30 border-b border-navy/[0.06] bg-white/95 backdrop-blur">
+            <div className={`mx-auto flex ${look.wide} items-center gap-3 px-5 py-3`}>
+              {photo('h-10 w-10 shrink-0 rounded-full !text-sm')}
+              <p className="min-w-0 flex-1 truncate font-display text-[15.5px] font-bold">{name}</p>
+              <div className="flex shrink-0 gap-2">
+                {allLinks.slice(0, 2).map((l, i) => {
+                  const Icon = MEMBER_LINK_ICONS[l.type] ?? Link2
+                  const green = l.type === 'whatsapp' || l.type === 'whatsapp_group'
+                  return (
+                    <a
+                      key={l.type + l.url}
+                      {...linkProps(l.type, l.url, `link:${l.type}`)}
+                      className={`${i === 1 ? 'hidden sm:inline-flex' : 'inline-flex'} items-center gap-1.5 rounded-xl px-3.5 py-2 text-[13.5px] font-semibold text-white ${green ? 'bg-whatsapp' : 'bg-primary hover:bg-primary/90'}`}
+                    >
+                      <Icon size={15} aria-hidden /> <span className="max-w-[9rem] truncate">{memberLinkLabel(l, page.language)}</span>
+                    </a>
+                  )
+                })}
+              </div>
+            </div>
+          </header>
+          <section className="relative overflow-hidden bg-navy text-white">
+            {cover ? (
+              <>
+                <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${cover})` }} aria-hidden />
+                <div className="absolute inset-0 bg-gradient-to-r from-navy via-navy/85 to-navy/30" aria-hidden />
+              </>
+            ) : (
+              <div className="absolute -right-40 -top-40 h-[32rem] w-[32rem] rounded-full bg-primary/40 blur-3xl" aria-hidden />
+            )}
+            <div className={`relative mx-auto ${look.wide} px-5 py-16 md:py-28`}>
+              <div className="max-w-2xl">
+                {(heroData.title || page.location) && (
+                  <p className="text-[12.5px] font-bold uppercase tracking-[0.18em] text-white/70">{heroData.title || page.location}</p>
+                )}
+                <h1 className="mt-4 font-display text-4xl font-bold leading-[1.05] tracking-tight md:text-6xl">{headline || name}</h1>
+                {heroData.body && <p className="mt-5 text-[17px] leading-relaxed text-white/75 md:text-[19px]">{heroData.body}</p>}
+                {heroTarget && (
+                  <div className="mt-8 flex flex-wrap gap-3">
+                    {heroButton()}
+                    {secondary && !heroData.buttonLink && ghost(secondary)}
+                  </div>
+                )}
+                {facts.length > 0 && (
+                  <dl className="mt-10 flex flex-wrap gap-x-10 gap-y-5 border-t border-white/15 pt-7">
+                    {facts.map((f, i) => (
+                      <div key={i}>
+                        <dt className="font-display text-2xl font-bold md:text-3xl">{f.title}</dt>
+                        {f.body && <dd className="mt-0.5 text-[14px] text-white/70">{f.body}</dd>}
+                      </div>
+                    ))}
+                  </dl>
+                )}
+              </div>
+            </div>
+          </section>
+        </div>
       )
     }
 
@@ -465,6 +551,37 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
             </div>,
           )
         }
+        // Service Business: contact is the page's strongest moment — a dark
+        // band, the member's own title and line, big buttons.
+        if (skin === 'service') {
+          return (
+            <section key={block.id} id={block.type} className="scroll-mt-20 bg-navy text-white">
+              <div className={`mx-auto grid ${look.wide} gap-10 px-5 py-16 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] md:items-center md:py-24`}>
+                <div>
+                  <h2 className="font-display text-3xl font-bold tracking-tight md:text-[2.6rem] md:leading-tight">{d.title || t.contact}</h2>
+                  {d.body && <p className="mt-4 max-w-xl text-[17px] leading-relaxed text-white/70">{d.body}</p>}
+                </div>
+                <div className="grid gap-3">
+                  {links.map((l, i) => {
+                    const Icon = MEMBER_LINK_ICONS[l.type] ?? Link2
+                    const green = l.type === 'whatsapp' || l.type === 'whatsapp_group'
+                    return (
+                      <a
+                        key={l.type + l.url}
+                        {...linkProps(l.type, l.url, `link:${l.type}`)}
+                        className={`flex min-h-[56px] items-center justify-center gap-2 rounded-xl px-5 text-[16.5px] font-semibold transition-colors ${
+                          green ? 'bg-whatsapp text-white' : i === 0 ? 'bg-primary text-white hover:bg-primary/90' : 'border border-white/25 text-white hover:bg-white/10'
+                        }`}
+                      >
+                        <Icon size={19} aria-hidden /> {memberLinkLabel(l, page.language)}
+                      </a>
+                    )
+                  })}
+                </div>
+              </div>
+            </section>
+          )
+        }
         return section(
           block.id,
           <div className="text-center">
@@ -538,6 +655,7 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
                     {s.image && <img src={s.image} alt="" className="aspect-video w-full object-cover" />}
                     <div className="flex flex-1 flex-col p-6">
                       {skin === 'local' && <span className="mb-4 grid h-11 w-11 place-items-center rounded-full bg-primary/10 font-display font-bold text-primary">{i + 1}</span>}
+                      {skin === 'service' && <span className="mb-5 grid h-12 w-12 place-items-center rounded-xl bg-primary/10 font-display text-lg font-bold text-primary">{String(i + 1).padStart(2, '0')}</span>}
                       <p className="text-[17px] font-semibold text-navy">{s.title}</p>
                       {s.description && <p className="mt-2 text-[14.5px] leading-relaxed text-navy/60">{s.description}</p>}
                       {s.price && <p className="mt-4 font-display text-lg font-bold text-primary">{s.price}</p>}
@@ -566,6 +684,23 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
         const body = block.type === 'about' ? page.bio : d.body
         if (!body?.trim() && !title?.trim()) return null
         if (block.type === 'about' && !page.bio) return null
+        // Service Business: "About" can carry its own photo (the owner, the
+        // team, the shop) — the page photo is usually the logo.
+        const aboutImage = skin === 'service' && block.type === 'about' ? d.images?.[0] : undefined
+        if (aboutImage) {
+          return section(
+            block.id,
+            <div className="grid gap-10 md:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] md:items-center md:gap-16">
+              <img src={aboutImage} alt="" className="aspect-[4/5] w-full rounded-3xl object-cover shadow-softer md:max-h-[560px]" />
+              <div>
+                <h2 className={look.h2}>{title}</h2>
+                <p className="mt-5 whitespace-pre-line text-[16.5px] leading-relaxed text-navy/70">{body}</p>
+              </div>
+            </div>,
+            band,
+            block.type,
+          )
+        }
         return section(
           block.id,
           <div

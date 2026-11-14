@@ -221,6 +221,52 @@ export function memberPageTemplates(lang: Lang): MemberPageTemplate[] {
       },
     },
     {
+      // Service Business (14/11/2026, the owner's decision): a full small
+      // website for a business that sells a service — body shop, cleaning,
+      // contractor. Sticky header with the contact buttons always in reach,
+      // a dark top over the member's own work photo with up to three facts
+      // they state, services, about with a photo, work, and contact as a
+      // dark band with big buttons. A NEW look: no existing page changed.
+      id: 'service',
+      name: { en: 'Service Business', pt: 'Empresa de serviços' },
+      description: {
+        en: 'A complete small website for a service business — auto shop, cleaning, contractor. Your contact buttons always in sight, a big photo of your work, your services, your story and a strong contact section.',
+        pt: 'Um site pequeno e completo para empresa de serviço — oficina, limpeza, reformas. Botões de contato sempre à vista, uma foto grande do seu trabalho, seus serviços, sua história e uma seção de contato forte.',
+      },
+      color: 'blue',
+      blocks: [
+        b('hero', {
+          title: L('Your service · Your city', 'Seu serviço · Sua cidade'),
+          body: L('One sentence on what you do and why clients choose you.', 'Uma frase sobre o que você faz e por que os clientes escolhem você.'),
+          button: L('Get a free quote', 'Pedir orçamento grátis'),
+          buttonLink: '#contact',
+          items: [
+            { title: '10+', body: L('years of experience', 'anos de experiência') },
+            { title: L('Your city', 'Sua cidade'), body: L('and nearby', 'e região') },
+          ],
+        }),
+        b('services'),
+        b('about'),
+        b('highlights'),
+        b('testimonials', {
+          title: L('What clients say', 'O que os clientes dizem'),
+          items: [{ title: L('A real comment from a real client.', 'Um comentário real de um cliente real.'), body: L('Client name', 'Nome do cliente') }],
+        }),
+        b('contact', {
+          title: L('Ready to get started?', 'Vamos começar?'),
+          body: L('Call, send a WhatsApp or an e-mail.', 'Ligue, mande um WhatsApp ou um e-mail.'),
+        }),
+      ],
+      example: {
+        headline: L('Quality work, done right the first time', 'Trabalho de qualidade, bem feito desde a primeira vez'),
+        services: [
+          { title: L('Main service', 'Serviço principal'), description: L('What it includes, in one or two lines', 'O que inclui, em uma ou duas linhas') },
+          { title: L('Second service', 'Segundo serviço'), description: L('What it includes, in one or two lines', 'O que inclui, em uma ou duas linhas') },
+          { title: L('Third service', 'Terceiro serviço'), description: L('What it includes, in one or two lines', 'O que inclui, em uma ou duas linhas') },
+        ],
+      },
+    },
+    {
       id: 'creative',
       name: { en: 'Creative Portfolio', pt: 'Portfólio criativo' },
       description: {
@@ -524,8 +570,8 @@ export function memberPageTemplates(lang: Lang): MemberPageTemplate[] {
 // cleaning, notary, teacher, creator, blank) keep the simple one-column page.
 // 'links' (Link Page) since the 11th model: a short, phone-first page of
 // stacked buttons — logo, name, a line about the business and its links.
-export type MemberPageSkin = 'professional' | 'local' | 'creative' | 'personal' | 'affiliate' | 'picks' | 'links'
-const SKINS: MemberPageSkin[] = ['professional', 'local', 'creative', 'personal', 'affiliate', 'picks', 'links']
+export type MemberPageSkin = 'professional' | 'local' | 'service' | 'creative' | 'personal' | 'affiliate' | 'picks' | 'links'
+const SKINS: MemberPageSkin[] = ['professional', 'local', 'service', 'creative', 'personal', 'affiliate', 'picks', 'links']
 // A model whose look belongs to ANOTHER model: 'payments' is a page of big
 // stacked buttons, which is exactly the Link Page look, so it borrows it
 // rather than duplicating a skin.
@@ -656,6 +702,11 @@ const SAMPLE: Record<string, { name: string; location: { en: string; pt: string 
     name: 'Ana Ribeiro',
     location: { en: 'Orlando, FL · Online', pt: 'Orlando, FL · Online' },
     bio: { en: 'Ten years helping families and small businesses with their documents — clear, on time and by the book.', pt: 'Dez anos ajudando famílias e pequenas empresas com seus documentos — com clareza, no prazo e dentro das regras.' },
+  },
+  service: {
+    name: 'Summit Auto Body',
+    location: { en: 'Orlando, FL', pt: 'Orlando, FL' },
+    bio: { en: 'Twenty years fixing and painting cars, one at a time, with the care we would give our own.', pt: 'Vinte anos consertando e pintando carros, um de cada vez, com o cuidado que daríamos ao nosso.' },
   },
   local: {
     name: 'Bright Home Cleaning',

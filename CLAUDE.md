@@ -382,6 +382,16 @@ This repo is a **static, client-only MVP**:
   screen readers, under a banner "Example — not your numbers" with a "Copy
   page link" button (`shareUrl`). Real rows and the example are never mixed;
   the first real row replaces it.
+  Since Sprint 241 (14/11/2026) there is a model **Service Business**
+  (`service`, its own skin in `MemberSiteView`; a NEW look, no existing page
+  changed): sticky header with the page photo/logo and the first two buttons,
+  a dark top over `theme.cover` (the member's photo of their work; no cover =
+  plain dark, never the logo blown up) with up to three facts the member
+  states (`hero` `data.items`, empty = none), numbered service cards, "About"
+  with its own photo (`about` `data.images[0]`), and contact as a dark band
+  with the block's own `title`/`body` and big buttons. The model id is in the
+  three copies (memberPageTemplates.ts, api/account.ts, api/admin.ts); the
+  admin.ts copy had been missing `picks`, `payments` and `simple`, fixed then.
   **Since Sprint 183 one table says what every plan does with every
   product** (approved by the owner 01/11/2026; Portal migration 0075):
   Admin → Plans → **Included** is now a product × plan grid where each cell
