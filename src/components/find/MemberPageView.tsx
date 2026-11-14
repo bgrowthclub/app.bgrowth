@@ -4,6 +4,7 @@ import MemberSiteView from './MemberSiteView'
 import MemberProductPicks from './MemberProductPicks'
 import MemberPageSignupForm from './MemberPageSignupForm'
 import MemberPagePromo from './MemberPagePromo'
+import MemberEmailChooser from './MemberEmailChooser'
 import MemberFloatingButton from './MemberFloatingButton'
 import ReportPageLink from './ReportPageLink'
 import type { CSSProperties } from 'react'
@@ -48,6 +49,8 @@ export default function MemberPageView(props: Props) {
     <>
       <MemberPageBody {...props} />
       <MemberFloatingButton page={props.page} preview={props.preview} onLinkClick={props.onLinkClick} />
+      {/* E-mail buttons on a computer ask where to write (14/11/2026). */}
+      {!props.preview && <MemberEmailChooser language={props.page.language} />}
     </>
   )
 }
@@ -68,7 +71,10 @@ function MemberPageBody({ page, preview = false, onLinkClick, onSearch, onCatego
         ? // A contact card opens in the same tab: that's where a phone shows
           // "Create new contact" (14/11/2026).
           { href: memberLinkHref(type, url, page.slug), onClick: () => onLinkClick?.(target) }
-        : { href: memberLinkHref(type, url), target: '_blank', rel: 'noreferrer', onClick: () => onLinkClick?.(target) }
+        : type === 'email'
+          ? // E-mail opens in place: a new tab for it was left blank.
+            { href: memberLinkHref(type, url), onClick: () => onLinkClick?.(target) }
+          : { href: memberLinkHref(type, url), target: '_blank', rel: 'noreferrer', onClick: () => onLinkClick?.(target) }
 
   const color = PAGE_COLORS.find((c) => c.id === page.theme?.color)
   const background = PAGE_BACKGROUNDS.find((c) => c.id === page.theme?.background)

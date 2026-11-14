@@ -137,7 +137,10 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
         ? // A contact card opens in the same tab: that's where a phone shows
           // "Create new contact" (14/11/2026).
           { href: memberLinkHref(type, url, page.slug), onClick: () => onLinkClick?.(target) }
-        : { href: memberLinkHref(type, url), target: '_blank', rel: 'noreferrer', onClick: () => onLinkClick?.(target) }
+        : type === 'email'
+          ? // E-mail opens in place: a new tab for it was left blank.
+            { href: memberLinkHref(type, url), onClick: () => onLinkClick?.(target) }
+          : { href: memberLinkHref(type, url), target: '_blank', rel: 'noreferrer', onClick: () => onLinkClick?.(target) }
 
   const button = (link: MemberPageLink, kind: 'solid' | 'outline' | 'light', label?: string) => {
     const Icon = MEMBER_LINK_ICONS[link.type] ?? Link2

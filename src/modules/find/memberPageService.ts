@@ -123,9 +123,10 @@ export function pageButtonProps(
   slug = '',
 ): { href: string; target?: string; rel?: string; scrollTo?: string } | null {
   // A contact card opens in the same tab: that's where a phone shows
-  // "Create new contact". Everything else opens a new one.
+  // "Create new contact". So does e-mail (14/11/2026) — a new tab for a
+  // mailto: link was left blank. Everything else opens a new one.
   const open = (link: MemberPageLink) =>
-    link.type === 'save_contact'
+    link.type === 'save_contact' || link.type === 'email'
       ? { href: memberLinkHref(link.type, link.url, slug) }
       : { href: memberLinkHref(link.type, link.url), target: '_blank', rel: 'noreferrer' }
   const value = (buttonLink ?? '').trim()

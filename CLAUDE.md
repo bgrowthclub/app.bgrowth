@@ -404,6 +404,11 @@ This repo is a **static, client-only MVP**:
   media on one side and its title, text and button on the other
   (`singleHighlight`; not on the Link Page look and the models that borrow
   it, whose column is too narrow); 2+ items keep the cards, up to three per row.
+  Since Sprint 248 an e-mail button on a COMPUTER (fine pointer, no touch)
+  asks where to write — Gmail, Outlook, the mail program, or copy the address
+  (`components/find/MemberEmailChooser`, mounted once by `MemberPageView`
+  outside previews, catching every `mailto:` click of the page); a phone opens
+  its mail app as before. E-mail links no longer open a new tab.
   **Since Sprint 183 one table says what every plan does with every
   product** (approved by the owner 01/11/2026; Portal migration 0075):
   Admin → Plans → **Included** is now a product × plan grid where each cell
