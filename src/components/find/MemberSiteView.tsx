@@ -661,7 +661,9 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
           block.id,
           <>
             <h2 className={look.h2}>{t.highlights}</h2>
-            {page.highlights.length === 1 ? (
+            {/* Not on the Link Page look: its one narrow column has no room
+                for a side-by-side. */}
+            {page.highlights.length === 1 && skin !== 'links' ? (
               <div className="mt-8">{singleHighlight(page.highlights[0])}</div>
             ) : (
             <>
