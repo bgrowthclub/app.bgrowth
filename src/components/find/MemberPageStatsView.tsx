@@ -1,4 +1,5 @@
-import { BarChart3 } from 'lucide-react'
+import { useState } from 'react'
+import { BarChart3, Check, Copy, Sparkles } from 'lucide-react'
 import FilterPill from '../ui/FilterPill'
 import EmptyState from '../ui/EmptyState'
 import { MEMBER_PAGE_LABELS } from '../../modules/find/memberPageService'
@@ -26,6 +27,10 @@ const LABELS = {
     noClicks: 'No clicks in this period yet.',
     notReady: 'The numbers start once the database update (Portal migration 0045) runs.',
     privacy: 'Only totals are counted — nothing about who visited.',
+    sampleTitle: 'Example — not your numbers',
+    sampleBody: (n: number) => `No visits in the last ${n} days yet. This is how your numbers will look once people open your page. Share your link to get the first ones.`,
+    copyLink: 'Copy page link',
+    copied: 'Copied',
     featured: 'Featured',
     links: { whatsapp: 'WhatsApp', whatsapp_group: 'WhatsApp group or channel', phone: 'Call', booking: 'Booking', email: 'E-mail', instagram: 'Instagram', tiktok: 'TikTok', youtube: 'YouTube', website: 'Website', save_contact: 'Save contact', other: 'Link' } as Record<string, string>,
   },
@@ -48,6 +53,10 @@ const LABELS = {
     noClicks: 'Ainda não houve cliques neste período.',
     notReady: 'Os números começam depois da atualização do banco (migration 0045 do Portal).',
     privacy: 'Contamos só os totais — nada sobre quem visitou.',
+    sampleTitle: 'Exemplo — não são os seus números',
+    sampleBody: (n: number) => `Ainda não houve visitas nos últimos ${n} dias. É assim que seus números vão aparecer quando as pessoas abrirem a sua página. Compartilhe o link para ter as primeiras.`,
+    copyLink: 'Copiar link da página',
+    copied: 'Copiado',
     featured: 'Destaque',
     links: { whatsapp: 'WhatsApp', whatsapp_group: 'Grupo ou canal do WhatsApp', phone: 'Ligar', booking: 'Agendamento', email: 'E-mail', instagram: 'Instagram', tiktok: 'TikTok', youtube: 'YouTube', website: 'Site', save_contact: 'Salvar contato', other: 'Link' } as Record<string, string>,
   },
@@ -116,6 +125,23 @@ function BarList({ title, hint, entries, empty, label, language }: {
   )
 }
 
+// Made-up numbers for a page with no visits in the period (14/11/2026), so a
+// new owner sees what the screen will show instead of a wall of zeros. Fixed,
+// not random: the same example every time. Never mixed with real rows — the
+// screen draws either these or the real ones, and says which.
+function sampleRows(days: number): MemberPageStatRow[] {
+  const rows: MemberPageStatRow[] = dayList(days).map((day, i) => ({
+    day,
+    kind: 'view' as const,
+    target: '',
+    count: 4 + ((i * 7) % 6) + (i % 7 === 5 || i % 7 === 6 ? 4 : 0) + Math.floor(i / Math.max(1, days / 4)),
+  }))
+  const last = rows[rows.length - 1].day
+  const clicks: [string, number][] = [['link:whatsapp', 23], ['link:instagram', 11], ['link:save_contact', 6], ['link:email', 3]]
+  for (const [target, count] of clicks) rows.push({ day: last, kind: 'click', target, count: Math.round((count * days) / 30) || 1 })
+  return rows
+}
+
 // The last `days` days, oldest first, as YYYY-MM-DD.
 function dayList(days: number) {
   const out: string[] = []
@@ -133,14 +159,20 @@ interface Props {
   // whose plan includes it or whose page the team switched it on for. The
   // plain numbers above are every owner's and are never hidden.
   insights?: boolean
+  // The page's public address, offered under the example when there are no
+  // visits yet (14/11/2026).
+  shareUrl?: string
 }
 
 // A member page's numbers: visits, clicks per button/featured item and the
 // course's visits and e-mails, over 7/30/90 days. Shared by the owner's
 // "My Page" and Admin → Pages.
-export default function MemberPageStatsView({ stats, days, onDays, language, error, insights = false }: Props) {
+export default function MemberPageStatsView({ stats, days, onDays, language, error, insights = false, shareUrl }: Props) {
   const t = LABELS[language] ?? LABELS.en
-  const rows = stats?.rows ?? []
+  const [copied, setCopied] = useState(false)
+  // No visits at all in the period: the example instead of a wall of zeros.
+  const sample = !!stats?.ready && (stats?.rows ?? []).length === 0
+  const rows = sample ? sampleRows(days) : (stats?.rows ?? [])
   const visits = sum(rows, 'view')
   const clicks = sum(rows, 'click')
   const courseVisits = sum(rows, 'course_view')
@@ -193,6 +225,31 @@ export default function MemberPageStatsView({ stats, days, onDays, language, err
         <EmptyState icon={BarChart3} title={t.visits} description={t.notReady} />
       ) : (
         <>
+          {sample && (
+            <div className="rounded-xl3 border border-primary/25 bg-primary/[0.05] p-4">
+              <p className="flex items-center gap-2 text-[14px] font-bold text-navy">
+                <Sparkles size={16} className="text-primary" aria-hidden /> {t.sampleTitle}
+              </p>
+              <p className="mt-1 text-[13.5px] leading-relaxed text-navy/65">{t.sampleBody(days)}</p>
+              {shareUrl && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    void navigator.clipboard?.writeText(shareUrl).then(() => {
+                      setCopied(true)
+                      window.setTimeout(() => setCopied(false), 2000)
+                    })
+                  }}
+                  className="mt-3 inline-flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-[13px] font-semibold text-white hover:bg-primary/90"
+                >
+                  {copied ? <Check size={15} /> : <Copy size={15} />} {copied ? t.copied : t.copyLink}
+                </button>
+              )}
+            </div>
+          )}
+          {/* The example is drawn faded, can't be selected or clicked, and is
+              hidden from screen readers: it must never pass for real numbers. */}
+          <div className={sample ? 'pointer-events-none select-none space-y-5 opacity-50' : 'space-y-5'} aria-hidden={sample || undefined}>
           <div className={`grid gap-3 ${tiles.length > 2 ? 'grid-cols-2 md:grid-cols-4' : 'grid-cols-2'}`}>
             {tiles.map((tile) => (
               <div key={tile.label} className={`${CARD} p-4`}>
@@ -239,6 +296,7 @@ export default function MemberPageStatsView({ stats, days, onDays, language, err
             </div>
           )}
 
+          </div>
           <p className="text-[12.5px] text-navy/40">{t.privacy}</p>
         </>
       )}

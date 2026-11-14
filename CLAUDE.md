@@ -376,6 +376,12 @@ This repo is a **static, client-only MVP**:
   Admin → Pages) shows the e-mail list's own link,
   `https://bgrowth.app/p/<slug>#signup`, with a copy button — only for a
   published page with a visible e-mail list section (`signupSlug`).
+  Since Sprint 238 (14/11/2026) the numbers screen (`MemberPageStatsView`)
+  shows an example when the chosen period has no rows at all: fixed made-up
+  visits and clicks (`sampleRows`), drawn faded, unclickable and hidden from
+  screen readers, under a banner "Example — not your numbers" with a "Copy
+  page link" button (`shareUrl`). Real rows and the example are never mixed;
+  the first real row replaces it.
   **Since Sprint 183 one table says what every plan does with every
   product** (approved by the owner 01/11/2026; Portal migration 0075):
   Admin → Plans → **Included** is now a product × plan grid where each cell

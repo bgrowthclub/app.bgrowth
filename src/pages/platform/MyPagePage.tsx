@@ -387,7 +387,7 @@ export default function MyPagePage() {
           }}
         />
       ) : activeTab === 'numbers' ? (
-        <MemberPageStatsView stats={stats} days={days} onDays={setDays} language={language} error={null} insights={insights} />
+        <MemberPageStatsView stats={stats} days={days} onDays={setDays} language={language} error={null} insights={insights} shareUrl={slug ? `https://bgrowth.app/p/${encodeURIComponent(slug)}` : undefined} />
       ) : activeTab === 'contacts' ? (
         <MemberPageSignupsList
           load={() => myPageService.signups()}

@@ -43,7 +43,7 @@ export default function AdminMemberPageStats({ page, onClose }: { page: MemberPa
         </button>
       </div>
       {/* The team always sees what visitors looked for, whatever the owner's plan. */}
-      <MemberPageStatsView stats={stats} days={days} onDays={setDays} language="en" error={error} insights />
+      <MemberPageStatsView stats={stats} days={days} onDays={setDays} language="en" error={error} insights shareUrl={`https://bgrowth.app/p/${encodeURIComponent(page.slug)}`} />
     </div>
   )
 }
