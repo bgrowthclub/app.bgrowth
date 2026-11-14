@@ -392,6 +392,9 @@ This repo is a **static, client-only MVP**:
   with the block's own `title`/`body` and big buttons. The model id is in the
   three copies (memberPageTemplates.ts, api/account.ts, api/admin.ts); the
   admin.ts copy had been missing `picks`, `payments` and `simple`, fixed then.
+  Its dark bands take `theme.dark` (`PAGE_DARKS`: black, graphite, wine,
+  forest, petrol, plum, brown; none = navy), open to every plan like the
+  background, copied as `PAGE_DARKS` in api/account.ts and api/admin.ts.
   **Since Sprint 183 one table says what every plan does with every
   product** (approved by the owner 01/11/2026; Portal migration 0075):
   Admin → Plans → **Included** is now a product × plan grid where each cell

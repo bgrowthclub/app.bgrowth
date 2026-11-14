@@ -147,6 +147,8 @@ export type MemberPageColor = 'blue' | 'teal' | 'green' | 'purple' | 'rose' | 'o
 // Page background (light tints only, so dark text stays readable). Open to
 // every page, whatever the plan. None = the look's own background.
 export type MemberPageBackground = 'cream' | 'mist' | 'sky' | 'mint' | 'blush' | 'lavender' | 'sand'
+// The dark bands of the Service Business look (14/11/2026); none = navy.
+export type MemberPageDark = 'black' | 'graphite' | 'wine' | 'forest' | 'petrol' | 'plum' | 'brown'
 
 export interface MemberPageTheme {
   color?: MemberPageColor
@@ -157,6 +159,9 @@ export interface MemberPageTheme {
   // 'contact:<type>' — one of the page's own buttons. Absent = none. Open to
   // every plan, like the background.
   floating?: string
+  // Service Business: the color of the dark top and contact band. Absent =
+  // navy. Open to every plan, like the background.
+  dark?: MemberPageDark
 }
 
 // What the subscriber's plan lets them do with their page.

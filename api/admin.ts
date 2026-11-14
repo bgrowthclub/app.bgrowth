@@ -2626,6 +2626,7 @@ const PAGE_TEMPLATES = new Set([
 ])
 // Background tints (light only — dark text stays readable), open to every plan.
 const PAGE_BACKGROUNDS = new Set(['cream', 'sand', 'mist', 'sky', 'mint', 'blush', 'lavender'])
+const PAGE_DARKS = new Set(['black', 'graphite', 'wine', 'forest', 'petrol', 'plum', 'brown'])
 const pageText = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '')
 const pageUrl = (v: unknown) => {
   const s = pageText(v, 500)
@@ -2725,6 +2726,8 @@ function cleanPageTheme(value: unknown) {
   const cover = pageUrl(v.cover)
   if (cover) theme.cover = cover
   if (typeof v.background === 'string' && PAGE_BACKGROUNDS.has(v.background)) theme.background = v.background
+  // Service Business dark bands (14/11/2026); copy of PAGE_DARKS in memberPageTemplates.ts.
+  if (typeof v.dark === 'string' && PAGE_DARKS.has(v.dark)) theme.dark = v.dark
   // The floating button (14/11/2026): one of the page's own buttons, by type.
   if (typeof v.floating === 'string' && v.floating.startsWith('contact:') && MEMBER_LINK_TYPES.includes(v.floating.slice('contact:'.length))) {
     theme.floating = v.floating

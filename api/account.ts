@@ -507,6 +507,7 @@ const PAGE_TEMPLATES = new Set([
 ])
 // Background tints (light only — dark text stays readable), open to every plan.
 const PAGE_BACKGROUNDS = new Set(['cream', 'sand', 'mist', 'sky', 'mint', 'blush', 'lavender'])
+const PAGE_DARKS = new Set(['black', 'graphite', 'wine', 'forest', 'petrol', 'plum', 'brown'])
 const pageText = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '')
 const pageUrl = (v: unknown) => {
   const s = pageText(v, 500)
@@ -581,6 +582,8 @@ function cleanPageTheme(value: unknown) {
   const cover = pageUrl(v.cover)
   if (cover) theme.cover = cover
   if (typeof v.background === 'string' && PAGE_BACKGROUNDS.has(v.background)) theme.background = v.background
+  // Service Business dark bands (14/11/2026); copy of PAGE_DARKS in memberPageTemplates.ts.
+  if (typeof v.dark === 'string' && PAGE_DARKS.has(v.dark)) theme.dark = v.dark
   // The floating button (14/11/2026): one of the page's own buttons, by type.
   if (typeof v.floating === 'string' && v.floating.startsWith('contact:') && MEMBER_LINK_TYPES.includes(v.floating.slice('contact:'.length))) {
     theme.floating = v.floating
@@ -627,6 +630,7 @@ const VIDEO_HOSTS = /^https:\/\/((www|m)\.)?(youtube\.com|youtu\.be|tiktok\.com|
 const TEMPLATE_SEQUENCES: Record<string, string> = {
   professional: 'hero,contact,services,credentials,area,about,faq,cta',
   local: 'hero,services,highlights,area,testimonials,faq,contact,cta',
+  service: 'hero,services,about,highlights,testimonials,contact',
   creative: 'hero,highlights,gallery,about,services,testimonials,contact,cta',
   personal: 'hero,about,services,testimonials,highlights,faq,contact,cta',
   affiliate: 'hero,products,services,about,contact',
@@ -644,6 +648,7 @@ const TEMPLATE_SEQUENCES: Record<string, string> = {
 const TEMPLATE_COLORS: Record<string, string> = {
   professional: 'navy',
   local: 'orange',
+  service: 'blue',
   creative: 'rose',
   personal: 'green',
   affiliate: 'blue',
@@ -1045,6 +1050,7 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string; emai
       color: TEMPLATE_COLORS[template] ?? input.theme.color,
       ...(input.theme.background ? { background: input.theme.background } : {}),
       ...(input.theme.floating ? { floating: input.theme.floating } : {}),
+      ...(input.theme.dark ? { dark: input.theme.dark } : {}),
     }
     input.highlights = input.highlights.slice(0, 1)
     // Pro: up to 12 product picks (Enterprise: 60).

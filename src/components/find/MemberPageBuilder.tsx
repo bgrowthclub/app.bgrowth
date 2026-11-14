@@ -8,7 +8,7 @@ import MemberPageView from './MemberPageView'
 import ResponsiveFrame from '../ui/ResponsiveFrame'
 import { shrinkImage } from '../../lib/shrinkImage'
 import { MEMBER_PAGE_LABELS, SAVE_CONTACT_URL, WHATSAPP_JOIN_RE, isUsableLink, videoEmbed } from '../../modules/find/memberPageService'
-import { BLOCK_TYPES, LEGACY_BLOCKS, PAGE_BACKGROUNDS, PAGE_COLORS, SINGLE_BLOCK_TYPES, blockId, fitBlocks, memberPageTemplates, mergeDuplicateSections, switchTemplateBlocks, templateBlocks, templatePreview } from '../../modules/find/memberPageTemplates'
+import { BLOCK_TYPES, LEGACY_BLOCKS, PAGE_BACKGROUNDS, PAGE_COLORS, PAGE_DARKS, SINGLE_BLOCK_TYPES, blockId, fitBlocks, memberPageTemplates, mergeDuplicateSections, switchTemplateBlocks, templateBlocks, templatePreview } from '../../modules/find/memberPageTemplates'
 import type {
   MemberPage,
   MemberPageBlock,
@@ -293,7 +293,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
     template: template || null,
     blocks: free ? blocks : blocks.map((b) => ({ ...b, ...(b.type === 'gallery' ? { data: { ...b.data, images: [] } } : {}) })),
     // The background tint is open to every plan; the color follows the model on Pro.
-    theme: free ? theme : { color: templates.find((t) => t.id === template)?.color, background: theme.background, floating: theme.floating },
+    theme: free ? theme : { color: templates.find((t) => t.id === template)?.color, background: theme.background, floating: theme.floating, dark: theme.dark },
   }
 
   // Where a big button (the one at the top of the page, and the "cta"
@@ -1085,6 +1085,36 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
               ))}
             </div>
           </section>
+
+          {template === 'service' && (
+            // The dark top and contact band (14/11/2026). Open to every plan,
+            // like the background.
+            <section className="space-y-3">
+              <span className={LABEL}>Dark color (top and contact)</span>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  title="Navy"
+                  aria-label="Navy (default)"
+                  aria-pressed={!theme.dark}
+                  onClick={() => setTheme((t) => ({ ...t, dark: undefined }))}
+                  className={`h-8 w-8 rounded-full bg-navy ring-offset-2 transition ${!theme.dark ? 'ring-2 ring-navy' : ''}`}
+                />
+                {PAGE_DARKS.map((c) => (
+                  <button
+                    key={c.id}
+                    type="button"
+                    title={c.label}
+                    aria-label={c.label}
+                    aria-pressed={theme.dark === c.id}
+                    onClick={() => setTheme((t) => ({ ...t, dark: c.id }))}
+                    className={`h-8 w-8 rounded-full ring-offset-2 transition ${theme.dark === c.id ? 'ring-2 ring-navy' : ''}`}
+                    style={{ background: c.hex }}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
 
           {/* The floating button (14/11/2026): off unless turned on, and the
               member picks which of the page's own buttons it opens. Open to

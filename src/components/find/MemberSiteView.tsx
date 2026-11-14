@@ -7,7 +7,7 @@ import MemberPagePromo from './MemberPagePromo'
 import ReportPageLink from './ReportPageLink'
 import { usePageTexts } from '../../lib/usePageTexts'
 import { MEMBER_PAGE_LABELS, memberLinkHref, memberLinkLabel, videoEmbed } from '../../modules/find/memberPageService'
-import { PAGE_BACKGROUNDS, PAGE_COLORS, blockLinks, pageBlocks } from '../../modules/find/memberPageTemplates'
+import { PAGE_BACKGROUNDS, PAGE_COLORS, PAGE_DARKS, blockLinks, pageBlocks } from '../../modules/find/memberPageTemplates'
 import { isUsableLink, pageButtonProps } from '../../modules/find/memberPageService'
 import type { MemberPageSkin } from '../../modules/find/memberPageTemplates'
 import type { MemberPage, MemberPageBlock, MemberPageHighlight, MemberPageLink, MemberPageProductCategory } from '../../modules/find/types'
@@ -104,6 +104,9 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
   const color = PAGE_COLORS.find((c) => c.id === page.theme?.color)
   // The page's own background tint (any plan); none = the look's default.
   const background = PAGE_BACKGROUNDS.find((c) => c.id === page.theme?.background)
+  // Service Business: the member's dark color for the dark bands; none = navy.
+  const dark = skin === 'service' ? PAGE_DARKS.find((c) => c.id === page.theme?.dark) : undefined
+  const darkStyle = dark ? { backgroundColor: dark.hex } : undefined
   const style = {
     ...(color ? { '--color-primary-rgb': color.rgb, '--color-primary-accent-rgb': color.rgb, '--color-primary': `rgb(${color.rgb})`, '--color-primary-accent': `rgb(${color.rgb})` } : {}),
     ...(background ? { backgroundColor: background.hex } : {}),
@@ -292,11 +295,15 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
               </div>
             </div>
           </header>
-          <section className="relative overflow-hidden bg-navy text-white">
+          <section className="relative overflow-hidden bg-navy text-white" style={darkStyle}>
             {cover ? (
               <>
                 <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url(${cover})` }} aria-hidden />
-                <div className="absolute inset-0 bg-gradient-to-r from-navy via-navy/85 to-navy/30" aria-hidden />
+                <div
+                  className={`absolute inset-0 ${dark ? '' : 'bg-gradient-to-r from-navy via-navy/85 to-navy/30'}`}
+                  style={dark ? { backgroundImage: `linear-gradient(to right, ${dark.hex}, ${dark.hex}d9, ${dark.hex}4d)` } : undefined}
+                  aria-hidden
+                />
               </>
             ) : (
               <div className="absolute -right-40 -top-40 h-[32rem] w-[32rem] rounded-full bg-primary/40 blur-3xl" aria-hidden />
@@ -555,7 +562,7 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
         // band, the member's own title and line, big buttons.
         if (skin === 'service') {
           return (
-            <section key={block.id} id={block.type} className="scroll-mt-20 bg-navy text-white">
+            <section key={block.id} id={block.type} className="scroll-mt-20 bg-navy text-white" style={darkStyle}>
               <div className={`mx-auto grid ${look.wide} gap-10 px-5 py-16 md:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] md:items-center md:py-24`}>
                 <div>
                   <h2 className="font-display text-3xl font-bold tracking-tight md:text-[2.6rem] md:leading-tight">{d.title || t.contact}</h2>

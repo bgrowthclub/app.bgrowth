@@ -1,5 +1,5 @@
 import { isUsableLink } from './memberPageService'
-import type { MemberPage, MemberPageBackground, MemberPageBlock, MemberPageBlockType, MemberPageColor, MemberPageLink } from './types'
+import type { MemberPage, MemberPageBackground, MemberPageBlock, MemberPageBlockType, MemberPageColor, MemberPageDark, MemberPageLink } from './types'
 
 // Ready-made member pages ("My Business Page"): four models — four looks of
 // the same page system. Each is a set of blocks already filled with example
@@ -47,6 +47,19 @@ export const PAGE_COLORS: { id: MemberPageColor; label: string; rgb: string }[] 
   { id: 'rose', label: 'Rose', rgb: '225 29 72' },
   { id: 'orange', label: 'Orange', rgb: '234 88 12' },
   { id: 'navy', label: 'Navy', rgb: '15 23 42' },
+]
+
+// Dark band colors for the Service Business look (14/11/2026). All dark
+// enough for white text (contrast above 10:1). None = navy. The same ids are
+// copied in api/account.ts and api/admin.ts (PAGE_DARKS) — change all three.
+export const PAGE_DARKS: { id: MemberPageDark; label: string; hex: string }[] = [
+  { id: 'black', label: 'Black', hex: '#0B0B0F' },
+  { id: 'graphite', label: 'Graphite', hex: '#1F2933' },
+  { id: 'wine', label: 'Wine', hex: '#4A0E1E' },
+  { id: 'forest', label: 'Forest', hex: '#0F2E22' },
+  { id: 'petrol', label: 'Petrol', hex: '#0B3440' },
+  { id: 'plum', label: 'Plum', hex: '#2E1442' },
+  { id: 'brown', label: 'Brown', hex: '#3A2416' },
 ]
 
 // Background tints any page can use (all light: navy text keeps a contrast
