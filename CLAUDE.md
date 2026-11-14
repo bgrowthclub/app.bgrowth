@@ -443,6 +443,16 @@ This repo is a **static, client-only MVP**:
   `MemberSiteView` covers both) with its own top — the page photo large and
   upright, the name, headline and a small line (`hero` `data.title`, else the
   location) written over its lower edge. In the three model-id copies.
+  Since Sprint 253 (owner's decision 14/11/2026) a page whose owner is on a
+  paid plan — `member_page_view_rules().level` is set — carries no BGrowth
+  brand: no footer pill (`branding` prop on `MemberPageView`/
+  `MemberSiteView`), no "| BGrowth" in the tab or share card (`SEO brand`),
+  and the link preview (`api/ingles.ts` og) drops it too. The disclaimer,
+  "not verified by BGrowth" on credentials and "Report this page" ALWAYS
+  stay: they keep the responsibility with the page's owner. Decided, not
+  built: paid pages get a subdomain (<slug>.bgrowth.app) and may connect
+  their own domain; Free keeps bgrowth.app/p/<slug>; BGrowth may sell
+  domains later.
   **Since Sprint 183 one table says what every plan does with every
   product** (approved by the owner 01/11/2026; Portal migration 0075):
   Admin → Plans → **Included** is now a product × plan grid where each cell

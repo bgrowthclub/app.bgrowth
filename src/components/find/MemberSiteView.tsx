@@ -21,6 +21,8 @@ interface Props {
   onLinkClick?: (target: string) => void
   onSearch?: (query: string, found: boolean) => void
   onCategory?: (category: MemberPageProductCategory) => void
+  // false = no BGrowth pill at the foot (a page on a paid plan, 14/11/2026).
+  branding?: boolean
 }
 
 // How each look dresses the same sections.
@@ -107,7 +109,7 @@ function initials(name: string) {
 // A member's page in one of the four looks (Sprint 128: Professional, Local
 // Services, Creative Portfolio, Personal Brand) — the same fields and
 // blocks, laid out as a small professional website, phone first.
-export default function MemberSiteView({ page, skin, preview = false, onLinkClick, onSearch, onCategory }: Props) {
+export default function MemberSiteView({ page, skin, preview = false, onLinkClick, onSearch, onCategory, branding = true }: Props) {
   const t = MEMBER_PAGE_LABELS[page.language] ?? MEMBER_PAGE_LABELS.en
   const look = LOOK[skin]
   // The one-column looks: Link Page and Personal Card share everything but the top.
@@ -1019,7 +1021,7 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
       <footer className="border-t border-navy/[0.06]">
         <div className={`mx-auto ${look.wide} px-5 py-8 text-center`}>
           {/* The BGrowth pill first, then the small print (14/11/2026). */}
-          <MemberPagePromo language={page.language} preview={preview} madeWith={t.madeWith} />
+          {branding && <MemberPagePromo language={page.language} preview={preview} madeWith={t.madeWith} />}
           <p className="mt-5 text-[11.5px] text-navy/35">{t.disclaimer}</p>
           <ReportPageLink slug={page.slug ?? ''} language={page.language} preview={preview} />
         </div>

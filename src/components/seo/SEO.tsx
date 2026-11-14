@@ -23,6 +23,9 @@ interface Props {
   // decision. undefined while the answer is still being fetched: nothing is
   // written then, so a page is never briefly marked either way by mistake.
   noIndex?: boolean
+  // false = the tab title and share card carry no "| BGrowth" (a member page
+  // on a paid plan, 14/11/2026). Default true, as every page had before.
+  brand?: boolean
 }
 
 // Admin → Site → SEO (portal.site_content key "seo"), loaded once per visit:
@@ -45,7 +48,7 @@ function upsertMeta(attr: 'name' | 'property', key: string, content: string) {
   tag.setAttribute('content', content)
 }
 
-export default function SEO({ title: builtInTitle, description: builtInDescription, keywords, path, ogImage: pageImage, noIndex }: Props) {
+export default function SEO({ title: builtInTitle, description: builtInDescription, keywords, path, ogImage: pageImage, noIndex, brand = true }: Props) {
   const [settings, setSettings] = useState<SeoSettings | null>(null)
   useEffect(() => {
     let cancelled = false
@@ -61,7 +64,7 @@ export default function SEO({ title: builtInTitle, description: builtInDescripti
   const ogImage = custom?.image || pageImage || settings?.defaultImage
 
   useEffect(() => {
-    const fullTitle = `${title} | BGrowth`
+    const fullTitle = brand ? `${title} | BGrowth` : title
     document.title = fullTitle
 
     upsertMeta('name', 'description', description)
@@ -71,7 +74,7 @@ export default function SEO({ title: builtInTitle, description: builtInDescripti
     upsertMeta('property', 'og:description', description)
     upsertMeta('property', 'og:type', 'website')
     upsertMeta('property', 'og:url', `${SITE_URL}${path}`)
-    upsertMeta('property', 'og:site_name', 'BGrowth')
+    upsertMeta('property', 'og:site_name', brand ? 'BGrowth' : title)
     if (ogImage) upsertMeta('property', 'og:image', ogImage)
     upsertMeta('name', 'twitter:card', ogImage ? 'summary_large_image' : 'summary')
 
@@ -89,7 +92,7 @@ export default function SEO({ title: builtInTitle, description: builtInDescripti
     const robots = document.querySelector<HTMLMetaElement>('meta[name="robots"]')
     if (noIndex) upsertMeta('name', 'robots', 'noindex, nofollow')
     else robots?.remove()
-  }, [title, description, keywords, path, ogImage, noIndex])
+  }, [title, description, keywords, path, ogImage, noIndex, brand])
 
   return null
 }

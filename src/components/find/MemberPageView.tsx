@@ -27,6 +27,8 @@ interface Props {
   // What visitors looked for in the products section (01/11/2026).
   onSearch?: (query: string, found: boolean) => void
   onCategory?: (category: MemberPageProductCategory) => void
+  // false = no BGrowth pill at the foot (a page on a paid plan, 14/11/2026).
+  branding?: boolean
 }
 
 function initials(name: string) {
@@ -56,10 +58,10 @@ export default function MemberPageView(props: Props) {
   )
 }
 
-function MemberPageBody({ page, preview = false, onLinkClick, onSearch, onCategory }: Props) {
+function MemberPageBody({ page, preview = false, onLinkClick, onSearch, onCategory, branding = true }: Props) {
   // The four models (Sprint 128) have their own full-width looks.
   const skin = pageSkin(page.template)
-  if (skin) return <MemberSiteView page={page} skin={skin} preview={preview} onLinkClick={onLinkClick} onSearch={onSearch} onCategory={onCategory} />
+  if (skin) return <MemberSiteView page={page} skin={skin} preview={preview} onLinkClick={onLinkClick} onSearch={onSearch} onCategory={onCategory} branding={branding} />
   const t = MEMBER_PAGE_LABELS[page.language] ?? MEMBER_PAGE_LABELS.en
   // The page's own first button — what the "cta" block opens. A contact
   // block has its own buttons (27/10/2026) and reads them below.
@@ -382,7 +384,7 @@ function MemberPageBody({ page, preview = false, onLinkClick, onSearch, onCatego
         })()}
 
       <footer className="mt-14 text-center">
-        <MemberPagePromo language={page.language} preview={preview} madeWith={t.madeWith} />
+        {branding && <MemberPagePromo language={page.language} preview={preview} madeWith={t.madeWith} />}
         <ReportPageLink slug={page.slug ?? ''} language={page.language} preview={preview} />
       </footer>
       </div>

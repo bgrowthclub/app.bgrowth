@@ -432,6 +432,7 @@ function escapeHtml(text: string) {
 type SeoRow = { defaultImage?: string; pages?: Record<string, { title?: string; description?: string; image?: string }> }
 
 async function linkPreview(req: VercelRequest, db: Db) {
+  let siteName = 'BGrowth'
   // The page address: ?path= from the rewrite, else the address the bot asked for.
   const asked = str(req.query.path, 300) || (req.url && !req.url.startsWith('/api/') ? req.url : '')
   const cleaned = cleanPath(asked)
@@ -474,16 +475,26 @@ async function linkPreview(req: VercelRequest, db: Db) {
       image = p.cover_image_url || image
     }
   } else if (member) {
-    let { data } = await db.from('member_pages').select('display_name, headline, photo_url').eq('slug', member[1]).eq('status', 'published').maybeSingle()
+    let { data } = await db.from('member_pages').select('id, display_name, headline, photo_url').eq('slug', member[1]).eq('status', 'published').maybeSingle()
     if (!data) {
       // An old address of a page that moved (Portal migration 0063).
-      const moved = await db.from('member_pages').select('display_name, headline, photo_url').contains('previous_slugs', [member[1]]).eq('status', 'published').limit(1)
+      const moved = await db.from('member_pages').select('id, display_name, headline, photo_url').contains('previous_slugs', [member[1]]).eq('status', 'published').limit(1)
       data = moved.error ? null : ((moved.data ?? [])[0] ?? null)
     }
-    const m = data as { display_name?: string; headline?: string | null; photo_url?: string | null } | null
+    const m = data as { id?: string; display_name?: string; headline?: string | null; photo_url?: string | null } | null
     if (m?.display_name) {
-      title = `${m.display_name} | BGrowth`
-      description = m.headline || `${m.display_name} on BGrowth`
+      // A page on a paid plan carries no BGrowth name in its preview
+      // (14/11/2026, the owner's decision) — the same rule as the page itself:
+      // its owner's plan gives it a level (portal.member_page_view_rules).
+      let paid = false
+      if (m.id) {
+        const rules = await db.rpc('member_page_view_rules', { p_page: m.id })
+        const row = (Array.isArray(rules.data) ? rules.data[0] : rules.data) as { level?: string | null } | null
+        paid = !rules.error && Boolean(row?.level)
+      }
+      if (paid) siteName = ''
+      title = paid ? m.display_name : `${m.display_name} | BGrowth`
+      description = m.headline || (paid ? m.display_name : `${m.display_name} on BGrowth`)
       image = m.photo_url || image
     }
   }
@@ -496,7 +507,7 @@ async function linkPreview(req: VercelRequest, db: Db) {
     `<meta name="description" content="${d}">`,
     `<link rel="canonical" href="${escapeHtml(url)}">`,
     '<meta property="og:type" content="website">',
-    '<meta property="og:site_name" content="BGrowth">',
+    siteName ? `<meta property="og:site_name" content="${escapeHtml(siteName)}">` : '',
     `<meta property="og:title" content="${t}">`,
     `<meta property="og:description" content="${d}">`,
     `<meta property="og:url" content="${escapeHtml(url)}">`,

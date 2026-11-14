@@ -105,17 +105,25 @@ export default function MemberPublicPage() {
 
   // The page's own background tint fills the whole window (default: soft grey).
   const background = PAGE_BACKGROUNDS.find((c) => c.id === page.theme?.background)
+  // No BGrowth brand on a page whose owner is on a paid plan (14/11/2026,
+  // the owner's decision): no "Try for free" pill, no "| BGrowth" in the tab
+  // or the share card. "Paid" = the owner's plan gives the page a level
+  // (rules.level). The disclaimer and "Report this page" always stay — they
+  // are what keeps the responsibility with the page's owner.
+  const branded = !rules?.level
   return (
     <div className="min-h-screen bg-bg-soft" style={background ? { backgroundColor: background.hex } : undefined}>
       <SEO
         title={page.display_name}
-        description={page.headline ?? `${page.display_name} on BGrowth`}
+        description={page.headline ?? (branded ? `${page.display_name} on BGrowth` : page.display_name)}
+        brand={branded}
         path={`/p/${page.slug}`}
         ogImage={page.photo_url ?? undefined}
         noIndex={indexable === false}
       />
       <MemberPageView
         page={shown}
+        branding={branded}
         onLinkClick={(target) => trackMemberPageClick(page.slug, target)}
         onSearch={(query, found) => trackMemberPageSearch(page.slug, query, found)}
         onCategory={(category) => trackMemberPageCategory(page.slug, category)}
