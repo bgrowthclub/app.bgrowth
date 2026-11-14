@@ -453,6 +453,11 @@ This repo is a **static, client-only MVP**:
   built: paid pages get a subdomain (<slug>.bgrowth.app) and may connect
   their own domain; Free keeps bgrowth.app/p/<slug>; BGrowth may sell
   domains later.
+  Since Sprint 255 (14/11/2026) "About" can have its own photo beside the
+  text on every site look (`data.images[0]` of the `about` block; not Link
+  Page / Personal Card, too narrow), and an About with no photo shows the
+  title on top, its first sentence larger and the rest in one readable
+  column (Personal Brand with a page photo keeps its layout).
   **Since Sprint 183 one table says what every plan does with every
   product** (approved by the owner 01/11/2026; Portal migration 0075):
   Admin → Plans → **Included** is now a product × plan grid where each cell

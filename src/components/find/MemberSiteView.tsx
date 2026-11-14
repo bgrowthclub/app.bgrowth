@@ -810,9 +810,10 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
         const body = block.type === 'about' ? page.bio : d.body
         if (!body?.trim() && !title?.trim()) return null
         if (block.type === 'about' && !page.bio) return null
-        // Service Business: "About" can carry its own photo (the owner, the
-        // team, the shop) — the page photo is usually the logo.
-        const aboutImage = skin === 'service' && block.type === 'about' ? d.images?.[0] : undefined
+        // "About" can carry its own photo (the owner, the team, the shop) —
+        // the page photo is usually the logo. Every site look since
+        // 14/11/2026 (Service Business first); not the narrow ones.
+        const aboutImage = !narrow && block.type === 'about' ? d.images?.[0] : undefined
         if (aboutImage) {
           return section(
             block.id,
@@ -822,6 +823,25 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
                 <h2 className={look.h2}>{title}</h2>
                 <p className="mt-5 whitespace-pre-line text-[16.5px] leading-relaxed text-navy/70">{body}</p>
               </div>
+            </div>,
+            band,
+            block.type,
+          )
+        }
+        // About with no photo of its own (14/11/2026): the title on top, the
+        // first sentence larger, the rest in a column narrow enough to read.
+        // Personal Brand with a page photo keeps its photo beside the text.
+        if (!narrow && block.type === 'about' && !(skin === 'personal' && page.photo_url)) {
+          const text = (body ?? '').trim()
+          const cut = text.search(/[.!?](\s|$)/)
+          const lead = cut > 0 && cut < 220 && cut < text.length - 1 ? text.slice(0, cut + 1) : text.length <= 220 ? text : ''
+          const rest = lead ? text.slice(lead.length).trim() : text
+          return section(
+            block.id,
+            <div className="mx-auto max-w-3xl">
+              <h2 className={look.h2}>{title}</h2>
+              {lead && <p className="mt-5 font-display text-[20px] font-semibold leading-snug text-navy md:text-[23px]">{lead}</p>}
+              {rest && <p className={`${lead ? 'mt-4' : 'mt-5'} whitespace-pre-line text-[16.5px] leading-relaxed text-navy/70`}>{rest}</p>}
             </div>,
             band,
             block.type,

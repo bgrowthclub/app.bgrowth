@@ -8,7 +8,7 @@ import MemberPageView from './MemberPageView'
 import ResponsiveFrame from '../ui/ResponsiveFrame'
 import { shrinkImage } from '../../lib/shrinkImage'
 import { MEMBER_PAGE_LABELS, SAVE_CONTACT_URL, WHATSAPP_JOIN_RE, isUsableLink, videoEmbed } from '../../modules/find/memberPageService'
-import { BLOCK_TYPES, LEGACY_BLOCKS, PAGE_BACKGROUNDS, PAGE_COLORS, PAGE_DARKS, SINGLE_BLOCK_TYPES, blockId, fitBlocks, memberPageTemplates, mergeDuplicateSections, switchTemplateBlocks, templateBlocks, templatePreview } from '../../modules/find/memberPageTemplates'
+import { BLOCK_TYPES, LEGACY_BLOCKS, PAGE_BACKGROUNDS, PAGE_COLORS, PAGE_DARKS, SINGLE_BLOCK_TYPES, blockId, fitBlocks, memberPageTemplates, mergeDuplicateSections, pageSkin, switchTemplateBlocks, templateBlocks, templatePreview } from '../../modules/find/memberPageTemplates'
 import type {
   MemberPage,
   MemberPageBlock,
@@ -710,10 +710,15 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
         )
       case 'about': {
         const aboutImage = d.images?.[0]
+        // Every site look can show a photo beside the story (14/11/2026) —
+        // not the narrow ones (Link Page, Personal Card), whose column is too
+        // narrow for two sides.
+        const aboutSkin = pageSkin(template)
+        const aboutPhoto = aboutSkin !== null && aboutSkin !== 'links' && aboutSkin !== 'card'
         return (
           <div className="space-y-2">
             <textarea value={bio} onChange={(e) => setBio(e.target.value)} rows={6} maxLength={3000} className={INPUT} placeholder="Your story, experience, what makes your work different" aria-label="About" />
-            {template === 'service' && (
+            {aboutPhoto && (
               // A photo beside the story — you, your team or your shop.
               <div className="flex flex-wrap items-center gap-3">
                 {aboutImage && <img src={aboutImage} alt="" className="h-14 w-14 rounded-lg object-cover" />}
