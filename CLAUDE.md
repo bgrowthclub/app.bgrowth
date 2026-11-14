@@ -419,6 +419,11 @@ This repo is a **static, client-only MVP**:
   `api/ingles.ts?action=favicon&host=` (Google's favicon service, server-side,
   edge-cached a month; 404 → our drawn icon). Phone, e-mail, Save contact and
   the floating button keep our icons.
+  Since Sprint 250 the Business ("Empresas", skin `affiliate`) top button
+  goes where the member chose (the editor now shows the destination picker
+  for it too); with nothing chosen: the products, else the services, else
+  the first contact button. It used to always scroll to the products, so a
+  page without products had a button that did nothing.
   **Since Sprint 183 one table says what every plan does with every
   product** (approved by the owner 01/11/2026; Portal migration 0075):
   Admin → Plans → **Included** is now a product × plan grid where each cell

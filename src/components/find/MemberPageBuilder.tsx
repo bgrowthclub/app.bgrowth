@@ -397,6 +397,8 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                 <textarea value={d.body ?? ''} onChange={(e) => setBlockData(block.id, { body: e.target.value })} rows={3} maxLength={400} className={INPUT} placeholder={ownCatalog ? 'A sentence about what you sell' : 'A sentence about what you recommend'} aria-label="Intro" />
                 <input value={d.button ?? ''} onChange={(e) => setBlockData(block.id, { button: e.target.value })} maxLength={40} className={INPUT} placeholder={ownCatalog ? 'Button text (e.g. See our products)' : 'Button text (default: See my picks)'} aria-label="Button text" />
                 <p className="text-[12.5px] text-navy/45">The big image on the right is your cover image (or your photo).</p>
+                {/* Empresas: where the big button goes (14/11/2026). */}
+                {ownCatalog && buttonDestination(block)}
               </>
             )}
             {template === 'service' && (

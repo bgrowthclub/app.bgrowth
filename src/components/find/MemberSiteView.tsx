@@ -449,16 +449,41 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
                 {heroData.title && <p className="text-[12.5px] font-bold uppercase tracking-[0.18em] text-primary">{heroData.title}</p>}
                 <h1 className="mt-3 font-display text-4xl font-bold leading-[1.05] tracking-tight md:text-6xl">{headline || name}</h1>
                 {heroData.body && <p className="mt-4 text-[16.5px] leading-relaxed text-navy/70">{heroData.body}</p>}
-                <a
-                  href="#picks"
-                  onClick={(e) => {
-                    e.preventDefault()
-                    ;(e.currentTarget.ownerDocument.getElementById('picks') ?? null)?.scrollIntoView({ behavior: 'smooth' })
-                  }}
-                  className="mt-7 inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-[15px] font-semibold text-white hover:bg-primary/90"
-                >
-                  {heroData.button || t.seePicks} <ArrowRight size={17} aria-hidden />
-                </a>
+                {/* Where the top button goes (14/11/2026). It used to always
+                    scroll to the products, so a business page with no
+                    products had a big button that did nothing. Now: where
+                    the member chose; else the products; else the services;
+                    else the first contact button. */}
+                {(() => {
+                  const hasProducts = blocks.some((b) => b.type === 'products' && (b.data?.products ?? []).length > 0)
+                  const target = heroData.buttonLink
+                    ? heroTarget
+                    : hasProducts
+                      ? { href: '#picks', scrollTo: 'picks' }
+                      : page.services.length && blocks.some((b) => b.type === 'services')
+                        ? { href: '#services', scrollTo: 'services' }
+                        : heroTarget
+                  if (!target) return null
+                  return (
+                    <a
+                      href={target.href}
+                      target={'target' in target ? target.target : undefined}
+                      rel={'rel' in target ? target.rel : undefined}
+                      onClick={(e) => {
+                        if (preview) {
+                          e.preventDefault()
+                          return
+                        }
+                        if (!target.scrollTo) return
+                        e.preventDefault()
+                        e.currentTarget.ownerDocument.getElementById(target.scrollTo)?.scrollIntoView({ behavior: 'smooth' })
+                      }}
+                      className="mt-7 inline-flex items-center gap-2 rounded-xl bg-primary px-6 py-3 text-[15px] font-semibold text-white hover:bg-primary/90"
+                    >
+                      {heroData.button || t.seePicks} <ArrowRight size={17} aria-hidden />
+                    </a>
+                  )
+                })()}
               </div>
             </div>
           </section>
