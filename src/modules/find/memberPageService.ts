@@ -397,6 +397,22 @@ export interface MemberPageViewRules {
  * is drawn exactly as it is stored — which is how it behaved before this
  * existed. A glitch must never silently strip someone's page.
  */
+/**
+ * Whether a published page shows the BGrowth brand (15/11/2026): its owner's
+ * plan decides (Admin → Plans → Page, "No BGrowth brand"), and only the
+ * server can read that plan. Any failure answers "show the brand".
+ */
+export async function getMemberPageBranding(slug: string): Promise<boolean> {
+  try {
+    const res = await fetch(`/api/ingles?action=page-brand&slug=${encodeURIComponent(slug)}`)
+    if (!res.ok) return true
+    const body = (await res.json()) as { branding?: boolean }
+    return body.branding !== false
+  } catch {
+    return true
+  }
+}
+
 export async function getMemberPageViewRules(pageId: string): Promise<MemberPageViewRules | null> {
   if (!supabase) return null
   const { data, error } = await supabase.rpc('member_page_view_rules', { p_page: pageId })
@@ -436,6 +452,10 @@ export const myPageService = {
       allowance?: number
       // Contact buttons the plan shows (null = no limit).
       linkLimit?: number | null
+      // What the plan allows, feature by feature, and the most any offered
+      // plan gives (15/11/2026, Admin → Plans → Page).
+      features?: import('./pageFeatures').PageFeatures | null
+      best?: import('./pageFeatures').PageFeatures | null
       pages?: MemberPageSummary[]
       page: MemberPage | null
     }>('GET', id ? `my-page&page=${encodeURIComponent(id)}` : 'my-page')

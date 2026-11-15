@@ -6,6 +6,7 @@ import SEO from '../../components/seo/SEO'
 import mypageHero from '../../assets/mypage-hero.webp'
 import Button from '../../components/ui/Button'
 import MemberPageStatsView from '../../components/find/MemberPageStatsView'
+import type { PageFeatures } from '../../modules/find/pageFeatures'
 import MemberPageBuilder from '../../components/find/MemberPageBuilder'
 import MemberPageSignupsList from '../../components/find/MemberPageSignupsList'
 import KeepPagesChooser from '../../components/find/KeepPagesChooser'
@@ -187,6 +188,9 @@ export default function MyPagePage() {
   const [allowance, setAllowance] = useState(1)
   // How many contact buttons the plan shows (null = no limit).
   const [linkLimit, setLinkLimit] = useState<number | null>(null)
+  // What the plan allows, feature by feature (15/11/2026), and the best plan.
+  const [features, setFeatures] = useState<PageFeatures | null>(null)
+  const [best, setBest] = useState<PageFeatures | null>(null)
   const [creating, setCreating] = useState(false)
   const [tab, setTab] = useState<'edit' | 'numbers' | 'contacts'>('edit')
   const [days, setDays] = useState(30)
@@ -206,6 +210,8 @@ export default function MyPagePage() {
         setPages(r.pages ?? (r.page ? [{ id: r.page.id, slug: r.page.slug, display_name: r.page.display_name, status: r.page.status }] : []))
         setAllowance(typeof r.allowance === 'number' ? r.allowance : 1)
         setLinkLimit(typeof r.linkLimit === 'number' ? r.linkLimit : null)
+        setFeatures(r.features ?? null)
+        setBest(r.best ?? null)
         setPage(r.page)
       })
       .catch((err) => {
@@ -234,11 +240,11 @@ export default function MyPagePage() {
   const publishedCount = pages.filter((p) => p.status === 'published').length
   const teamPage = page ? !page.owner_managed : Boolean(linked)
   const statsPageId = page?.id ?? linked?.id
-  const showNumbers = Boolean(statsPageId) && (teamPage || level === 'full')
+  const showNumbers = Boolean(statsPageId) && (teamPage || (features ? features.stats : level === 'full'))
   const canEdit = Boolean(level) && !teamPage
   // The e-mail list (Sprint 139): whole-page plans, team-made pages, or a
   // page the team switched it on for.
-  const showContacts = Boolean(page) && (teamPage || level === 'full' || Boolean(page?.signup_granted))
+  const showContacts = Boolean(page) && (teamPage || (features ? features.signup : level === 'full') || Boolean(page?.signup_granted))
   const tabs = ([canEdit && 'edit', showNumbers && 'numbers', showContacts && 'contacts'] as const).filter(Boolean) as ('edit' | 'numbers' | 'contacts')[]
   const activeTab = tabs.includes(tab) ? tab : tabs[0]
 
@@ -366,6 +372,8 @@ export default function MyPagePage() {
           page={page}
           allowedTemplates={templates}
           maxLinks={linkLimit}
+          features={features}
+          best={best}
           readOnly={!selfService}
           upload={(dataUrl) => myPageService.uploadImage(dataUrl)}
           onSave={async (draft) => {

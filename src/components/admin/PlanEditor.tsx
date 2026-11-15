@@ -175,7 +175,7 @@ export default function PlanEditor({ plan, nextRank, yearlyDiscountPercent, onSa
               <option value="partial">Part of the page</option>
               <option value="full">The whole page</option>
             </select>
-            <span className="mt-1 block text-[12px] text-navy/40">Part: a ready-made model as it is, one featured item, no numbers. Whole: sections, look, address, numbers.</span>
+            <span className="mt-1 block text-[12px] text-navy/40">Part: a ready-made model as it is, one featured item. Whole: sections, look, address, numbers. Every page feature, line by line, is in the Page tab.</span>
           </label>
           {ent.memberPage && (
             <label className="block">

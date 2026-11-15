@@ -81,6 +81,10 @@ export interface PlanEntitlements {
   // looked for on it, including the searches that found nothing. The plain
   // numbers (visits, clicks) are every page owner's and are not gated.
   pageInsights?: boolean
+  // Every page feature, one by one (15/11/2026, Admin → Plans → Page). What
+  // isn't set here follows memberPage ('partial' / 'full') as it always did
+  // — see modules/find/pageFeatures.ts.
+  pageFeatures?: Partial<import('../../find/pageFeatures').PageFeatures>
   // Opens every product (Workspaces, calculators, downloads) while the plan
   // is live — Portal migration 0061. Otherwise a plan opens the products
   // included from it or a lower plan (portal.product_plan_access).

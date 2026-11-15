@@ -9,11 +9,12 @@ import PlanEditor from '../../../components/admin/PlanEditor'
 import PlanSettingsForm from '../../../components/admin/PlanSettingsForm'
 import PlanSubscribersPanel from '../../../components/admin/PlanSubscribersPanel'
 import PlanProductsPanel from '../../../components/admin/PlanProductsPanel'
+import PlanPageFeaturesPanel from '../../../components/admin/PlanPageFeaturesPanel'
 import { CARD, SMALL_BUTTON } from '../../../components/admin/styles'
 import { adminService } from '../../../modules/admin/adminService'
 import type { AdminPlan, AdminPlanDraft, AdminPlansOverview } from '../../../modules/admin/types'
 
-type Tab = 'plans' | 'included' | 'subscribers' | 'settings'
+type Tab = 'plans' | 'page' | 'included' | 'subscribers' | 'settings'
 
 // Admin → Plans (Portal migration 0057): the plans BGrowth offers, their
 // prices and what each one unlocks, plus how subscriptions behave. A plan is
@@ -72,6 +73,7 @@ export default function AdminPlansPage() {
               {(
                 [
                   ['plans', 'Plans'],
+                  ['page', 'Page'],
                   ['included', 'Included'],
                   ['subscribers', 'Subscribers'],
                   ['settings', 'Settings'],
@@ -110,7 +112,14 @@ export default function AdminPlansPage() {
 
           {notice && <p className="rounded-xl bg-emerald-50 px-4 py-3 text-[13.5px] text-emerald-700">{notice}</p>}
 
-          {tab === 'included' ? (
+          {tab === 'page' ? (
+            <PlanPageFeaturesPanel
+              plans={data.plans}
+              onSaved={(planId, entitlements) =>
+                setData((d) => (d ? { ...d, plans: d.plans.map((p) => (p.id === planId ? { ...p, entitlements } : p)) } : d))
+              }
+            />
+          ) : tab === 'included' ? (
             <PlanProductsPanel />
           ) : tab === 'subscribers' ? (
             <PlanSubscribersPanel />

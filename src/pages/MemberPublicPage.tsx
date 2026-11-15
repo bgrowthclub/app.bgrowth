@@ -4,6 +4,7 @@ import SEO from '../components/seo/SEO'
 import MemberPageView from '../components/find/MemberPageView'
 import {
   getPublishedMemberPage,
+  getMemberPageBranding,
   getMemberPageViewRules,
   isMemberPageIndexable,
   trackMemberPageCategory,
@@ -29,6 +30,8 @@ export default function MemberPublicPage() {
   // (08/11/2026). undefined = still asking; null = no answer, draw the page
   // as stored.
   const [rules, setRules] = useState<MemberPageViewRules | null | undefined>(undefined)
+  // The BGrowth brand (15/11/2026): shown until the owner's plan says otherwise.
+  const [branded, setBranded] = useState(true)
 
   useEffect(() => {
     let cancelled = false
@@ -40,6 +43,7 @@ export default function MemberPublicPage() {
         // An old address redirects below; the new one counts the visit.
         if (p && p.slug === slug.toLowerCase()) trackMemberPageView(p.slug)
         if (p) {
+          void getMemberPageBranding(p.slug).then((b) => !cancelled && setBranded(b))
           void getMemberPageViewRules(p.id).then((r) => {
             if (cancelled) return
             setRules(r)
@@ -107,10 +111,10 @@ export default function MemberPublicPage() {
   const background = PAGE_BACKGROUNDS.find((c) => c.id === page.theme?.background)
   // No BGrowth brand on a page whose owner is on a paid plan (14/11/2026,
   // the owner's decision): no "Try for free" pill, no "| BGrowth" in the tab
-  // or the share card. "Paid" = the owner's plan gives the page a level
-  // (rules.level). The disclaimer and "Report this page" always stay — they
-  // are what keeps the responsibility with the page's owner.
-  const branded = !rules?.level
+  // or the share card. Since 15/11/2026 the plan's own "No BGrowth brand"
+  // line decides (Admin → Plans → Page; `branded` above). The disclaimer and
+  // "Report this page" always stay — they keep the responsibility with the
+  // page's owner.
   return (
     <div className="min-h-screen bg-bg-soft" style={background ? { backgroundColor: background.hex } : undefined}>
       <SEO

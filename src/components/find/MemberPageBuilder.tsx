@@ -8,6 +8,8 @@ import MemberPageView from './MemberPageView'
 import ResponsiveFrame from '../ui/ResponsiveFrame'
 import PaidFeatureNote from './PaidFeatureNote'
 import PagePlanCompare from './PagePlanCompare'
+import { FULL_PAGE_FEATURES, PARTIAL_PAGE_FEATURES } from '../../modules/find/pageFeatures'
+import type { PageFeatures } from '../../modules/find/pageFeatures'
 import { shrinkImage } from '../../lib/shrinkImage'
 import { MEMBER_PAGE_LABELS, SAVE_CONTACT_URL, WHATSAPP_JOIN_RE, isUsableLink, videoEmbed } from '../../modules/find/memberPageService'
 import { BLOCK_TYPES, LEGACY_BLOCKS, PAGE_BACKGROUNDS, PAGE_COLORS, PAGE_DARKS, SINGLE_BLOCK_TYPES, blockId, fitBlocks, memberPageTemplates, mergeDuplicateSections, pageSkin, switchTemplateBlocks, templateBlocks, templatePreview } from '../../modules/find/memberPageTemplates'
@@ -49,6 +51,11 @@ interface Props {
   maxLinks?: number | null
   // Look only: nothing can be changed or saved (subscribers before launch).
   readOnly?: boolean
+  // What the member's plan allows, feature by feature (15/11/2026, Admin →
+  // Plans → Page), and the most any offered plan gives (for the ⚡ notes).
+  // Absent: what the mode always meant. The team ('team') has everything.
+  features?: PageFeatures | null
+  best?: PageFeatures | null
 }
 
 const LABEL = 'mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-navy/40'
@@ -153,9 +160,13 @@ const TEMPLATE_ICONS: Record<string, LucideIcon> = {
   blank: LayoutTemplate,
 }
 
-export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel, extra, allowedTemplates, maxLinks, readOnly = false }: Props) {
+export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel, extra, allowedTemplates, maxLinks, readOnly = false, features, best }: Props) {
   const allowed = (id: string) => !allowedTemplates || allowedTemplates.includes(id)
-  const free = mode !== 'partial'
+  const f: PageFeatures = mode === 'team' ? FULL_PAGE_FEATURES : features ?? (mode === 'partial' ? PARTIAL_PAGE_FEATURES : FULL_PAGE_FEATURES)
+  const top: PageFeatures = best ?? FULL_PAGE_FEATURES
+  // `free` = may add and reorder sections (it was "not Pro" before the
+  // feature table; the other lines read `f` directly).
+  const free = f.sections
   const [language, setLanguage] = useState<MemberPage['language']>(page?.language ?? 'en')
   const [template, setTemplate] = useState(page ? (page.template ?? 'blank') : '')
   // A page saved with two copies of a one-per-page section (Sprint 151):
@@ -195,9 +206,9 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
   const [saving, setSaving] = useState<MemberPage['status'] | null>(null)
   const [error, setError] = useState<string | null>(null)
   const published = page?.status === 'published'
-  const maxHighlights = free ? 8 : 1
+  const maxHighlights = f.highlights
   const linkCap = Math.max(1, Math.min(12, maxLinks ?? 12))
-  const maxProducts = free ? 60 : 12
+  const maxProducts = f.products
   const templates = memberPageTemplates(language)
   // Models being retired (14/11/2026, Admin → Pages → Page models): hidden
   // from the list, except the one this page is on now. Read from the
@@ -309,9 +320,15 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
     highlights: highlights.filter((h) => h.title.trim()).slice(0, maxHighlights),
     language,
     template: template || null,
-    blocks: free ? blocks : blocks.map((b) => ({ ...b, ...(b.type === 'gallery' ? { data: { ...b.data, images: [] } } : {}) })),
+    blocks: f.gallery ? blocks : blocks.map((b) => ({ ...b, ...(b.type === 'gallery' ? { data: { ...b.data, images: [] } } : {}) })),
     // The background tint is open to every plan; the color follows the model on Pro.
-    theme: free ? theme : { color: templates.find((t) => t.id === template)?.color, background: theme.background, floating: theme.floating, dark: theme.dark },
+    theme: {
+      color: f.color ? theme.color : templates.find((t) => t.id === template)?.color,
+      cover: f.cover ? theme.cover : undefined,
+      background: f.style ? theme.background : undefined,
+      floating: f.style ? theme.floating : undefined,
+      dark: f.style ? theme.dark : undefined,
+    },
   }
 
   // Where a big button (the one at the top of the page, and the "cta"
@@ -503,7 +520,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
               </Row>
             ))}
             <Add label="Add a product" disabled={products.length >= maxProducts} onClick={() => setBlockData(block.id, { products: [...products, { title: '', url: '', category: 'other' }] })} />
-            {!free && <PaidFeatureNote>Your plan shows up to {maxProducts} products — up to 60 with the whole page.</PaidFeatureNote>}
+            {maxProducts < top.products && <PaidFeatureNote>Your plan shows up to {maxProducts} products — up to {top.products} on a higher plan.</PaidFeatureNote>}
             <textarea value={d.body ?? ''} onChange={(e) => setBlockData(block.id, { body: e.target.value })} rows={2} maxLength={600} className={INPUT} placeholder={own ? 'A note about your products (optional)' : 'Your own note about these links (optional)'} aria-label="Your note" />
             {!own && (
               <label className="flex items-start gap-2 text-[13px] text-navy/70">
@@ -647,7 +664,13 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
       case 'highlights':
         return (
           <div>
-            {!free && <div className="mb-2"><PaidFeatureNote>Your plan shows one featured photo or video — up to 8 with the whole page.</PaidFeatureNote></div>}
+            {maxHighlights < top.highlights && (
+              <div className="mb-2">
+                <PaidFeatureNote>
+                  Your plan shows {maxHighlights === 1 ? 'one featured photo or video' : `${maxHighlights} featured photos or videos`} — up to {top.highlights} on a higher plan.
+                </PaidFeatureNote>
+              </div>
+            )}
             <div className="space-y-2">
               {highlights.slice(0, maxHighlights).map((h, i) => (
                 <Row key={i} index={i} total={highlights.length} onMove={free ? (dd) => setHighlights((l) => move(l, i, dd)) : undefined} onRemove={() => setHighlights((l) => l.filter((_, j) => j !== i))}>
@@ -761,7 +784,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
       }
       case 'gallery': {
         const images = d.images ?? []
-        if (!free) return <PaidFeatureNote>The photo gallery comes with the whole page plan.</PaidFeatureNote>
+        if (!f.gallery) return <PaidFeatureNote>The photo gallery comes with a higher plan.</PaidFeatureNote>
         return (
           <div className="space-y-2">
             <input value={d.title ?? ''} onChange={(e) => setBlockData(block.id, { title: e.target.value })} maxLength={120} className={INPUT} placeholder="Section title" aria-label="Section title" />
@@ -822,7 +845,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
       return {
         ...current,
         blocks: fitBlocks(t.id, language, blocks, free),
-        theme: { ...theme, color: free ? theme.color ?? t.color : t.color },
+        theme: { ...theme, color: f.color ? theme.color ?? t.color : t.color },
         template: t.id,
       }
     }
@@ -1012,7 +1035,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
         </p>
       )}
 
-      {mode === 'partial' && <PagePlanCompare />}
+      {mode !== 'team' && <PagePlanCompare yours={f} best={top} />}
 
       <div className="grid gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,420px)]">
         {/* Read-only: every field and button on this side is disabled. */}
@@ -1051,7 +1074,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
               </label>
               <label className="block">
                 <span className={LABEL}>Address</span>
-                {free ? (
+                {f.address ? (
                   <>
                   <div className="flex items-center rounded-xl border border-navy/10 bg-white pl-3.5 focus-within:border-primary/40 focus-within:ring-2 focus-within:ring-primary/15">
                     <span className="text-sm text-navy/40">bgrowth.app/p/</span>
@@ -1072,7 +1095,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                 ) : (
                   <>
                     <p className="py-2.5 text-sm text-navy/60">{page?.slug ? `bgrowth.app/p/${page.slug}` : 'Made from your name when you save'}</p>
-                    <PaidFeatureNote>Choose your own address</PaidFeatureNote>
+                    {top.address && <PaidFeatureNote>Choose your own address</PaidFeatureNote>}
                   </>
                 )}
               </label>
@@ -1097,6 +1120,13 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
             {extra}
           </section>
 
+          {!f.style && top.style && (
+            <section className="space-y-2">
+              <span className={LABEL}>Background, dark color and floating button</span>
+              <PaidFeatureNote>Choose a background tint, the dark color and a floating button</PaidFeatureNote>
+            </section>
+          )}
+          {f.style && (
           <section className="space-y-3">
             <span className={LABEL}>Background</span>
             <div className="flex flex-wrap gap-2">
@@ -1124,8 +1154,9 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
               ))}
             </div>
           </section>
+          )}
 
-          {template === 'service' && (
+          {f.style && template === 'service' && (
             // The dark top and contact band (14/11/2026). Open to every plan,
             // like the background.
             <section className="space-y-3">
@@ -1158,6 +1189,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
           {/* The floating button (14/11/2026): off unless turned on, and the
               member picks which of the page's own buttons it opens. Open to
               every plan, like the background. */}
+          {f.style && (
           <section className="space-y-2">
             <span className={LABEL}>Floating button</span>
             <select
@@ -1177,16 +1209,13 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
             </select>
             <p className="text-[12.5px] text-navy/45">A round button in the corner of the page that stays visible while visitors scroll.</p>
           </section>
-
-          {!free && (
-            <section className="space-y-2">
-              <span className={LABEL}>Look</span>
-              <PaidFeatureNote>Choose any page color and add a cover image</PaidFeatureNote>
-            </section>
           )}
-          {free && (
+
+          {(f.color || f.cover || top.color || top.cover) && (
             <section className="space-y-3">
               <span className={LABEL}>Look</span>
+              {!f.color && top.color && <PaidFeatureNote>Choose any page color</PaidFeatureNote>}
+              {f.color && (
               <div className="flex flex-wrap gap-2">
                 {PAGE_COLORS.map((c) => (
                   <button
@@ -1200,6 +1229,9 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                   />
                 ))}
               </div>
+              )}
+              {!f.cover && top.cover && <PaidFeatureNote>Add a cover image</PaidFeatureNote>}
+              {f.cover && (
               <div className="flex items-center gap-3">
                 {theme.cover && <img src={theme.cover} alt="" className="h-10 w-20 rounded-md object-cover" />}
                 <button type="button" disabled={uploading !== null} onClick={() => pickImage('cover', 1600, (url) => setTheme((t) => ({ ...t, cover: url })))} className={`${SMALL} inline-flex items-center gap-1.5 text-primary hover:bg-bg-soft`}>
@@ -1211,11 +1243,12 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                   </button>
                 )}
               </div>
+              )}
             </section>
           )}
 
           <section>
-            <span className={LABEL}>Sections {free ? '— move, hide or add' : '— hide the ones you don’t need'}</span>
+            <span className={LABEL}>Sections {free ? '— move, hide or add' : f.hide ? '— hide the ones you don’t need' : ''}</span>
             <div className="space-y-2">
               {blocks.map((block, i) => {
                 const isOpen = open === block.id
@@ -1243,7 +1276,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                           <Trash2 size={14} />
                         </button>
                       )}
-                      {!free && block.type !== 'hero' && (
+                      {!free && f.hide && block.type !== 'hero' && (
                         <button
                           type="button"
                           aria-label={block.hidden ? 'Show' : 'Hide'}
@@ -1281,12 +1314,12 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                 )
               })}
             </div>
-            {!free && (
+            {!free && top.sections && (
               <div className="mt-3">
                 <PaidFeatureNote>Add new sections and change their order</PaidFeatureNote>
               </div>
             )}
-            {!free && page?.signup_granted && !blocks.some((b) => b.type === 'signup') && (
+            {!free && (f.signup || page?.signup_granted) && !blocks.some((b) => b.type === 'signup') && (
               <Add
                 label="Add the e-mail list section"
                 onClick={() => {
@@ -1304,6 +1337,8 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                     // Name, buttons, services, featured work… belong to the
                     // page: a second copy would only show the same items again.
                     const taken = SINGLE_BLOCK_TYPES.includes(t.type) && blocks.some((b) => b.type === t.type)
+                    // The e-mail list: the plan's, or switched on for this page.
+                    if (t.type === 'signup' && !f.signup && !page?.signup_granted) return null
                     return (
                     <button
                       key={t.type}

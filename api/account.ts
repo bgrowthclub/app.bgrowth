@@ -736,6 +736,70 @@ async function livePlanEntitlements(db: Db, userId: string): Promise<any[] | nul
   return out
 }
 
+// What a plan lets a member do with their page, feature by feature
+// (15/11/2026, Admin → Plans → Page). A COPY of src/modules/find/
+// pageFeatures.ts (also copied in api/ingles.ts) — change all three. A plan
+// without `pageFeatures` keeps what "part" / "whole page" always meant.
+type PageFeatures = {
+  color: boolean; cover: boolean; address: boolean; hide: boolean; sections: boolean; gallery: boolean
+  signup: boolean; style: boolean; stats: boolean; noBrand: boolean; highlights: number; products: number
+}
+const PAGE_FEATURE_KEYS = ['color', 'cover', 'address', 'hide', 'sections', 'gallery', 'signup', 'style', 'stats', 'noBrand'] as const
+const PARTIAL_FEATURES: PageFeatures = { color: false, cover: false, address: false, hide: true, sections: false, gallery: false, signup: false, style: true, stats: false, noBrand: true, highlights: 1, products: 12 }
+const FULL_FEATURES: PageFeatures = { color: true, cover: true, address: true, hide: true, sections: true, gallery: true, signup: true, style: true, stats: true, noBrand: true, highlights: 8, products: 60 }
+
+function pageFeaturesOf(ent: any, isFree: boolean): PageFeatures | null {
+  if (!ent || (ent.memberPage !== 'partial' && ent.memberPage !== 'full')) return null
+  const out: PageFeatures = { ...(ent.memberPage === 'full' ? FULL_FEATURES : PARTIAL_FEATURES), noBrand: !isFree }
+  const own = (ent.pageFeatures ?? {}) as Record<string, unknown>
+  for (const k of PAGE_FEATURE_KEYS) if (typeof own[k] === 'boolean') out[k] = own[k] as boolean
+  if (typeof own.highlights === 'number') out.highlights = Math.max(0, Math.min(8, Math.round(own.highlights)))
+  if (typeof own.products === 'number') out.products = Math.max(0, Math.min(60, Math.round(own.products)))
+  return out
+}
+
+function mergePageFeatures(list: (PageFeatures | null)[]): PageFeatures | null {
+  const real = list.filter((f): f is PageFeatures => Boolean(f))
+  if (!real.length) return null
+  const out = { ...real[0] }
+  for (const f of real.slice(1)) {
+    for (const k of PAGE_FEATURE_KEYS) out[k] = out[k] || f[k]
+    out.highlights = Math.max(out.highlights, f.highlights)
+    out.products = Math.max(out.products, f.products)
+  }
+  return out
+}
+
+// The member's page features: their live plans, or the Free plan (the same
+// fallback as livePlanEntitlements). null = no page.
+async function memberPageFeatures(db: Db, userId: string): Promise<PageFeatures | null> {
+  const now = new Date().toISOString()
+  const { data, error } = await db
+    .from('member_plans')
+    .select('starts_at, ends_at, membership_plans(entitlements, is_free)')
+    .eq('user_id', userId)
+    .in('status', ['active', 'trialing', 'past_due'])
+  if (error) return null
+  const list: (PageFeatures | null)[] = []
+  for (const row of (data ?? []) as any[]) {
+    if (row.starts_at > now || (row.ends_at && row.ends_at <= now)) continue
+    const plan = Array.isArray(row.membership_plans) ? row.membership_plans[0] : row.membership_plans
+    list.push(pageFeaturesOf(plan?.entitlements, plan?.is_free === true))
+  }
+  if (!list.length) {
+    const { data: free } = await db.from('membership_plans').select('entitlements').eq('is_free', true).eq('status', 'active').order('rank').limit(1).maybeSingle()
+    if (free?.entitlements) list.push(pageFeaturesOf(free.entitlements, true))
+  }
+  return mergePageFeatures(list)
+}
+
+// The most any offered plan gives — what the editor's ⚡ notes and the
+// comparison point to.
+async function bestPageFeatures(db: Db): Promise<PageFeatures | null> {
+  const { data } = await db.from('membership_plans').select('entitlements, is_free').eq('status', 'active')
+  return mergePageFeatures(((data ?? []) as any[]).map((p) => pageFeaturesOf(p.entitlements, p.is_free === true)))
+}
+
 // The page models the member's plans allow (Sprint 132): null = all of them
 // (a plan with a page and no list), else the union of the plans' lists.
 async function memberPageTemplates(db: Db, userId: string): Promise<string[] | null> {
@@ -965,6 +1029,8 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string; emai
       insights,
       allowance: await memberPageAllowance(db, user.id),
       linkLimit: await memberPageLinkLimit(db, user.id),
+      features: level ? await memberPageFeatures(db, user.id) : null,
+      best: await bestPageFeatures(db),
       // The light list the screen draws before anything is opened.
       pages: pages.map((p) => ({
         id: p.id,
@@ -1037,37 +1103,37 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string; emai
     input.links = input.links.slice(0, linkLimit)
   }
 
-  if (level === 'partial') {
-    // A model's blocks as they are; the model's color; one featured item.
-    // They may switch to another model; its sections then come as they are.
-    const template = input.template
-    // The e-mail section isn't part of a model: it's added on its own when
-    // the team switched it on for this page (signup_granted).
-    if (!existing?.signup_granted) input.blocks = (input.blocks ?? []).filter((b) => b.type !== 'signup') as typeof input.blocks
+  // What the plan allows, feature by feature (15/11/2026). A read error
+  // falls back to what the level always meant, so a glitch never blocks a save.
+  const f = (await memberPageFeatures(db, user.id)) ?? (level === 'full' ? FULL_FEATURES : PARTIAL_FEATURES)
+  const template = input.template
+  // The e-mail section: the plan's, or switched on for this page by the team.
+  if (!f.signup && !existing?.signup_granted) input.blocks = (input.blocks ?? []).filter((b) => b.type !== 'signup') as typeof input.blocks
+  if (!f.sections) {
+    // A model's blocks as they are; they may switch to another model, whose
+    // sections then come as they are.
     const sequence = (input.blocks ?? []).filter((b) => b.type !== 'signup').map((b) => b.type).join(',')
     // An unknown model (a new one this copy hasn't caught up with) is let
     // through: a stale copy must never be the reason someone can't save.
     const model = TEMPLATE_SEQUENCES[template]
     if (model && !keepsModelSections(sequence, model)) throw new HttpError(400, 'Your plan keeps the model’s sections as they are.')
-    input.template = template
-    input.blocks = (input.blocks ?? []).map((b) => {
-      const { hidden, ...rest } = b as Record<string, any>
-      const block = b.type === 'gallery' ? { ...rest, data: { ...(rest.data ?? {}), images: [] } } : rest
-      return hidden && b.type !== 'hero' ? { ...block, hidden: true } : block
-    }) as typeof input.blocks
-    // The model's color; the background tint is open to every plan.
-    input.theme = {
-      color: TEMPLATE_COLORS[template] ?? input.theme.color,
-      ...(input.theme.background ? { background: input.theme.background } : {}),
-      ...(input.theme.floating ? { floating: input.theme.floating } : {}),
-      ...(input.theme.dark ? { dark: input.theme.dark } : {}),
-    }
-    input.highlights = input.highlights.slice(0, 1)
-    // Pro: up to 12 product picks (Enterprise: 60).
-    input.blocks = (input.blocks ?? []).map((b: any) =>
-      b.type === 'products' && b.data?.products ? { ...b, data: { ...b.data, products: b.data.products.slice(0, 12) } } : b,
-    ) as typeof input.blocks
-  } else {
+  }
+  input.blocks = (input.blocks ?? []).map((b: any) => {
+    const { hidden, ...rest } = b as Record<string, any>
+    let block: Record<string, any> = rest
+    if (b.type === 'gallery' && !f.gallery) block = { ...block, data: { ...(block.data ?? {}), images: [] } }
+    if (b.type === 'products' && block.data?.products) block = { ...block, data: { ...block.data, products: block.data.products.slice(0, f.products) } }
+    return hidden && f.hide && (b.type !== 'hero' || f.sections) ? { ...block, hidden: true } : block
+  }) as typeof input.blocks
+  input.theme = {
+    ...(f.color ? (input.theme.color ? { color: input.theme.color } : {}) : { color: TEMPLATE_COLORS[template] ?? input.theme.color }),
+    ...(f.cover && input.theme.cover ? { cover: input.theme.cover } : {}),
+    ...(f.style && input.theme.background ? { background: input.theme.background } : {}),
+    ...(f.style && input.theme.floating ? { floating: input.theme.floating } : {}),
+    ...(f.style && input.theme.dark ? { dark: input.theme.dark } : {}),
+  }
+  input.highlights = input.highlights.slice(0, f.highlights)
+  if (f.address) {
     const wanted = slugFrom(pageText(req.body?.slug, 40))
     if (wanted && wanted !== slug) {
       if (!PAGE_SLUG.test(wanted) || wanted.length < 3) throw new HttpError(400, 'The address needs 3 to 40 lowercase letters, numbers or dashes.')

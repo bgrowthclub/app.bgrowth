@@ -465,6 +465,29 @@ This repo is a **static, client-only MVP**:
   featured items and products, and `components/find/PagePlanCompare` at the
   top of the editor (a "Your plan | Whole page" table — its lines mirror the
   editor's and api/account.ts's limits; change them together).
+  **Since Sprint 257 every page feature is set per plan, line by line**
+  (decided by the owner 15/11/2026; no migration): Admin → Plans → **Page**
+  (`components/admin/PlanPageFeaturesPanel`, resource `plan-page` PUT,
+  admin-only, logged in Activity) is a feature × plan table — has a page,
+  how many pages, contact buttons, featured items, products, hide sections,
+  add/reorder sections, color, cover, address, gallery, e-mail list,
+  background/dark/floating, page numbers, no BGrowth brand, what visitors
+  looked for, shows on Google, and one line per page model. Kept in the
+  plan's entitlements as `pageFeatures` (plus the existing memberPage,
+  pages, pageLinks, pageNoIndex, pageInsights, pageTemplates); a plan
+  without `pageFeatures` keeps what "part"/"whole" always meant
+  (`modules/find/pageFeatures.ts`, COPIED in api/account.ts and
+  api/ingles.ts — change all three). Saving writes every line out and sets
+  memberPage to 'full' when "add and reorder sections" is on (the public
+  page and the database still read that level). api/account.ts enforces
+  the features on save and returns `features` + `best` (most any offered
+  plan gives) — the editor's ⚡ notes and `PagePlanCompare` come from them.
+  The BGrowth brand now follows the "No BGrowth brand" line: the public page
+  asks `api/ingles.ts?action=page-brand&slug=` (the og preview and page
+  sign-ups read the same helper, `ownerPageFeatures`); its default is "paid
+  plans only", which fixed Sprint 253 also hiding the brand on Free pages.
+  Fixed at the same time: api/admin.ts `cleanEntitlements` had been dropping
+  pages, pageLinks, pageNoIndex and pageInsights on every plan save.
   **Since Sprint 183 one table says what every plan does with every
   product** (approved by the owner 01/11/2026; Portal migration 0075):
   Admin → Plans → **Included** is now a product × plan grid where each cell

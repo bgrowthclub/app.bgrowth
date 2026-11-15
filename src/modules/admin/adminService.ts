@@ -22,7 +22,7 @@ import type {
   AdminWixContactsOverview, WixContactGroup,
   AdminPlan, AdminPlanDraft, AdminPlansOverview, AdminMemberPlans, MemberPlanReason, AdminPlanSubscribers,
   AdminCouponsOverview, AdminCouponDraft, AdminPlanProducts } from './types'
-import type { PlanSettings } from '../commerce/types/membership'
+import type { PlanEntitlements, PlanSettings } from '../commerce/types/membership'
 import type { MemberPage, MemberPageSignup, MemberPageStats } from '../find/types'
 import type { SupportHours } from '../support/types'
 
@@ -324,6 +324,10 @@ export const adminService = {
   },
   async savePlan(draft: AdminPlanDraft) {
     return (await call<{ plan: AdminPlan }>(draft.id ? 'PATCH' : 'POST', 'plans', undefined, draft)).plan
+  },
+  // Admin → Plans → Page (15/11/2026): only the page part of one plan.
+  savePlanPage(planId: string, entitlements: PlanEntitlements) {
+    return call<{ entitlements: PlanEntitlements }>('PUT', 'plan-page', undefined, { planId, entitlements })
   },
   async savePlanSettings(settings: PlanSettings) {
     return (await call<{ settings: PlanSettings }>('PUT', 'plan-settings', undefined, settings)).settings

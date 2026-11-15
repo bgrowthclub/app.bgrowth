@@ -3561,16 +3561,68 @@ function percent(value: unknown, field: string): number {
 }
 
 // What a plan unlocks. Only what is set is kept (an empty object = nothing).
+// The page part of a plan's entitlements (15/11/2026). Until today
+// cleanEntitlements kept only memberPage and pageTemplates, so "how many
+// pages", "how many buttons", "keep out of Google" and "what visitors looked
+// for", set in the plan editor since 01–08/11, were dropped on every save.
+// The keys of pageFeatures mirror src/modules/find/pageFeatures.ts.
+const PAGE_FEATURE_BOOLS = ['color', 'cover', 'address', 'hide', 'sections', 'gallery', 'signup', 'style', 'stats', 'noBrand']
+const PAGE_ENTITLEMENT_KEYS = ['memberPage', 'pageTemplates', 'pages', 'pageLinks', 'pageNoIndex', 'pageInsights', 'pageFeatures']
+
+function cleanPageEntitlements(v: Record<string, any>) {
+  const out: Record<string, unknown> = {}
+  if (v.memberPage !== 'partial' && v.memberPage !== 'full') return out
+  out.memberPage = v.memberPage
+  if (Array.isArray(v.pageTemplates)) {
+    const list = [...new Set(v.pageTemplates.filter((t: unknown) => typeof t === 'string' && PAGE_TEMPLATES.has(t)))]
+    if (list.length && list.length < PAGE_TEMPLATES.size) out.pageTemplates = list
+  }
+  const whole = (n: unknown, min: number, max: number) => {
+    const x = Math.round(Number(n))
+    return n !== null && n !== '' && n !== undefined && Number.isFinite(x) ? Math.max(min, Math.min(max, x)) : undefined
+  }
+  const pages = whole(v.pages, 1, 10)
+  if (pages !== undefined) out.pages = pages
+  const links = whole(v.pageLinks, 1, 12)
+  if (links !== undefined) out.pageLinks = links
+  if (v.pageNoIndex === true) out.pageNoIndex = true
+  if (v.pageInsights === true) out.pageInsights = true
+  const f = v.pageFeatures && typeof v.pageFeatures === 'object' ? (v.pageFeatures as Record<string, unknown>) : null
+  if (f) {
+    const features: Record<string, unknown> = {}
+    for (const k of PAGE_FEATURE_BOOLS) if (typeof f[k] === 'boolean') features[k] = f[k]
+    const h = whole(f.highlights, 0, 8)
+    if (h !== undefined) features.highlights = h
+    const pr = whole(f.products, 0, 60)
+    if (pr !== undefined) features.products = pr
+    if (Object.keys(features).length) out.pageFeatures = features
+  }
+  return out
+}
+
+// Admin → Plans → Page (15/11/2026): one plan's page settings, saved on their
+// own so the table never rewrites the plan's prices or other benefits.
+//   PUT ?resource=plan-page { planId, entitlements }
+async function savePlanPage(req: VercelRequest, db: Db) {
+  const planId = str(req.body?.planId)
+  if (!isUuid(planId)) throw new HttpError(400, 'Which plan?')
+  const { data: plan, error } = await db.from('membership_plans').select('id, name, entitlements').eq('id', planId).maybeSingle()
+  if (error) throw error
+  if (!plan) throw new HttpError(404, 'Plan not found.')
+  const kept = Object.fromEntries(Object.entries((plan.entitlements ?? {}) as Record<string, unknown>).filter(([k]) => !PAGE_ENTITLEMENT_KEYS.includes(k)))
+  const entitlements = { ...kept, ...cleanPageEntitlements((req.body?.entitlements ?? {}) as Record<string, any>) }
+  const { error: upError } = await db.from('membership_plans').update({ entitlements, updated_at: new Date().toISOString() }).eq('id', planId)
+  if (upError) throw upError
+  return { planName: plan.name, entitlements }
+}
+
 function cleanEntitlements(value: unknown) {
   const v = (value && typeof value === 'object' ? value : {}) as Record<string, any>
   const out: Record<string, unknown> = {}
   if (v.memberPage === 'partial' || v.memberPage === 'full') out.memberPage = v.memberPage
   if (v.prioritySupport === true) out.prioritySupport = true
   // Which page models the plan allows (Sprint 132); none listed = all.
-  if (out.memberPage && Array.isArray(v.pageTemplates)) {
-    const list = [...new Set(v.pageTemplates.filter((t: unknown) => typeof t === 'string' && PAGE_TEMPLATES.has(t)))]
-    if (list.length && list.length < PAGE_TEMPLATES.size) out.pageTemplates = list
-  }
+  Object.assign(out, cleanPageEntitlements(v))
   // Opens every product while the plan is live (Portal migration 0061).
   if (v.includesAll === true) out.includesAll = true
   const ws = percent(v.workspaceDiscountPercent, 'Workspace discount')
@@ -4272,6 +4324,8 @@ function describe(key: string, b: Body, r: Record<string, any>): Described {
       return { area: 'plans', summary: `Edited the plan “${b.name}”${b.status === 'disabled' ? ' (disabled)' : b.status === 'hidden' ? ' (hidden)' : ''}` }
     case 'PUT plan-settings':
       return { area: 'plans', summary: 'Changed the plan settings' }
+    case 'PUT plan-page':
+      return { area: 'plans', summary: `Changed what the ${r.planName ?? ''} plan gives on member pages` }
     case 'POST member-plans':
       return {
         area: 'plans',
@@ -4791,6 +4845,7 @@ const ROUTES: Record<string, Route> = {
   'POST plans': (req, db) => createPlan(req, db),
   'PATCH plans': (req, db) => updatePlan(req, db),
   'PUT plan-settings': (req, db, admin) => savePlanSettings(req, db, admin),
+  'PUT plan-page': (req, db) => savePlanPage(req, db),
   'GET plan-subscribers': (_req, db) => listPlanSubscribers(db),
   'GET plan-products': (_req, db) => listPlanProducts(db),
   'PUT plan-products': (req, db) => setPlanProduct(req, db),

@@ -164,6 +164,52 @@ async function pageReport(req: VercelRequest, db: Db) {
 
 const REPORT_REASONS = new Set(['scam', 'adult', 'illegal', 'impersonation', 'not-working', 'other'])
 
+// What a page's owner's plan allows (15/11/2026, Admin → Plans → Page). A
+// COPY of src/modules/find/pageFeatures.ts and api/account.ts — change all
+// three. Only the lines this function needs: the BGrowth brand and the
+// e-mail list. A plan without `pageFeatures` keeps what it always meant;
+// the brand only leaves paid plans unless the table says otherwise.
+async function ownerPageFeatures(db: Db, userId: string | null | undefined): Promise<{ noBrand: boolean; signup: boolean } | null> {
+  if (!userId) return null
+  const now = new Date().toISOString()
+  const { data, error } = await db
+    .from('member_plans')
+    .select('starts_at, ends_at, membership_plans(entitlements, is_free)')
+    .eq('user_id', userId)
+    .in('status', ['active', 'trialing', 'past_due'])
+  if (error) return null
+  const plans: { ent: any; isFree: boolean }[] = []
+  for (const row of (data ?? []) as any[]) {
+    if (row.starts_at > now || (row.ends_at && row.ends_at <= now)) continue
+    const plan = Array.isArray(row.membership_plans) ? row.membership_plans[0] : row.membership_plans
+    plans.push({ ent: plan?.entitlements ?? {}, isFree: plan?.is_free === true })
+  }
+  if (!plans.length) {
+    const { data: free } = await db.from('membership_plans').select('entitlements').eq('is_free', true).eq('status', 'active').order('rank').limit(1).maybeSingle()
+    if (free?.entitlements) plans.push({ ent: free.entitlements, isFree: true })
+  }
+  let out = null as { noBrand: boolean; signup: boolean } | null
+  for (const { ent, isFree } of plans) {
+    if (ent?.memberPage !== 'partial' && ent?.memberPage !== 'full') continue
+    const own = (ent.pageFeatures ?? {}) as Record<string, unknown>
+    const noBrand = typeof own.noBrand === 'boolean' ? own.noBrand : !isFree
+    const signup = typeof own.signup === 'boolean' ? own.signup : ent.memberPage === 'full'
+    out = { noBrand: (out?.noBrand ?? false) || noBrand, signup: (out?.signup ?? false) || signup }
+  }
+  return out
+}
+
+// Whether a published page shows the BGrowth brand (15/11/2026): the page
+// asks here because the browser can't read its owner's plan.
+//   GET ?action=page-brand&slug= → { branding }
+async function pageBrand(req: VercelRequest, db: Db) {
+  const slug = str(req.query.slug, 60).toLowerCase()
+  if (!slug) return { branding: true }
+  const { data } = await db.from('member_pages').select('user_id, owner_managed').eq('slug', slug).eq('status', 'published').maybeSingle()
+  const f = data ? await ownerPageFeatures(db, (data as { user_id?: string | null }).user_id) : null
+  return { branding: !f?.noBrand }
+}
+
 async function pageSignup(req: VercelRequest, db: Db) {
   const body = (req.body && typeof req.body === 'object' ? req.body : {}) as Record<string, unknown>
   const asked = str(body.slug, 40).toLowerCase()
@@ -183,10 +229,7 @@ async function pageSignup(req: VercelRequest, db: Db) {
   const p = page as { id: string; slug: string; user_id: string | null; owner_managed: boolean; signup_granted: boolean; blocks: { type: string; hidden?: boolean }[] | null } | null
   if (!p || !(p.blocks ?? []).some((b) => b.type === 'signup' && !b.hidden)) throw new HttpError(404, 'This page isn’t taking sign-ups.')
   let allowed = !p.owner_managed || p.signup_granted
-  if (!allowed && p.user_id) {
-    const { data } = await db.rpc('member_page_level', { p_user: p.user_id })
-    allowed = data === 'full'
-  }
+  if (!allowed && p.user_id) allowed = (await ownerPageFeatures(db, p.user_id))?.signup === true
   if (!allowed) throw new HttpError(404, 'This page isn’t taking sign-ups.')
   const { error } = await db.from('member_page_signups').insert({
     page_id: p.id,
@@ -475,23 +518,18 @@ async function linkPreview(req: VercelRequest, db: Db) {
       image = p.cover_image_url || image
     }
   } else if (member) {
-    let { data } = await db.from('member_pages').select('id, display_name, headline, photo_url').eq('slug', member[1]).eq('status', 'published').maybeSingle()
+    let { data } = await db.from('member_pages').select('id, user_id, display_name, headline, photo_url').eq('slug', member[1]).eq('status', 'published').maybeSingle()
     if (!data) {
       // An old address of a page that moved (Portal migration 0063).
-      const moved = await db.from('member_pages').select('id, display_name, headline, photo_url').contains('previous_slugs', [member[1]]).eq('status', 'published').limit(1)
+      const moved = await db.from('member_pages').select('id, user_id, display_name, headline, photo_url').contains('previous_slugs', [member[1]]).eq('status', 'published').limit(1)
       data = moved.error ? null : ((moved.data ?? [])[0] ?? null)
     }
-    const m = data as { id?: string; display_name?: string; headline?: string | null; photo_url?: string | null } | null
+    const m = data as { id?: string; user_id?: string | null; display_name?: string; headline?: string | null; photo_url?: string | null } | null
     if (m?.display_name) {
       // A page on a paid plan carries no BGrowth name in its preview
       // (14/11/2026, the owner's decision) — the same rule as the page itself:
-      // its owner's plan gives it a level (portal.member_page_view_rules).
-      let paid = false
-      if (m.id) {
-        const rules = await db.rpc('member_page_view_rules', { p_page: m.id })
-        const row = (Array.isArray(rules.data) ? rules.data[0] : rules.data) as { level?: string | null } | null
-        paid = !rules.error && Boolean(row?.level)
-      }
+      // since 15/11/2026 the plan's "No BGrowth brand" line (Admin → Plans → Page).
+      const paid = (await ownerPageFeatures(db, m.user_id))?.noBrand === true
       if (paid) siteName = ''
       title = paid ? m.display_name : `${m.display_name} | BGrowth`
       description = m.headline || (paid ? m.display_name : `${m.display_name} on BGrowth`)
@@ -676,6 +714,10 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       res.setHeader('Content-Disposition', `attachment; filename="${file}.vcf"`)
       res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600')
       return res.status(200).send(card)
+    }
+    if (req.method === 'GET' && action === 'page-brand') {
+      res.setHeader('Cache-Control', 'public, s-maxage=60, stale-while-revalidate=300')
+      return res.status(200).json(await pageBrand(req, db))
     }
     if (req.method === 'GET' && action === 'creator') {
       res.setHeader('Cache-Control', 'public, s-maxage=300, stale-while-revalidate=600')
