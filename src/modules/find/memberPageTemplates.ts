@@ -195,10 +195,12 @@ export function memberPageTemplates(lang: Lang): MemberPageTemplate[] {
     },
     {
       id: 'local',
-      name: { en: 'Local Services', pt: 'Serviços locais' },
+      // Renamed 15/11/2026 (was "Local Services") so it no longer reads like
+      // Service Business: this one is the person who does the work.
+      name: { en: 'Self-employed · Local service', pt: 'Autônomo · Serviço local' },
       description: {
-        en: 'For cleaning, lawn care, handyman, detailing and home services. Your service up front, photos of the work, areas served and a quote button.',
-        pt: 'Para limpeza, jardinagem, handyman, detailing e serviços residenciais. Serviço em destaque, fotos do trabalho, regiões atendidas e botão de orçamento.',
+        en: 'For the person who does the work — cleaning, lawn care, handyman, detailing. Quick contact right at the top, your services with prices, photos of your work, the areas you serve and reviews.',
+        pt: 'Para quem faz o serviço — limpeza, jardinagem, handyman, detailing. Contato rápido logo no topo, seus serviços com preço, fotos do trabalho, as regiões que você atende e avaliações.',
       },
       color: 'orange',
       blocks: [
@@ -241,10 +243,11 @@ export function memberPageTemplates(lang: Lang): MemberPageTemplate[] {
       // they state, services, about with a photo, work, and contact as a
       // dark band with big buttons. A NEW look: no existing page changed.
       id: 'service',
-      name: { en: 'Service Business', pt: 'Empresa de serviços' },
+      // Renamed 15/11/2026 (was "Service Business"): a company with a team.
+      name: { en: 'Company with a team', pt: 'Empresa com equipe' },
       description: {
-        en: 'A complete small website for a service business — auto shop, cleaning, contractor. Your contact buttons always in sight, a big photo of your work, your services, your story and a strong contact section.',
-        pt: 'Um site pequeno e completo para empresa de serviço — oficina, limpeza, reformas. Botões de contato sempre à vista, uma foto grande do seu trabalho, seus serviços, sua história e uma seção de contato forte.',
+        en: 'A complete small website for a company with a team — auto shop, contractor, cleaning company. Your logo and contact buttons always in sight, your numbers up front, your services, your story and a strong contact section.',
+        pt: 'Um site pequeno e completo para empresa com equipe — oficina, construtora, empresa de limpeza. Logo e botões de contato sempre à vista, seus números em destaque, seus serviços, sua história e uma seção de contato forte.',
       },
       color: 'blue',
       blocks: [

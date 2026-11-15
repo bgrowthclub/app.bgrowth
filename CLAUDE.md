@@ -488,6 +488,12 @@ This repo is a **static, client-only MVP**:
   plans only", which fixed Sprint 253 also hiding the brand on Free pages.
   Fixed at the same time: api/admin.ts `cleanEntitlements` had been dropping
   pages, pageLinks, pageNoIndex and pageInsights on every plan save.
+  Since Sprint 258 (15/11/2026, the owner's choice) the two home-service
+  looks say who they are for: `local` is now "Self-employed · Local
+  service" / "Autônomo · Serviço local" and `service` "Company with a
+  team" / "Empresa com equipe" (names and descriptions only — ids, pages
+  and layouts unchanged), and the `local` top takes the dark color
+  (`theme.dark`) like `service`.
   **Since Sprint 183 one table says what every plan does with every
   product** (approved by the owner 01/11/2026; Portal migration 0075):
   Admin → Plans → **Included** is now a product × plan grid where each cell

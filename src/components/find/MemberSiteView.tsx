@@ -118,7 +118,8 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
   // The page's own background tint (any plan); none = the look's default.
   const background = PAGE_BACKGROUNDS.find((c) => c.id === page.theme?.background)
   // Service Business: the member's dark color for the dark bands; none = navy.
-  const dark = skin === 'service' ? PAGE_DARKS.find((c) => c.id === page.theme?.dark) : undefined
+  // Service Business and, since 15/11/2026, Local Services take the chosen dark color.
+  const dark = skin === 'service' || skin === 'local' ? PAGE_DARKS.find((c) => c.id === page.theme?.dark) : undefined
   const darkStyle = dark ? { backgroundColor: dark.hex } : undefined
   const style = {
     ...(color ? { '--color-primary-rgb': color.rgb, '--color-primary-accent-rgb': color.rgb, '--color-primary': `rgb(${color.rgb})`, '--color-primary-accent': `rgb(${color.rgb})` } : {}),
@@ -274,11 +275,17 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
       const bg = page.theme?.cover
       const side = !bg ? page.photo_url : null
       return (
-        <section key="hero" className="relative overflow-hidden bg-navy text-white">
+        <section key="hero" className="relative overflow-hidden bg-navy text-white" style={darkStyle}>
           {bg && <div className="absolute inset-0 bg-cover bg-center opacity-40" style={{ backgroundImage: `url(${bg})` }} aria-hidden />}
           {side && sideImage(side)}
           {side && stripImage(side)}
-          {!side && <div className="absolute inset-0 bg-gradient-to-r from-navy via-navy/80 to-navy/30" aria-hidden />}
+          {!side && (
+            <div
+              className={`absolute inset-0 ${fadeHex ? '' : 'bg-gradient-to-r from-navy via-navy/80 to-navy/30'}`}
+              style={fadeHex ? { backgroundImage: `linear-gradient(to right, ${fadeHex}, ${fadeHex}cc, ${fadeHex}4d)` } : undefined}
+              aria-hidden
+            />
+          )}
           <div className={`relative mx-auto grid ${look.wide} gap-10 px-5 py-16 md:grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] md:items-center md:py-24`}>
             <div>
               {location}

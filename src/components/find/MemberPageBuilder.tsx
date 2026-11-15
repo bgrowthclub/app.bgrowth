@@ -1156,11 +1156,12 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
           </section>
           )}
 
-          {f.style && template === 'service' && (
-            // The dark top and contact band (14/11/2026). Open to every plan,
+          {f.style && (template === 'service' || template === 'local') && (
+            // The dark top and contact band (14/11/2026; Local Services too
+            // since 15/11/2026). Open to every plan,
             // like the background.
             <section className="space-y-3">
-              <span className={LABEL}>Dark color (top and contact)</span>
+              <span className={LABEL}>{template === 'local' ? 'Dark color (top)' : 'Dark color (top and contact)'}</span>
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"
