@@ -8,6 +8,7 @@ import MemberPageView from './MemberPageView'
 import ResponsiveFrame from '../ui/ResponsiveFrame'
 import PaidFeatureNote from './PaidFeatureNote'
 import PagePlanCompare from './PagePlanCompare'
+import CustomColorSwatch from './CustomColorSwatch'
 import { FULL_PAGE_FEATURES, PARTIAL_PAGE_FEATURES } from '../../modules/find/pageFeatures'
 import type { PageFeatures } from '../../modules/find/pageFeatures'
 import { shrinkImage } from '../../lib/shrinkImage'
@@ -1152,6 +1153,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                   style={{ background: c.hex }}
                 />
               ))}
+              <CustomColorSwatch value={theme.background} role="background" onPick={(hex) => setTheme((t) => ({ ...t, background: hex as `#${string}` }))} />
             </div>
           </section>
           )}
@@ -1183,6 +1185,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                     style={{ background: c.hex }}
                   />
                 ))}
+                <CustomColorSwatch value={theme.dark} role="dark" onPick={(hex) => setTheme((t) => ({ ...t, dark: hex as `#${string}` }))} />
               </div>
             </section>
           )}
@@ -1229,6 +1232,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                     style={{ background: `rgb(${c.rgb})` }}
                   />
                 ))}
+                <CustomColorSwatch value={theme.color} role="primary" onPick={(hex) => setTheme((t) => ({ ...t, color: hex as `#${string}` }))} />
               </div>
               )}
               {!f.cover && top.cover && <PaidFeatureNote>Add a cover image</PaidFeatureNote>}

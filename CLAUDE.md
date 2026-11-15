@@ -494,6 +494,18 @@ This repo is a **static, client-only MVP**:
   team" / "Empresa com equipe" (names and descriptions only — ids, pages
   and layouts unchanged), and the `local` top takes the dark color
   (`theme.dark`) like `service`.
+  Since Sprint 259 (15/11/2026, the owner's decision) the main color, the
+  dark color and the background take ANY color, not only the swatches:
+  "More colors" (`components/find/CustomColorSwatch`, the device's own
+  picker) saves a "#rrggbb" in `theme.color` / `theme.dark` /
+  `theme.background`. Every custom color is made readable first
+  (`fitPageHex` in memberPageTemplates.ts, copied in api/account.ts and
+  api/admin.ts and applied again on save — change all three): white text
+  ≥ 4.5:1 on the main color, ≥ 10:1 on the dark one, navy text ≥ 12:1 on
+  the background. Pages resolve a theme through `pagePrimaryRgb`,
+  `pageBackgroundHex`, `pageDarkHex` (swatch id or hex). The same plan
+  lines apply (color → "Choose the page color"; background/dark → the
+  style line).
   **Since Sprint 183 one table says what every plan does with every
   product** (approved by the owner 01/11/2026; Portal migration 0075):
   Admin → Plans → **Included** is now a product × plan grid where each cell

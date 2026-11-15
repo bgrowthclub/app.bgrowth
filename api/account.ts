@@ -575,15 +575,41 @@ function cleanPageBlocks(value: unknown) {
   return blocks.length ? blocks : null
 }
 
+// Any color (15/11/2026): a swatch id, or the member's own "#rrggbb", made
+// readable first. A COPY of fitPageHex in src/modules/find/
+// memberPageTemplates.ts (also in the other function) — change all three.
+// primary: white text ≥ 4.5:1 · dark: white text ≥ 10:1 · background: navy text ≥ 12:1
+function fitPageHex(hex: string, role: 'primary' | 'dark' | 'background'): string {
+  const ch = (c: number) => {
+    const s = c / 255
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4
+  }
+  const lum = (c: number[]) => 0.2126 * ch(c[0]) + 0.7152 * ch(c[1]) + 0.0722 * ch(c[2])
+  const con = (a: number[], b: number[]) => {
+    const [x, y] = [lum(a), lum(b)].sort((m, n) => n - m)
+    return (x + 0.05) / (y + 0.05)
+  }
+  let rgb = [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16))
+  const ok = (c: number[]) => (role === 'background' ? con(c, [15, 23, 42]) >= 12 : con(c, [255, 255, 255]) >= (role === 'dark' ? 10 : 4.5))
+  for (let i = 0; i < 60 && !ok(rgb); i++) rgb = role === 'background' ? rgb.map((c) => c + (255 - c) * 0.08) : rgb.map((c) => c * 0.92)
+  return '#' + rgb.map((c) => Math.round(Math.max(0, Math.min(255, c))).toString(16).padStart(2, '0')).join('')
+}
+const PAGE_HEX = /^#[0-9a-f]{6}$/i
+const pageColorValue = (v: unknown, swatches: Set<string>, role: 'primary' | 'dark' | 'background') =>
+  typeof v === 'string' ? (swatches.has(v) ? v : PAGE_HEX.test(v) ? fitPageHex(v.toLowerCase(), role) : undefined) : undefined
+
 function cleanPageTheme(value: unknown) {
   const v = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>
   const theme: Record<string, string> = {}
-  if (typeof v.color === 'string' && PAGE_COLORS.has(v.color)) theme.color = v.color
+  const color = pageColorValue(v.color, PAGE_COLORS, 'primary')
+  if (color) theme.color = color
   const cover = pageUrl(v.cover)
   if (cover) theme.cover = cover
-  if (typeof v.background === 'string' && PAGE_BACKGROUNDS.has(v.background)) theme.background = v.background
+  const background = pageColorValue(v.background, PAGE_BACKGROUNDS, 'background')
+  if (background) theme.background = background
   // Service Business dark bands (14/11/2026); copy of PAGE_DARKS in memberPageTemplates.ts.
-  if (typeof v.dark === 'string' && PAGE_DARKS.has(v.dark)) theme.dark = v.dark
+  const dark = pageColorValue(v.dark, PAGE_DARKS, 'dark')
+  if (dark) theme.dark = dark
   // The floating button (14/11/2026): one of the page's own buttons, by type.
   if (typeof v.floating === 'string' && v.floating.startsWith('contact:') && MEMBER_LINK_TYPES.includes(v.floating.slice('contact:'.length))) {
     theme.floating = v.floating

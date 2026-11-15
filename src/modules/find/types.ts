@@ -151,17 +151,18 @@ export type MemberPageBackground = 'cream' | 'mist' | 'sky' | 'mint' | 'blush' |
 export type MemberPageDark = 'black' | 'graphite' | 'wine' | 'forest' | 'petrol' | 'plum' | 'brown'
 
 export interface MemberPageTheme {
-  color?: MemberPageColor
+  // A swatch id, or since 15/11/2026 the member's own "#rrggbb" (made readable).
+  color?: MemberPageColor | `#${string}`
   // A wide image behind the top of the page.
   cover?: string
-  background?: MemberPageBackground
+  background?: MemberPageBackground | `#${string}`
   // The button that stays in the corner while visitors scroll (14/11/2026):
   // 'contact:<type>' — one of the page's own buttons. Absent = none. Open to
   // every plan, like the background.
   floating?: string
   // Service Business: the color of the dark top and contact band. Absent =
   // navy. Open to every plan, like the background.
-  dark?: MemberPageDark
+  dark?: MemberPageDark | `#${string}`
 }
 
 // What the subscriber's plan lets them do with their page.

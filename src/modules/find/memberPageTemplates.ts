@@ -74,6 +74,50 @@ export const PAGE_BACKGROUNDS: { id: MemberPageBackground; label: string; hex: s
   { id: 'lavender', label: 'Lavender', hex: '#F3F0FB' },
 ]
 
+// Any color, not only the swatches (15/11/2026, the owner's decision): the
+// main color, the dark color and the background may also be a "#rrggbb" the
+// member picked. Every custom color is first made READABLE — darkened or
+// lightened in small steps until it reaches the same contrast the swatches
+// were chosen for — so a pale yellow never leaves white button text
+// unreadable. The same rule is copied in api/account.ts and api/admin.ts
+// (fitPageHex), which apply it again on save — change all three.
+export type PageColorRole = 'primary' | 'dark' | 'background'
+const HEX_COLOR = /^#[0-9a-f]{6}$/i
+export const isHexColor = (v: unknown): v is string => typeof v === 'string' && HEX_COLOR.test(v)
+const channel = (c: number) => {
+  const s = c / 255
+  return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4
+}
+const luminance = ([r, g, b]: number[]) => 0.2126 * channel(r) + 0.7152 * channel(g) + 0.0722 * channel(b)
+const contrast = (a: number[], b: number[]) => {
+  const [x, y] = [luminance(a), luminance(b)].sort((m, n) => n - m)
+  return (x + 0.05) / (y + 0.05)
+}
+const hexRgb = (hex: string) => [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16))
+const rgbHex = (rgb: number[]) => '#' + rgb.map((c) => Math.round(Math.max(0, Math.min(255, c))).toString(16).padStart(2, '0')).join('')
+const WHITE = [255, 255, 255]
+const NAVY = [15, 23, 42]
+// primary: white text on it ≥ 4.5:1 · dark: white text ≥ 10:1 · background: navy text ≥ 12:1
+export function fitPageHex(hex: string, role: PageColorRole): string {
+  let rgb = hexRgb(hex.toLowerCase())
+  const ok = (c: number[]) => (role === 'background' ? contrast(c, NAVY) >= 12 : contrast(c, WHITE) >= (role === 'dark' ? 10 : 4.5))
+  for (let i = 0; i < 60 && !ok(rgb); i++) rgb = role === 'background' ? rgb.map((c) => c + (255 - c) * 0.08) : rgb.map((c) => c * 0.92)
+  return rgbHex(rgb)
+}
+// What a page's theme resolves to: a swatch's value, or the member's own color.
+export function pagePrimaryRgb(color: string | undefined): string | null {
+  if (isHexColor(color)) return hexRgb(color).join(' ')
+  return PAGE_COLORS.find((c) => c.id === color)?.rgb ?? null
+}
+export function pageBackgroundHex(background: string | undefined): string | null {
+  if (isHexColor(background)) return background
+  return PAGE_BACKGROUNDS.find((c) => c.id === background)?.hex ?? null
+}
+export function pageDarkHex(dark: string | undefined): string | null {
+  if (isHexColor(dark)) return dark
+  return PAGE_DARKS.find((c) => c.id === dark)?.hex ?? null
+}
+
 // Sections whose content is the page's own (name, buttons, services…):
 // one of each per page — a second copy would only repeat the same items.
 export const SINGLE_BLOCK_TYPES: MemberPageBlockType[] = ['hero', 'highlights', 'services', 'about', 'products', 'signup']

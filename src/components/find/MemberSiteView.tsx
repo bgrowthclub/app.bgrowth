@@ -8,7 +8,7 @@ import MemberPagePromo from './MemberPagePromo'
 import ReportPageLink from './ReportPageLink'
 import { usePageTexts } from '../../lib/usePageTexts'
 import { MEMBER_PAGE_LABELS, memberLinkHref, memberLinkLabel, videoEmbed } from '../../modules/find/memberPageService'
-import { PAGE_BACKGROUNDS, PAGE_COLORS, PAGE_DARKS, blockLinks, pageBlocks } from '../../modules/find/memberPageTemplates'
+import { blockLinks, pageBackgroundHex, pageBlocks, pageDarkHex, pagePrimaryRgb } from '../../modules/find/memberPageTemplates'
 import { isUsableLink, pageButtonProps } from '../../modules/find/memberPageService'
 import type { MemberPageSkin } from '../../modules/find/memberPageTemplates'
 import type { MemberPage, MemberPageBlock, MemberPageHighlight, MemberPageLink, MemberPageProductCategory } from '../../modules/find/types'
@@ -114,12 +114,16 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
   const look = LOOK[skin]
   // The one-column looks: Link Page and Personal Card share everything but the top.
   const narrow = skin === 'links' || skin === 'card'
-  const color = PAGE_COLORS.find((c) => c.id === page.theme?.color)
+  // A swatch or the member's own color (15/11/2026).
+  const primaryRgb = pagePrimaryRgb(page.theme?.color)
+  const color = primaryRgb ? { rgb: primaryRgb } : undefined
   // The page's own background tint (any plan); none = the look's default.
-  const background = PAGE_BACKGROUNDS.find((c) => c.id === page.theme?.background)
+  const backgroundHex = pageBackgroundHex(page.theme?.background)
+  const background = backgroundHex ? { hex: backgroundHex } : undefined
   // Service Business: the member's dark color for the dark bands; none = navy.
   // Service Business and, since 15/11/2026, Local Services take the chosen dark color.
-  const dark = skin === 'service' || skin === 'local' ? PAGE_DARKS.find((c) => c.id === page.theme?.dark) : undefined
+  const darkHex = skin === 'service' || skin === 'local' ? pageDarkHex(page.theme?.dark) : null
+  const dark = darkHex ? { hex: darkHex } : undefined
   const darkStyle = dark ? { backgroundColor: dark.hex } : undefined
   const style = {
     ...(color ? { '--color-primary-rgb': color.rgb, '--color-primary-accent-rgb': color.rgb, '--color-primary': `rgb(${color.rgb})`, '--color-primary-accent': `rgb(${color.rgb})` } : {}),
