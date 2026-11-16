@@ -1,4 +1,6 @@
 import { isUsableLink } from './memberPageService'
+import { importedLook, importedModels, importedShowcase, importedTemplate } from './importedModels'
+import type { ImportedPageModel } from './importedModels'
 import type { MemberPage, MemberPageBackground, MemberPageBlock, MemberPageBlockType, MemberPageColor, MemberPageDark, MemberPageLink } from './types'
 
 // Ready-made member pages ("My Business Page"): four models — four looks of
@@ -20,6 +22,10 @@ export interface MemberPageTemplate {
   blocks: MemberPageBlock[]
   // Example texts that fill an empty page when the model is chosen.
   example: Partial<MemberPageContent>
+  // An imported model (16/11/2026): the look that draws it, and the model
+  // itself (for its showcase photos). Built-in models have neither.
+  look?: MemberPageSkin
+  imported?: ImportedPageModel
 }
 
 export const BLOCK_TYPES: { type: MemberPageBlockType; label: string; hint: string }[] = [
@@ -195,7 +201,13 @@ const b = (type: MemberPageBlockType, data?: MemberPageBlock['data']): MemberPag
 // The four models (decided 19/10/2026): four looks ("skins") of the same page —
 // same fields and blocks, different layout and identity. Each comes with
 // its sections and example texts in the page's language.
+// Every model a page can use: the built-in ones, then the models imported in
+// Admin → Pages → Page models that are live (importedModels.ts).
 export function memberPageTemplates(lang: Lang): MemberPageTemplate[] {
+  return [...builtInTemplates(lang), ...importedModels().map((m) => importedTemplate(m, lang))]
+}
+
+function builtInTemplates(lang: Lang): MemberPageTemplate[] {
   const L = (en: string, pt: string) => (lang === 'pt' ? pt : en)
   return [
     {
@@ -655,10 +667,15 @@ const BORROWED_SKIN: Record<string, MemberPageSkin> = { payments: 'links', simpl
 export function pageSkin(template: string | null | undefined): MemberPageSkin | null {
   const id = template ?? ''
   if (BORROWED_SKIN[id]) return BORROWED_SKIN[id]
+  // An imported model is drawn by the look it was made for.
+  const own = importedLook(id)
+  if (own) return own
   return SKINS.includes(id as MemberPageSkin) ? (id as MemberPageSkin) : null
 }
 
-export const MEMBER_PAGE_TEMPLATES = memberPageTemplates('en')
+// The BUILT-IN models only (computed once). Lists that must include the
+// imported ones call memberPageTemplates('en').
+export const MEMBER_PAGE_TEMPLATES = builtInTemplates('en')
 
 // The blocks a page shows: its own, or — for pages made before blocks —
 // the original fixed layout.
@@ -802,7 +819,22 @@ const SAMPLE: Record<string, { name: string; location: { en: string; pt: string 
   },
 }
 
-export function templatePreview(t: MemberPageTemplate, lang: Lang): MemberPageContent & { blocks: MemberPageBlock[]; theme: { color: MemberPageColor }; template: string } {
+export function templatePreview(t: MemberPageTemplate, lang: Lang): MemberPageContent & { blocks: MemberPageBlock[]; theme: { color: MemberPageColor; cover?: string }; template: string } {
+  // An imported model shows its own example, with its showcase photos.
+  if (t.imported) {
+    const { cover, ...show } = importedShowcase(t.imported, lang)
+    return {
+      ...show,
+      links: [
+        { type: 'whatsapp', label: '', url: '+1 555 123 4567' },
+        { type: 'email', label: '', url: 'hello@example.com' },
+        { type: 'instagram', label: '', url: 'https://instagram.com/' },
+      ],
+      language: lang,
+      theme: { color: t.color, ...(cover ? { cover } : {}) },
+      template: t.id,
+    }
+  }
   const s = SAMPLE[t.id] ?? SAMPLE.professional
   return {
     display_name: s.name,

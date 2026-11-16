@@ -1,3 +1,4 @@
+import { setImportedModels } from '../find/importedModels'
 import { supabase } from '../identity/supabase/supabaseClient'
 import type { SiteAnnouncement, SiteContentRow } from './types'
 
@@ -77,7 +78,10 @@ export async function getSiteAccess(): Promise<{ open: boolean; pages: string[] 
   try {
     const res = await fetch('/api/ingles?action=site')
     if (!res.ok) return { open: false, pages: [] }
-    const data = (await res.json()) as { open?: boolean; pages?: unknown }
+    const data = (await res.json()) as { open?: boolean; pages?: unknown; models?: unknown }
+    // The live imported page models (16/11/2026): known before any page is
+    // drawn, since the SiteGate waits for this answer.
+    setImportedModels(data.models)
     const pages = Array.isArray(data.pages) ? data.pages.filter((s): s is string => typeof s === 'string').map((s) => s.toLowerCase()) : []
     return { open: data.open === true, pages }
   } catch {

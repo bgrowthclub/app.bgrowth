@@ -10,6 +10,7 @@ import MemberPageBuilder from '../../../components/find/MemberPageBuilder'
 import { INPUT } from '../../../components/admin/styles'
 import AdminMemberPageStats from '../../../components/admin/AdminMemberPageStats'
 import AdminPageModelsPanel from '../../../components/admin/AdminPageModelsPanel'
+import ImportedModelsPanel from '../../../components/admin/ImportedModelsPanel'
 import MemberPageReviewQueue from '../../../components/admin/MemberPageReviewQueue'
 import { CARD, SMALL_BUTTON } from '../../../components/admin/styles'
 import { adminService } from '../../../modules/admin/adminService'
@@ -165,6 +166,7 @@ export default function AdminMemberPagesPage() {
           )}
 
           {!editing && <AdminPageModelsPanel />}
+          {!editing && <ImportedModelsPanel />}
 
           {numbers && !editing && <AdminMemberPageStats key={numbers.id} page={numbers} onClose={() => setNumbers(null)} />}
           {contacts && !editing && (

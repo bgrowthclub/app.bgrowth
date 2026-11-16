@@ -4,7 +4,7 @@ import Button from '../ui/Button'
 import { CARD, INPUT, SMALL_BUTTON, LINK_BUTTON, formatDate, pillClass } from './styles'
 import { adminService } from '../../modules/admin/adminService'
 import type { AdminPageTemplates } from '../../modules/admin/types'
-import { MEMBER_PAGE_TEMPLATES } from '../../modules/find/memberPageTemplates'
+import { memberPageTemplates } from '../../modules/find/memberPageTemplates'
 
 // Admin → Pages → Page models (14/11/2026, the owner's decision): how many
 // pages use each model, and retiring one. A retired model gets an end date
@@ -18,7 +18,7 @@ const DEFAULT_MESSAGE = (from: string, to: string, date: string) =>
 
 Olá! O modelo “${from}” da sua página BGrowth vai ser descontinuado. Em ${date} sua página passa sozinha para o modelo “${to}” — seus textos, botões e fotos continuam iguais. Se preferir outro modelo, você pode trocar antes disso em My Business Page.`
 
-const nameOf = (id: string) => MEMBER_PAGE_TEMPLATES.find((t) => t.id === id)?.name.en ?? id
+const nameOf = (id: string) => memberPageTemplates('en').find((t) => t.id === id)?.name.en ?? id
 const tomorrow = () => new Date(Date.now() + 86_400_000).toISOString().slice(0, 10)
 
 export default function AdminPageModelsPanel() {
@@ -60,7 +60,7 @@ export default function AdminPageModelsPanel() {
   }
 
   const archive = data?.archive ?? {}
-  const live = MEMBER_PAGE_TEMPLATES.filter((t) => !archive[t.id] || archive[t.id].finishedAt)
+  const live = memberPageTemplates('en').filter((t) => !archive[t.id] || archive[t.id].finishedAt)
 
   return (
     <div className={`${CARD} p-5`}>
@@ -79,7 +79,7 @@ export default function AdminPageModelsPanel() {
           {!data && !error && <p className="text-[13.5px] text-navy/40">Loading…</p>}
 
           {data &&
-            MEMBER_PAGE_TEMPLATES.map((t) => {
+            memberPageTemplates('en').map((t) => {
               const pages = data.usage[t.id] ?? []
               const entry = archive[t.id]
               const owners = pages.filter((p) => p.hasOwner).length

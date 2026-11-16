@@ -2811,7 +2811,7 @@ function readMemberPageInput(req: VercelRequest) {
     status: b.status === 'published' ? 'published' : 'draft',
     // Blocks, model and look (migration 0062) — only sent once that runs.
     ...(b.blocks !== undefined
-      ? { blocks: cleanPageBlocks(b.blocks), theme: cleanPageTheme(b.theme), template: PAGE_TEMPLATES.has(b.template) ? b.template : null }
+      ? { blocks: cleanPageBlocks(b.blocks), theme: cleanPageTheme(b.theme), template: PAGE_TEMPLATES.has(b.template) || MODEL_ID_RE.test(str(b.template)) ? b.template : null }
       : {}),
   }
 }
@@ -3157,6 +3157,197 @@ async function listPageTemplates(_req: VercelRequest, db: Db) {
     ;(usage[key] ??= []).push({ id: p.id, slug: p.slug, name: p.display_name, status: p.status, hasOwner: Boolean(p.user_id) })
   }
   return { archive, usage }
+}
+
+// ---------------------------------------------------------------------------
+// Imported page models (16/11/2026, plan item 23). A "page package" (.zip,
+// contract in the Plano BGrowth Pages doc) is read in the browser
+// (src/modules/find/modelPackage.ts); its photos come here one by one
+// (page-model-image) and then the model itself (PUT page-models). Kept in
+// site_settings key `page_models` as { models: [...] }; the live ones reach
+// every visitor through api/ingles.ts?action=site. A model is data drawn by
+// a look that exists in code. Same shape as src/modules/find/importedModels.ts
+// (ImportedPageModel) — change both.
+const PAGE_MODELS_KEY = 'page_models'
+const MODEL_ID_RE = /^[a-z0-9][a-z0-9-]{1,39}$/
+const MODEL_LOOKS = ['professional', 'local', 'service', 'creative', 'personal', 'affiliate', 'picks', 'links', 'card']
+const MODEL_COLORS = ['blue', 'teal', 'green', 'purple', 'rose', 'orange', 'navy']
+const MODEL_BLOCKS = ['hero', 'contact', 'highlights', 'services', 'about', 'testimonials', 'gallery', 'text', 'faq', 'area', 'cta', 'credentials', 'products', 'signup']
+const MODEL_SINGLE = ['hero', 'contact', 'highlights', 'services', 'about', 'products', 'signup']
+
+async function readPageModels(db: Db): Promise<Record<string, any>[]> {
+  const { data, error } = await db.from('site_settings').select('value').eq('key', PAGE_MODELS_KEY).maybeSingle()
+  if (error) throw error
+  const list = (data?.value as { models?: unknown })?.models
+  return Array.isArray(list) ? (list as Record<string, any>[]) : []
+}
+
+async function writePageModels(db: Db, admin: Admin, models: Record<string, any>[]) {
+  const { error } = await db
+    .from('site_settings')
+    .upsert({ key: PAGE_MODELS_KEY, value: { models }, updated_at: new Date().toISOString(), updated_by: admin.email })
+  if (error) throw error
+}
+
+function modelBi(v: any, max: number, what: string, required = false): { en: string; pt: string } | undefined {
+  const en = typeof v?.en === 'string' ? v.en.trim().slice(0, max) : ''
+  const pt = typeof v?.pt === 'string' ? v.pt.trim().slice(0, max) : ''
+  if (!en && !pt) {
+    if (required) throw new HttpError(400, `${what}: missing text (en and pt).`)
+    return undefined
+  }
+  return { en: en || pt, pt: pt || en }
+}
+
+function modelImage(v: unknown): string | undefined {
+  const url = typeof v === 'string' ? v.trim() : ''
+  return /^https:\/\/[^\s"'<>]+$/.test(url) ? url.slice(0, 600) : undefined
+}
+
+function cleanImportedModel(raw: any): Record<string, any> {
+  const id = str(raw?.id)
+  if (!MODEL_ID_RE.test(id)) throw new HttpError(400, 'Model id: use lowercase letters, numbers and hyphens (2–40).')
+  if (PAGE_TEMPLATES.has(id)) throw new HttpError(409, `“${id}” is a built-in model — choose another id.`)
+  if (!MODEL_LOOKS.includes(raw?.look)) throw new HttpError(400, `Unknown look “${raw?.look}”.`)
+  if (!MODEL_COLORS.includes(raw?.color)) throw new HttpError(400, `Unknown color “${raw?.color}”.`)
+  const blocksIn = Array.isArray(raw?.blocks) ? raw.blocks : []
+  if (blocksIn.length < 2 || blocksIn.length > 14) throw new HttpError(400, 'A model needs 2 to 14 sections.')
+  const seen = new Set<string>()
+  const blocks = blocksIn.map((bl: any, i: number) => {
+    const type = str(bl?.type)
+    if (!MODEL_BLOCKS.includes(type)) throw new HttpError(400, `Section ${i + 1}: unknown type “${type}”.`)
+    if (MODEL_SINGLE.includes(type) && seen.has(type)) throw new HttpError(400, `Section “${type}” appears twice.`)
+    seen.add(type)
+    const d = bl?.data ?? {}
+    const data: Record<string, unknown> = {}
+    const title = modelBi(d.title, 160, `Section ${i + 1} title`)
+    const body = modelBi(d.body, 1200, `Section ${i + 1} text`)
+    const button = modelBi(d.button, 40, `Section ${i + 1} button`)
+    if (title) data.title = title
+    if (body) data.body = body
+    if (button) data.button = button
+    const link = str(d.buttonLink).slice(0, 300)
+    if (link && (/^#[a-z]+$/.test(link) || /^https:\/\//.test(link) || /^contact:[a-z_]+$/.test(link))) data.buttonLink = link
+    if (Array.isArray(d.items)) {
+      const items = d.items.slice(0, 12).flatMap((it: any) => {
+        const t = modelBi(it?.title, 300, 'Item')
+        return t ? [{ title: t, ...(modelBi(it?.body, 800, 'Item') ? { body: modelBi(it?.body, 800, 'Item') } : {}) }] : []
+      })
+      if (items.length) data.items = items
+    }
+    return { type, ...(Object.keys(data).length ? { data } : {}) }
+  })
+  const ex = raw?.example ?? {}
+  const services = (Array.isArray(ex.services) ? ex.services : []).slice(0, 8).flatMap((sv: any) => {
+    const title = modelBi(sv?.title, 120, 'Service')
+    if (!title) return []
+    const description = modelBi(sv?.description, 400, 'Service')
+    const price = modelBi(sv?.price, 40, 'Service')
+    return [{ title, ...(description ? { description } : {}), ...(price ? { price } : {}) }]
+  })
+  const highlights = (Array.isArray(ex.highlights) ? ex.highlights : []).slice(0, 8).flatMap((h: any) => {
+    const title = modelBi(h?.title, 120, 'Highlight')
+    if (!title) return []
+    const description = modelBi(h?.description, 400, 'Highlight')
+    return [{ title, ...(description ? { description } : {}) }]
+  })
+  const example: Record<string, unknown> = {}
+  for (const [k, max] of [['headline', 140], ['bio', 1500], ['location', 100]] as const) {
+    const v = modelBi(ex[k], max, k)
+    if (v) example[k] = v
+  }
+  if (services.length) example.services = services
+  if (highlights.length) example.highlights = highlights
+  const im = raw?.images ?? {}
+  const list = (v: unknown, n: number) => (Array.isArray(v) ? v.slice(0, n).map((x) => modelImage(x) ?? null) : [])
+  const images: Record<string, unknown> = {}
+  for (const k of ['photo', 'cover', 'about']) {
+    const u = modelImage(im[k])
+    if (u) images[k] = u
+  }
+  const gallery = list(im.gallery, 12).filter(Boolean)
+  if (gallery.length) images.gallery = gallery
+  const svcImages = list(im.services, services.length)
+  if (svcImages.some(Boolean)) images.services = svcImages
+  const hlImages = list(im.highlights, highlights.length)
+  if (hlImages.some(Boolean)) images.highlights = hlImages
+  const categories = (Array.isArray(raw?.categories) ? raw.categories : []).filter((c: unknown) => typeof c === 'string').map((c: string) => c.trim().slice(0, 80)).filter(Boolean).slice(0, 5)
+  return {
+    id,
+    look: raw.look,
+    color: raw.color,
+    categories,
+    name: modelBi(raw?.name, 60, 'Name', true),
+    description: modelBi(raw?.description, 400, 'Description', true),
+    blocks,
+    example,
+    images,
+  }
+}
+
+async function listPageModels(_req: VercelRequest, db: Db) {
+  return { models: await readPageModels(db) }
+}
+
+// A model's photo: stored once, under pages/models/<id>/ (showcase only).
+async function uploadPageModelImage(req: VercelRequest, db: Db) {
+  const id = str(req.body?.modelId)
+  if (!MODEL_ID_RE.test(id)) throw new HttpError(400, 'Which model?')
+  const name = str(req.body?.name).toLowerCase()
+  if (!/^[a-z0-9][a-z0-9_-]{0,40}\.(jpg|jpeg|png|webp)$/.test(name)) throw new HttpError(400, `Photo name “${name}” is not allowed.`)
+  const match = /^data:(image\/(png|jpeg|webp));base64,([A-Za-z0-9+/=]+)$/.exec(str(req.body?.dataUrl))
+  if (!match) throw new HttpError(400, 'Use a PNG, JPG or WebP image.')
+  const bytes = Buffer.from(match[3], 'base64')
+  if (bytes.length > 1024 * 1024) throw new HttpError(413, `“${name}” is too large (1 MB max).`)
+  // A new folder per import, so a re-import never shows an old cached photo.
+  const batch = /^[a-z0-9]{6,20}$/.test(str(req.body?.batch)) ? str(req.body?.batch) : Date.now().toString(36)
+  const path = `pages/models/${id}/${batch}/${name}`
+  const { error } = await db.storage.from('portal-product-assets').upload(path, bytes, { contentType: match[1], upsert: true })
+  if (error) throw error
+  return { url: db.storage.from('portal-product-assets').getPublicUrl(path).data.publicUrl }
+}
+
+// Save (new or replacing) a model. A new import is a draft; replacing keeps
+// the status it had, unless `status` is sent.
+async function savePageModel(req: VercelRequest, db: Db, admin: Admin) {
+  const model = cleanImportedModel(req.body?.model)
+  const models = await readPageModels(db)
+  const i = models.findIndex((m) => m.id === model.id)
+  if (i >= 0 && req.body?.replace !== true) throw new HttpError(409, `A model “${model.id}” already exists — tick “Replace” to overwrite it.`)
+  const now = new Date().toISOString()
+  const status = req.body?.status === 'live' || req.body?.status === 'draft' ? req.body.status : i >= 0 ? models[i].status : 'draft'
+  const saved = { ...model, status, importedAt: i >= 0 ? models[i].importedAt ?? now : now, updatedAt: now }
+  if (i >= 0) models[i] = saved
+  else models.push(saved)
+  await writePageModels(db, admin, models)
+  return { model: saved, replaced: i >= 0 }
+}
+
+async function setPageModelStatus(req: VercelRequest, db: Db, admin: Admin) {
+  const id = str(req.body?.id)
+  const status = req.body?.status === 'live' ? 'live' : 'draft'
+  const models = await readPageModels(db)
+  const m = models.find((x) => x.id === id)
+  if (!m) throw new HttpError(404, 'Model not found.')
+  if (status === 'draft') {
+    const { count } = await db.from('member_pages').select('id', { count: 'exact', head: true }).eq('template', id)
+    if (count) throw new HttpError(409, `${count} page(s) use this model — it can't go back to draft. Retire it instead.`)
+  }
+  m.status = status
+  m.updatedAt = new Date().toISOString()
+  await writePageModels(db, admin, models)
+  return { id, status, name: m.name?.en ?? id }
+}
+
+async function deletePageModel(req: VercelRequest, db: Db, admin: Admin) {
+  const id = str(req.query.id)
+  const models = await readPageModels(db)
+  const m = models.find((x) => x.id === id)
+  if (!m) throw new HttpError(404, 'Model not found.')
+  const { count } = await db.from('member_pages').select('id', { count: 'exact', head: true }).eq('template', id)
+  if (count) throw new HttpError(409, `${count} page(s) use this model — it can't be deleted.`)
+  await writePageModels(db, admin, models.filter((x) => x.id !== id))
+  return { id, name: m.name?.en ?? id }
 }
 
 async function archivePageTemplate(req: VercelRequest, db: Db, admin: Admin) {
@@ -3600,8 +3791,9 @@ function cleanPageEntitlements(v: Record<string, any>) {
   if (v.memberPage !== 'partial' && v.memberPage !== 'full') return out
   out.memberPage = v.memberPage
   if (Array.isArray(v.pageTemplates)) {
-    const list = [...new Set(v.pageTemplates.filter((t: unknown) => typeof t === 'string' && PAGE_TEMPLATES.has(t)))]
-    if (list.length && list.length < PAGE_TEMPLATES.size) out.pageTemplates = list
+    // Built-in ids or imported ones (16/11/2026). "All" is sent as no list.
+    const list = [...new Set(v.pageTemplates.filter((t: unknown) => typeof t === 'string' && (PAGE_TEMPLATES.has(t) || MODEL_ID_RE.test(t))))]
+    if (list.length) out.pageTemplates = list
   }
   const whole = (n: unknown, min: number, max: number) => {
     const x = Math.round(Number(n))
@@ -4300,6 +4492,12 @@ function describe(key: string, b: Body, r: Record<string, any>): Described {
       }
     case 'PUT site-open':
       return { area: 'site', summary: r.open ? 'Opened the site to everyone' : 'Closed the site (Coming soon for visitors)' }
+    case 'PUT page-models':
+      return { area: 'pages', summary: `${r.replaced ? 'Replaced' : 'Imported'} the page model “${r.model?.name?.en ?? r.model?.id}”${r.replaced ? '' : ' (draft)'}` }
+    case 'PUT page-model-status':
+      return { area: 'pages', summary: r.status === 'live' ? `Published the page model “${r.name}”` : `Took the page model “${r.name}” back to draft` }
+    case 'DELETE page-models':
+      return { area: 'pages', summary: `Deleted the page model “${r.name}”` }
     case 'PUT page-template-archive':
       return { area: 'pages', summary: `Archived the page model “${r.template}”: its pages move to “${r.replaceWith}” on ${r.endsAt}` }
     case 'DELETE page-template-archive':
@@ -4855,6 +5053,11 @@ const ROUTES: Record<string, Route> = {
   'PUT site-open': (req, db, admin) => setSiteOpen(req, db, admin),
   'PUT page-self-service': (req, db, admin) => setPageSelfService(req, db, admin),
   'GET page-templates': (req, db) => listPageTemplates(req, db),
+  'GET page-models': (req, db) => listPageModels(req, db),
+  'POST page-model-image': (req, db) => uploadPageModelImage(req, db),
+  'PUT page-models': (req, db, admin) => savePageModel(req, db, admin),
+  'PUT page-model-status': (req, db, admin) => setPageModelStatus(req, db, admin),
+  'DELETE page-models': (req, db, admin) => deletePageModel(req, db, admin),
   'PUT page-template-archive': (req, db, admin) => archivePageTemplate(req, db, admin),
   'DELETE page-template-archive': (req, db, admin) => unarchivePageTemplate(req, db, admin),
   'POST page-template-notify': (req, db, admin) => notifyPageTemplateOwners(req, db, admin),

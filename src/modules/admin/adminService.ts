@@ -276,6 +276,22 @@ export const adminService = {
   unarchivePageTemplate(template: string) {
     return call<{ template: string }>('DELETE', 'page-template-archive', undefined, { template })
   },
+  // Imported page models (16/11/2026, plan item 23).
+  async listPageModels() {
+    return (await call<{ models: import('../find/importedModels').ImportedPageModel[] }>('GET', 'page-models')).models
+  },
+  async uploadPageModelImage(modelId: string, name: string, dataUrl: string, batch: string) {
+    return (await call<{ url: string }>('POST', 'page-model-image', undefined, { modelId, name, dataUrl, batch })).url
+  },
+  savePageModel(model: unknown, replace: boolean) {
+    return call<{ model: import('../find/importedModels').ImportedPageModel; replaced: boolean }>('PUT', 'page-models', undefined, { model, replace })
+  },
+  setPageModelStatus(id: string, status: 'live' | 'draft') {
+    return call<{ id: string; status: string }>('PUT', 'page-model-status', undefined, { id, status })
+  },
+  deletePageModel(id: string) {
+    return call<{ id: string }>('DELETE', 'page-models', { id })
+  },
   notifyPageTemplateOwners(template: string, message: string) {
     return call<{ template: string; sent: number; noOwner: number }>('POST', 'page-template-notify', undefined, { template, message })
   },

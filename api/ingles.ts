@@ -339,7 +339,20 @@ async function getCreator(req: VercelRequest, db: Db) {
 async function getSiteOpen(db: Db) {
   const { data, error } = await db.from('site_settings').select('value').eq('key', 'site_open').maybeSingle()
   if (error) throw error
-  return { open: data?.value === true, pages: await openPageSlugs(db), archivedTemplates: await archivedTemplates(db) }
+  return { open: data?.value === true, pages: await openPageSlugs(db), archivedTemplates: await archivedTemplates(db), models: await liveImportedModels(db) }
+}
+
+// Page models imported in Admin → Pages (16/11/2026): the live ones, for the
+// editor and for drawing pages made from them (src/modules/find/
+// importedModels.ts). Same key as api/admin.ts (PAGE_MODELS_KEY).
+async function liveImportedModels(db: Db): Promise<unknown[]> {
+  try {
+    const { data } = await db.from('site_settings').select('value').eq('key', 'page_models').maybeSingle()
+    const list = Array.isArray((data?.value as { models?: unknown })?.models) ? ((data!.value as { models: { status?: string }[] }).models) : []
+    return list.filter((m) => m && m.status === 'live')
+  } catch {
+    return []
+  }
 }
 
 // Page models being retired (14/11/2026): the editor hides them from the

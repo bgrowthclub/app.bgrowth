@@ -501,6 +501,16 @@ const PAGE_COLORS = new Set(['blue', 'teal', 'green', 'purple', 'rose', 'orange'
 // function must not import from src/ (CLAUDE.md §13). Keep the two in step
 // — a model missing here is saved as 'professional', silently, which is how
 // 'payments' shipped broken on 07/11/2026 and 'picks' before it.
+// Models imported in Admin → Pages (16/11/2026): any id of this shape is
+// accepted when read, then checked against site_settings `page_models` (same
+// key and shape as api/admin.ts PAGE_MODELS_KEY).
+const IMPORTED_MODEL_ID = /^[a-z0-9][a-z0-9-]{1,39}$/
+type ImportedModelRow = { id?: string; status?: string; color?: string; blocks?: { type?: string }[] }
+async function liveImportedModel(db: Db, id: string): Promise<ImportedModelRow | null> {
+  const { data } = await db.from('site_settings').select('value').eq('key', 'page_models').maybeSingle()
+  const list = (data?.value as { models?: ImportedModelRow[] })?.models
+  return (Array.isArray(list) && list.find((m) => m?.id === id && m.status === 'live')) || null
+}
 const PAGE_TEMPLATES = new Set([
   'professional', 'local', 'service', 'creative', 'personal', 'affiliate', 'picks', 'links', 'card', 'payments',
   'cleaning', 'notary', 'teacher', 'creator', 'simple', 'blank',
@@ -995,7 +1005,9 @@ function readMyPage(b: Record<string, any>) {
     highlights,
     language: b.language === 'pt' ? 'pt' : 'en',
     status: b.status === 'published' ? 'published' : 'draft',
-    template: PAGE_TEMPLATES.has(b.template) ? b.template : 'professional',
+    // A built-in model, or one imported in Admin → Pages (checked to be live
+    // in myPageAction, which can read the database).
+    template: PAGE_TEMPLATES.has(b.template) || IMPORTED_MODEL_ID.test(String(b.template ?? '')) ? b.template : 'professional',
     blocks: cleanPageBlocks(b.blocks),
     theme: cleanPageTheme(b.theme),
   }
@@ -1111,6 +1123,10 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string; emai
 
   if (req.method !== 'PUT') throw new HttpError(405, 'Use PUT.')
   const input = readMyPage((req.body ?? {}) as Record<string, any>)
+  // An imported model: its sections and color play the part of
+  // TEMPLATE_SEQUENCES / TEMPLATE_COLORS below.
+  const imported = PAGE_TEMPLATES.has(input.template) ? null : await liveImportedModel(db, input.template)
+  if (!PAGE_TEMPLATES.has(input.template) && !imported) throw new HttpError(400, 'This model isn’t available — choose another one.')
   if (templates && !templates.includes(input.template)) throw new HttpError(403, 'Your plan doesn’t include this model — choose another one or see the plans in Account → Membership.')
   // A model being retired (14/11/2026) can't be newly chosen; a page already
   // on it keeps saving until its end date. Same key as api/admin.ts.
@@ -1141,7 +1157,9 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string; emai
     const sequence = (input.blocks ?? []).filter((b) => b.type !== 'signup').map((b) => b.type).join(',')
     // An unknown model (a new one this copy hasn't caught up with) is let
     // through: a stale copy must never be the reason someone can't save.
-    const model = TEMPLATE_SEQUENCES[template]
+    const model = imported
+      ? (imported.blocks ?? []).map((b) => b?.type).filter((t) => t && t !== 'signup').join(',')
+      : TEMPLATE_SEQUENCES[template]
     if (model && !keepsModelSections(sequence, model)) throw new HttpError(400, 'Your plan keeps the model’s sections as they are.')
   }
   input.blocks = (input.blocks ?? []).map((b: any) => {
@@ -1152,7 +1170,7 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string; emai
     return hidden && f.hide && (b.type !== 'hero' || f.sections) ? { ...block, hidden: true } : block
   }) as typeof input.blocks
   input.theme = {
-    ...(f.color ? (input.theme.color ? { color: input.theme.color } : {}) : { color: TEMPLATE_COLORS[template] ?? input.theme.color }),
+    ...(f.color ? (input.theme.color ? { color: input.theme.color } : {}) : { color: (imported?.color as string | undefined) ?? TEMPLATE_COLORS[template] ?? input.theme.color }),
     ...(f.cover && input.theme.cover ? { cover: input.theme.cover } : {}),
     ...(f.style && input.theme.background ? { background: input.theme.background } : {}),
     ...(f.style && input.theme.floating ? { floating: input.theme.floating } : {}),

@@ -506,6 +506,30 @@ This repo is a **static, client-only MVP**:
   `pageBackgroundHex`, `pageDarkHex` (swatch id or hex). The same plan
   lines apply (color → "Choose the page color"; background/dark → the
   style line).
+  **Since Sprint 261 page models can be imported** (approved by the owner
+  16/11/2026, plan item 23; no migration): a "page package" (.zip made by
+  ChatGPT — contract v1 in the Plano BGrowth Pages doc: manifest.json with
+  `bgrowthPackage: 1`, models/<id>/model.json, models/<id>/assets/<photos>)
+  is read in the browser by `modules/find/modelPackage.ts` (fflate), checked
+  and previewed in Admin → Pages → **Imported models**
+  (`components/admin/ImportedModelsPanel`) before anything is saved. "Save as
+  draft" uploads the photos (`page-model-image`, pages/models/<id>/<batch>/)
+  and the model (`PUT page-models`); "Publish" (`page-model-status`) puts it in
+  every model list. All admin-only, logged in Activity. Kept in
+  `site_settings` key `page_models` ({ models: [...] }); the live ones reach
+  the browser through `api/ingles.ts?action=site` → `models`, registered by
+  `getSiteAccess()` (`setImportedModels`, `modules/find/importedModels.ts`)
+  before the SiteGate draws anything. A model is DATA drawn by a look that
+  exists in code (`look`); `memberPageTemplates()` = built-in + live imported,
+  `pageSkin()` asks the registry, `MEMBER_PAGE_TEMPLATES` stays built-in only.
+  The model's photos are a SHOWCASE (previews, the future model gallery):
+  `importedShowcase()` uses them, `importedTemplate()` (what a member's page
+  starts from) never does. api/account.ts accepts a live imported id and uses
+  its sections/color where it uses TEMPLATE_SEQUENCES/TEMPLATE_COLORS;
+  api/admin.ts accepts any id of the model shape; a plan's `pageTemplates`
+  list is kept as sent ("all" = no list). A model a page uses can't go back to
+  draft or be deleted. Same model shape in importedModels.ts and api/admin.ts
+  (`cleanImportedModel`) — change both.
   **Since Sprint 183 one table says what every plan does with every
   product** (approved by the owner 01/11/2026; Portal migration 0075):
   Admin → Plans → **Included** is now a product × plan grid where each cell

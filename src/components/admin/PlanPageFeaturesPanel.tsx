@@ -4,7 +4,7 @@ import { CARD, SMALL_BUTTON } from './styles'
 import { adminService } from '../../modules/admin/adminService'
 import type { AdminPlan } from '../../modules/admin/types'
 import type { PlanEntitlements } from '../../modules/commerce/types/membership'
-import { MEMBER_PAGE_TEMPLATES } from '../../modules/find/memberPageTemplates'
+import { memberPageTemplates } from '../../modules/find/memberPageTemplates'
 import { PAGE_FEATURE_MAX, pageFeaturesOf } from '../../modules/find/pageFeatures'
 import type { PageFeatures } from '../../modules/find/pageFeatures'
 
@@ -230,7 +230,7 @@ export default function PlanPageFeaturesPanel({ plans, onSaved }: { plans: Admin
                 Page models
               </td>
             </tr>
-            {MEMBER_PAGE_TEMPLATES.map((t) => (
+            {memberPageTemplates('en').map((t) => (
               <tr key={t.id} className="border-t border-navy/[0.05]">
                 <td className={label}>{t.name.en}</td>
                 {columns.map((p) => {
@@ -247,7 +247,7 @@ export default function PlanPageFeaturesPanel({ plans, onSaved }: { plans: Admin
                         aria-label={`${t.name.en} — ${p.name}`}
                         onChange={(e) =>
                           edit(p, (cur) => {
-                            const all = MEMBER_PAGE_TEMPLATES.map((x) => x.id)
+                            const all = memberPageTemplates('en').map((x) => x.id)
                             const now = cur.pageTemplates?.length ? cur.pageTemplates : all
                             const next = e.target.checked ? [...new Set([...now, t.id])] : now.filter((x) => x !== t.id)
                             // At least one model: an empty list would mean "all".
