@@ -112,7 +112,11 @@ export default function ImportedModelsPanel() {
       const urls: Record<string, string> = {}
       for (const photo of p.photos) urls[photo.name] = await adminService.uploadPageModelImage(p.model.id, photo.name, await photoDataUrl(photo), batch)
       const res = await adminService.savePageModel(withPhotoUrls(p.model, (n) => urls[n]), Boolean(replace[p.model.id]))
-      setPkg((cur) => (cur ? { ...cur, models: cur.models.filter((x) => x.model.id !== p.model.id) } : cur))
+      // The package box closes once nothing is left in it to save.
+      setPkg((cur) => {
+        const left = cur ? cur.models.filter((x) => x.model.id !== p.model.id) : []
+        return cur && left.length ? { ...cur, models: left } : null
+      })
       return `“${res.model.name.en}” saved as a draft. Check it below, then publish.`
     })
 
