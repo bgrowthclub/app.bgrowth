@@ -17,6 +17,7 @@ import StudioPurchaseCard from '../components/systems/StudioPurchaseCard'
 import StudioWorkspaceOutline from '../components/systems/StudioWorkspaceOutline'
 import ProductGalleryCarousel from '../components/systems/ProductGalleryCarousel'
 import ProductPlansStrip from '../components/systems/ProductPlansStrip'
+import ProductVideoButton from '../components/systems/ProductVideoButton'
 import { planService } from '../modules/account/planService'
 import type { StoredPlan } from '../modules/commerce/types/membership'
 import { ArrowLeft, ChevronDown } from 'lucide-react'
@@ -224,6 +225,10 @@ export default function ProductPage() {
     const about = product.longDescription && product.longDescription !== heroText ? product.longDescription : product.subtitle && product.description !== heroText ? product.description : ''
     const checks = product.benefits.map((b) => b.title).filter(Boolean).slice(0, 6)
     const cover = product.assets.heroImage ?? product.assets.thumbnail ?? null
+    // The video opens from "Watch video" (16/11/2026); the gallery keeps the
+    // photos. With no photo at all, the video stays at the top instead.
+    const video = gallery?.video && gallery.images.length > 0 ? gallery.video : null
+    const topGallery = gallery && video ? { ...gallery, video: null } : gallery
     return (
       <div className="pt-28 md:pt-32">
         <SEO title={product.title} description={product.description} path={`/product/${product.slug}`} ogImage={product.assets.thumbnail ?? undefined} />
@@ -234,8 +239,8 @@ export default function ProductPage() {
 
           <section className="grid gap-8 lg:grid-cols-[1.05fr_1fr] lg:items-start">
             <div className="min-w-0">
-              {gallery ? (
-                <ProductGalleryCarousel gallery={gallery} title={product.title} />
+              {topGallery ? (
+                <ProductGalleryCarousel gallery={topGallery} title={product.title} />
               ) : cover ? (
                 <img src={cover} alt="" className="aspect-[4/3] w-full rounded-xl3 border border-navy/[0.06] object-cover shadow-softer" />
               ) : null}
@@ -253,6 +258,11 @@ export default function ProductPage() {
                 <ReviewSummaryLine summary={reviews.summary} href={`#${REVIEWS_ID}`} />
               </div>
               <div className="mt-5">{studioCard()}</div>
+              {video && (
+                <div className="mt-3">
+                  <ProductVideoButton video={video} title={product.title} />
+                </div>
+              )}
               {bundles.length > 0 && (
                 <div className="mt-4 space-y-2">
                   {bundles.map(({ bundle, items }) => (
