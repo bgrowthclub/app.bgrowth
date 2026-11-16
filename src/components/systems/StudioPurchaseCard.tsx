@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, Check, Loader2 } from 'lucide-react'
+import { ArrowRight, Download, Loader2, MonitorSmartphone, Save, Zap } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import Button from '../ui/Button'
 import type { Product } from '../../modules/commerce/types/product'
 import { studioProductNoun } from '../../modules/workspace/lib/productNoun'
@@ -30,36 +31,32 @@ interface Props {
   className?: string
 }
 
-const QUICK_SUMMARY = [
-  'Interactive Workspace™ you fill in online',
-  'Save as many records as you need',
-  'Print or download as PDF',
-  'Works on desktop, tablet and mobile',
-]
-
-// A Studio calculator (Sprint 78) is sold the same way.
-const CALCULATOR_SUMMARY = [
-  'Interactive Calculator™ — results update as you type',
-  'Save as many calculations as you need',
-  'Print or download as PDF',
-  'Works on desktop, tablet and mobile',
-]
-
-// A Download (Sprint 86): files the member keeps.
-// BGrowth Academy™ (30/10/2026): what a course gives the student.
-const COURSE_SUMMARY = [
-  'Lessons you work through at your own pace',
-  'Your progress is saved — come back where you left off',
-  'Text, video and files, plus the tools each lesson hands you',
-  'Works on desktop, tablet and mobile',
-]
-
-const DOWNLOAD_SUMMARY = [
-  'Download your files right after purchase',
-  'Yours to keep — download again any time from My Workspaces',
-  'Print-ready PDF',
-  'Instructions included when there are Canva links',
-]
+// Three short facts shown as icons above the price (16/11/2026, the owner's
+// design) — true of every product of that type; nothing is promised that the
+// product doesn't do.
+type Fact = { icon: LucideIcon; text: string }
+const FACTS: Record<string, Fact[]> = {
+  Workspace: [
+    { icon: Zap, text: 'Ready to use' },
+    { icon: Save, text: 'Saves your progress' },
+    { icon: MonitorSmartphone, text: 'Phone & computer' },
+  ],
+  Calculator: [
+    { icon: Zap, text: 'Results as you type' },
+    { icon: Save, text: 'Saves your calculations' },
+    { icon: MonitorSmartphone, text: 'Phone & computer' },
+  ],
+  Course: [
+    { icon: Zap, text: 'At your own pace' },
+    { icon: Save, text: 'Progress saved' },
+    { icon: MonitorSmartphone, text: 'Phone & computer' },
+  ],
+  Download: [
+    { icon: Download, text: 'Instant download' },
+    { icon: Save, text: 'Yours to keep' },
+    { icon: MonitorSmartphone, text: 'Print-ready PDF' },
+  ],
+}
 
 function money(value: number) {
   return `$${Number.isInteger(value) ? value : value.toFixed(2)}`
@@ -104,17 +101,19 @@ export default function StudioPurchaseCard({
   const [couponPath, setCouponPath] = useState(false)
   const showCouponPath = Boolean(member) && couponPath
   const noun = studioProductNoun(product)
-  const summary =
-    product.type === 'Calculator'
-      ? CALCULATOR_SUMMARY
-      : product.type === 'Course'
-        ? COURSE_SUMMARY
-        : product.type === 'Download'
-          ? DOWNLOAD_SUMMARY
-          : QUICK_SUMMARY
+  const facts = FACTS[product.type] ?? FACTS.Workspace
+  const priceText = free ? 'Free' : showCouponPath ? priceLabel(product) : memberLabel ?? priceLabel(product)
 
   return (
-    <div className={`rounded-xl3 border border-navy/[0.06] bg-white p-6 shadow-glow ${className}`}>
+    <div className={className}>
+      <ul className="mb-5 grid grid-cols-3 divide-x divide-navy/[0.08]">
+        {facts.map(({ icon: Icon, text }) => (
+          <li key={text} className="flex flex-col items-center gap-1.5 px-2 text-center text-[13px] font-medium leading-snug text-navy/75">
+            <Icon size={20} className="text-primary" aria-hidden />
+            {text}
+          </li>
+        ))}
+      </ul>
       {confirming ? (
         <div className="flex items-start gap-3 rounded-xl bg-bg-soft p-4">
           <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-primary" />
@@ -124,9 +123,10 @@ export default function StudioPurchaseCard({
         </div>
       ) : status === 'owned' ? (
         <>
-          <p className="text-[13px] font-semibold text-primary">
-            {trialActive ? 'Your free trial is active' : `You own this ${noun}`}
-          </p>
+          <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+            <span className="font-display text-3xl font-bold text-navy">{free ? 'Free' : priceLabel(product)}</span>
+            <span className="text-[13px] font-semibold text-primary">{trialActive ? 'Your free trial is active' : `You own this ${noun}`}</span>
+          </div>
           <Button to={openTo} icon={<ArrowRight size={16} />} className="mt-4 w-full">
             Open {noun}
           </Button>
@@ -140,15 +140,13 @@ export default function StudioPurchaseCard({
         <>
           <div className="flex items-baseline gap-2">
             {member && !showCouponPath && <span className="text-lg font-semibold text-navy/35 line-through">{priceLabel(product)}</span>}
-            <span className="font-display text-3xl font-bold text-navy">
-              {free ? 'Free' : showCouponPath ? priceLabel(product) : memberLabel ?? priceLabel(product)}
-            </span>
+            <span className="font-display text-3xl font-bold text-navy">{priceText}</span>
             {!free && <span className="text-[13px] text-navy/40">one-time</span>}
           </div>
           {!free && includedInPlan && (
             <p className="mt-1 text-[12.5px] text-navy/55">
               Included in the {includedInPlan} plan and above ·{' '}
-              <Link to="/pricing" className="font-semibold text-primary hover:underline">
+              <Link to="/platform/membership" className="font-semibold text-primary hover:underline">
                 See plans
               </Link>
             </p>
@@ -232,14 +230,6 @@ export default function StudioPurchaseCard({
 
       {error && <p className="mt-3 text-center text-[13px] text-red-500">{error}</p>}
 
-      <ul className="mt-6 space-y-2.5">
-        {summary.map((item) => (
-          <li key={item} className="flex items-center gap-2.5 text-[13px] text-navy/60">
-            <Check size={14} className="shrink-0 text-primary" />
-            {item}
-          </li>
-        ))}
-      </ul>
     </div>
   )
 }

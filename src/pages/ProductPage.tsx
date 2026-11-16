@@ -242,7 +242,7 @@ export default function ProductPage() {
               {topGallery ? (
                 <ProductGalleryCarousel gallery={topGallery} title={product.title} />
               ) : cover ? (
-                <img src={cover} alt="" className="aspect-[4/3] w-full rounded-xl3 border border-navy/[0.06] object-cover shadow-softer" />
+                <img src={cover} alt="" className="max-h-[300px] w-full rounded-xl3 border border-navy/[0.06] bg-bg-soft object-contain shadow-softer lg:max-h-[460px]" />
               ) : null}
             </div>
             <div className="min-w-0">
