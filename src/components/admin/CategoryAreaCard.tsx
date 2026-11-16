@@ -169,7 +169,7 @@ export default function CategoryAreaCard({ area, areas, items, counts, busy, onC
           </button>
         </form>
       ) : (
-        <button type="button" onClick={() => setAdding(true)} className={`${LINK_BUTTON} mt-2 inline-flex items-center gap-1.5 text-primary hover:bg-bg-soft`}>
+        <button type="button" onClick={() => setAdding(true)} className="mt-3 flex w-full items-center justify-center gap-1.5 rounded-lg border border-dashed border-primary/40 py-2 text-[13px] font-semibold text-primary hover:bg-primary/[0.05]">
           <Plus size={14} /> Add category
         </button>
       )}

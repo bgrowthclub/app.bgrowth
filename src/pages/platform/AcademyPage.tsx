@@ -149,8 +149,11 @@ export default function AcademyPage() {
 
       {/* items-start: each panel keeps its own height. Stretched, the short
           Learning Paths list grew to match the two panels beside it and
-          ended in a block of empty white. */}
-      <div className="grid items-start gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
+          ended in a block of empty white. grid-cols-1 (15/11/2026): with no
+          column set on a phone, the one column grew to the Journeys' full
+          names (truncate never applied) and pushed the page wider than the
+          screen — the "cut off" buttons. */}
+      <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)]">
         <LearningPaths journeys={journeys} />
         <div className="space-y-5">
           <SoonPanel
