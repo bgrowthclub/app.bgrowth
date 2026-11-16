@@ -124,7 +124,7 @@ export default function StudioPurchaseCard({
       ) : status === 'owned' ? (
         <>
           <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
-            <span className="font-display text-3xl font-bold text-navy">{free ? 'Free' : priceLabel(product)}</span>
+            <span className="text-[20px] font-bold text-navy">{free ? 'Free' : priceLabel(product)}</span>
             <span className="text-[13px] font-semibold text-primary">{trialActive ? 'Your free trial is active' : `You own this ${noun}`}</span>
           </div>
           <Button to={openTo} icon={<ArrowRight size={16} />} className="mt-4 w-full">
@@ -139,8 +139,8 @@ export default function StudioPurchaseCard({
       ) : (
         <>
           <div className="flex items-baseline gap-2">
-            {member && !showCouponPath && <span className="text-lg font-semibold text-navy/35 line-through">{priceLabel(product)}</span>}
-            <span className="font-display text-3xl font-bold text-navy">{priceText}</span>
+            {member && !showCouponPath && <span className="text-[15px] font-semibold text-navy/35 line-through">{priceLabel(product)}</span>}
+            <span className="text-[20px] font-bold text-navy">{priceText}</span>
             {!free && <span className="text-[13px] text-navy/40">one-time</span>}
           </div>
           {!free && includedInPlan && (
