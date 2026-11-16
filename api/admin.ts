@@ -3336,7 +3336,35 @@ async function setPageModelStatus(req: VercelRequest, db: Db, admin: Admin) {
   m.status = status
   m.updatedAt = new Date().toISOString()
   await writePageModels(db, admin, models)
-  return { id, status, name: m.name?.en ?? id }
+  // Publishing asks which plans get the model (16/11/2026, the owner's
+  // choice): ticked plans get it, the others don't — on every plan that has a
+  // page, whether it had a list of models or "all" (no list) until now.
+  let opened: string[] = []
+  if (status === 'live' && Array.isArray(req.body?.plans)) {
+    const chosen = new Set((req.body.plans as unknown[]).filter((x): x is string => typeof x === 'string'))
+    const everyModel = [...PAGE_TEMPLATES, ...models.filter((x) => x.status === 'live').map((x) => String(x.id))]
+    const { data: plans, error } = await db.from('membership_plans').select('id, name, entitlements')
+    if (error) throw error
+    for (const plan of plans ?? []) {
+      const ent = (plan.entitlements ?? {}) as Record<string, any>
+      if (ent.memberPage !== 'partial' && ent.memberPage !== 'full') continue
+      const list: string[] | null = Array.isArray(ent.pageTemplates) && ent.pageTemplates.length ? ent.pageTemplates : null
+      let next: string[] | null = list
+      if (chosen.has(plan.id)) {
+        opened.push(plan.name)
+        if (list && !list.includes(id)) next = [...list, id]
+      } else {
+        next = (list ?? everyModel).filter((x) => x !== id)
+      }
+      if (next === list) continue
+      const { error: upError } = await db
+        .from('membership_plans')
+        .update({ entitlements: { ...ent, pageTemplates: next }, updated_at: new Date().toISOString() })
+        .eq('id', plan.id)
+      if (upError) throw upError
+    }
+  }
+  return { id, status, name: m.name?.en ?? id, plans: opened }
 }
 
 async function deletePageModel(req: VercelRequest, db: Db, admin: Admin) {
@@ -4495,7 +4523,7 @@ function describe(key: string, b: Body, r: Record<string, any>): Described {
     case 'PUT page-models':
       return { area: 'pages', summary: `${r.replaced ? 'Replaced' : 'Imported'} the page model “${r.model?.name?.en ?? r.model?.id}”${r.replaced ? '' : ' (draft)'}` }
     case 'PUT page-model-status':
-      return { area: 'pages', summary: r.status === 'live' ? `Published the page model “${r.name}”` : `Took the page model “${r.name}” back to draft` }
+      return { area: 'pages', summary: r.status === 'live' ? `Published the page model “${r.name}”${r.plans?.length ? ` for ${r.plans.join(', ')}` : ''}` : `Took the page model “${r.name}” back to draft` }
     case 'DELETE page-models':
       return { area: 'pages', summary: `Deleted the page model “${r.name}”` }
     case 'PUT page-template-archive':

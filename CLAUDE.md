@@ -530,6 +530,11 @@ This repo is a **static, client-only MVP**:
   list is kept as sent ("all" = no list). A model a page uses can't go back to
   draft or be deleted. Same model shape in importedModels.ts and api/admin.ts
   (`cleanImportedModel`) — change both.
+  Since Sprint 263 (16/11/2026, the owner's choice) "Publish" — and "Plans"
+  on a live model — asks which plans get the model: `page-model-status` with
+  `plans` adds the id to each ticked plan's `pageTemplates` list (if it has
+  one) and, on every unticked plan with a page, writes a list without it
+  (turning "all" into every model but this one).
   **Since Sprint 183 one table says what every plan does with every
   product** (approved by the owner 01/11/2026; Portal migration 0075):
   Admin → Plans → **Included** is now a product × plan grid where each cell

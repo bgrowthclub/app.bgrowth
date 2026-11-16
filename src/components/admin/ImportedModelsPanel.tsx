@@ -71,6 +71,30 @@ export default function ImportedModelsPanel() {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const input = useRef<HTMLInputElement>(null)
+  // Publishing asks which plans get the model (16/11/2026, the owner's choice).
+  const [plans, setPlans] = useState<{ id: string; name: string }[] | null>(null)
+  const [publishing, setPublishing] = useState<string | null>(null)
+  const [chosen, setChosen] = useState<string[]>([])
+
+  async function startPublish(id: string) {
+    setError('')
+    let list = plans
+    if (!list) {
+      try {
+        const res = await adminService.listPlans()
+        list = res.plans
+          .filter((p) => p.status !== 'disabled' && (p.entitlements?.memberPage === 'partial' || p.entitlements?.memberPage === 'full'))
+          .sort((a, b) => a.rank - b.rank)
+          .map((p) => ({ id: p.id, name: p.name }))
+        setPlans(list)
+      } catch (e) {
+        setError(e instanceof Error ? e.message : 'Could not load the plans.')
+        return
+      }
+    }
+    setChosen(list.map((p) => p.id))
+    setPublishing(id)
+  }
 
   const load = () =>
     adminService
@@ -237,16 +261,19 @@ export default function ImportedModelsPanel() {
                     variant={m.status === 'live' ? 'secondary' : undefined}
                     disabled={Boolean(busy)}
                     onClick={() =>
-                      void run(`status:${m.id}`, async () => {
-                        const next = m.status === 'live' ? 'draft' : 'live'
-                        await adminService.setPageModelStatus(m.id, next)
-                        return next === 'live' ? `“${m.name.en}” is published — it shows in the model list (reload the editor to see it).` : `“${m.name.en}” is a draft again.`
-                      })
+                      m.status === 'live'
+                        ? void run(`status:${m.id}`, async () => (await adminService.setPageModelStatus(m.id, 'draft'), `“${m.name.en}” is a draft again.`))
+                        : void startPublish(m.id)
                     }
                     className={SMALL_BUTTON}
                   >
                     {m.status === 'live' ? 'Back to draft' : 'Publish'}
                   </Button>
+                  {m.status === 'live' && (
+                    <button type="button" disabled={Boolean(busy)} onClick={() => void startPublish(m.id)} className={`${LINK_BUTTON} text-primary hover:bg-bg-soft`}>
+                      Plans
+                    </button>
+                  )}
                   <button
                     type="button"
                     aria-label={`Delete ${m.name.en}`}
@@ -261,6 +288,45 @@ export default function ImportedModelsPanel() {
                   </button>
                 </div>
               </div>
+              {publishing === m.id && (
+                <div className="mt-4 rounded-xl border border-primary/20 bg-primary/[0.04] p-4">
+                  <p className="text-[13.5px] font-semibold text-navy">Which plans get this model?</p>
+                  <p className="mt-0.5 text-[12.5px] text-navy/50">Plans left unticked show it locked (“Higher plan”). Also editable in Admin → Plans → Page.</p>
+                  {plans && plans.length === 0 && <p className="mt-2 text-[13px] text-navy/50">No plan has a page yet — the model goes to every page the team makes.</p>}
+                  <div className="mt-3 flex flex-wrap gap-x-5 gap-y-2">
+                    {plans?.map((p) => (
+                      <label key={p.id} className="flex items-center gap-2 text-[13.5px] text-navy/75">
+                        <input
+                          type="checkbox"
+                          className="h-4 w-4 accent-primary"
+                          checked={chosen.includes(p.id)}
+                          onChange={(e) => setChosen(e.target.checked ? [...chosen, p.id] : chosen.filter((x) => x !== p.id))}
+                        />
+                        {p.name}
+                      </label>
+                    ))}
+                  </div>
+                  <div className="mt-4 flex flex-wrap items-center gap-2">
+                    <Button
+                      type="button"
+                      disabled={Boolean(busy)}
+                      onClick={() =>
+                        void run(`status:${m.id}`, async () => {
+                          const res = await adminService.setPageModelStatus(m.id, 'live', chosen)
+                          setPublishing(null)
+                          return `“${m.name.en}” is published${res.plans?.length ? ` for ${res.plans.join(', ')}` : ''} — reload the editor to see it.`
+                        })
+                      }
+                      className={SMALL_BUTTON}
+                    >
+                      {m.status === 'live' ? 'Save plans' : 'Publish'}
+                    </Button>
+                    <button type="button" onClick={() => setPublishing(null)} className={`${LINK_BUTTON} text-navy/50 hover:bg-white`}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              )}
               {showing === m.id && (
                 <div className="mt-4">
                   <Preview model={m} lang={lang} />

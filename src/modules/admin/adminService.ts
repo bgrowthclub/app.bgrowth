@@ -286,8 +286,8 @@ export const adminService = {
   savePageModel(model: unknown, replace: boolean) {
     return call<{ model: import('../find/importedModels').ImportedPageModel; replaced: boolean }>('PUT', 'page-models', undefined, { model, replace })
   },
-  setPageModelStatus(id: string, status: 'live' | 'draft') {
-    return call<{ id: string; status: string }>('PUT', 'page-model-status', undefined, { id, status })
+  setPageModelStatus(id: string, status: 'live' | 'draft', plans?: string[]) {
+    return call<{ id: string; status: string; plans?: string[] }>('PUT', 'page-model-status', undefined, { id, status, plans })
   },
   deletePageModel(id: string) {
     return call<{ id: string }>('DELETE', 'page-models', { id })
