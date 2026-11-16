@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { downloadCsv } from '../../lib/downloadCsv'
 import Button from '../ui/Button'
 import { CARD, SMALL_BUTTON } from './styles'
 import { adminService } from '../../modules/admin/adminService'
@@ -82,6 +83,32 @@ export default function PlanPageFeaturesPanel({ plans, onSaved }: { plans: Admin
     } finally {
       setBusy(false)
     }
+  }
+
+  // Download the table as a spreadsheet (16/11/2026, the owner's request):
+  // the same lines and values the table shows, as they are on screen.
+  function exportCsv() {
+    const yes = (b: boolean) => (b ? 'Yes' : '—')
+    const line = (title: string, get: (p: AdminPlan, d: PageEnt, f: PageFeatures) => string) => [
+      title,
+      ...columns.map((p) => {
+        const f = featuresOf(p)
+        return f ? get(p, drafts[p.id] ?? {}, f) : 'No page'
+      }),
+    ]
+    const all = memberPageTemplates('en')
+    downloadCsv('bgrowth-page-features-by-plan', [
+      ['Feature', ...columns.map((p) => p.name)],
+      ['Has their own page', ...columns.map((p) => yes(Boolean(featuresOf(p))))],
+      line('How many pages', (_p, d) => String(d.pages ?? 1)),
+      line('Contact buttons', (_p, d) => (d.pageLinks ? String(d.pageLinks) : 'No limit')),
+      line('Featured photos or videos', (_p, _d, f) => String(f.highlights)),
+      line('Products', (_p, _d, f) => String(f.products)),
+      ...BOOL_ROWS.map((row) => line(row.label, (_p, _d, f) => yes(Boolean(f[row.key])))),
+      line('What visitors looked for', (_p, d) => yes(d.pageInsights === true)),
+      line('Shows up on Google', (_p, d) => yes(d.pageNoIndex !== true)),
+      ...all.map((t) => line(`Model: ${t.name.en}`, (_p, d) => yes(!d.pageTemplates?.length || d.pageTemplates.includes(t.id)))),
+    ])
   }
 
   if (!columns.length) return <p className="text-[13.5px] text-navy/50">Create a plan first.</p>
@@ -269,6 +296,10 @@ export default function PlanPageFeaturesPanel({ plans, onSaved }: { plans: Admin
         <Button type="button" disabled={busy || !changed.length} onClick={() => void save()} className={SMALL_BUTTON}>
           {busy ? 'Saving…' : changed.length ? `Save changes (${changed.length === 1 ? '1 plan' : `${changed.length} plans`})` : 'Save changes'}
         </Button>
+        <button type="button" onClick={exportCsv} className="rounded-lg border border-navy/10 px-3 py-1.5 text-[13px] font-semibold text-primary hover:bg-bg-soft">
+          Download CSV
+        </button>
+        {changed.length > 0 && <span className="text-[12.5px] text-navy/45">The file shows the table as it is on screen, unsaved changes included.</span>}
         {notice && <span className="text-[13px] text-emerald-700">{notice}</span>}
         {error && <span className="text-[13px] text-red-500">{error}</span>}
       </div>

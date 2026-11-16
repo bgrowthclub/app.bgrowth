@@ -4,6 +4,7 @@ import SEO from '../../../components/seo/SEO'
 import SectionHeader from '../../../components/ui/SectionHeader'
 import EmptyState from '../../../components/ui/EmptyState'
 import Button from '../../../components/ui/Button'
+import { downloadCsv } from '../../../lib/downloadCsv'
 import ConfirmDialog from '../../../components/ui/ConfirmDialog'
 import AdminBundleRow from '../../../components/admin/AdminBundleRow'
 import BundleEditor from '../../../components/admin/BundleEditor'
@@ -93,7 +94,35 @@ export default function AdminBundlesPage() {
               onCancel={() => setEditing(null)}
             />
           ) : (
-            <div className="flex justify-end">
+            <div className="flex flex-wrap justify-end gap-2">
+              <button
+                type="button"
+                disabled={data.bundles.length === 0}
+                onClick={() => {
+                  // Every bundle with its price and what's inside (16/11/2026).
+                  const money = (c: number | null) => (typeof c === 'number' ? (c / 100).toFixed(2) : '')
+                  downloadCsv('bgrowth-bundles', [
+                    ['Bundle', 'Status', 'Free', 'Price (USD)', 'Sum of the products (USD)', 'Products inside', 'How many', 'Address'],
+                    ...data.bundles.map((b) => {
+                      const items = b.item_ids.map((id) => workspaces.get(id)).filter((w): w is NonNullable<typeof w> => Boolean(w))
+                      const sum = items.reduce((t, w) => t + (w.is_free ? 0 : w.price_cents ?? 0), 0)
+                      return [
+                        b.name,
+                        b.status,
+                        b.is_free ? 'Yes' : 'No',
+                        b.is_free ? '0.00' : money(b.price_cents),
+                        money(sum),
+                        items.map((w) => w.name).join(' | '),
+                        b.item_ids.length,
+                        `https://bgrowth.app/bundle/${b.slug}`,
+                      ]
+                    }),
+                  ])
+                }}
+                className="rounded-lg border border-navy/10 px-3 py-1.5 text-[13px] font-semibold text-primary hover:bg-bg-soft disabled:opacity-40"
+              >
+                Download CSV
+              </button>
               <Button
                 type="button"
                 icon={<Plus size={16} />}

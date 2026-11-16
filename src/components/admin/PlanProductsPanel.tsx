@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import Button from '../ui/Button'
+import { downloadCsv } from '../../lib/downloadCsv'
 import { CARD, INPUT, SMALL_BUTTON, pillClass } from './styles'
 import { adminService } from '../../modules/admin/adminService'
 import type { AdminPlanOffer, AdminPlanProducts } from '../../modules/admin/types'
@@ -154,7 +155,7 @@ export default function PlanProductsPanel() {
   // Download the table as a spreadsheet (16/11/2026, the owner's request):
   // every product (not only the filtered ones), its list price, and what
   // each plan does with it — the same words the cells show.
-  function downloadCsv() {
+  function exportCsv() {
     if (!data) return
     const money = (c: number | null | undefined) => (typeof c === 'number' ? (c / 100).toFixed(2) : '')
     const say = (productId: string, plan: (typeof data.plans)[number]) => {
@@ -167,7 +168,6 @@ export default function PlanProductsPanel() {
       if (o.kind === 'percent') return `${o.percent}% off`
       return `Fixed $${money(o.priceCents)}`
     }
-    const esc = (v: string) => (/[",\n]/.test(v) ? `"${v.replace(/"/g, '""')}"` : v)
     const head = ['Product', 'Type', 'Status', 'Free', 'List price (USD)', 'Address', ...data.plans.map((p) => p.name)]
     const rows = data.products.map((p) => [
       p.name,
@@ -178,13 +178,7 @@ export default function PlanProductsPanel() {
       `https://bgrowth.app/product/${p.slug}`,
       ...data.plans.map((plan) => (p.is_free ? 'Free for everyone' : say(p.id, plan))),
     ])
-    const csv = '\ufeff' + [head, ...rows].map((r) => r.map((v) => esc(String(v))).join(',')).join('\r\n')
-    const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `bgrowth-products-by-plan-${new Date().toISOString().slice(0, 10)}.csv`
-    a.click()
-    URL.revokeObjectURL(url)
+    downloadCsv('bgrowth-products-by-plan', [head, ...rows])
   }
 
   return (
@@ -226,7 +220,7 @@ export default function PlanProductsPanel() {
         <span className="text-[12.5px] text-navy/40">
           {visible.length} product(s) · {data.plans.length} plan(s)
         </span>
-        <button type="button" onClick={downloadCsv} className="ml-auto rounded-lg border border-navy/10 px-3 py-1.5 text-[13px] font-semibold text-primary hover:bg-bg-soft">
+        <button type="button" onClick={exportCsv} className="ml-auto rounded-lg border border-navy/10 px-3 py-1.5 text-[13px] font-semibold text-primary hover:bg-bg-soft">
           Download CSV
         </button>
       </div>
