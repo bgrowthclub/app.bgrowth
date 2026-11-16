@@ -16,6 +16,10 @@ import RelatedProductsPanel from '../components/runtime/RelatedProductsPanel'
 import StudioPurchaseCard from '../components/systems/StudioPurchaseCard'
 import StudioWorkspaceOutline from '../components/systems/StudioWorkspaceOutline'
 import ProductGalleryCarousel from '../components/systems/ProductGalleryCarousel'
+import ProductPlansStrip from '../components/systems/ProductPlansStrip'
+import { planService } from '../modules/account/planService'
+import type { StoredPlan } from '../modules/commerce/types/membership'
+import { ArrowLeft, ChevronDown } from 'lucide-react'
 import { studioProductNoun } from '../modules/workspace/lib/productNoun'
 import { studioWorkspaceService } from '../modules/workspace/services/studioWorkspaceService'
 import type { ProductGallery } from '../modules/workspace/types/portal'
@@ -71,6 +75,11 @@ export default function ProductPage() {
   // 0075). The checkout decides the real price; this is the same rule, so
   // the page and the till never disagree.
   const [planOffer, setPlanOffer] = useState<{ kind: string; percent: number | null; price_cents: number | null } | null | undefined>(undefined)
+  // Every plan, for the "Included in BGrowth Plans" strip (16/11/2026).
+  const [plans, setPlans] = useState<StoredPlan[]>([])
+  useEffect(() => {
+    planService.listPlans().then(setPlans).catch(() => undefined)
+  }, [])
   const [searchParams] = useSearchParams()
   // Studio Workspaces: ownership, trial and checkout (no-op for other products).
   const purchase = useStudioPurchase(slug, user?.id, searchParams.get('checkout'))
@@ -195,6 +204,116 @@ export default function ProductPage() {
       className={className}
     />
   )
+
+  // A Studio product's page (16/11/2026, the owner's design, kept SHORT on
+  // purpose — "not a giant page like before"): photos on the left, what it
+  // is and the buy box on the right; then only the parts that have something
+  // to say — the plans that include it, the description, what's inside
+  // (folded), reviews (only once there is one) and the FAQ. The buy box is no
+  // longer repeated at the bottom.
+  if (studio) {
+    const includedRank = includedPlan ? plans.find((p) => p.name === includedPlan)?.rank ?? null : null
+    const planPills = product.basePrice === 0
+      ? []
+      : plans
+          .filter((p) => p.status === 'active' && !p.is_free)
+          .sort((a, b) => a.rank - b.rank)
+          .map((p) => ({ name: p.name, included: Boolean(p.entitlements?.includesAll) || (includedRank !== null && p.rank >= includedRank) }))
+    // The top shows the short line; the card the longer text — never the same words twice.
+    const heroText = product.subtitle || product.description
+    const about = product.longDescription && product.longDescription !== heroText ? product.longDescription : product.subtitle && product.description !== heroText ? product.description : ''
+    const checks = product.benefits.map((b) => b.title).filter(Boolean).slice(0, 6)
+    const cover = product.assets.heroImage ?? product.assets.thumbnail ?? null
+    return (
+      <div className="pt-28 md:pt-32">
+        <SEO title={product.title} description={product.description} path={`/product/${product.slug}`} ogImage={product.assets.thumbnail ?? undefined} />
+        <div className="container-px mx-auto max-w-page space-y-5 pb-20">
+          <Link to="/systems" className="inline-flex items-center gap-1.5 text-[13.5px] font-semibold text-primary">
+            <ArrowLeft size={15} /> Back to catalog
+          </Link>
+
+          <section className="grid gap-8 lg:grid-cols-[1.05fr_1fr] lg:items-start">
+            <div className="min-w-0">
+              {gallery ? (
+                <ProductGalleryCarousel gallery={gallery} title={product.title} />
+              ) : cover ? (
+                <img src={cover} alt="" className="aspect-[4/3] w-full rounded-xl3 border border-navy/[0.06] object-cover shadow-softer" />
+              ) : null}
+            </div>
+            <div className="min-w-0">
+              <div className="flex flex-wrap items-center gap-2">
+                <Badge variant="outline">{`${studioProductNoun(product)}™`}</Badge>
+                {product.industry && <Badge>{product.industry}</Badge>}
+                {product.difficulty && <Badge variant="outline">{product.difficulty}</Badge>}
+              </div>
+              <h1 className="mt-4 font-display text-3xl font-bold leading-tight tracking-tight text-navy md:text-[40px]">{product.title}</h1>
+              {heroText && <p className="mt-3 max-w-xl text-[16px] leading-relaxed text-navy/60">{heroText}</p>}
+              <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-1 text-[13px] text-navy/45">
+                {product.estimatedTime && <span>{product.estimatedTime}</span>}
+                <ReviewSummaryLine summary={reviews.summary} href={`#${REVIEWS_ID}`} />
+              </div>
+              <div className="mt-5">{studioCard()}</div>
+              {bundles.length > 0 && (
+                <div className="mt-4 space-y-2">
+                  {bundles.map(({ bundle, items }) => (
+                    <BundleOfferNote key={bundle.id} bundle={bundle} items={items} />
+                  ))}
+                </div>
+              )}
+            </div>
+          </section>
+
+          <ProductPlansStrip plans={planPills} />
+
+          {(about || checks.length > 0) && (
+            <section className="grid gap-6 rounded-xl3 border border-navy/[0.06] bg-white p-5 shadow-softer md:grid-cols-2 md:p-7">
+              <div className={`min-w-0 ${about ? '' : 'md:col-span-2'}`}>
+                <p className="eyebrow">{about ? `About this ${studioProductNoun(product)}™` : 'What it helps you do'}</p>
+                {about && <p className="mt-3 whitespace-pre-line text-[15px] leading-relaxed text-navy/70">{about}</p>}
+              </div>
+              {checks.length > 0 && (
+                <ul className={`min-w-0 ${about ? 'space-y-2.5 md:border-l md:border-navy/[0.06] md:pl-6' : '-mt-3 grid gap-2.5 sm:grid-cols-2 md:col-span-2'}`}>
+                  {checks.map((c) => (
+                    <li key={c} className="flex items-start gap-2.5 text-[14.5px] text-navy/75">
+                      <CheckSquare size={17} className="mt-0.5 shrink-0 text-primary" /> {c}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          )}
+
+          {outline.length > 0 && (
+            <details className="group rounded-xl3 border border-navy/[0.06] bg-white shadow-softer">
+              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 md:px-7">
+                <span className="font-display text-[17px] font-bold text-navy">
+                  What’s inside <span className="font-sans text-[14px] font-normal text-navy/45">· {outline.length} {outline.length === 1 ? 'step' : 'steps'}</span>
+                </span>
+                <ChevronDown size={18} className="text-navy/40 transition group-open:rotate-180" />
+              </summary>
+              <div className="border-t border-navy/[0.06] p-5 md:p-7">
+                <StudioWorkspaceOutline sections={outline} />
+              </div>
+            </details>
+          )}
+
+          <ProductReviewsSection
+            id={REVIEWS_ID}
+            workspaceName={product.title}
+            reviews={reviews}
+            signedIn={Boolean(user)}
+            requested={searchParams.get('review') === '1'}
+          />
+
+          {(product.faq?.length ?? 0) > 0 && (
+            <section className="rounded-xl3 border border-navy/[0.06] bg-white p-5 shadow-softer md:p-7">
+              <FAQPanel items={product.faq ?? []} />
+            </section>
+          )}
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className="pt-32 md:pt-40">

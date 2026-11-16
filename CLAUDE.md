@@ -535,6 +535,16 @@ This repo is a **static, client-only MVP**:
   `plans` adds the id to each ticked plan's `pageTemplates` list (if it has
   one) and, on every unticked plan with a page, writes a list without it
   (turning "all" into every model but this one).
+  **Since Sprint 266 a Studio product page is short** (the owner's design,
+  16/11/2026 — "not a giant page like before"): photos left, what it is +
+  `StudioPurchaseCard` right (no second buy box at the bottom), then only
+  what has something to say — `components/systems/ProductPlansStrip`
+  ("Included in BGrowth Plans", from `product_plan_access` + `includesAll`,
+  hidden when no plan includes it), a description card (long text + the
+  benefits as ticks), "What's inside" folded in a `<details>`, reviews and
+  FAQ. `ProductReviewsSection` shows one review at a time and NOTHING when
+  there is no review yet (the e-mail's ?review=1 still opens the form). The
+  older layout below stays for non-Studio products.
   **Since Sprint 183 one table says what every plan does with every
   product** (approved by the owner 01/11/2026; Portal migration 0075):
   Admin → Plans → **Included** is now a product × plan grid where each cell
