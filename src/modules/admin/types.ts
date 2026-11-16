@@ -676,7 +676,7 @@ export interface AdminPlanProducts {
   ready: boolean
   // false before Portal migration 0075: only inclusion can be set.
   pricingReady?: boolean
-  products: { id: string; name: string; slug: string; content_type: string; is_free: boolean; status: string }[]
+  products: { id: string; name: string; slug: string; content_type: string; is_free: boolean; status: string; price_cents?: number | null }[]
   plans: { id: string; name: string; rank: number; status: string; includesAll: boolean }[]
   // product id → the lowest plan that includes it (and every plan above it)
   included: Record<string, string>

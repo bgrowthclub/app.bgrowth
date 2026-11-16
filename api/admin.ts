@@ -4100,7 +4100,7 @@ async function listPlanProducts(db: Db) {
   const [products, links, plans] = await Promise.all([
     db
       .from('products')
-      .select('id, name, slug, content_type, is_free, status, category_id')
+      .select('id, name, slug, content_type, is_free, status, category_id, price_cents')
       .in('content_type', SELLABLE_TYPES)
       .neq('status', 'archived')
       .order('name'),
