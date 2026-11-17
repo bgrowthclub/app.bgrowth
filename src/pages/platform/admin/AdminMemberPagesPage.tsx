@@ -34,6 +34,8 @@ export default function AdminMemberPagesPage() {
   const [insightsGranted, setInsightsGranted] = useState(false)
   // The whole page given by the team (17/11/2026, Portal migration 0084).
   const [fullGranted, setFullGranted] = useState(false)
+  // Inviting an owner who has no account yet (17/11/2026).
+  const [invite, setInvite] = useState<{ busy?: boolean; ok?: string; error?: string }>({})
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   // The owner e-mail field of the page being edited (team only).
@@ -46,6 +48,7 @@ export default function AdminMemberPagesPage() {
     setSignupGranted(editing && editing !== 'new' ? Boolean(editing.signup_granted) : false)
     setInsightsGranted(editing && editing !== 'new' ? Boolean(editing.insights_granted) : false)
     setFullGranted(editing && editing !== 'new' ? Boolean(editing.full_granted) : false)
+    setInvite({})
   }, [editing])
 
   const reload = () =>
@@ -211,7 +214,36 @@ export default function AdminMemberPagesPage() {
               extra={
                 <label className="block">
                   <span className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-navy/40">Owner — BGrowth account e-mail (optional)</span>
-                  <input type="email" value={ownerEmail} onChange={(e) => setOwnerEmail(e.target.value)} className={INPUT} placeholder="The member sees this page’s numbers in My Page" />
+                  <input
+                    type="email"
+                    value={ownerEmail}
+                    onChange={(e) => {
+                      setOwnerEmail(e.target.value)
+                      setInvite({})
+                    }}
+                    className={INPUT}
+                    placeholder="The member sees this page’s numbers in My Page"
+                  />
+                  <span className="mt-1.5 flex flex-wrap items-center gap-2 text-[12px] text-navy/50">
+                    No account yet?
+                    <button
+                      type="button"
+                      disabled={!ownerEmail.trim() || invite.busy}
+                      onClick={() => {
+                        setInvite({ busy: true })
+                        adminService
+                          .invitePageOwner(ownerEmail.trim(), editing !== 'new' && editing ? editing.display_name : undefined)
+                          .then((r) => setInvite({ ok: `Invitation sent to ${r.email}. Their account exists now — save the page with this e-mail.` }))
+                          .catch((err) => setInvite({ error: err instanceof Error ? err.message : 'The invitation couldn’t be sent.' }))
+                      }}
+                      className="font-semibold text-primary hover:underline disabled:opacity-40"
+                    >
+                      {invite.busy ? 'Sending…' : 'Send invitation'}
+                    </button>
+                    <span className="w-full text-navy/40">Creates their account and e-mails a link to choose a password; they land on My Business Page.</span>
+                  </span>
+                  {invite.ok && <span className="mt-1.5 block rounded-lg bg-emerald-50 px-3 py-2 text-[12.5px] text-emerald-700">{invite.ok}</span>}
+                  {invite.error && <span className="mt-1.5 block rounded-lg bg-red-50 px-3 py-2 text-[12.5px] text-red-600">{invite.error}</span>}
                   <span className="mt-2 flex items-start gap-2 text-[13px] text-navy/70">
                     <input type="checkbox" className="mt-0.5 h-4 w-4 accent-primary" checked={ownerManaged || fullGranted} disabled={!ownerEmail.trim() || fullGranted} onChange={(e) => setOwnerManaged(e.target.checked)} />
                     <span>

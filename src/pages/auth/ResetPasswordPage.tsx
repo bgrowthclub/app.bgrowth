@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import type { FormEvent } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import SEO from '../../components/seo/SEO'
 import AuthCard from '../../components/ui/AuthCard'
 import Button from '../../components/ui/Button'
@@ -19,6 +19,10 @@ export default function ResetPasswordPage() {
   const [submitting, setSubmitting] = useState(false)
   const [done, setDone] = useState(false)
   const [mismatch, setMismatch] = useState(false)
+  // Opened from an invitation (17/11/2026): the team made the account for
+  // someone they gave a page to; they choose their first password here.
+  const [params] = useSearchParams()
+  const invited = params.get('invite') === '1'
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -42,8 +46,8 @@ export default function ResetPasswordPage() {
     <>
       <SEO title="Reset Password" description="Choose a new BGrowth password." path="/reset-password" />
       <AuthCard
-        title="Choose a new password"
-        subtitle="Almost done — pick a password you haven’t used before."
+        title={invited ? 'Welcome to BGrowth' : 'Choose a new password'}
+        subtitle={invited ? 'Choose a password for your account — then your page is waiting for you.' : 'Almost done — pick a password you haven’t used before.'}
         footer={
           <Link to="/login" className="font-semibold text-primary">
             Back to sign in
@@ -53,14 +57,19 @@ export default function ResetPasswordPage() {
         {status === 'loading' ? null : done ? (
           <div className="space-y-6">
             <p className="rounded-xl bg-bg-soft p-4 text-[14px] text-navy/70">Your password has been updated.</p>
-            <Button to="/platform/dashboard" className="w-full !py-4 !text-[15px]">
-              Continue to Workspace
+            <Button to={invited ? '/platform/my-page' : '/platform/dashboard'} className="w-full !py-4 !text-[15px]">
+              {invited ? 'Go to my page' : 'Continue to Workspace'}
             </Button>
           </div>
+        ) : invited && status !== 'authenticated' && !passwordRecovery && !error ? (
+          // The invitation's link is still being confirmed.
+          <p className="rounded-xl bg-bg-soft p-4 text-[14px] text-navy/70">Opening your invitation…</p>
         ) : status !== 'authenticated' && !passwordRecovery ? (
           <div className="space-y-6">
             <p className="rounded-xl bg-bg-soft p-4 text-[14px] text-navy/70">
-              This reset link is invalid or has expired. Request a new one to continue.
+              {invited
+                ? 'This invitation link has expired or was already used. Your account exists — request a link below to choose your password.'
+                : 'This reset link is invalid or has expired. Request a new one to continue.'}
             </p>
             <Button to="/forgot-password" className="w-full !py-4 !text-[15px]">
               Request a New Link

@@ -219,6 +219,11 @@ export const adminService = {
   saveMemberPage(draft: AdminMemberPageDraft) {
     return call<{ page: MemberPage; warning?: string }>(draft.id ? 'PATCH' : 'POST', 'member-pages', undefined, draft)
   },
+  // Creates the owner's account and e-mails them (17/11/2026): /register is
+  // closed before launch.
+  invitePageOwner(email: string, name?: string) {
+    return call<{ email: string }>('POST', 'page-owner-invite', undefined, { email, name })
+  },
   async listMemberPageSignups(id: string) {
     return (await call<{ signups: MemberPageSignup[] }>('GET', 'member-page-signups', { id })).signups
   },

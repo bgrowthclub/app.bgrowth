@@ -2847,6 +2847,32 @@ async function slugUsedBefore(db: Db, slug: string, exceptId?: string) {
   return !error && Boolean(data && data.length)
 }
 
+// Inviting a page's owner (17/11/2026, the owner's choice): before launch
+// /register stays closed, so someone the team gives a page to has no way to
+// make an account. This creates it and e-mails them: the link (Supabase's
+// "Invite user" template) confirms the address and opens /reset-password
+// ?invite=1, where they choose a password and go on to My Business Page.
+// The page is then saved with their e-mail as usual — the account exists.
+//   POST ?resource=page-owner-invite { email, name? } → { email }
+async function invitePageOwner(req: VercelRequest, db: Db) {
+  const email = cleanText(req.body?.email, 254).toLowerCase()
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new HttpError(400, 'Write the owner’s e-mail.')
+  const { data: existing, error: findError } = await db.from('users').select('id').ilike('email', email).limit(1)
+  if (findError) throw findError
+  if (existing?.length) throw new HttpError(409, `${email} already has a BGrowth account — just save the page with it.`)
+  const name = cleanText(req.body?.name, 80)
+  const { error } = await db.auth.admin.inviteUserByEmail(email, {
+    redirectTo: `${newsletterSiteUrl(req)}/reset-password?invite=1`,
+    ...(name ? { data: { full_name: name } } : {}),
+  })
+  if (error) {
+    if (/already/i.test(error.message)) throw new HttpError(409, `${email} already has a BGrowth account — just save the page with it.`)
+    if (/rate|limit/i.test(error.message)) throw new HttpError(429, 'Too many e-mails sent just now — try again in a few minutes.')
+    throw new HttpError(400, `The invitation couldn’t be sent: ${error.message}`)
+  }
+  return { email }
+}
+
 async function createMemberPage(req: VercelRequest, db: Db) {
   const input = readMemberPageInput(req)
   await ensurePageSlugFree(db, input.slug)
@@ -4542,6 +4568,8 @@ function describe(key: string, b: Body, r: Record<string, any>): Described {
       return { area: 'catalog', summary: `Edited the bundle “${b.name}”${b.status === 'published' ? '' : ' (draft)'}` }
     case 'DELETE bundles':
       return { area: 'catalog', summary: 'Removed a bundle from the site' }
+    case 'POST page-owner-invite':
+      return { area: 'pages', summary: `Invited ${r.email ?? b.email} to own a page (account created, e-mail sent)` }
     case 'POST member-pages':
       return { area: 'pages', summary: `Created the page bgrowth.app/p/${b.slug}${b.status === 'published' ? ' and published it' : ' as a draft'}` }
     case 'PATCH member-pages':
@@ -5128,6 +5156,7 @@ const ROUTES: Record<string, Route> = {
   'GET member-page-signups': (req, db) => memberPageSignups(req, db),
   'DELETE member-page-signups': (req, db) => memberPageSignups(req, db),
   'POST member-pages': (req, db) => createMemberPage(req, db),
+  'POST page-owner-invite': (req, db) => invitePageOwner(req, db),
   'PATCH member-pages': (req, db) => updateMemberPage(req, db),
   'DELETE member-pages': (req, db) => deleteMemberPage(req, db),
   'GET tags': (_req, db) => listTags(db),

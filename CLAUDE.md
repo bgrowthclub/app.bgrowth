@@ -321,6 +321,13 @@ This repo is a **static, client-only MVP**:
   support, profile and settings (`early-access` answers `pageOnly`); the
   page itself still needs "Make page public" to be seen before launch.
   It is about the page: it gives no plan and opens nothing else.
+  Since Sprint 273 (17/11/2026) the team can invite a page's owner who has
+  no account (`/register` stays closed): Admin → Pages → owner e-mail → "Send
+  invitation" (resource `page-owner-invite`, admin-only, logged in Activity)
+  creates the account with `auth.admin.inviteUserByEmail` and Supabase's
+  "Invite user" e-mail; its link opens `/reset-password?invite=1` (welcome
+  copy, first password, then "Go to my page"). The page is then saved with
+  that e-mail as usual.
   **Since Sprint 148 the closed site is also respected by the public
   function** (Layer A, approved 23/10/2026; no migration, no middleware):
   what stays open lives in `src/lib/siteAccess.ts` (used by `SiteGate`; a
