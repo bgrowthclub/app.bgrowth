@@ -730,6 +730,19 @@ async function memberPagesSelfService(db: Db): Promise<boolean> {
   return data?.value === true
 }
 
+// Early access (17/11/2026, the owner's choice): members the team lets in
+// before launch — they pass the closed site (the SiteGate asks resource
+// `early-access`) and may edit their own page while self-service is off.
+// Kept in site_settings key `early_access` ({ users: [id…] }), set in
+// Admin → Members (api/admin.ts, same key). Nothing else changes for them:
+// the page still needs a plan that includes it, and no Admin area opens.
+async function hasEarlyAccess(db: Db, userId: string): Promise<boolean> {
+  const { data, error } = await db.from('site_settings').select('value').eq('key', 'early_access').maybeSingle()
+  if (error) return false
+  const users = (data?.value as { users?: unknown })?.users
+  return Array.isArray(users) && users.includes(userId)
+}
+
 async function memberPageLevel(db: Db, userId: string): Promise<'partial' | 'full' | null> {
   const { data, error } = await db.rpc('member_page_level', { p_user: userId })
   if (error) return null
@@ -1037,7 +1050,7 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string; emai
   const existing = (wantedId ? pages.find((p) => p.id === wantedId) : undefined) ?? pages[0]
 
   const templates = level ? await memberPageTemplates(db, user.id) : null
-  const selfService = await memberPagesSelfService(db)
+  const selfService = (await memberPagesSelfService(db)) || (await hasEarlyAccess(db, user.id))
   // Which pages stay online when the plan allows fewer than the member has
   // (08/11/2026, Portal migration 0081). The order they send is the order
   // of preference; the database keeps the first N.
@@ -1511,6 +1524,11 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
         .createSignedUrl(file.storage_path, 120, { download: file.name })
       if (signError) throw signError
       return res.status(200).json({ ok: true, url: signed.signedUrl })
+    }
+
+    // Early access (17/11/2026): may this member enter the closed site?
+    if (resource === 'early-access') {
+      return res.status(200).json({ ok: true, earlyAccess: await hasEarlyAccess(db, user.id) })
     }
 
     // My Profile (Sprint 110): the member's own name, in portal.users (what

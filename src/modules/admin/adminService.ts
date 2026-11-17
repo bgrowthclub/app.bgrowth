@@ -374,6 +374,13 @@ export const adminService = {
   getMemberPlans(userId: string) {
     return call<AdminMemberPlans>('GET', 'member-plans', { userId })
   },
+  // Early access (17/11/2026): enter before launch and edit their own page.
+  async getEarlyAccess(userId: string) {
+    return (await call<{ on: boolean }>('GET', 'early-access', { userId })).on
+  },
+  setEarlyAccess(userId: string, on: boolean) {
+    return call<{ on: boolean }>('PUT', 'early-access', undefined, { userId, on })
+  },
   async giveMemberPlan(input: { userId: string; planId: string; endsAt: string | null; reason: MemberPlanReason; note: string }) {
     await call('POST', 'member-plans', undefined, input)
   },

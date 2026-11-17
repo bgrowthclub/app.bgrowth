@@ -33,4 +33,8 @@ export const accountService = {
   getPurchases() {
     return call<AccountPurchases>('GET', undefined, 'purchases')
   },
+  // Early access (17/11/2026): may this member enter the site before launch?
+  async hasEarlyAccess() {
+    return (await call<{ earlyAccess: boolean }>('GET', undefined, 'early-access')).earlyAccess
+  },
 }

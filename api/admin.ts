@@ -3378,6 +3378,38 @@ async function deletePageModel(req: VercelRequest, db: Db, admin: Admin) {
   return { id, name: m.name?.en ?? id }
 }
 
+// Early access (17/11/2026, the owner's choice): members who may enter the
+// closed site and edit their own page before launch. site_settings key
+// `early_access` ({ users: [id…] }), read by api/account.ts (same key).
+const EARLY_ACCESS_KEY = 'early_access'
+
+async function readEarlyAccess(db: Db): Promise<string[]> {
+  const { data, error } = await db.from('site_settings').select('value').eq('key', EARLY_ACCESS_KEY).maybeSingle()
+  if (error) throw error
+  const users = (data?.value as { users?: unknown })?.users
+  return Array.isArray(users) ? users.filter((u): u is string => typeof u === 'string') : []
+}
+
+async function getEarlyAccess(req: VercelRequest, db: Db) {
+  const userId = str(req.query.userId)
+  return { userId, on: (await readEarlyAccess(db)).includes(userId) }
+}
+
+async function setEarlyAccess(req: VercelRequest, db: Db, admin: Admin) {
+  const userId = str(req.body?.userId)
+  if (!/^[0-9a-f-]{36}$/i.test(userId)) throw new HttpError(400, 'Which member?')
+  const on = req.body?.on === true
+  const { data: member } = await db.from('users').select('email').eq('id', userId).maybeSingle()
+  if (!member) throw new HttpError(404, 'Member not found.')
+  const current = await readEarlyAccess(db)
+  const users = on ? [...new Set([...current, userId])] : current.filter((u) => u !== userId)
+  const { error } = await db
+    .from('site_settings')
+    .upsert({ key: EARLY_ACCESS_KEY, value: { users }, updated_at: new Date().toISOString(), updated_by: admin.email })
+  if (error) throw error
+  return { userId, on, email: member.email as string }
+}
+
 async function archivePageTemplate(req: VercelRequest, db: Db, admin: Admin) {
   const template = str(req.body?.template)
   const replaceWith = str(req.body?.replaceWith)
@@ -4520,6 +4552,8 @@ function describe(key: string, b: Body, r: Record<string, any>): Described {
       }
     case 'PUT site-open':
       return { area: 'site', summary: r.open ? 'Opened the site to everyone' : 'Closed the site (Coming soon for visitors)' }
+    case 'PUT early-access':
+      return { area: 'members', summary: r.on ? `Gave early access to ${r.email}` : `Removed early access from ${r.email}` }
     case 'PUT page-models':
       return { area: 'pages', summary: `${r.replaced ? 'Replaced' : 'Imported'} the page model “${r.model?.name?.en ?? r.model?.id}”${r.replaced ? '' : ' (draft)'}` }
     case 'PUT page-model-status':
@@ -5082,6 +5116,8 @@ const ROUTES: Record<string, Route> = {
   'PUT page-self-service': (req, db, admin) => setPageSelfService(req, db, admin),
   'GET page-templates': (req, db) => listPageTemplates(req, db),
   'GET page-models': (req, db) => listPageModels(req, db),
+  'GET early-access': (req, db) => getEarlyAccess(req, db),
+  'PUT early-access': (req, db, admin) => setEarlyAccess(req, db, admin),
   'POST page-model-image': (req, db) => uploadPageModelImage(req, db),
   'PUT page-models': (req, db, admin) => savePageModel(req, db, admin),
   'PUT page-model-status': (req, db, admin) => setPageModelStatus(req, db, admin),

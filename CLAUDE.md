@@ -297,6 +297,15 @@ This repo is a **static, client-only MVP**:
   My Business Page shows the editor read-only (`MemberPageBuilder readOnly`).
   Admin → Pages is unchanged. Turning it on restores the Sprint 127+
   subscriber behaviour as it was.
+  **Since Sprint 271 one person can have early access** (the owner's choice,
+  17/11/2026; no migration): Admin → Members → a member → "Early access"
+  (`components/admin/EarlyAccessCard`, resource `early-access` GET/PUT,
+  admin-only, logged in Activity) keeps user ids in `site_settings` key
+  `early_access` ({ users }). Such a member passes the closed site
+  (`SiteGate` asks `api/account.ts?resource=early-access`) and may save,
+  publish and upload on their own page while self-service is off
+  (`hasEarlyAccess` beside `memberPagesSelfService`). Their page must still
+  be handed to them and their plan include a page; no Admin area opens.
   **Since Sprint 148 the closed site is also respected by the public
   function** (Layer A, approved 23/10/2026; no migration, no middleware):
   what stays open lives in `src/lib/siteAccess.ts` (used by `SiteGate`; a
