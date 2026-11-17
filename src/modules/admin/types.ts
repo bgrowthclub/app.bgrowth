@@ -474,6 +474,10 @@ export interface AdminMemberPageDraft extends MemberPageDraft {
   // The team switched the e-mail list on for this page (Sprint 139).
   signupGranted?: boolean
   insightsGranted?: boolean
+  // The whole page given by the team (Portal migration 0084): the owner edits
+  // everything and it stays online whatever their plan. Sent only when it
+  // changes, so pages keep saving on a database before 0084.
+  fullGranted?: boolean
 }
 
 // Admin → Site (Portal migration 0046).

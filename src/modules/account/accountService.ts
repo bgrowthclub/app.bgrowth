@@ -34,7 +34,10 @@ export const accountService = {
     return call<AccountPurchases>('GET', undefined, 'purchases')
   },
   // Early access (17/11/2026): may this member enter the site before launch?
+  // earlyAccess = the whole closed site; pageOnly = only their own page (the
+  // owner of a page the team gave, Portal migration 0084).
   async hasEarlyAccess() {
-    return (await call<{ earlyAccess: boolean }>('GET', undefined, 'early-access')).earlyAccess
+    const r = await call<{ earlyAccess: boolean; pageOnly?: boolean }>('GET', undefined, 'early-access')
+    return { earlyAccess: r.earlyAccess === true, pageOnly: r.pageOnly === true }
   },
 }

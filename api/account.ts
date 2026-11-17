@@ -842,6 +842,14 @@ async function memberPageFeatures(db: Db, userId: string): Promise<PageFeatures 
   return mergePageFeatures(list)
 }
 
+// A whole page given by the team (Portal migration 0084): everything a whole
+// page has. The BGrowth brand stays unless the owner's own plan removes it —
+// a gift spreads the name.
+async function grantedPageFeatures(db: Db, userId: string): Promise<PageFeatures> {
+  const own = await memberPageFeatures(db, userId)
+  return { ...FULL_FEATURES, noBrand: own?.noBrand === true }
+}
+
 // The most any offered plan gives — what the editor's ⚡ notes and the
 // comparison point to.
 async function bestPageFeatures(db: Db): Promise<PageFeatures | null> {
@@ -1049,8 +1057,15 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string; emai
   // addresses nothing, and the request falls back to their first page.
   const existing = (wantedId ? pages.find((p) => p.id === wantedId) : undefined) ?? pages[0]
 
-  const templates = level ? await memberPageTemplates(db, user.id) : null
-  const selfService = (await memberPagesSelfService(db)) || (await hasEarlyAccess(db, user.id))
+  // A whole page given by the team (17/11/2026, Portal migration 0084): on
+  // that page the owner edits everything a whole page has, whatever their
+  // plan — Free included — and with no wait for self-service. It is about the
+  // page: their other pages still follow their plan. Before 0084 the column
+  // is absent and this is false for everyone.
+  const granted = existing?.full_granted === true
+  const anyGranted = pages.some((p) => p.full_granted === true)
+  const templates = level && !granted ? await memberPageTemplates(db, user.id) : null
+  const selfService = granted || (await memberPagesSelfService(db)) || (await hasEarlyAccess(db, user.id))
   // Which pages stay online when the plan allows fewer than the member has
   // (08/11/2026, Portal migration 0081). The order they send is the order
   // of preference; the database keeps the first N.
@@ -1074,13 +1089,14 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string; emai
   if (resource === 'my-page' && req.method === 'GET') {
     const insights = existing?.insights_granted === true || (await memberPageInsights(db, user.id))
     return {
-      level,
+      level: granted ? 'full' : level,
       templates,
       selfService,
       insights,
+      granted,
       allowance: await memberPageAllowance(db, user.id),
-      linkLimit: await memberPageLinkLimit(db, user.id),
-      features: level ? await memberPageFeatures(db, user.id) : null,
+      linkLimit: granted ? null : await memberPageLinkLimit(db, user.id),
+      features: granted ? await grantedPageFeatures(db, user.id) : level ? await memberPageFeatures(db, user.id) : null,
       best: await bestPageFeatures(db),
       // The light list the screen draws before anything is opened.
       pages: pages.map((p) => ({
@@ -1116,11 +1132,11 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string; emai
     }
     return { signups: data ?? [] }
   }
-  if (!level) throw new HttpError(403, 'Your plan doesn’t include a page. See the plans in Account → Membership.')
+  if (!level && !granted && !(resource === 'my-page-image' && anyGranted)) throw new HttpError(403, 'Your plan doesn’t include a page. See the plans in Account → Membership.')
   // A page the team made for this member stays the team's to edit.
   if (existing && !existing.owner_managed) throw new HttpError(403, 'Your page is managed by the BGrowth team — talk to us through Support to change it.')
   // Pre-launch: saving, publishing and uploading wait for the team's switch.
-  if (!selfService) throw new HttpError(403, 'Building your own page is coming soon — for now the BGrowth team builds pages. Talk to us through Support.')
+  if (!selfService && !(resource === 'my-page-image' && anyGranted)) throw new HttpError(403, 'Building your own page is coming soon — for now the BGrowth team builds pages. Talk to us through Support.')
 
   if (resource === 'my-page-image') {
     if (req.method !== 'POST') throw new HttpError(405, 'Use POST.')
@@ -1140,7 +1156,7 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string; emai
   // TEMPLATE_SEQUENCES / TEMPLATE_COLORS below.
   const imported = PAGE_TEMPLATES.has(input.template) ? null : await liveImportedModel(db, input.template)
   if (!PAGE_TEMPLATES.has(input.template) && !imported) throw new HttpError(400, 'This model isn’t available — choose another one.')
-  if (templates && !templates.includes(input.template)) throw new HttpError(403, 'Your plan doesn’t include this model — choose another one or see the plans in Account → Membership.')
+  if (!granted && templates && !templates.includes(input.template)) throw new HttpError(403, 'Your plan doesn’t include this model — choose another one or see the plans in Account → Membership.')
   // A model being retired (14/11/2026) can't be newly chosen; a page already
   // on it keeps saving until its end date. Same key as api/admin.ts.
   if (input.template && input.template !== existing?.template) {
@@ -1153,14 +1169,14 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string; emai
 
   // The cap applies whatever the level is: it comes from the plan, not from
   // how much of the page the member may rearrange.
-  const linkLimit = await memberPageLinkLimit(db, user.id)
+  const linkLimit = granted ? null : await memberPageLinkLimit(db, user.id)
   if (linkLimit !== null && Array.isArray(input.links) && input.links.length > linkLimit) {
     input.links = input.links.slice(0, linkLimit)
   }
 
   // What the plan allows, feature by feature (15/11/2026). A read error
   // falls back to what the level always meant, so a glitch never blocks a save.
-  const f = (await memberPageFeatures(db, user.id)) ?? (level === 'full' ? FULL_FEATURES : PARTIAL_FEATURES)
+  const f = granted ? await grantedPageFeatures(db, user.id) : (await memberPageFeatures(db, user.id)) ?? (level === 'full' ? FULL_FEATURES : PARTIAL_FEATURES)
   const template = input.template
   // The e-mail section: the plan's, or switched on for this page by the team.
   if (!f.signup && !existing?.signup_granted) input.blocks = (input.blocks ?? []).filter((b) => b.type !== 'signup') as typeof input.blocks
@@ -1225,7 +1241,8 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string; emai
   // then swap the content. The page is off the web while it waits, which is
   // the price of not keeping two versions of it.
   let queued = false
-  if (input.status === 'published' && (await onFreePlan(db, user.id))) {
+  // A page the team gave (full_granted) was already looked at by the team.
+  if (input.status === 'published' && !granted && (await onFreePlan(db, user.id))) {
     input.status = 'pending'
     queued = true
   }
@@ -1528,7 +1545,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
     // Early access (17/11/2026): may this member enter the closed site?
     if (resource === 'early-access') {
-      return res.status(200).json({ ok: true, earlyAccess: await hasEarlyAccess(db, user.id) })
+      // pageOnly (17/11/2026): the owner of a page the team gave (Portal
+      // migration 0084) passes the closed site only to edit that page.
+      const early = await hasEarlyAccess(db, user.id)
+      let pageOnly = false
+      if (!early) {
+        const { data: given, error: givenError } = await db.from('member_pages').select('id').eq('user_id', user.id).eq('full_granted', true).limit(1)
+        pageOnly = !givenError && Boolean(given?.length)
+      }
+      return res.status(200).json({ ok: true, earlyAccess: early, pageOnly })
     }
 
     // My Profile (Sprint 110): the member's own name, in portal.users (what

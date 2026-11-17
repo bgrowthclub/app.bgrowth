@@ -2853,8 +2853,17 @@ async function createMemberPage(req: VercelRequest, db: Db) {
   const userId = await resolvePageOwner(db, req.body?.ownerEmail)
   const managed = pageManagedBy(req, userId)
   const { data, error } = await db.from('member_pages').insert({ ...input, ...managed, user_id: userId }).select('*').single()
-  if (error) throw error
-  return { page: (await withOwnerEmails(db, [data]))[0], ...(await ownerPageWarning(db, managed, userId)) }
+  if (error) throw fullGrantedMissing(error, managed)
+  return { page: (await withOwnerEmails(db, [data]))[0], ...(await ownerPageWarning(db, managed, userId, data)) }
+}
+
+// Before Portal migration 0084 the column doesn't exist: say so instead of
+// a schema error nobody can read.
+function fullGrantedMissing(error: unknown, managed: { full_granted?: boolean }) {
+  const code = (error as { code?: string })?.code
+  if (managed.full_granted !== undefined && (code === 'PGRST204' || code === '42703'))
+    return new HttpError(409, 'Giving the whole page needs the database update (Portal migration 0084) first.')
+  return error
 }
 
 // Who edits the page (Sprint 133): the owner (owner_managed — shown only
@@ -2862,10 +2871,19 @@ async function createMemberPage(req: VercelRequest, db: Db) {
 function pageManagedBy(
   req: VercelRequest,
   userId: string | null,
-): { owner_managed?: boolean; signup_granted?: boolean; insights_granted?: boolean } {
+): { owner_managed?: boolean; signup_granted?: boolean; insights_granted?: boolean; full_granted?: boolean } {
   const v = req.body?.ownerManaged
-  const out: { owner_managed?: boolean; signup_granted?: boolean; insights_granted?: boolean } = {}
+  const out: { owner_managed?: boolean; signup_granted?: boolean; insights_granted?: boolean; full_granted?: boolean } = {}
   if (typeof v === 'boolean') out.owner_managed = v && Boolean(userId)
+  // A whole page given by the team (17/11/2026, Portal migration 0084): the
+  // owner edits everything and the page stays online whatever their plan.
+  // Only sent when it changes, so a database before 0084 keeps saving pages.
+  // Giving the page means handing it to its owner, so it needs one.
+  if (typeof req.body?.fullGranted === 'boolean') {
+    if (req.body.fullGranted && !userId) throw new HttpError(400, 'Write the owner’s e-mail to give them the whole page.')
+    out.full_granted = req.body.fullGranted
+    if (req.body.fullGranted) out.owner_managed = true
+  }
   // E-mail list switched on by the team for this page (Sprint 139, 0065).
   if (typeof req.body?.signupGranted === 'boolean') out.signup_granted = req.body.signupGranted
   // What visitors looked for, switched on by the team for this page
@@ -2903,8 +2921,10 @@ async function memberPageSignups(req: VercelRequest, db: Db) {
 // there but "Subscribers build their own page" is off, so they open the
 // editor read-only. Both are silent until someone notices, so the save says
 // which one happened (28/10/2026).
-async function ownerPageWarning(db: Db, managed: { owner_managed?: boolean }, userId: string | null) {
+async function ownerPageWarning(db: Db, managed: { owner_managed?: boolean }, userId: string | null, page?: { full_granted?: boolean } | null) {
   if (!managed.owner_managed || !userId) return {}
+  // A given page stays online and editable whatever the plan (0084).
+  if (page?.full_granted === true) return {}
   const { data } = await db.rpc('member_page_level', { p_user: userId })
   if (!data)
     return { warning: 'Saved — the owner edits this page now, but their plan has no page, so it is off the site until they get one (Admin → Members → Plan).' }
@@ -2931,9 +2951,9 @@ async function updateMemberPage(req: VercelRequest, db: Db) {
     .eq('id', id)
     .select('*')
     .maybeSingle()
-  if (error) throw error
+  if (error) throw fullGrantedMissing(error, managed)
   if (!data) throw new HttpError(404, 'This page no longer exists — reload the list.')
-  return { page: (await withOwnerEmails(db, [data]))[0], ...(await ownerPageWarning(db, managed, userId)) }
+  return { page: (await withOwnerEmails(db, [data]))[0], ...(await ownerPageWarning(db, managed, userId, data)) }
 }
 
 async function deleteMemberPage(req: VercelRequest, db: Db) {
@@ -4525,7 +4545,12 @@ function describe(key: string, b: Body, r: Record<string, any>): Described {
     case 'POST member-pages':
       return { area: 'pages', summary: `Created the page bgrowth.app/p/${b.slug}${b.status === 'published' ? ' and published it' : ' as a draft'}` }
     case 'PATCH member-pages':
-      return { area: 'pages', summary: `Edited the page bgrowth.app/p/${r.page?.slug ?? b.slug}${b.status === 'published' ? '' : ' (draft)'}` }
+      return {
+        area: 'pages',
+        summary: `Edited the page bgrowth.app/p/${r.page?.slug ?? b.slug}${b.status === 'published' ? '' : ' (draft)'}${
+          b.fullGranted === true ? ' — gave the owner the whole page' : b.fullGranted === false ? ' — took back the whole page given' : ''
+        }`,
+      }
     case 'DELETE member-page-signups':
       return { area: 'pages', summary: 'Removed a contact from a page’s e-mail list' }
     case 'DELETE member-pages':

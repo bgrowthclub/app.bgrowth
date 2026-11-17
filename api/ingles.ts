@@ -222,13 +222,14 @@ async function pageSignup(req: VercelRequest, db: Db) {
   if (!(await captchaOk(req))) throw new HttpError(400, 'Please try again.')
   const { data: page } = await db
     .from('member_pages')
-    .select('id, slug, user_id, owner_managed, signup_granted, blocks')
+    .select('*')
     .eq('slug', slug)
     .eq('status', 'published')
     .maybeSingle()
-  const p = page as { id: string; slug: string; user_id: string | null; owner_managed: boolean; signup_granted: boolean; blocks: { type: string; hidden?: boolean }[] | null } | null
+  const p = page as { id: string; slug: string; user_id: string | null; owner_managed: boolean; signup_granted: boolean; full_granted?: boolean; blocks: { type: string; hidden?: boolean }[] | null } | null
   if (!p || !(p.blocks ?? []).some((b) => b.type === 'signup' && !b.hidden)) throw new HttpError(404, 'This page isn’t taking sign-ups.')
-  let allowed = !p.owner_managed || p.signup_granted
+  // A whole page given by the team (Portal migration 0084) has the e-mail list.
+  let allowed = !p.owner_managed || p.signup_granted || p.full_granted === true
   if (!allowed && p.user_id) allowed = (await ownerPageFeatures(db, p.user_id))?.signup === true
   if (!allowed) throw new HttpError(404, 'This page isn’t taking sign-ups.')
   const { error } = await db.from('member_page_signups').insert({
@@ -448,7 +449,7 @@ async function openPageSlugs(db: Db): Promise<string[]> {
     const { data } = await db.from('site_settings').select('value').eq('key', 'open_pages').maybeSingle()
     const ids = (data?.value as { ids?: unknown } | null)?.ids
     const list = Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string' && /^[0-9a-f-]{36}$/i.test(id)).slice(0, 500) : []
-    type Row = { slug: string; previous_slugs?: string[] | null; owner_managed?: boolean; user_id?: string | null }
+    type Row = { slug: string; previous_slugs?: string[] | null; owner_managed?: boolean; full_granted?: boolean; user_id?: string | null }
     const released = list.length ? await db.from('member_pages').select('*').in('id', list).eq('status', 'published') : { data: [], error: null }
     // …and BGrowth Demos (member_pages.is_demo, Portal migration 0067). Before
     // 0067 the column is missing: the query errors and counts as none.
@@ -459,11 +460,12 @@ async function openPageSlugs(db: Db): Promise<string[]> {
     // whose data the database would hide.
     const levels = new Map<string, boolean>()
     for (const r of rows) {
-      if (!r.owner_managed || !r.user_id || levels.has(r.user_id)) continue
+      if (!r.owner_managed || r.full_granted || !r.user_id || levels.has(r.user_id)) continue
       const { data: level, error } = await db.rpc('member_page_level', { p_user: r.user_id })
       levels.set(r.user_id, !error && (level === 'partial' || level === 'full'))
     }
-    const visible = rows.filter((r) => !r.owner_managed || (r.user_id ? levels.get(r.user_id) === true : false))
+    // A whole page given by the team (0084) stays whatever the plan.
+    const visible = rows.filter((r) => !r.owner_managed || r.full_granted === true || (r.user_id ? levels.get(r.user_id) === true : false))
     return [...new Set(visible.flatMap((p) => [p.slug, ...(p.previous_slugs ?? [])]))]
   } catch {
     return []
@@ -607,7 +609,7 @@ async function contactCard(req: VercelRequest, db: Db): Promise<{ file: string; 
   if (!(await pageOpenToVisitors(db, asked, slug))) throw gone()
   const { data } = await db
     .from('member_pages')
-    .select('id, slug, display_name, headline, location, links, blocks, user_id, owner_managed')
+    .select('*')
     .eq('slug', slug)
     .eq('status', 'published')
     .maybeSingle()
@@ -621,9 +623,10 @@ async function contactCard(req: VercelRequest, db: Db): Promise<{ file: string; 
     blocks: { type: string; hidden?: boolean; data?: { links?: CardLink[] } }[] | null
     user_id: string | null
     owner_managed: boolean
+    full_granted?: boolean
   } | null
   if (!page) throw gone()
-  if (page.owner_managed) {
+  if (page.owner_managed && page.full_granted !== true) {
     const level = page.user_id ? await db.rpc('member_page_level', { p_user: page.user_id }) : { data: null }
     if (!level.data) throw gone()
   }

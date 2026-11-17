@@ -32,6 +32,8 @@ export default function AdminMemberPagesPage() {
   const [signupGranted, setSignupGranted] = useState(false)
   // What visitors looked for, switched on by the team for this page (01/11/2026).
   const [insightsGranted, setInsightsGranted] = useState(false)
+  // The whole page given by the team (17/11/2026, Portal migration 0084).
+  const [fullGranted, setFullGranted] = useState(false)
   const [busy, setBusy] = useState(false)
   const [notice, setNotice] = useState<string | null>(null)
   // The owner e-mail field of the page being edited (team only).
@@ -43,6 +45,7 @@ export default function AdminMemberPagesPage() {
     setOwnerManaged(editing && editing !== 'new' ? Boolean(editing.owner_managed) : false)
     setSignupGranted(editing && editing !== 'new' ? Boolean(editing.signup_granted) : false)
     setInsightsGranted(editing && editing !== 'new' ? Boolean(editing.insights_granted) : false)
+    setFullGranted(editing && editing !== 'new' ? Boolean(editing.full_granted) : false)
   }, [editing])
 
   const reload = () =>
@@ -193,18 +196,46 @@ export default function AdminMemberPagesPage() {
               mode="team"
               page={editing === 'new' ? null : editing}
               upload={(dataUrl) => adminService.uploadMemberPageImage(dataUrl)}
-              onSave={(draft) => save({ ...draft, ownerEmail, ownerManaged: ownerManaged && Boolean(ownerEmail.trim()), signupGranted, insightsGranted })}
+              onSave={(draft) =>
+                save({
+                  ...draft,
+                  ownerEmail,
+                  ownerManaged: (ownerManaged || fullGranted) && Boolean(ownerEmail.trim()),
+                  signupGranted,
+                  insightsGranted,
+                  // Only when it changes (a database before 0084 has no such column).
+                  ...(fullGranted !== Boolean(editing !== 'new' && editing.full_granted) ? { fullGranted } : {}),
+                })
+              }
               onCancel={() => setEditing(null)}
               extra={
                 <label className="block">
                   <span className="mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-navy/40">Owner — BGrowth account e-mail (optional)</span>
                   <input type="email" value={ownerEmail} onChange={(e) => setOwnerEmail(e.target.value)} className={INPUT} placeholder="The member sees this page’s numbers in My Page" />
                   <span className="mt-2 flex items-start gap-2 text-[13px] text-navy/70">
-                    <input type="checkbox" className="mt-0.5 h-4 w-4 accent-primary" checked={ownerManaged} disabled={!ownerEmail.trim()} onChange={(e) => setOwnerManaged(e.target.checked)} />
+                    <input type="checkbox" className="mt-0.5 h-4 w-4 accent-primary" checked={ownerManaged || fullGranted} disabled={!ownerEmail.trim() || fullGranted} onChange={(e) => setOwnerManaged(e.target.checked)} />
                     <span>
                       The owner edits this page in My Business Page
                       <span className="block text-[12px] text-navy/45">
                         They need a plan with a page (Pro, Enterprise or a page plan) — without one the page goes off the site. With a “part of the page” plan they keep the model’s sections. The team can still edit it here.
+                      </span>
+                    </span>
+                  </span>
+                  <span className="mt-2 flex items-start gap-2 text-[13px] text-navy/70">
+                    <input
+                      type="checkbox"
+                      className="mt-0.5 h-4 w-4 accent-primary"
+                      checked={fullGranted}
+                      disabled={!ownerEmail.trim()}
+                      onChange={(e) => {
+                        setFullGranted(e.target.checked)
+                        if (e.target.checked) setOwnerManaged(true)
+                      }}
+                    />
+                    <span>
+                      Whole page given by the team
+                      <span className="block text-[12px] text-navy/45">
+                        The owner edits everything a whole page has, and the page stays online whatever their plan is — Free included. Only this page; it gives no plan. Before launch it still needs “Make page public” to be seen.
                       </span>
                     </span>
                   </span>

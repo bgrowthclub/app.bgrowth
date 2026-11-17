@@ -306,6 +306,21 @@ This repo is a **static, client-only MVP**:
   publish and upload on their own page while self-service is off
   (`hasEarlyAccess` beside `memberPagesSelfService`). Their page must still
   be handed to them and their plan include a page; no Admin area opens.
+  **Since Sprint 272 the team can give one page whole** (the owner's
+  choice, 17/11/2026; Portal migration 0084 — `member_pages.full_granted`):
+  Admin → Pages → "Whole page given by the team" (needs an owner e-mail,
+  turns on owner editing, sent only when it changes, a line in
+  `describe()`). On that page the owner edits everything a whole page has
+  (`grantedPageFeatures` in api/account.ts — FULL, the BGrowth brand stays
+  unless their own plan removes it), whatever their plan, Free included,
+  with no review queue and no wait for self-service; the database shows it
+  whatever the plan (read policy `or full_granted`, `member_page_view_rules`
+  level 'full', not counted in the allowance) and api/ingles.ts follows
+  (released/demo list, e-mail list, Save contact). While the site is
+  closed its owner passes the SiteGate only to `/platform/my-page`,
+  support, profile and settings (`early-access` answers `pageOnly`); the
+  page itself still needs "Make page public" to be seen before launch.
+  It is about the page: it gives no plan and opens nothing else.
   **Since Sprint 148 the closed site is also respected by the public
   function** (Layer A, approved 23/10/2026; no migration, no middleware):
   what stays open lives in `src/lib/siteAccess.ts` (used by `SiteGate`; a

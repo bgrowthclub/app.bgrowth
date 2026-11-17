@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import type { ReactNode } from 'react'
-import { useLocation } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import { useIdentity } from '../../modules/identity/IdentityContext'
 import { getSiteAccess } from '../../modules/site/siteService'
 import { accountService } from '../../modules/account/accountService'
@@ -12,6 +12,9 @@ import ComingSoonPage from '../../pages/ComingSoonPage'
 // stays reachable (sign-in, legal pages, released member pages…) is in
 // lib/siteAccess.ts. This is a screen, not data protection: see there.
 
+// What the owner of a given page may open while the site is closed.
+const PAGE_OWNER_PATHS = ['/platform/my-page', '/platform/support', '/platform/profile', '/platform/settings']
+
 export default function SiteGate({ children }: { children: ReactNode }) {
   const { pathname } = useLocation()
   const { status, user } = useIdentity()
@@ -20,13 +23,20 @@ export default function SiteGate({ children }: { children: ReactNode }) {
   const [openPages, setOpenPages] = useState<string[]>([])
   // Members the team let in before launch (Admin → Members → Early access).
   const [early, setEarly] = useState<boolean | null>(null)
+  // The owner of a page the team gave (17/11/2026, Portal migration 0084)
+  // passes the closed site only to look after that page.
+  const [pageOnly, setPageOnly] = useState(false)
   const signedInMember = status !== 'loading' && Boolean(user) && !user?.isAdmin
   useEffect(() => {
     if (!signedInMember || open !== false) return
     let cancelled = false
     accountService
       .hasEarlyAccess()
-      .then((v) => !cancelled && setEarly(v))
+      .then((v) => {
+        if (cancelled) return
+        setPageOnly(v.pageOnly)
+        setEarly(v.earlyAccess)
+      })
       .catch(() => !cancelled && setEarly(false))
     return () => {
       cancelled = true
@@ -50,6 +60,11 @@ export default function SiteGate({ children }: { children: ReactNode }) {
   if (open || user?.isAdmin) return <>{children}</>
   if (signedInMember && early === null && !openWhileClosed(pathname, openPages)) return null
   if (early) return <>{children}</>
+  if (pageOnly) {
+    if (PAGE_OWNER_PATHS.some((p) => pathname === p || pathname.startsWith(`${p}/`))) return <>{children}</>
+    // Signing in lands on the dashboard: take them straight to their page.
+    if (pathname === '/platform' || pathname === '/platform/dashboard' || pathname === '/dashboard') return <Navigate to="/platform/my-page" replace />
+  }
   if (openWhileClosed(pathname, openPages)) return <>{children}</>
   return <ComingSoonPage />
 }

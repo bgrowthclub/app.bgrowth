@@ -191,6 +191,10 @@ export interface MemberPage {
   // What visitors looked for, switched on by the team for this page
   // (01/11/2026, Portal migration 0073).
   insights_granted?: boolean
+  // The whole page given by the team (Portal migration 0084, 17/11/2026):
+  // the owner edits everything a whole page has and it stays online
+  // whatever their plan is — Free included.
+  full_granted?: boolean
   // A BGrowth Demo (Portal migration 0067): public while the site is closed,
   // set only by a website admin in Admin → Pages. Never skips publication
   // or plan checks. Absent before 0067.
