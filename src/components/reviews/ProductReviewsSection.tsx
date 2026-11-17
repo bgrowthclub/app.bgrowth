@@ -7,6 +7,8 @@ import ReviewFormDialog from './ReviewFormDialog'
 import type { ProductReviews } from '../../modules/workspace/hooks/useProductReviews'
 
 interface Props {
+  // Replaces the section's own card look (the product page shows it inside a tab).
+  className?: string
   id: string
   workspaceName: string
   reviews: ProductReviews
@@ -23,7 +25,7 @@ const BUTTON = '!rounded-xl !px-4 !py-2.5 !text-[13px]'
 // once there IS a review: an empty "No reviews yet" box made the page longer
 // for nothing. The first review is invited inside the product and by e-mail;
 // the e-mail's link (?review=1) still opens the form here.
-export default function ProductReviewsSection({ id, workspaceName, reviews, signedIn, requested }: Props) {
+export default function ProductReviewsSection({ id, workspaceName, reviews, signedIn, requested, className }: Props) {
   const [open, setOpen] = useState(false)
   const [at, setAt] = useState(0)
   const { summary, mine, canReview, loading } = reviews
@@ -63,7 +65,7 @@ export default function ProductReviewsSection({ id, workspaceName, reviews, sign
   const i = Math.min(at, list.length - 1)
 
   return (
-    <section id={id} className="scroll-mt-24 rounded-xl3 border border-navy/[0.06] bg-white p-5 shadow-softer md:p-7">
+    <section id={id} className={className ?? 'scroll-mt-24 rounded-xl3 border border-navy/[0.06] bg-white p-5 shadow-softer md:p-7'}>
       <div className="flex flex-wrap items-end justify-between gap-4">
         <div>
           <p className="eyebrow">Reviews</p>

@@ -20,7 +20,7 @@ import ProductPlansStrip from '../components/systems/ProductPlansStrip'
 import ProductVideoButton from '../components/systems/ProductVideoButton'
 import { planService } from '../modules/account/planService'
 import type { StoredPlan } from '../modules/commerce/types/membership'
-import { ArrowLeft, ChevronDown } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { studioProductNoun } from '../modules/workspace/lib/productNoun'
 import { studioWorkspaceService } from '../modules/workspace/services/studioWorkspaceService'
 import type { ProductGallery } from '../modules/workspace/types/portal'
@@ -78,6 +78,8 @@ export default function ProductPage() {
   const [planOffer, setPlanOffer] = useState<{ kind: string; percent: number | null; price_cents: number | null } | null | undefined>(undefined)
   // Every plan, for the "Included in BGrowth Plans" strip (16/11/2026).
   const [plans, setPlans] = useState<StoredPlan[]>([])
+  // The product page's tabs (17/11/2026, the owner's choice).
+  const [tab, setTab] = useState<'about' | 'inside' | 'reviews' | 'faq' | null>(null)
   useEffect(() => {
     planService.listPlans().then(setPlans).catch(() => undefined)
   }, [])
@@ -275,51 +277,74 @@ export default function ProductPage() {
 
           <ProductPlansStrip plans={planPills} />
 
-          {(about || checks.length > 0) && (
-            <section className="grid gap-6 rounded-xl3 border border-navy/[0.06] bg-white p-5 shadow-softer md:grid-cols-2 md:p-7">
-              <div className={`min-w-0 ${about ? '' : 'md:col-span-2'}`}>
-                <p className="eyebrow">{about ? `About this ${studioProductNoun(product)}™` : 'What it helps you do'}</p>
-                {about && <p className="mt-3 whitespace-pre-line text-[15px] leading-relaxed text-navy/70">{about}</p>}
-              </div>
-              {checks.length > 0 && (
-                <ul className={`min-w-0 ${about ? 'space-y-2.5 md:border-l md:border-navy/[0.06] md:pl-6' : '-mt-3 grid gap-2.5 sm:grid-cols-2 md:col-span-2'}`}>
-                  {checks.map((c) => (
-                    <li key={c} className="flex items-start gap-2.5 text-[14.5px] text-navy/75">
-                      <CheckSquare size={17} className="mt-0.5 shrink-0 text-primary" /> {c}
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
-          )}
-
-          {outline.length > 0 && (
-            <details className="group rounded-xl3 border border-navy/[0.06] bg-white shadow-softer">
-              <summary className="flex cursor-pointer list-none items-center justify-between gap-3 px-5 py-4 md:px-7">
-                <span className="font-display text-[17px] font-bold text-navy">
-                  What’s inside <span className="font-sans text-[14px] font-normal text-navy/45">· {outline.length} {outline.length === 1 ? 'step' : 'steps'}</span>
-                </span>
-                <ChevronDown size={18} className="text-navy/40 transition group-open:rotate-180" />
-              </summary>
-              <div className="border-t border-navy/[0.06] p-5 md:p-7">
-                <StudioWorkspaceOutline sections={outline} />
-              </div>
-            </details>
-          )}
-
-          <ProductReviewsSection
-            id={REVIEWS_ID}
-            workspaceName={product.title}
-            reviews={reviews}
-            signedIn={Boolean(user)}
-            requested={searchParams.get('review') === '1'}
-          />
-
-          {(product.faq?.length ?? 0) > 0 && (
-            <section className="rounded-xl3 border border-navy/[0.06] bg-white p-5 shadow-softer md:p-7">
-              <FAQPanel items={product.faq ?? []} />
-            </section>
-          )}
+          {/* One card with tabs instead of a long page (17/11/2026): only the
+              tabs that have something in them; Reviews only once there is one. */}
+          {(() => {
+            const tabs = [
+              (about || checks.length > 0) && { id: 'about' as const, label: 'Description' },
+              outline.length > 0 && { id: 'inside' as const, label: `What’s inside (${outline.length})` },
+              reviews.summary.reviewCount > 0 && { id: 'reviews' as const, label: `Reviews (${reviews.summary.reviewCount})` },
+              (product.faq?.length ?? 0) > 0 && { id: 'faq' as const, label: 'FAQ' },
+            ].filter((t): t is { id: 'about' | 'inside' | 'reviews' | 'faq'; label: string } => Boolean(t))
+            const wanted = searchParams.get('review') === '1' ? 'reviews' : null
+            const current = tabs.find((t) => t.id === (tab ?? wanted))?.id ?? tabs[0]?.id
+            return (
+              <>
+                {tabs.length > 0 && (
+                  <section className="overflow-hidden rounded-xl3 border border-navy/[0.06] bg-white shadow-softer">
+                    <div role="tablist" className="flex gap-1 overflow-x-auto border-b border-navy/[0.06] px-3 md:px-5">
+                      {tabs.map((t) => (
+                        <button
+                          key={t.id}
+                          type="button"
+                          role="tab"
+                          aria-selected={current === t.id}
+                          onClick={() => setTab(t.id)}
+                          className={`shrink-0 border-b-2 px-3 py-3.5 text-[14px] font-semibold transition ${
+                            current === t.id ? 'border-primary text-primary' : 'border-transparent text-navy/55 hover:text-navy'
+                          }`}
+                        >
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="p-5 md:p-7">
+                      {current === 'about' && (
+                        <div className={`grid gap-6 ${about && checks.length ? 'md:grid-cols-[1.4fr_1fr]' : ''}`}>
+                          {about && <p className="min-w-0 whitespace-pre-line text-[15px] leading-relaxed text-navy/70">{about}</p>}
+                          {checks.length > 0 && (
+                            <ul className={`min-w-0 ${about ? 'space-y-2.5 md:border-l md:border-navy/[0.06] md:pl-6' : 'grid gap-2.5 sm:grid-cols-2'}`}>
+                              {checks.map((c) => (
+                                <li key={c} className="flex items-start gap-2.5 text-[14.5px] text-navy/75">
+                                  <CheckSquare size={17} className="mt-0.5 shrink-0 text-primary" /> {c}
+                                </li>
+                              ))}
+                            </ul>
+                          )}
+                        </div>
+                      )}
+                      {current === 'inside' && <StudioWorkspaceOutline sections={outline} />}
+                      {current === 'faq' && <FAQPanel items={product.faq ?? []} />}
+                      <div hidden={tabs.some((t) => t.id === 'reviews') && current !== 'reviews'}>
+                        <ProductReviewsSection
+                          id={REVIEWS_ID}
+                          workspaceName={product.title}
+                          reviews={reviews}
+                          signedIn={Boolean(user)}
+                          requested={searchParams.get('review') === '1'}
+                          className="scroll-mt-24"
+                        />
+                      </div>
+                    </div>
+                  </section>
+                )}
+                {/* No review yet: the section draws nothing but still opens the e-mail's form. */}
+                {!tabs.some((t) => t.id === 'reviews') && tabs.length === 0 && (
+                  <ProductReviewsSection id={REVIEWS_ID} workspaceName={product.title} reviews={reviews} signedIn={Boolean(user)} requested={searchParams.get('review') === '1'} />
+                )}
+              </>
+            )
+          })()}
         </div>
       </div>
     )

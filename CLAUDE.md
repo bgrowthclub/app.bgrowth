@@ -545,6 +545,13 @@ This repo is a **static, client-only MVP**:
   FAQ. `ProductReviewsSection` shows one review at a time and NOTHING when
   there is no review yet (the e-mail's ?review=1 still opens the form). The
   older layout below stays for non-Studio products.
+  Since Sprint 270 (17/11/2026, the owner's choice) the parts below the top
+  are TABS in one card — Description, What's inside (n), Reviews (n) only
+  once there is a review, FAQ — only the tabs with content; ?review=1 opens
+  Reviews. The plans strip shows even when no plan includes the product (all
+  empty circles). The buy area has no box: three icon facts per type
+  (`FACTS` in StudioPurchaseCard), the price small and always shown (also to
+  an owner), then the buttons; the video opens from "Watch video".
   **Since Sprint 183 one table says what every plan does with every
   product** (approved by the owner 01/11/2026; Portal migration 0075):
   Admin → Plans → **Included** is now a product × plan grid where each cell
