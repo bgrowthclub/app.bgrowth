@@ -307,7 +307,8 @@ This repo is a **static, client-only MVP**:
   (`hasEarlyAccess` beside `memberPagesSelfService`). Their page must still
   be handed to them and their plan include a page; no Admin area opens.
   **Since Sprint 272 the team can give one page whole** (the owner's
-  choice, 17/11/2026; Portal migration 0084 — `member_pages.full_granted`):
+  choice, 17/11/2026; Portal migration 0084 — `member_pages.full_granted`,
+  applied in production 17/11/2026):
   Admin → Pages → "Whole page given by the team" (needs an owner e-mail,
   turns on owner editing, sent only when it changes, a line in
   `describe()`). On that page the owner edits everything a whole page has
