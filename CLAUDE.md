@@ -329,6 +329,21 @@ This repo is a **static, client-only MVP**:
   "Invite user" e-mail; its link opens `/reset-password?invite=1` (welcome
   copy, first password, then "Go to my page"). The page is then saved with
   that e-mail as usual.
+  **Since Sprint 275 a page can have free colors** (the owner's decision,
+  18/11/2026; no migration): a new plan line "Any background color and a
+  text color" (`freeColors` in pageFeatures — the three copies; default on
+  for paid plans, off on Free; FULL, so on for pages the team gave). The
+  background may then be ANY hex (kept as chosen) and `theme.text` sets the
+  text color, always made readable against it (`fitTextHex`, 4.5:1, copied
+  in api/account.ts and api/admin.ts). Only the looks in `FREE_COLOR_LOOKS`
+  draw it (Link Page, Personal Card, local, service, professional, personal —
+  the owner chose to start with some); on any other look `pageColors()` turns
+  a strong background back into a tint and ignores the text color. The text
+  color replaces navy through `--color-navy-rgb` on the page wrapper
+  (class `member-text`); index.css gives white cards and navy bands navy
+  back. Saved colors are checked on save only: a member who loses the line
+  keeps them until the next save. The editor also shows "Dark color" for
+  imported models drawn with the service/local look (it checked the model id).
   **Since Sprint 148 the closed site is also respected by the public
   function** (Layer A, approved 23/10/2026; no migration, no middleware):
   what stays open lives in `src/lib/siteAccess.ts` (used by `SiteGate`; a

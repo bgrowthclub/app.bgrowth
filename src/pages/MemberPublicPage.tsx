@@ -14,7 +14,7 @@ import {
 } from '../modules/find/memberPageService'
 import type { MemberPageViewRules } from '../modules/find/memberPageService'
 import type { MemberPage } from '../modules/find/types'
-import { pageBackgroundHex, pageUnderPlan } from '../modules/find/memberPageTemplates'
+import { pageColors, pageSkin, pageUnderPlan } from '../modules/find/memberPageTemplates'
 
 // /p/:slug — a member's public page (BGrowth Find™, Portal migration 0044).
 // Rendered "bare" by AppLayout: the member's page, not BGrowth's, so no
@@ -108,7 +108,7 @@ export default function MemberPublicPage() {
   const shown = pageUnderPlan(page, rules ?? null)
 
   // The page's own background tint fills the whole window (default: soft grey).
-  const backgroundHex = pageBackgroundHex(page.theme?.background)
+  const { backgroundHex } = pageColors(shown.theme, pageSkin(shown.template))
   const background = backgroundHex ? { hex: backgroundHex } : undefined
   // No BGrowth brand on a page whose owner is on a paid plan (14/11/2026,
   // the owner's decision): no "Try for free" pill, no "| BGrowth" in the tab

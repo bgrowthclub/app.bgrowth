@@ -8,7 +8,7 @@ import MemberPagePromo from './MemberPagePromo'
 import ReportPageLink from './ReportPageLink'
 import { usePageTexts } from '../../lib/usePageTexts'
 import { MEMBER_PAGE_LABELS, memberLinkHref, memberLinkLabel, videoEmbed } from '../../modules/find/memberPageService'
-import { blockLinks, pageBackgroundHex, pageBlocks, pageDarkHex, pagePrimaryRgb } from '../../modules/find/memberPageTemplates'
+import { blockLinks, pageBlocks, pageColors, pageDarkHex, pagePrimaryRgb } from '../../modules/find/memberPageTemplates'
 import { isUsableLink, pageButtonProps } from '../../modules/find/memberPageService'
 import type { MemberPageSkin } from '../../modules/find/memberPageTemplates'
 import type { MemberPage, MemberPageBlock, MemberPageHighlight, MemberPageLink, MemberPageProductCategory } from '../../modules/find/types'
@@ -118,7 +118,9 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
   const primaryRgb = pagePrimaryRgb(page.theme?.color)
   const color = primaryRgb ? { rgb: primaryRgb } : undefined
   // The page's own background tint (any plan); none = the look's default.
-  const backgroundHex = pageBackgroundHex(page.theme?.background)
+  // Since 18/11/2026 the background may be any color and the text has its
+  // own, on the free-color looks (pageColors).
+  const { backgroundHex, textRgb } = pageColors(page.theme, skin)
   const background = backgroundHex ? { hex: backgroundHex } : undefined
   // Service Business: the member's dark color for the dark bands; none = navy.
   // Service Business and, since 15/11/2026, Local Services take the chosen dark color.
@@ -128,6 +130,9 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
   const style = {
     ...(color ? { '--color-primary-rgb': color.rgb, '--color-primary-accent-rgb': color.rgb, '--color-primary': `rgb(${color.rgb})`, '--color-primary-accent': `rgb(${color.rgb})` } : {}),
     ...(background ? { backgroundColor: background.hex } : {}),
+    // The page's text color replaces navy on the page itself; white cards and
+    // navy bands get navy back (.member-text in index.css).
+    ...(textRgb ? { '--color-navy-rgb': textRgb } : {}),
   } as CSSProperties
   // A button that goes nowhere is worse than no button (08/11/2026).
   const usableLinks = page.links.filter((l) => isUsableLink(l.type, l.url))
@@ -1047,7 +1052,7 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
   }
 
   return (
-    <div style={style} className={`min-h-full w-full ${look.page}`}>
+    <div style={style} className={`min-h-full w-full ${look.page} ${textRgb ? 'member-text' : ''}`}>
       {blocks.map((block, i) => render(block, i))}
       <footer className="border-t border-navy/[0.06]">
         <div className={`mx-auto ${look.wide} px-5 py-8 text-center`}>

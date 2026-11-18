@@ -13,7 +13,7 @@ import { FULL_PAGE_FEATURES, PARTIAL_PAGE_FEATURES } from '../../modules/find/pa
 import type { PageFeatures } from '../../modules/find/pageFeatures'
 import { shrinkImage } from '../../lib/shrinkImage'
 import { MEMBER_PAGE_LABELS, SAVE_CONTACT_URL, WHATSAPP_JOIN_RE, isUsableLink, videoEmbed } from '../../modules/find/memberPageService'
-import { BLOCK_TYPES, LEGACY_BLOCKS, PAGE_BACKGROUNDS, PAGE_COLORS, PAGE_DARKS, SINGLE_BLOCK_TYPES, blockId, fitBlocks, memberPageTemplates, mergeDuplicateSections, pageSkin, switchTemplateBlocks, templateBlocks, templatePreview } from '../../modules/find/memberPageTemplates'
+import { BLOCK_TYPES, FREE_COLOR_LOOKS, LEGACY_BLOCKS, PAGE_BACKGROUNDS, PAGE_COLORS, PAGE_DARKS, SINGLE_BLOCK_TYPES, blockId, fitTextHex, pageBackgroundHex, fitBlocks, memberPageTemplates, mergeDuplicateSections, pageSkin, switchTemplateBlocks, templateBlocks, templatePreview } from '../../modules/find/memberPageTemplates'
 import type {
   MemberPage,
   MemberPageBlock,
@@ -60,6 +60,13 @@ interface Props {
 }
 
 const LABEL = 'mb-1.5 block text-[12px] font-semibold uppercase tracking-wide text-navy/40'
+// Ready-made text colors (free colors, 18/11/2026); "Any text color" picks the rest.
+const TEXT_SWATCHES: { label: string; hex: `#${string}` }[] = [
+  { label: 'Black', hex: '#111111' },
+  { label: 'Navy', hex: '#0a1b4d' },
+  { label: 'Graphite', hex: '#374151' },
+  { label: 'White', hex: '#ffffff' },
+]
 
 // "Contact buttons" / "Contact buttons and About" — section names as the editor shows them.
 function sectionNames(types: MemberPageBlockType[]) {
@@ -183,6 +190,10 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
   // Still-disagreeing copies, live (the warning goes away once one is deleted).
   const conflictsLeft = duplicates.conflicts.filter((t) => blocks.filter((x) => x.type === t).length > 1)
   const [theme, setTheme] = useState<MemberPageTheme>(page?.theme ?? {})
+  // Free colors (18/11/2026): only on the looks that take them so far.
+  const skin = pageSkin(template)
+  const freeColorLook = skin !== null && FREE_COLOR_LOOKS.includes(skin)
+  const freeHere = f.style && f.freeColors && freeColorLook
   const [displayName, setDisplayName] = useState(page?.display_name ?? '')
   const [slug, setSlug] = useState(page?.slug ?? '')
   const [slugTouched, setSlugTouched] = useState(Boolean(page))
@@ -329,6 +340,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
       background: f.style ? theme.background : undefined,
       floating: f.style ? theme.floating : undefined,
       dark: f.style ? theme.dark : undefined,
+      text: f.style && f.freeColors ? theme.text : undefined,
     },
   }
 
@@ -1130,6 +1142,10 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
           {f.style && (
           <section className="space-y-3">
             <span className={LABEL}>Background</span>
+            {f.freeColors && !freeColorLook && (
+              <p className="text-[12.5px] text-navy/45">This look takes light tints. Any color, with your own text color, works on the Link Page, Personal Card, Self-employed, Company with a team, Professional and Personal Brand looks.</p>
+            )}
+            {!f.freeColors && top.freeColors && <PaidFeatureNote>Any background color and your own text color come with a higher plan.</PaidFeatureNote>}
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
@@ -1153,17 +1169,62 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                   style={{ background: c.hex }}
                 />
               ))}
-              <CustomColorSwatch value={theme.background} role="background" onPick={(hex) => setTheme((t) => ({ ...t, background: hex as `#${string}` }))} />
+              <CustomColorSwatch
+                value={theme.background}
+                role="background"
+                {...(freeHere ? { fit: (hex: string) => hex, label: 'Any background color' } : {})}
+                onPick={(hex) => setTheme((t) => ({ ...t, background: hex as `#${string}` }))}
+              />
             </div>
           </section>
           )}
 
-          {f.style && (template === 'service' || template === 'local') && (
+          {freeHere && (
+            // Free colors (18/11/2026): the page's text color, always made
+            // readable on the background (fitTextHex).
+            <section className="space-y-3">
+              <span className={LABEL}>Text color</span>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  title="Automatic"
+                  aria-label="Automatic text color"
+                  aria-pressed={!theme.text}
+                  onClick={() => setTheme((t) => ({ ...t, text: undefined }))}
+                  className={`h-8 rounded-full border border-navy/15 bg-white px-3 text-[12px] font-semibold text-navy/60 ring-offset-2 transition ${!theme.text ? 'ring-2 ring-navy' : ''}`}
+                >
+                  Automatic
+                </button>
+                {TEXT_SWATCHES.map((c) => (
+                  <button
+                    key={c.hex}
+                    type="button"
+                    title={c.label}
+                    aria-label={`${c.label} text`}
+                    aria-pressed={theme.text === c.hex}
+                    onClick={() => setTheme((t) => ({ ...t, text: c.hex }))}
+                    className={`h-8 w-8 rounded-full border border-navy/15 ring-offset-2 transition ${theme.text === c.hex ? 'ring-2 ring-navy' : ''}`}
+                    style={{ background: c.hex }}
+                  />
+                ))}
+                <CustomColorSwatch
+                  value={theme.text}
+                  role="background"
+                  label="Any text color"
+                  fit={(hex) => fitTextHex(hex, pageBackgroundHex(theme.background) ?? '#ffffff')}
+                  onPick={(hex) => setTheme((t) => ({ ...t, text: hex as `#${string}` }))}
+                />
+              </div>
+              <p className="text-[12.5px] text-navy/45">Titles and texts of the page. Cards keep their own dark text. If a color would be hard to read on the background, we adjust its tone.</p>
+            </section>
+          )}
+
+          {f.style && (skin === 'service' || skin === 'local') && (
             // The dark top and contact band (14/11/2026; Local Services too
             // since 15/11/2026). Open to every plan,
             // like the background.
             <section className="space-y-3">
-              <span className={LABEL}>{template === 'local' ? 'Dark color (top)' : 'Dark color (top and contact)'}</span>
+              <span className={LABEL}>{skin === 'local' ? 'Dark color (top)' : 'Dark color (top and contact)'}</span>
               <div className="flex flex-wrap gap-2">
                 <button
                   type="button"

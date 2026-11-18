@@ -163,6 +163,10 @@ export interface MemberPageTheme {
   // Service Business: the color of the dark top and contact band. Absent =
   // navy. Open to every plan, like the background.
   dark?: MemberPageDark | `#${string}`
+  // The text color (18/11/2026), on plans with free colors and on pages the
+  // team gave; drawn only on the looks in FREE_COLOR_LOOKS, always made
+  // readable against the background (pageColors in memberPageTemplates.ts).
+  text?: `#${string}`
 }
 
 // What the subscriber's plan lets them do with their page.

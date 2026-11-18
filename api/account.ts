@@ -517,6 +517,8 @@ const PAGE_TEMPLATES = new Set([
 ])
 // Background tints (light only — dark text stays readable), open to every plan.
 const PAGE_BACKGROUNDS = new Set(['cream', 'sand', 'mist', 'sky', 'mint', 'blush', 'lavender'])
+// Their colors (copy of PAGE_BACKGROUNDS in memberPageTemplates.ts), to make a text color readable on them.
+const PAGE_BACKGROUND_HEX: Record<string, string> = { cream: '#fbf7f0', sand: '#f5efe4', mist: '#f2f5f9', sky: '#edf4fd', mint: '#ecf7f1', blush: '#fcf0f1', lavender: '#f3f0fb' }
 const PAGE_DARKS = new Set(['black', 'graphite', 'wine', 'forest', 'petrol', 'plum', 'brown'])
 const pageText = (v: unknown, max: number) => (typeof v === 'string' ? v.trim().slice(0, max) : '')
 const pageUrl = (v: unknown) => {
@@ -608,15 +610,45 @@ const PAGE_HEX = /^#[0-9a-f]{6}$/i
 const pageColorValue = (v: unknown, swatches: Set<string>, role: 'primary' | 'dark' | 'background') =>
   typeof v === 'string' ? (swatches.has(v) ? v : PAGE_HEX.test(v) ? fitPageHex(v.toLowerCase(), role) : undefined) : undefined
 
-function cleanPageTheme(value: unknown) {
+// Free colors (18/11/2026): the text color made readable against the page's
+// background (4.5:1), moved toward black or white. COPY of fitTextHex in
+// src/modules/find/memberPageTemplates.ts — change all three.
+function fitTextHex(text: string, background: string): string {
+  const ch = (c: number) => {
+    const s = c / 255
+    return s <= 0.03928 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4
+  }
+  const lum = (c: number[]) => 0.2126 * ch(c[0]) + 0.7152 * ch(c[1]) + 0.0722 * ch(c[2])
+  const con = (a: number[], b: number[]) => {
+    const [x, y] = [lum(a), lum(b)].sort((m, n) => n - m)
+    return (x + 0.05) / (y + 0.05)
+  }
+  const hex = (h: string) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16))
+  const bg = hex(background.toLowerCase())
+  let rgb = hex(text.toLowerCase())
+  const toward = lum(bg) > 0.18 ? 0 : 255
+  for (let i = 0; i < 60 && con(rgb, bg) < 4.5; i++) rgb = rgb.map((c) => c + (toward - c) * 0.1)
+  return '#' + rgb.map((c) => Math.round(Math.max(0, Math.min(255, c))).toString(16).padStart(2, '0')).join('')
+}
+
+function cleanPageTheme(value: unknown, free = false) {
   const v = (value && typeof value === 'object' ? value : {}) as Record<string, unknown>
   const theme: Record<string, string> = {}
   const color = pageColorValue(v.color, PAGE_COLORS, 'primary')
   if (color) theme.color = color
   const cover = pageUrl(v.cover)
   if (cover) theme.cover = cover
-  const background = pageColorValue(v.background, PAGE_BACKGROUNDS, 'background')
+  // free (18/11/2026): any background color, kept as chosen, and a text
+  // color made readable against it. Otherwise a light tint, as before.
+  const background =
+    free && typeof v.background === 'string' && PAGE_HEX.test(v.background)
+      ? v.background.toLowerCase()
+      : pageColorValue(v.background, PAGE_BACKGROUNDS, 'background')
   if (background) theme.background = background
+  if (free && typeof v.text === 'string' && PAGE_HEX.test(v.text)) {
+    const bgHex = background && PAGE_HEX.test(background) ? background : (PAGE_BACKGROUND_HEX[background ?? ''] ?? '#ffffff')
+    theme.text = fitTextHex(v.text, bgHex)
+  }
   // Service Business dark bands (14/11/2026); copy of PAGE_DARKS in memberPageTemplates.ts.
   const dark = pageColorValue(v.dark, PAGE_DARKS, 'dark')
   if (dark) theme.dark = dark
@@ -791,15 +823,15 @@ async function livePlanEntitlements(db: Db, userId: string): Promise<any[] | nul
 // without `pageFeatures` keeps what "part" / "whole page" always meant.
 type PageFeatures = {
   color: boolean; cover: boolean; address: boolean; hide: boolean; sections: boolean; gallery: boolean
-  signup: boolean; style: boolean; stats: boolean; noBrand: boolean; highlights: number; products: number
+  signup: boolean; style: boolean; stats: boolean; noBrand: boolean; freeColors: boolean; highlights: number; products: number
 }
-const PAGE_FEATURE_KEYS = ['color', 'cover', 'address', 'hide', 'sections', 'gallery', 'signup', 'style', 'stats', 'noBrand'] as const
-const PARTIAL_FEATURES: PageFeatures = { color: false, cover: false, address: false, hide: true, sections: false, gallery: false, signup: false, style: true, stats: false, noBrand: true, highlights: 1, products: 12 }
-const FULL_FEATURES: PageFeatures = { color: true, cover: true, address: true, hide: true, sections: true, gallery: true, signup: true, style: true, stats: true, noBrand: true, highlights: 8, products: 60 }
+const PAGE_FEATURE_KEYS = ['color', 'cover', 'address', 'hide', 'sections', 'gallery', 'signup', 'style', 'stats', 'noBrand', 'freeColors'] as const
+const PARTIAL_FEATURES: PageFeatures = { color: false, cover: false, address: false, hide: true, sections: false, gallery: false, signup: false, style: true, stats: false, noBrand: true, freeColors: true, highlights: 1, products: 12 }
+const FULL_FEATURES: PageFeatures = { color: true, cover: true, address: true, hide: true, sections: true, gallery: true, signup: true, style: true, stats: true, noBrand: true, freeColors: true, highlights: 8, products: 60 }
 
 function pageFeaturesOf(ent: any, isFree: boolean): PageFeatures | null {
   if (!ent || (ent.memberPage !== 'partial' && ent.memberPage !== 'full')) return null
-  const out: PageFeatures = { ...(ent.memberPage === 'full' ? FULL_FEATURES : PARTIAL_FEATURES), noBrand: !isFree }
+  const out: PageFeatures = { ...(ent.memberPage === 'full' ? FULL_FEATURES : PARTIAL_FEATURES), noBrand: !isFree, freeColors: !isFree }
   const own = (ent.pageFeatures ?? {}) as Record<string, unknown>
   for (const k of PAGE_FEATURE_KEYS) if (typeof own[k] === 'boolean') out[k] = own[k] as boolean
   if (typeof own.highlights === 'number') out.highlights = Math.max(0, Math.min(8, Math.round(own.highlights)))
@@ -1030,7 +1062,8 @@ function readMyPage(b: Record<string, any>) {
     // in myPageAction, which can read the database).
     template: PAGE_TEMPLATES.has(b.template) || IMPORTED_MODEL_ID.test(String(b.template ?? '')) ? b.template : 'professional',
     blocks: cleanPageBlocks(b.blocks),
-    theme: cleanPageTheme(b.theme),
+    // Kept as sent here; the plan's free-colors line decides on save.
+    theme: cleanPageTheme(b.theme, true),
   }
 }
 
@@ -1204,6 +1237,12 @@ async function myPageAction(req: VercelRequest, db: Db, user: { id: string; emai
     ...(f.style && input.theme.background ? { background: input.theme.background } : {}),
     ...(f.style && input.theme.floating ? { floating: input.theme.floating } : {}),
     ...(f.style && input.theme.dark ? { dark: input.theme.dark } : {}),
+    // Free colors (18/11/2026): without the plan line a strong background goes
+    // back to a light tint, and there is no text color.
+    ...(f.style && f.freeColors && input.theme.text ? { text: input.theme.text } : {}),
+  }
+  if (!f.freeColors && typeof input.theme.background === 'string' && PAGE_HEX.test(input.theme.background)) {
+    input.theme.background = fitPageHex(input.theme.background, 'background')
   }
   input.highlights = input.highlights.slice(0, f.highlights)
   if (f.address) {

@@ -82,6 +82,15 @@ body {
   }
 }
 
+/* Free colors on a member page (18/11/2026): the page's text color takes the
+   place of navy (--color-navy-rgb, set by MemberSiteView). White cards,
+   inputs and navy bands keep the real navy, so their text stays readable. */
+.member-text [class~='bg-white'],
+.member-text [class*='bg-white/'],
+.member-text [class~='bg-navy'] {
+  --color-navy-rgb: 10 27 77;
+}
+
 @layer components {
   .container-px {
     @apply px-6 md:px-10 lg:px-16;

@@ -21,6 +21,7 @@ export interface PageFeatures {
   style: boolean // background tint, dark color, floating button
   stats: boolean // the page's numbers (visits, clicks)
   noBrand: boolean // no BGrowth brand on the page
+  freeColors: boolean // any background color and a text color (18/11/2026); default paid plans
   highlights: number // featured photos / videos
   products: number // product picks
 }
@@ -36,6 +37,7 @@ export const PARTIAL_PAGE_FEATURES: PageFeatures = {
   style: true,
   stats: false,
   noBrand: true,
+  freeColors: true,
   highlights: 1,
   products: 12,
 }
@@ -51,19 +53,20 @@ export const FULL_PAGE_FEATURES: PageFeatures = {
   style: true,
   stats: true,
   noBrand: true,
+  freeColors: true,
   highlights: 8,
   products: 60,
 }
 
 export const PAGE_FEATURE_MAX = { highlights: 8, products: 60 }
 
-const BOOL_KEYS = ['color', 'cover', 'address', 'hide', 'sections', 'gallery', 'signup', 'style', 'stats', 'noBrand'] as const
+const BOOL_KEYS = ['color', 'cover', 'address', 'hide', 'sections', 'gallery', 'signup', 'style', 'stats', 'noBrand', 'freeColors'] as const
 
 // One plan's features: null when the plan gives no page. The BGrowth brand
 // only leaves paid pages unless the table says otherwise (Sprint 253 rule).
 export function pageFeaturesOf(ent: PlanEntitlements | null | undefined, isFree: boolean): PageFeatures | null {
   if (!ent || (ent.memberPage !== 'partial' && ent.memberPage !== 'full')) return null
-  const base = { ...(ent.memberPage === 'full' ? FULL_PAGE_FEATURES : PARTIAL_PAGE_FEATURES), noBrand: !isFree }
+  const base = { ...(ent.memberPage === 'full' ? FULL_PAGE_FEATURES : PARTIAL_PAGE_FEATURES), noBrand: !isFree, freeColors: !isFree }
   const own = ent.pageFeatures ?? {}
   const out = { ...base }
   for (const k of BOOL_KEYS) if (typeof own[k] === 'boolean') out[k] = own[k] as boolean

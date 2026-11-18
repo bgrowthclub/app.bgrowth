@@ -10,7 +10,7 @@ import MemberFloatingButton from './MemberFloatingButton'
 import ReportPageLink from './ReportPageLink'
 import type { CSSProperties } from 'react'
 import { MEMBER_PAGE_LABELS, memberLinkHref, memberLinkLabel, videoEmbed } from '../../modules/find/memberPageService'
-import { blockLinks, pageBackgroundHex, pageBlocks, pagePrimaryRgb, pageSkin } from '../../modules/find/memberPageTemplates'
+import { blockLinks, pageBlocks, pageColors, pagePrimaryRgb, pageSkin } from '../../modules/find/memberPageTemplates'
 import { isUsableLink, pageButtonProps } from '../../modules/find/memberPageService'
 import type { MemberPage, MemberPageBlock, MemberPageProductCategory } from '../../modules/find/types'
 
@@ -82,7 +82,9 @@ function MemberPageBody({ page, preview = false, onLinkClick, onSearch, onCatego
   // A swatch or the member's own color (15/11/2026).
   const primaryRgb = pagePrimaryRgb(page.theme?.color)
   const color = primaryRgb ? { rgb: primaryRgb } : undefined
-  const backgroundHex = pageBackgroundHex(page.theme?.background)
+  // The one-column models don't take free colors: a strong background goes
+  // back to a light tint here (pageColors).
+  const { backgroundHex } = pageColors(page.theme, null)
   const background = backgroundHex ? { hex: backgroundHex } : undefined
   const style = {
     ...(color ? { '--color-primary-rgb': color.rgb, '--color-primary-accent-rgb': color.rgb, '--color-primary': `rgb(${color.rgb})`, '--color-primary-accent': `rgb(${color.rgb})` } : {}),

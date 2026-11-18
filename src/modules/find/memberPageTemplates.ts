@@ -124,6 +124,36 @@ export function pageDarkHex(dark: string | undefined): string | null {
   return PAGE_DARKS.find((c) => c.id === dark)?.hex ?? null
 }
 
+// Free colors (18/11/2026, the owner's decision): on a plan with the "Choose
+// any background and text color" line (Pro, Enterprise) and on a page the
+// team gave, the background may be ANY color — dark and strong included —
+// and the text has its own color. The text is always made readable against
+// the background (4.5:1, like the main color): too close to it, it is moved
+// toward black or white until it reads well. COPIED in api/account.ts and
+// api/admin.ts (fitTextHex) — change all three.
+//
+// Only some looks take it for now (the owner's choice: start with some, add
+// the rest after checking each). On any other look a strong background is
+// lightened back to a tint and the text stays the look's own.
+export const FREE_COLOR_LOOKS: MemberPageSkin[] = ['links', 'card', 'service', 'local', 'professional', 'personal']
+const NAVY_TEXT = '#0a1b4d'
+export function fitTextHex(text: string, background: string): string {
+  const bg = hexRgb(background.toLowerCase())
+  let rgb = hexRgb(text.toLowerCase())
+  const toward = luminance(bg) > 0.18 ? 0 : 255
+  for (let i = 0; i < 60 && contrast(rgb, bg) < 4.5; i++) rgb = rgb.map((c) => c + (toward - c) * 0.1)
+  return rgbHex(rgb)
+}
+/** What a page is drawn with: its background and (on a free-color look) its text color, as "r g b". */
+export function pageColors(theme: { background?: string; text?: string } | null | undefined, skin: MemberPageSkin | null) {
+  const raw = pageBackgroundHex(theme?.background)
+  const free = skin !== null && FREE_COLOR_LOOKS.includes(skin)
+  if (!free) return { backgroundHex: raw && isHexColor(theme?.background) ? fitPageHex(raw, 'background') : raw, textRgb: null as string | null }
+  const bg = raw ?? '#ffffff'
+  const wanted = isHexColor(theme?.text) ? theme!.text! : contrast(hexRgb(NAVY_TEXT), hexRgb(bg)) < 4.5 ? NAVY_TEXT : null
+  return { backgroundHex: raw, textRgb: wanted ? hexRgb(fitTextHex(wanted, bg)).join(' ') : null }
+}
+
 // Sections whose content is the page's own (name, buttons, services…):
 // one of each per page — a second copy would only repeat the same items.
 export const SINGLE_BLOCK_TYPES: MemberPageBlockType[] = ['hero', 'highlights', 'services', 'about', 'products', 'signup']

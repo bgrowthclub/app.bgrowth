@@ -12,6 +12,7 @@ type Cell = boolean | string
 const BOOLS: { key: keyof PageFeatures; label: string }[] = [
   { key: 'hide', label: 'Hide sections you don’t need' },
   { key: 'style', label: 'Background tint, dark color and floating button' },
+  { key: 'freeColors', label: 'Any background color and your own text color' },
   { key: 'noBrand', label: 'No BGrowth brand on your page' },
   { key: 'color', label: 'Choose any page color' },
   { key: 'cover', label: 'Cover image' },

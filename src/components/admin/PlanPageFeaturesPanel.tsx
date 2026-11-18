@@ -28,6 +28,7 @@ const BOOL_ROWS: { key: keyof PageFeatures; label: string; hint?: string }[] = [
   { key: 'gallery', label: 'Photo gallery' },
   { key: 'signup', label: 'E-mail list' },
   { key: 'style', label: 'Background tint, dark color, floating button' },
+  { key: 'freeColors', label: 'Any background color and a text color' },
   { key: 'stats', label: 'Page numbers (visits, clicks)' },
   { key: 'noBrand', label: 'No BGrowth brand', hint: 'The disclaimer and “Report” always stay' },
 ]
