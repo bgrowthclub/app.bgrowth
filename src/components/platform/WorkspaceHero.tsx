@@ -1,16 +1,15 @@
 import { Link } from 'react-router-dom'
-import { Crown, FolderOpen } from 'lucide-react'
+import { FolderOpen, GraduationCap } from 'lucide-react'
 import { getTimeOfDayGreeting } from '../../lib/greeting'
 import { useIdentity } from '../../modules/identity/IdentityContext'
-import { useMemberPlan } from '../../modules/account/useMemberPlan'
 import { useOwnedProducts } from '../../lib/productLibrary'
 
 // The top of the member Dashboard (19/11/2026, the owner's design): a pill,
 // the greeting with the member's first name in blue, and two cards with real
-// numbers — their plan and how many products they have. Nothing invented.
+// numbers — how many Workspaces and how many courses they have. The plan is
+// not repeated here: the top bar's badge shows it on every page (19/11/2026).
 export default function WorkspaceHero() {
   const { user } = useIdentity()
-  const { current, loading } = useMemberPlan()
   const owned = useOwnedProducts(user).filter((p) => !p.expired)
 
   // ProtectedRoute guarantees an authenticated member by the time this
@@ -31,18 +30,6 @@ export default function WorkspaceHero() {
       </div>
       <div className="grid grid-cols-2 gap-3 sm:w-auto">
         <Link
-          to="/platform/membership"
-          className="flex items-center gap-3 rounded-2xl border border-navy/[0.07] bg-white px-4 py-3 shadow-softer transition-colors hover:border-primary/20"
-        >
-          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-amber-50 text-amber-600">
-            <Crown size={17} aria-hidden />
-          </span>
-          <span className="min-w-0">
-            <span className="block text-[11.5px] text-navy/45">Your plan</span>
-            <span className="block truncate text-[14px] font-bold text-navy">{loading ? '…' : current?.name ?? 'Free'}</span>
-          </span>
-        </Link>
-        <Link
           to="/platform/my-systems"
           className="flex items-center gap-3 rounded-2xl border border-navy/[0.07] bg-white px-4 py-3 shadow-softer transition-colors hover:border-primary/20"
         >
@@ -50,8 +37,20 @@ export default function WorkspaceHero() {
             <FolderOpen size={17} aria-hidden />
           </span>
           <span className="min-w-0">
-            <span className="block text-[11.5px] text-navy/45">Your products</span>
-            <span className="block text-[14px] font-bold text-navy">{owned.length}</span>
+            <span className="block text-[11.5px] text-navy/45">Workspaces</span>
+            <span className="block text-[14px] font-bold text-navy">{owned.filter((p) => p.type !== 'Course').length}</span>
+          </span>
+        </Link>
+        <Link
+          to="/platform/courses"
+          className="flex items-center gap-3 rounded-2xl border border-navy/[0.07] bg-white px-4 py-3 shadow-softer transition-colors hover:border-primary/20"
+        >
+          <span className="grid h-9 w-9 shrink-0 place-items-center rounded-xl bg-violet-50 text-violet-600">
+            <GraduationCap size={17} aria-hidden />
+          </span>
+          <span className="min-w-0">
+            <span className="block text-[11.5px] text-navy/45">Courses</span>
+            <span className="block text-[14px] font-bold text-navy">{owned.filter((p) => p.type === 'Course').length}</span>
           </span>
         </Link>
       </div>

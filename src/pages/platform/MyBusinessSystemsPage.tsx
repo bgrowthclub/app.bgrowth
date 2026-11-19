@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Crown, FolderOpen, Play } from 'lucide-react'
+import { FolderOpen, GraduationCap, Play } from 'lucide-react'
 import SEO from '../../components/seo/SEO'
 import SearchToolbar from '../../components/ui/SearchToolbar'
 import FilterPill from '../../components/ui/FilterPill'
@@ -12,7 +12,6 @@ import ProductLibraryCard from '../../components/systems/ProductLibraryCard'
 import WorkspaceLibraryCard from '../../components/systems/WorkspaceLibraryCard'
 import Pagination from '../../components/ui/Pagination'
 import { getProductActionLabel, getProductActionRoute } from '../../lib/productLibrary'
-import { useMemberPlan } from '../../modules/account/useMemberPlan'
 import { timeAgo } from '../../lib/timeAgo'
 import MyWorkspacesTabs from '../../components/platform/MyWorkspacesTabs'
 import { useOwnedProductsState } from '../../lib/productLibrary'
@@ -45,7 +44,6 @@ export default function MyBusinessSystemsPage() {
   const [sort, setSort] = useState('recent')
   const [view, setView] = useState<CardView>('grid')
   const [page, setPage] = useState(1)
-  const { current: plan, loading: planLoading } = useMemberPlan()
 
   const results = useMemo(() => {
     const list = owned.filter((p) => {
@@ -90,7 +88,7 @@ export default function MyBusinessSystemsPage() {
       <MyWorkspacesTabs />
 
       {/* 19/11/2026, the owner's design: pill, title and two cards with real
-          numbers (how many, the plan); the last opened Workspace; then the
+          numbers (Workspaces, courses); the last opened Workspace; then the
           search, sort and filters in one card. Nothing invented. */}
       <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
         <div>
@@ -110,13 +108,13 @@ export default function MyBusinessSystemsPage() {
               <span className="block text-[14px] font-bold text-navy">{owned.filter((p) => !p.expired).length} active</span>
             </span>
           </div>
-          <Link to="/platform/membership" className="flex items-center gap-3 rounded-2xl border border-navy/[0.07] bg-white px-4 py-3 shadow-softer transition-colors hover:border-primary/20">
-            <span className="grid h-9 w-9 place-items-center rounded-xl bg-amber-50 text-amber-600">
-              <Crown size={17} aria-hidden />
+          <Link to="/platform/courses" className="flex items-center gap-3 rounded-2xl border border-navy/[0.07] bg-white px-4 py-3 shadow-softer transition-colors hover:border-primary/20">
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-violet-50 text-violet-600">
+              <GraduationCap size={17} aria-hidden />
             </span>
-            <span className="min-w-0">
-              <span className="block text-[11.5px] text-navy/45">Your plan</span>
-              <span className="block truncate text-[14px] font-bold text-navy">{planLoading ? '…' : plan?.name ?? 'Free'}</span>
+            <span>
+              <span className="block text-[11.5px] text-navy/45">Courses</span>
+              <span className="block text-[14px] font-bold text-navy">{ownedState.products.filter((p) => p.type === 'Course').length}</span>
             </span>
           </Link>
         </div>

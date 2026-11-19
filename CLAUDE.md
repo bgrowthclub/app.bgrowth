@@ -512,8 +512,8 @@ This repo is a **static, client-only MVP**:
   New text fields: `home.close.eyebrow`, `home.close.highlight`,
   `home.close.checks`, `home.story.secondary`. No invented numbers.
   **Since Sprint 287 the member Dashboard follows the owner's design**
-  (19/11/2026): greeting with the first name in blue and two real cards (the
-  plan, how many products); "Continue your Workspace" = the product opened
+  (19/11/2026): greeting with the first name in blue and two real cards
+  (Workspaces, courses — the plan stays only in the top bar's badge); "Continue your Workspace" = the product opened
   most recently (`lastOpenedAt`, else the first) — progress only where real
   (courses), else "last opened … ago" (`lib/timeAgo.ts`); My Workspaces as
   cards with a colored top; four quick actions (Academy no longer locked);
@@ -522,7 +522,7 @@ This repo is a **static, client-only MVP**:
   marketplace discounts and AI credits that don't exist. Section titles:
   `DashboardSectionTitle`. Recommended and Recently added stay, at the end.
   Since Sprint 288 (19/11/2026, the owner's design) My Workspaces has a pill,
-  two real cards (active count, the plan), a "Last opened" banner (only when
+  two real cards (active Workspaces, courses), a "Last opened" banner (only when
   something was opened), search/sort/filters in one card (type chips with
   counts), grid cards `components/systems/WorkspaceLibraryCard` (dark top,
   real progress only, "Opened … ago"; list view keeps `ProductLibraryCard`),
