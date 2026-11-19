@@ -15,6 +15,8 @@ import FAQPanel from '../components/runtime/FAQPanel'
 import RelatedProductsPanel from '../components/runtime/RelatedProductsPanel'
 import StudioPurchaseCard from '../components/systems/StudioPurchaseCard'
 import StudioWorkspaceOutline from '../components/systems/StudioWorkspaceOutline'
+import ProductInsideList from '../components/systems/ProductInsideList'
+import { usePageTexts } from '../lib/usePageTexts'
 import ProductGalleryCarousel from '../components/systems/ProductGalleryCarousel'
 import ProductPlansStrip from '../components/systems/ProductPlansStrip'
 import ProductVideoButton from '../components/systems/ProductVideoButton'
@@ -80,6 +82,8 @@ export default function ProductPage() {
   const [plans, setPlans] = useState<StoredPlan[]>([])
   // The product page's tabs (17/11/2026, the owner's choice).
   const [tab, setTab] = useState<'about' | 'inside' | 'reviews' | 'faq' | null>(null)
+  // The standard FAQ per product type (Admin → Site → Page texts → Product pages).
+  const siteText = usePageTexts()
   useEffect(() => {
     planService.listPlans().then(setPlans).catch(() => undefined)
   }, [])
@@ -244,7 +248,11 @@ export default function ProductPage() {
               {topGallery ? (
                 <ProductGalleryCarousel gallery={topGallery} title={product.title} />
               ) : cover ? (
-                <img src={cover} alt="" className="max-h-[300px] w-full rounded-xl3 border border-navy/[0.06] bg-bg-soft object-contain shadow-softer lg:max-h-[460px]" />
+                // Same frame for every cover (19/11/2026): a portrait one sits on a blurred copy of itself.
+                <div className="relative h-72 w-full overflow-hidden rounded-xl3 border border-navy/[0.06] bg-bg-soft shadow-softer md:h-80 lg:h-[420px]">
+                  <img src={cover} alt="" aria-hidden className="absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-2xl" />
+                  <img src={cover} alt="" className="relative h-full w-full object-contain" />
+                </div>
               ) : null}
             </div>
             <div className="min-w-0">
@@ -280,11 +288,25 @@ export default function ProductPage() {
           {/* One card with tabs instead of a long page (17/11/2026): only the
               tabs that have something in them; Reviews only once there is one. */}
           {(() => {
+            // Every product with the same tabs (19/11/2026, the owner's choice):
+            // Description falls back to the short text, What's inside lists a
+            // Download's files, and FAQ falls back to the standard one for the
+            // product's type. Reviews still only once there is one.
+            const aboutText = about || (checks.length ? '' : product.description)
+            const insideCount = outline.length || (product.whatsIncluded?.length ?? 0)
+            const kind = product.type === 'Download' ? 'download' : product.type === 'Calculator' ? 'calculator' : product.type === 'Course' ? 'course' : 'workspace'
+            const faq = product.faq?.length
+              ? product.faq
+              : siteText
+                  .items(`product.faq.${kind}`)
+                  .map((line) => line.split('|'))
+                  .filter((p) => p.length >= 2 && p[0].trim() && p.slice(1).join('|').trim())
+                  .map((p) => ({ question: p[0].trim(), answer: p.slice(1).join('|').trim() }))
             const tabs = [
-              (about || checks.length > 0) && { id: 'about' as const, label: 'Description' },
-              outline.length > 0 && { id: 'inside' as const, label: `What’s inside (${outline.length})` },
+              (aboutText || checks.length > 0) && { id: 'about' as const, label: 'Description' },
+              insideCount > 0 && { id: 'inside' as const, label: `What’s inside (${insideCount})` },
               reviews.summary.reviewCount > 0 && { id: 'reviews' as const, label: `Reviews (${reviews.summary.reviewCount})` },
-              (product.faq?.length ?? 0) > 0 && { id: 'faq' as const, label: 'FAQ' },
+              faq.length > 0 && { id: 'faq' as const, label: 'FAQ' },
             ].filter((t): t is { id: 'about' | 'inside' | 'reviews' | 'faq'; label: string } => Boolean(t))
             const wanted = searchParams.get('review') === '1' ? 'reviews' : null
             const current = tabs.find((t) => t.id === (tab ?? wanted))?.id ?? tabs[0]?.id
@@ -310,10 +332,10 @@ export default function ProductPage() {
                     </div>
                     <div className="p-5 md:p-7">
                       {current === 'about' && (
-                        <div className={`grid gap-6 ${about && checks.length ? 'md:grid-cols-[1.4fr_1fr]' : ''}`}>
-                          {about && <p className="min-w-0 whitespace-pre-line text-[15px] leading-relaxed text-navy/70">{about}</p>}
+                        <div className={`grid gap-6 ${aboutText && checks.length ? 'md:grid-cols-[1.4fr_1fr]' : ''}`}>
+                          {aboutText && <p className="min-w-0 whitespace-pre-line text-[15px] leading-relaxed text-navy/70">{aboutText}</p>}
                           {checks.length > 0 && (
-                            <ul className={`min-w-0 ${about ? 'space-y-2.5 md:border-l md:border-navy/[0.06] md:pl-6' : 'grid gap-2.5 sm:grid-cols-2'}`}>
+                            <ul className={`min-w-0 ${aboutText ? 'space-y-2.5 md:border-l md:border-navy/[0.06] md:pl-6' : 'grid gap-2.5 sm:grid-cols-2'}`}>
                               {checks.map((c) => (
                                 <li key={c} className="flex items-start gap-2.5 text-[14.5px] text-navy/75">
                                   <CheckSquare size={17} className="mt-0.5 shrink-0 text-primary" /> {c}
@@ -323,8 +345,8 @@ export default function ProductPage() {
                           )}
                         </div>
                       )}
-                      {current === 'inside' && <StudioWorkspaceOutline sections={outline} />}
-                      {current === 'faq' && <FAQPanel items={product.faq ?? []} />}
+                      {current === 'inside' && <ProductInsideList sections={outline} items={product.whatsIncluded} />}
+                      {current === 'faq' && <FAQPanel items={faq} />}
                       <div hidden={tabs.some((t) => t.id === 'reviews') && current !== 'reviews'}>
                         <ProductReviewsSection
                           id={REVIEWS_ID}

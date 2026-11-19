@@ -35,7 +35,14 @@ export default function ProductGalleryCarousel({ gallery, title }: Props) {
       className="overflow-hidden rounded-xl3 border border-navy/[0.06] bg-white p-2 shadow-glow"
     >
       <div className="relative overflow-hidden rounded-xl bg-bg-soft">
-        {current.kind === 'image' && <img src={current.url} alt={`${title} — picture ${index + 1}`} className="h-72 w-full object-contain md:h-80" />}
+        {/* Every picture fills the same frame (19/11/2026): one in portrait
+            sits on a blurred copy of itself instead of white bars. */}
+        {current.kind === 'image' && (
+          <div className="relative h-72 w-full md:h-80">
+            <img src={current.url} alt="" aria-hidden className="absolute inset-0 h-full w-full scale-110 object-cover opacity-60 blur-2xl" />
+            <img src={current.url} alt={`${title} — picture ${index + 1}`} className="relative h-full w-full object-contain" />
+          </div>
+        )}
         {current.kind === 'video' && current.file && (
           <video src={current.url} controls playsInline preload="metadata" className="h-72 w-full bg-navy md:h-80" />
         )}

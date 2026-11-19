@@ -610,6 +610,15 @@ This repo is a **static, client-only MVP**:
   empty circles). The buy area has no box: three icon facts per type
   (`FACTS` in StudioPurchaseCard), the price small and always shown (also to
   an owner), then the buttons; the video opens from "Watch video".
+  Since Sprint 280 (19/11/2026, the owner's choice: every product page the
+  same) Description falls back to the short text, "What's inside" is a
+  compact numbered list of titles (`components/systems/ProductInsideList` —
+  no section description, no Form/Checklist label; a Download lists its
+  files) and FAQ falls back to a standard one per type (Admin → Site → Page
+  texts → Product pages, `product.faq.<workspace|download|calculator|
+  course>`, "Question | Answer" per line). Reviews still only once there is
+  one. Every cover/photo fills the same frame, a portrait one over a blurred
+  copy of itself.
   **Since Sprint 183 one table says what every plan does with every
   product** (approved by the owner 01/11/2026; Portal migration 0075):
   Admin → Plans → **Included** is now a product × plan grid where each cell

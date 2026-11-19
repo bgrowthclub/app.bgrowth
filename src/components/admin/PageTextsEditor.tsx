@@ -6,8 +6,8 @@ import type { PageTextBlock, PageTexts } from '../../data/pageTexts'
 import { adminService } from '../../modules/admin/adminService'
 
 const KEY = 'page-texts'
-const PAGES: PageTextBlock['page'][] = ['Home', 'About', 'Coming soon', 'Member pages']
-const PAGE_PATHS: Record<PageTextBlock['page'], string> = { Home: '/', About: '/about', 'Coming soon': '/', 'Member pages': '/' }
+const PAGES: PageTextBlock['page'][] = ['Home', 'About', 'Coming soon', 'Member pages', 'Product pages']
+const PAGE_PATHS: Record<PageTextBlock['page'], string> = { Home: '/', About: '/about', 'Coming soon': '/', 'Member pages': '/', 'Product pages': '/systems' }
 
 // Lists are edited one item per line.
 function toDraft(saved: PageTexts): Record<string, string> {
@@ -155,7 +155,7 @@ export default function PageTextsEditor() {
             </span>
           </div>
 
-          {page !== 'Coming soon' && page !== 'Member pages' && (
+          {page !== 'Coming soon' && page !== 'Member pages' && page !== 'Product pages' && (
             <a href={PAGE_PATHS[page]} target="_blank" rel="noreferrer" className="inline-block text-[12.5px] text-primary hover:underline">
               Open the {page} page in a new tab
             </a>

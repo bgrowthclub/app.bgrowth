@@ -15,7 +15,7 @@ export interface PageTextField {
 }
 
 export interface PageTextBlock {
-  page: 'Home' | 'About' | 'Coming soon' | 'Member pages'
+  page: 'Home' | 'About' | 'Coming soon' | 'Member pages' | 'Product pages'
   title: string
   fields: PageTextField[]
 }
@@ -333,6 +333,41 @@ export const PAGE_TEXT_BLOCKS: PageTextBlock[] = [
     ],
   },
 ]
+
+// The FAQ a product page shows when the product has none of its own
+// (19/11/2026, the owner's choice: every product page with the same tabs).
+// One question per line: "Question | Answer". One list per product type.
+const faqList = (id: string, label: string, items: string[]) => list(id, `${label} — one per line: "Question | Answer"`, items)
+PAGE_TEXT_BLOCKS.push({
+  page: 'Product pages',
+  title: 'Standard FAQ (used when a product has no FAQ of its own)',
+  fields: [
+    faqList('product.faq.workspace', 'Workspaces', [
+      'How do I open it after buying? | It appears in My Workspaces right away. Open it from there whenever you want.',
+      'Does it work on my phone? | Yes — on your phone, tablet or computer. Your progress is saved to your account.',
+      'Can I print it or save it as PDF? | Yes. Use the Save PDF button inside the Workspace.',
+      'I need help with it. What do I do? | Use “Need help with this?” at the end of the Workspace, or write to us in Support.',
+    ]),
+    faqList('product.faq.download', 'Downloads (PDF and Kit)', [
+      'How do I get the files? | Right after buying, open it in My Workspaces and download each file.',
+      'Can I download it again later? | Yes. It stays in your account — download it whenever you need.',
+      'Can I print it? | Yes, the files are ready to print.',
+      'I need help with it. What do I do? | Write to us in Support and tell us which product it is.',
+    ]),
+    faqList('product.faq.calculator', 'Calculators', [
+      'How do I open it after buying? | It appears in My Workspaces right away.',
+      'Are my calculations saved? | Yes, each one is saved to your account so you can come back to it.',
+      'Does it work on my phone? | Yes — on your phone, tablet or computer.',
+      'I need help with it. What do I do? | Write to us in Support and tell us which calculator it is.',
+    ]),
+    faqList('product.faq.course', 'Courses', [
+      'How do I start? | After buying, open it in the Academy or in My Workspaces → Courses.',
+      'Do I have a deadline? | No. Go at your own pace; your progress is saved.',
+      'Does it work on my phone? | Yes — on your phone, tablet or computer.',
+      'I need help with it. What do I do? | Write to us in Support and tell us which course it is.',
+    ]),
+  ],
+})
 
 export const PAGE_TEXT_DEFAULTS: Record<string, string | string[]> = Object.fromEntries(
   PAGE_TEXT_BLOCKS.flatMap((b) => b.fields.map((f) => [f.id, f.default])),
