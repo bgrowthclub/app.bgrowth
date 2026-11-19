@@ -34,7 +34,10 @@ export default function AdminMemberPageRow({ page, onEdit, onNumbers, onContacts
           {page.display_name.slice(0, 1).toUpperCase()}
         </span>
       )}
-      <div className="min-w-0 flex-1">
+      {/* At least room for the name (19/11/2026): with "Save as model" the
+          buttons took the whole row and squeezed the name to one letter.
+          Now the buttons wrap onto the next line instead. */}
+      <div className="min-w-[14rem] flex-1">
         <p className="truncate text-[14.5px] font-semibold text-navy">{page.display_name}</p>
         <p className="mt-0.5 truncate text-[12.5px] text-navy/45">
           bgrowth.app/p/{page.slug} · updated {formatDate(page.updated_at)}
