@@ -17,10 +17,12 @@ interface Props {
   // admins change it. No release button then.
   onToggleDemo: () => void
   demoBusy?: boolean
+  // "Save as model" (19/11/2026): the page becomes a page model draft.
+  onSaveAsModel: () => void
 }
 
 // One public page in Admin → Pages.
-export default function AdminMemberPageRow({ page, onEdit, onNumbers, onContacts, onRemove, releasedEarly, onToggleRelease, releasing, onToggleDemo, demoBusy }: Props) {
+export default function AdminMemberPageRow({ page, onEdit, onNumbers, onContacts, onRemove, releasedEarly, onToggleRelease, releasing, onToggleDemo, demoBusy, onSaveAsModel }: Props) {
   const published = page.status === 'published'
   const demo = page.is_demo === true
   return (
@@ -79,6 +81,9 @@ export default function AdminMemberPageRow({ page, onEdit, onNumbers, onContacts
         </button>
         <button type="button" onClick={onContacts} className={`${LINK_BUTTON} text-navy/60 hover:bg-bg-soft`}>
           Contacts
+        </button>
+        <button type="button" onClick={onSaveAsModel} className={`${LINK_BUTTON} text-navy/60 hover:bg-bg-soft`}>
+          Save as model
         </button>
         <button type="button" onClick={onEdit} className={`${LINK_BUTTON} text-primary hover:bg-bg-soft`}>
           Edit

@@ -344,6 +344,17 @@ This repo is a **static, client-only MVP**:
   back. Saved colors are checked on save only: a member who loses the line
   keeps them until the next save. The editor also shows "Dark color" for
   imported models drawn with the service/local look (it checked the model id).
+  **Since Sprint 277 a page can be saved as a model** (the owner's choice,
+  19/11/2026 — the ChatGPT ZIP kept getting the photos wrong; no migration):
+  Admin → Pages → a page → "Save as model" (`components/admin/
+  SaveAsModelPanel`, `modules/find/modelFromPage.ts`) turns a team page into
+  the same model shape a package gives and saves it as a DRAFT through the
+  existing `PUT page-models` (logged in Activity); it is published from
+  Imported models with its plans, as before. Only site looks
+  (`IMPORTED_LOOKS`); the page's texts go to both languages as written; a
+  custom main color falls back to the look's swatch; the page's own photos
+  (already uploaded) become the model's showcase by URL — a future cleanup
+  of unused photos must count `page_models` too.
   **Since Sprint 148 the closed site is also respected by the public
   function** (Layer A, approved 23/10/2026; no migration, no middleware):
   what stays open lives in `src/lib/siteAccess.ts` (used by `SiteGate`; a

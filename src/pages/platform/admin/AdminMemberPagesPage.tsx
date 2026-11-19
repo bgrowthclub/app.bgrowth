@@ -11,6 +11,7 @@ import { INPUT } from '../../../components/admin/styles'
 import AdminMemberPageStats from '../../../components/admin/AdminMemberPageStats'
 import AdminPageModelsPanel from '../../../components/admin/AdminPageModelsPanel'
 import ImportedModelsPanel from '../../../components/admin/ImportedModelsPanel'
+import SaveAsModelPanel from '../../../components/admin/SaveAsModelPanel'
 import MemberPageReviewQueue from '../../../components/admin/MemberPageReviewQueue'
 import { CARD, SMALL_BUTTON } from '../../../components/admin/styles'
 import { adminService } from '../../../modules/admin/adminService'
@@ -28,6 +29,9 @@ export default function AdminMemberPagesPage() {
   const [removing, setRemoving] = useState<MemberPage | null>(null)
   const [numbers, setNumbers] = useState<MemberPage | null>(null)
   const [contacts, setContacts] = useState<MemberPage | null>(null)
+  // "Save as model" (19/11/2026); modelsKey reloads Imported models after.
+  const [asModel, setAsModel] = useState<MemberPage | null>(null)
+  const [modelsKey, setModelsKey] = useState(0)
   // The e-mail list switched on by the team for this page (Sprint 139).
   const [signupGranted, setSignupGranted] = useState(false)
   // What visitors looked for, switched on by the team for this page (01/11/2026).
@@ -172,7 +176,19 @@ export default function AdminMemberPagesPage() {
           )}
 
           {!editing && <AdminPageModelsPanel />}
-          {!editing && <ImportedModelsPanel />}
+          {asModel && !editing && (
+            <SaveAsModelPanel
+              key={asModel.id}
+              page={asModel}
+              onClose={() => setAsModel(null)}
+              onSaved={(name) => {
+                setAsModel(null)
+                setModelsKey((k) => k + 1)
+                setNotice(`“${name}” saved as a draft model — publish it in Imported models below and choose its plans.`)
+              }}
+            />
+          )}
+          {!editing && <ImportedModelsPanel key={modelsKey} />}
 
           {numbers && !editing && <AdminMemberPageStats key={numbers.id} page={numbers} onClose={() => setNumbers(null)} />}
           {contacts && !editing && (
@@ -341,6 +357,13 @@ export default function AdminMemberPagesPage() {
                   onToggleDemo={() => void toggleDemo(p)}
                   releasing={releasing === p.id}
                   onToggleRelease={() => void toggleRelease(p)}
+                  onSaveAsModel={() => {
+                    setEditing(null)
+                    setNumbers(null)
+                    setContacts(null)
+                    setAsModel(p)
+                    window.scrollTo({ top: 0, behavior: 'smooth' })
+                  }}
                 />
               ))}
             </div>
