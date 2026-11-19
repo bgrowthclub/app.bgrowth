@@ -129,7 +129,7 @@ export default function AcademyPage() {
           {owned.status === 'loading' ? (
             <p className="py-6 text-[14px] text-navy/40">Loading…</p>
           ) : (
-            <div className={view === 'grid' ? 'mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3' : 'mt-5 max-w-2xl space-y-3'}>
+            <div className={view === 'grid' ? 'mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3' : 'mt-5 max-w-2xl space-y-3'}>
               {myShown.map((product) => (
                 <ContinueLearningCard key={product.slug} product={product} />
               ))}

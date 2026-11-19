@@ -40,7 +40,7 @@ export default function MemberBenefitsSection() {
         }
       />
       {!mine && <p className="-mt-2 mb-5 text-[13.5px] text-navy/55">You are on the Free plan. This is what {plan.name} adds:</p>}
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {plan.features.map((f, i) => (
           <div key={f} className="flex items-start gap-3.5 rounded-2xl border border-navy/[0.07] bg-white p-4 shadow-softer">
             <span className={`grid h-9 w-9 shrink-0 place-items-center rounded-xl ${TONES[i % TONES.length]}`}>

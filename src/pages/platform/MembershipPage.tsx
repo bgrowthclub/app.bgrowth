@@ -190,7 +190,7 @@ export default function MembershipPage() {
               </div>
             </div>
 
-            <div className="mt-6 grid gap-3 border-t border-navy/[0.07] pt-6 sm:grid-cols-3">
+            <div className="mt-6 grid grid-cols-1 gap-3 border-t border-navy/[0.07] pt-6 sm:grid-cols-3">
               <div className={tile}>
                 <ReceiptText size={18} className="shrink-0 text-primary" aria-hidden />
                 <span className="min-w-0">

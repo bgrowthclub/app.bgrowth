@@ -51,7 +51,8 @@ export default function PlatformLayout() {
           badges={badges}
         />
 
-        <div className="flex min-w-0 flex-1 flex-col">
+        {/* overflow-x-clip: one too-wide item must never widen the whole page on a phone (Safari then zooms out). */}
+        <div className="flex min-w-0 flex-1 flex-col overflow-x-clip">
           <TopBar onOpenMobileSidebar={() => setMobileOpen(true)} menuBadge={hasBadge} />
           <main className="flex-1">
             <PageContainer width="page" className="py-10">

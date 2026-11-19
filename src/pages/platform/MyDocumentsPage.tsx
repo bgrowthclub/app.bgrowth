@@ -124,7 +124,7 @@ export default function MyDocumentsPage() {
                   {group.documents.length} {group.documents.length === 1 ? 'document' : 'documents'}
                 </span>
               </div>
-              <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {group.documents.map((doc) => (
                   <DocumentCard key={doc.id} document={doc} to={workspaceViewerPath(group.productSlug, doc.id)} />
                 ))}

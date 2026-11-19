@@ -22,14 +22,15 @@ export default function MyWorkspacesTabs({ className = '' }: { className?: strin
 
   return (
     <nav aria-label="My Workspaces" className={`no-print ${className}`}>
-      <div className="inline-flex gap-1 rounded-xl border border-navy/10 bg-white p-1 shadow-softer">
+      <div className="max-w-full overflow-x-auto">
+      <div className="inline-flex gap-1 whitespace-nowrap rounded-xl border border-navy/10 bg-white p-1 shadow-softer">
         {TABS.map(({ label, to, icon: Icon, count }) => (
           <NavLink
             key={to}
             to={to}
             end
             className={({ isActive }) =>
-              `inline-flex items-center gap-2 rounded-lg px-4 py-2 text-[13.5px] font-semibold transition-colors ${
+              `inline-flex items-center gap-2 rounded-lg px-3 py-2 text-[13px] sm:px-4 sm:text-[13.5px] font-semibold transition-colors ${
                 isActive ? 'bg-bg-soft text-primary' : 'text-navy/55 hover:text-navy'
               }`
             }
@@ -39,6 +40,7 @@ export default function MyWorkspacesTabs({ className = '' }: { className?: strin
             {counts && count && <span className="text-navy/40">({counts[count]})</span>}
           </NavLink>
         ))}
+      </div>
       </div>
     </nav>
   )

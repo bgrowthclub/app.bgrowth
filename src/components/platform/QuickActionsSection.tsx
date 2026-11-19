@@ -38,7 +38,7 @@ export default function QuickActionsSection() {
   return (
     <div>
       <DashboardSectionTitle title="Quick actions" />
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
         {QUICK_ACTIONS.map((action) => {
           const inner = (
             <>
