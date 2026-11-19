@@ -112,18 +112,20 @@ export default function KnowledgeHomePage() {
 
       {byCount.length > 0 && (
         <section id="browse-categories" className="container-px mx-auto max-w-7xl scroll-mt-28 pt-16 md:pt-20">
-          <div className="mb-8 flex flex-wrap items-end justify-between gap-3">
-            <div>
-              <p className="eyebrow w-fit">Topics</p>
-              <h2 className="mt-3 font-display text-[26px] font-bold text-navy sm:text-[30px]">Browse by category</h2>
-            </div>
-            <Link to="/knowledge/search" className="inline-flex items-center gap-1 text-[13.5px] font-semibold text-primary">
+          {/* Centered (19/11/2026, the owner's choice): with few categories a
+              left-aligned row looked empty; more of them fill it from the middle. */}
+          <div className="mb-8 text-center">
+            <p className="eyebrow mx-auto w-fit">Topics</p>
+            <h2 className="mt-3 font-display text-[26px] font-bold text-navy sm:text-[30px]">Browse by category</h2>
+            <Link to="/knowledge/search" className="mt-2 inline-flex items-center gap-1 text-[13.5px] font-semibold text-primary">
               Search everything <ArrowRight size={14} />
             </Link>
           </div>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-6">
+          <div className="flex flex-wrap justify-center gap-3">
             {byCount.map((c) => (
-              <KnowledgeCategoryCard key={c.slug} slug={c.slug} name={c.name} count={data.counts[c.slug] ?? 0} />
+              <div key={c.slug} className="w-[calc(50%-0.375rem)] sm:w-48">
+                <KnowledgeCategoryCard slug={c.slug} name={c.name} count={data.counts[c.slug] ?? 0} />
+              </div>
             ))}
           </div>
         </section>
