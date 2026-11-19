@@ -521,6 +521,13 @@ This repo is a **static, client-only MVP**:
   the first offered plan's with "See the plans" — the old list promised
   marketplace discounts and AI credits that don't exist. Section titles:
   `DashboardSectionTitle`. Recommended and Recently added stay, at the end.
+  Since Sprint 288 (19/11/2026, the owner's design) My Workspaces has a pill,
+  two real cards (active count, the plan), a "Last opened" banner (only when
+  something was opened), search/sort/filters in one card (type chips with
+  counts), grid cards `components/systems/WorkspaceLibraryCard` (dark top,
+  real progress only, "Opened … ago"; list view keeps `ProductLibraryCard`),
+  12 per page with "Showing n of m"; the tabs show their counts. No
+  favourites or share buttons (not built).
   **Since Sprint 251 a page model can be retired on a date** (decided by the
   owner 14/11/2026; no migration): Admin → Pages → Page models
   (`components/admin/AdminPageModelsPanel`, resources `page-templates`,

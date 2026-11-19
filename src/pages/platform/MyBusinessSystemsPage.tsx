@@ -1,14 +1,19 @@
 import { useMemo, useState } from 'react'
-import { FolderOpen } from 'lucide-react'
+import { Link } from 'react-router-dom'
+import { Crown, FolderOpen, Play } from 'lucide-react'
 import SEO from '../../components/seo/SEO'
 import SearchToolbar from '../../components/ui/SearchToolbar'
 import FilterPill from '../../components/ui/FilterPill'
 import EmptyState from '../../components/ui/EmptyState'
 import Button from '../../components/ui/Button'
-import Grid from '../../components/layout/Grid'
 import ViewToggle from '../../components/ui/ViewToggle'
 import type { CardView } from '../../components/ui/ViewToggle'
 import ProductLibraryCard from '../../components/systems/ProductLibraryCard'
+import WorkspaceLibraryCard from '../../components/systems/WorkspaceLibraryCard'
+import Pagination from '../../components/ui/Pagination'
+import { getProductActionLabel, getProductActionRoute } from '../../lib/productLibrary'
+import { useMemberPlan } from '../../modules/account/useMemberPlan'
+import { timeAgo } from '../../lib/timeAgo'
 import MyWorkspacesTabs from '../../components/platform/MyWorkspacesTabs'
 import { useOwnedProductsState } from '../../lib/productLibrary'
 import { useIdentity } from '../../modules/identity/IdentityContext'
@@ -18,6 +23,8 @@ const SORT_OPTIONS = [
   { label: 'Name: A–Z', value: 'name-asc' },
   { label: 'Difficulty', value: 'difficulty' },
 ]
+
+const PAGE_SIZE = 12
 
 const DIFFICULTY_ORDER: Record<string, number> = { Beginner: 0, Intermediate: 1, Advanced: 2 }
 
@@ -37,6 +44,8 @@ export default function MyBusinessSystemsPage() {
   const [difficulty, setDifficulty] = useState('All')
   const [sort, setSort] = useState('recent')
   const [view, setView] = useState<CardView>('grid')
+  const [page, setPage] = useState(1)
+  const { current: plan, loading: planLoading } = useMemberPlan()
 
   const results = useMemo(() => {
     const list = owned.filter((p) => {
@@ -63,6 +72,13 @@ export default function MyBusinessSystemsPage() {
     })
   }, [owned, query, industry, category, difficulty, sort])
 
+  const pageCount = Math.max(1, Math.ceil(results.length / PAGE_SIZE))
+  const currentPage = Math.min(page, pageCount)
+  const shown = results.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+  const lastOpened = [...owned]
+    .filter((p) => p.lastOpenedAt && !p.expired)
+    .sort((a, b) => (b.lastOpenedAt ?? '').localeCompare(a.lastOpenedAt ?? ''))[0]
+
   return (
     <div className="space-y-8">
       <SEO
@@ -73,47 +89,92 @@ export default function MyBusinessSystemsPage() {
 
       <MyWorkspacesTabs />
 
-      <div>
-        <p className="eyebrow">Your Workspaces</p>
-        <h1 className="mt-2 font-display text-3xl font-bold tracking-tight text-navy md:text-4xl">
-          My Workspaces
-        </h1>
-        <p className="mt-3 max-w-lg text-[15px] text-navy/55">
-          Continue any Workspace below — everything runs right in your browser.
-        </p>
+      {/* 19/11/2026, the owner's design: pill, title and two cards with real
+          numbers (how many, the plan); the last opened Workspace; then the
+          search, sort and filters in one card. Nothing invented. */}
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <p className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-primary/[0.05] px-3 py-1 text-[12px] font-semibold text-primary">
+            <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden /> Your interactive tools
+          </p>
+          <h1 className="mt-3 font-display text-3xl font-bold tracking-tight text-navy md:text-4xl">My Workspaces</h1>
+          <p className="mt-2 max-w-lg text-[15px] text-navy/55">Open any Workspace below — your work is saved as you go.</p>
+        </div>
+        <div className="grid grid-cols-2 gap-3">
+          <div className="flex items-center gap-3 rounded-2xl border border-navy/[0.07] bg-white px-4 py-3 shadow-softer">
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-blue-50 text-primary">
+              <FolderOpen size={17} aria-hidden />
+            </span>
+            <span>
+              <span className="block text-[11.5px] text-navy/45">Workspaces</span>
+              <span className="block text-[14px] font-bold text-navy">{owned.filter((p) => !p.expired).length} active</span>
+            </span>
+          </div>
+          <Link to="/platform/membership" className="flex items-center gap-3 rounded-2xl border border-navy/[0.07] bg-white px-4 py-3 shadow-softer transition-colors hover:border-primary/20">
+            <span className="grid h-9 w-9 place-items-center rounded-xl bg-amber-50 text-amber-600">
+              <Crown size={17} aria-hidden />
+            </span>
+            <span className="min-w-0">
+              <span className="block text-[11.5px] text-navy/45">Your plan</span>
+              <span className="block truncate text-[14px] font-bold text-navy">{planLoading ? '…' : plan?.name ?? 'Free'}</span>
+            </span>
+          </Link>
+        </div>
       </div>
 
-      <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+      {lastOpened && (
+        <div className="flex flex-col gap-5 rounded-[20px] border border-primary/10 bg-gradient-to-br from-primary/[0.05] to-white p-5 shadow-softer sm:flex-row sm:items-center">
+          <span className="grid h-14 w-14 shrink-0 place-items-center overflow-hidden rounded-2xl bg-grad-primary text-white">
+            {lastOpened.coverImage ? <img src={lastOpened.coverImage} alt="" className="h-full w-full object-cover" /> : <lastOpened.icon size={24} aria-hidden />}
+          </span>
+          <div className="min-w-0 flex-1">
+            <p className="flex flex-wrap items-center gap-2 text-[12px]">
+              <span className="rounded-md bg-primary/10 px-2 py-0.5 font-bold uppercase tracking-wide text-primary">Last opened</span>
+              <span className="text-navy/45">{timeAgo(lastOpened.lastOpenedAt!)}</span>
+            </p>
+            <p className="mt-1.5 font-display text-[18px] font-bold text-navy">{lastOpened.title}</p>
+            {lastOpened.description && <p className="mt-0.5 line-clamp-1 text-[13.5px] text-navy/55">{lastOpened.description}</p>}
+          </div>
+          <Link to={getProductActionRoute(lastOpened)} className="btn-primary inline-flex shrink-0 items-center gap-2 !px-5 !py-2.5 text-[14px]">
+            <Play size={14} aria-hidden /> {getProductActionLabel(lastOpened.type)}
+          </Link>
+        </div>
+      )}
+
+      <div className="flex flex-col gap-4 rounded-[20px] border border-navy/[0.07] bg-white p-4 shadow-softer sm:flex-row sm:items-start sm:justify-between sm:p-5">
         <div className="flex-1">
           <SearchToolbar
             query={query}
-            onQueryChange={setQuery}
+            onQueryChange={(v) => {
+              setQuery(v)
+              setPage(1)
+            }}
             sortValue={sort}
             onSortChange={setSort}
             sortOptions={SORT_OPTIONS}
             placeholder="Search Workspaces…"
           >
-            {industries.length > 0 && (
+            {industries.length > 1 && (
               <>
-                <FilterPill label="All Industries" active={industry === 'All'} onClick={() => setIndustry('All')} />
+                <FilterPill label={`All (${owned.length})`} active={industry === 'All'} onClick={() => { setIndustry('All'); setPage(1) }} />
                 {industries.map((i) => (
-                  <FilterPill key={i} label={i} active={industry === i} onClick={() => setIndustry(i)} />
+                  <FilterPill key={i} label={`${i} (${owned.filter((p) => p.tag === i).length})`} active={industry === i} onClick={() => { setIndustry(i); setPage(1) }} />
                 ))}
               </>
             )}
             {categories.length > 0 && (
               <>
-                <FilterPill label="All Categories" active={category === 'All'} onClick={() => setCategory('All')} />
+                <FilterPill label="All Categories" active={category === 'All'} onClick={() => { setCategory('All'); setPage(1) }} />
                 {categories.map((c) => (
-                  <FilterPill key={c} label={c} active={category === c} onClick={() => setCategory(c)} />
+                  <FilterPill key={c} label={c} active={category === c} onClick={() => { setCategory(c); setPage(1) }} />
                 ))}
               </>
             )}
             {difficulties.length > 0 && (
               <>
-                <FilterPill label="All Levels" active={difficulty === 'All'} onClick={() => setDifficulty('All')} />
+                <FilterPill label="All Levels" active={difficulty === 'All'} onClick={() => { setDifficulty('All'); setPage(1) }} />
                 {difficulties.map((d) => (
-                  <FilterPill key={d} label={d} active={difficulty === d} onClick={() => setDifficulty(d)} />
+                  <FilterPill key={d} label={d} active={difficulty === d} onClick={() => { setDifficulty(d); setPage(1) }} />
                 ))}
               </>
             )}
@@ -125,14 +186,14 @@ export default function MyBusinessSystemsPage() {
 
       {results.length > 0 ? (
         view === 'grid' ? (
-          <Grid cols={3}>
-            {results.map((product) => (
-              <ProductLibraryCard key={product.slug} product={product} size="library" />
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+            {shown.map((product, i) => (
+              <WorkspaceLibraryCard key={product.slug} product={product} index={i} />
             ))}
-          </Grid>
+          </div>
         ) : (
           <div className="mx-auto max-w-2xl space-y-4">
-            {results.map((product) => (
+            {shown.map((product) => (
               <ProductLibraryCard key={product.slug} product={product} size="library" />
             ))}
           </div>
@@ -158,6 +219,15 @@ export default function MyBusinessSystemsPage() {
           action={owned.length === 0 ? <Button to="/systems">Browse Workspaces</Button> : undefined}
         />
         )
+      )}
+
+      {results.length > 0 && (
+        <div className="flex flex-col items-center justify-between gap-3 border-t border-navy/[0.07] pt-5 text-[13.5px] text-navy/55 sm:flex-row">
+          <p>
+            Showing <strong className="text-navy">{shown.length}</strong> of <strong className="text-navy">{results.length}</strong>
+          </p>
+          <Pagination page={currentPage} pageCount={pageCount} onChange={setPage} />
+        </div>
       )}
     </div>
   )
