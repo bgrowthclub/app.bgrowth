@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, PlayCircle } from 'lucide-react'
 import heroImage from '../../assets/home-hero.webp'
 import { fadeUp } from '../../lib/motion'
 import { usePageTexts } from '../../lib/usePageTexts'
@@ -24,7 +24,11 @@ export default function HomeHero() {
       <div className="container-px mx-auto max-w-page pb-2 pt-24 sm:pb-3 sm:pt-28 lg:pb-4 lg:pt-28">
         <div className="grid items-center gap-12 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)] lg:gap-10">
           <motion.div initial="hidden" animate="show" variants={fadeUp}>
-            <p className="text-[12px] font-bold uppercase tracking-[0.22em] text-primary">{t.text('home.lead.kicker')}</p>
+            {/* 19/11/2026, the owner's design: the line above the title as a pill. */}
+            <p className="inline-flex items-center gap-2 rounded-full border border-primary/15 bg-white/70 px-3.5 py-1.5 text-[11px] font-bold uppercase tracking-[0.14em] text-primary shadow-softer">
+              <span className="h-1.5 w-1.5 rounded-full bg-primary" aria-hidden />
+              {t.text('home.lead.kicker')}
+            </p>
             <h1 className="mt-5 font-display text-[40px] font-extrabold leading-[1.05] tracking-tight text-navy sm:text-[52px] lg:text-[60px]">
               {t.text('home.lead.line1')}{' '}
               <span className="text-primary">{t.text('home.lead.word')}</span>{' '}
@@ -32,14 +36,18 @@ export default function HomeHero() {
             </h1>
             <p className="mt-5 max-w-xl text-[17px] leading-relaxed text-navy/60">{t.text('home.lead.text')}</p>
 
-            <div className="mt-8 flex flex-wrap items-center gap-4">
+            <div className="mt-8 flex flex-wrap items-center gap-3">
               <Link to="/register" className="btn-primary inline-flex items-center gap-2">
                 {t.text('home.lead.cta')}
                 <ArrowRight size={18} aria-hidden />
               </Link>
-              <Link to="/about" className="inline-flex items-center gap-2 text-[15px] font-semibold text-navy/70 transition-colors hover:text-navy">
+              <a
+                href="#solutions"
+                className="inline-flex items-center gap-2 rounded-xl border border-navy/10 bg-white px-5 py-3 text-[15px] font-semibold text-navy shadow-softer transition-colors hover:border-primary/25 hover:text-primary"
+              >
+                <PlayCircle size={17} className="text-navy/45" aria-hidden />
                 {t.text('home.lead.secondary')}
-              </Link>
+              </a>
             </div>
           </motion.div>
 

@@ -54,11 +54,11 @@ export const PAGE_TEXT_BLOCKS: PageTextBlock[] = [
         'Whether you are learning a new skill, starting a business or looking for new opportunities, BGrowth gives you the tools and support to move forward, step by step.',
       ),
       list('home.steps.items', 'The five steps — "Verb — what it leads to", one per line', [
-        'Discover — new opportunities',
-        'Learn — practical skills',
-        'Build — with the right tools',
-        'Manage — your work',
-        'Connect — with a community',
+        'Discover — Find promising opportunities and skills worth learning.',
+        'Learn — Master practical skills with step-by-step courses.',
+        'Build — Put it to work with ready-to-use Workspaces and tools.',
+        'Manage — Keep your clients, work and money organized.',
+        'Connect — Share experiences with people on the same path.',
       ]),
     ],
   },
@@ -85,7 +85,9 @@ export const PAGE_TEXT_BLOCKS: PageTextBlock[] = [
     page: 'Home',
     title: 'Closing invitation',
     fields: [
+      line('home.close.eyebrow', 'Small line above the title', 'Start your journey today'),
       line('home.close.title', 'Title', 'Your next step is one decision away.'),
+      line('home.close.highlight', 'Part of the title in light blue (must be written the same in the title)', 'one decision away.'),
       para(
         'home.close.subtitle',
         'Sentence under the title',
@@ -93,6 +95,11 @@ export const PAGE_TEXT_BLOCKS: PageTextBlock[] = [
       ),
       line('home.close.cta', 'Main button', 'Get started'),
       line('home.close.secondary', 'Link next to the button', 'See what is available'),
+      list('home.close.checks', 'Short facts under the buttons, one per line (only what is true)', [
+        'Free account',
+        'No credit card to sign up',
+        'Instant access',
+      ]),
     ],
   },
   {
@@ -172,6 +179,7 @@ export const PAGE_TEXT_BLOCKS: PageTextBlock[] = [
         'BGrowth exists because we believe meaningful progress should be accessible to everyone. Whether you’re starting over, chasing a dream, or building something bigger than yourself, every journey begins by deciding to move forward.',
       ),
       line('home.story.button', 'Button', 'Read Our Story'),
+      line('home.story.secondary', 'Second button (goes to the catalog)', 'Explore the catalog'),
     ],
   },
   {

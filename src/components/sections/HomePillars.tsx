@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import { ArrowRight } from 'lucide-react'
+import { ArrowRight, BookOpen, CheckCircle2, GraduationCap, LayoutGrid, LayoutTemplate, Search, ShoppingCart, Signpost, Smartphone, Users, type LucideIcon } from 'lucide-react'
 import { fadeUp, viewportOnce } from '../../lib/motion'
 import { usePageTexts } from '../../lib/usePageTexts'
 
@@ -16,6 +16,7 @@ import { usePageTexts } from '../../lib/usePageTexts'
 interface Product {
   name: string
   blurb: string
+  icon: LucideIcon
   to?: string
   soon?: boolean
 }
@@ -26,8 +27,9 @@ interface Pillar {
   title: string
   highlight: string
   blurb: string
-  tint: string
-  accent: string
+  /** Tag and icon colors (19/11/2026, the owner's design). */
+  tag: string
+  icon: string
   products: Product[]
 }
 
@@ -38,40 +40,42 @@ const PILLARS: Pillar[] = [
     title: 'Gain knowledge and build the systems behind',
     highlight: 'your growth.',
     blurb: 'Learn new skills, use practical tools and read free guides to turn goals into real progress.',
-    tint: 'from-violet-500/[0.07]',
-    accent: 'text-violet-600',
+    tag: 'bg-violet-50 text-violet-600',
+    icon: 'bg-violet-50 text-violet-600',
     products: [
-      { name: 'BGrowth Academy™', blurb: 'Courses and structured programs for real-world skills.', to: '/academy' },
-      { name: 'BGrowth Workspaces™', blurb: 'Interactive tools to plan, organize and get work done.', to: '/systems?type=workspace' },
-      { name: 'BGrowth Knowledge™', blurb: 'Free guides, articles and resources to keep you moving.', to: '/knowledge' },
+      { name: 'BGrowth Academy™', blurb: 'Courses and structured programs for real-world skills.', icon: GraduationCap, to: '/academy' },
+      { name: 'BGrowth Workspaces™', blurb: 'Interactive tools to plan, organize and get work done.', icon: LayoutGrid, to: '/systems?type=workspace' },
+      { name: 'BGrowth Knowledge™', blurb: 'Free guides, articles and resources to keep you moving.', icon: BookOpen, to: '/knowledge' },
     ],
   },
   {
     number: '02',
-    eyebrow: 'Market',
+    eyebrow: 'Market & Attract',
     title: 'Get discovered, attract customers and',
     highlight: 'make sales.',
     blurb: 'Reach new customers, sell what you offer and build a professional presence online.',
-    tint: 'from-emerald-500/[0.07]',
-    accent: 'text-emerald-600',
+    tag: 'bg-emerald-50 text-emerald-600',
+    icon: 'bg-emerald-50 text-emerald-600',
     products: [
-      { name: 'BGrowth Pages™', blurb: 'A page of your own to show your work and be contacted.', to: '/pages' },
-      { name: 'BGrowth Find™', blurb: 'Be found by customers looking for what you do.', soon: true },
-      { name: 'BGrowth Marketplace™', blurb: 'Sell physical and digital products.', soon: true },
+      { name: 'BGrowth Pages™', blurb: 'A page of your own to show your work and be contacted.', icon: LayoutTemplate, to: '/pages' },
+      { name: 'BGrowth Find™', blurb: 'Be found by customers looking for what you do.', icon: Search, soon: true },
+      { name: 'BGrowth Marketplace™', blurb: 'Sell physical and digital products.', icon: ShoppingCart, soon: true },
     ],
   },
   {
     number: '03',
-    eyebrow: 'Operate',
+    eyebrow: 'Operate & Scale',
     title: 'Run and manage',
     highlight: 'your business.',
     blurb: 'Keep everything in one place: clients, work, money and the goals behind them.',
-    tint: 'from-primary/[0.07]',
-    accent: 'text-primary',
+    tag: 'bg-blue-50 text-primary',
+    icon: 'bg-blue-50 text-primary',
     products: [
-      { name: 'BGrowth App™', blurb: 'Clients, projects, tasks and finances in one place.', soon: true },
-      { name: 'BGrowth Club™', blurb: 'People on the same journey, sharing what works.', soon: true },
-      { name: 'BGrowth Journeys™', blurb: 'A guided path to a goal, one step at a time.', to: '/journeys' },
+      { name: 'BGrowth App™', blurb: 'Clients, projects, tasks and finances in one place.', icon: Smartphone, soon: true },
+      { name: 'BGrowth Club™', blurb: 'People on the same journey, sharing what works.', icon: Users, soon: true },
+      // Built but not open yet (Portal migration 0068 not applied) — "coming
+      // soon" until it is, then give it back `to: '/journeys'`.
+      { name: 'BGrowth Journeys™', blurb: 'A guided path to a goal, one step at a time.', icon: Signpost, soon: true },
     ],
   },
 ]
@@ -81,10 +85,12 @@ export default function HomePillars() {
 
   return (
     // id="solutions": the top menu's "Solutions" scrolls here.
-    <section id="solutions" className="section-py bg-bg-soft scroll-mt-24">
+    <section id="solutions" className="section-py scroll-mt-24 bg-white">
       <div className="container-px mx-auto max-w-page">
         <motion.div initial="hidden" whileInView="show" viewport={viewportOnce} variants={fadeUp} className="text-center">
-          <p className="eyebrow">{t.text('home.pillars.eyebrow')}</p>
+          <p className="mx-auto w-fit rounded-full border border-primary/15 bg-bg-soft px-3.5 py-1 text-[11.5px] font-bold uppercase tracking-[0.14em] text-primary">
+            {t.text('home.pillars.eyebrow')}
+          </p>
           <h2 className="mt-3 font-display text-[30px] font-extrabold tracking-tight text-navy sm:text-[38px]">
             {t.text('home.pillars.title')} <span className="text-primary">{t.text('home.pillars.highlight')}</span>
           </h2>
@@ -100,26 +106,37 @@ export default function HomePillars() {
               viewport={viewportOnce}
               variants={fadeUp}
               custom={i}
-              className={`flex flex-col rounded-xl2 border border-navy/[0.07] bg-gradient-to-b ${pillar.tint} to-white px-7 py-8 shadow-soft`}
+              className="flex flex-col rounded-[24px] border border-navy/[0.08] bg-white p-6 shadow-softer sm:p-7"
             >
-              <p className="flex items-baseline gap-3">
-                <span className={`font-display text-[40px] font-extrabold leading-none tracking-tight ${pillar.accent} opacity-25`}>
-                  {pillar.number}
+              <div className="flex items-center justify-between gap-3">
+                <span className={`rounded-md px-2.5 py-1 font-mono text-[11.5px] font-bold uppercase tracking-wide ${pillar.tag}`}>
+                  {pillar.number} {pillar.eyebrow}
                 </span>
-                <span className={`text-[12px] font-bold uppercase tracking-[0.18em] ${pillar.accent}`}>{pillar.eyebrow}</span>
-              </p>
-              <h3 className="mt-4 font-display text-[25px] font-extrabold leading-tight tracking-tight text-navy">
-                {pillar.title} <span className={pillar.accent}>{pillar.highlight}</span>
+                {pillar.products.every((p) => !p.soon) && (
+                  <span className="inline-flex items-center gap-1 text-[12.5px] font-semibold text-emerald-600">
+                    <CheckCircle2 size={14} aria-hidden /> Available now
+                  </span>
+                )}
+              </div>
+              <h3 className="mt-5 font-display text-[21px] font-bold leading-snug tracking-tight text-navy">
+                {pillar.title} {pillar.highlight}
               </h3>
-              <p className="mt-3 text-[14.5px] leading-relaxed text-navy/60">{pillar.blurb}</p>
+              <p className="mt-2.5 text-[14px] leading-relaxed text-navy/55">{pillar.blurb}</p>
 
-              <ul className="mt-7 space-y-2.5">
-                {pillar.products.map((product, p) => (
+              <ul className="mt-6 flex-1 space-y-3">
+                {pillar.products.map((product) => (
                   <li key={product.name}>
-                    <ProductRow product={product} lead={p === 0} />
+                    <ProductRow product={product} tone={pillar.icon} />
                   </li>
                 ))}
               </ul>
+
+              <p className="mt-6 flex items-center justify-between border-t border-navy/[0.07] pt-4 text-[13px] text-navy/50">
+                <span>{pillar.eyebrow}</span>
+                <span className="font-semibold text-navy/70">
+                  {pillar.products.filter((p) => !p.soon).length} of {pillar.products.length} available now
+                </span>
+              </p>
             </motion.article>
           ))}
         </div>
@@ -130,36 +147,34 @@ export default function HomePillars() {
   )
 }
 
-function ProductRow({ product, lead }: { product: Product; lead?: boolean }) {
+function ProductRow({ product, tone }: { product: Product; tone: string }) {
+  const Icon = product.icon
   const body = (
-    <>
-      <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span className={`font-bold text-navy ${lead ? 'text-[16px]' : 'text-[14.5px]'}`}>{product.name}</span>
-        {product.soon && (
-          <span className="rounded-full bg-navy/[0.06] px-2 py-0.5 text-[10.5px] font-bold uppercase tracking-wide text-navy/45">
-            Coming soon
-          </span>
-        )}
+    <span className="flex items-start gap-3.5">
+      <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-xl ${product.soon ? 'bg-navy/[0.04] text-navy/40' : tone}`}>
+        <Icon size={18} aria-hidden />
       </span>
-      <span className="mt-0.5 block text-[13.5px] leading-snug text-navy/55">{product.blurb}</span>
-    </>
+      <span className="min-w-0 flex-1">
+        <span className="flex items-start justify-between gap-2">
+          <span className="text-[14px] font-bold text-navy">{product.name}</span>
+          {product.soon ? (
+            <span className="shrink-0 rounded-md bg-navy/[0.05] px-2 py-0.5 text-[10.5px] font-bold text-navy/45">Coming soon</span>
+          ) : (
+            <ArrowRight size={15} className="mt-0.5 shrink-0 text-navy/30 transition-transform group-hover:translate-x-0.5 group-hover:text-primary" aria-hidden />
+          )}
+        </span>
+        <span className="mt-0.5 block text-[13px] leading-snug text-navy/55">{product.blurb}</span>
+      </span>
+    </span>
   )
 
   // Not built yet: a card, not a link. Clicking through to an empty page
   // costs more trust than the honest badge does.
-  const box = lead ? 'px-4 py-3.5' : 'px-4 py-3'
-  if (!product.to) return <span className={`block rounded-xl bg-white/70 ${box}`}>{body}</span>
-
+  const box = 'block rounded-2xl border border-navy/[0.07] bg-white px-4 py-3.5'
+  if (!product.to) return <span className={`${box} bg-bg-soft/60`}>{body}</span>
   return (
-    <Link
-      to={product.to}
-      className={`group block rounded-xl bg-white ${box} transition-shadow hover:shadow-md`}
-    >
+    <Link to={product.to} className={`group ${box} transition-all hover:border-primary/20 hover:shadow-soft`}>
       {body}
-      <span className="mt-1 inline-flex items-center gap-1 text-[13px] font-semibold text-primary">
-        Open
-        <ArrowRight size={13} className="transition-transform group-hover:translate-x-0.5" aria-hidden />
-      </span>
     </Link>
   )
 }

@@ -501,6 +501,16 @@ This repo is a **static, client-only MVP**:
   Knowledge" (`featured_options.mainHighlight` → placement `hero`, newest
   ticked wins; none = the newest article). Numbers are counted, never
   written. `ContentTypeTile` and `LearningPathCard` are no longer used.
+  **Since Sprint 286 the Home follows the owner's second design** (19/11/2026;
+  same five sections, same editable texts): the line above the title as a
+  pill and a bordered "See how it works" button (to #solutions) — the hero
+  image stays; the five steps as numbered cards; the pillars as white cards
+  with a numbered tag, one row per product with its icon and "Coming soon"
+  where it isn't open (Journeys too, until 0068), and "n of 3 available now";
+  "Why BGrowth exists" as a quote card with a second button (catalog); the
+  closing band with a pill, a light-blue part of the title and short facts.
+  New text fields: `home.close.eyebrow`, `home.close.highlight`,
+  `home.close.checks`, `home.story.secondary`. No invented numbers.
   **Since Sprint 251 a page model can be retired on a date** (decided by the
   owner 14/11/2026; no migration): Admin → Pages → Page models
   (`components/admin/AdminPageModelsPanel`, resources `page-templates`,
