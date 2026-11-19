@@ -34,7 +34,7 @@ export default function MemberBenefitsSection() {
         title={mine ? 'Your plan benefits' : 'What a plan adds'}
         count={mine ? plan.name : undefined}
         action={
-          <Link to={mine ? '/platform/membership' : '/pricing'} className="inline-flex items-center gap-1 font-semibold text-primary">
+          <Link to="/platform/membership" className="inline-flex items-center gap-1 font-semibold text-primary">
             {mine ? 'Manage plan' : 'See the plans'} <ArrowRight size={14} aria-hidden />
           </Link>
         }
