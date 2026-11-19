@@ -1038,7 +1038,10 @@ function readMyPage(b: Record<string, any>) {
     const url = pageUrl(raw?.url)
     const image = pageUrl(raw?.image)
     const cta = pageText(raw?.cta, 40)
-    return [{ title, description: pageText(raw?.description, 400), price: pageText(raw?.price, 40), ...(url ? { url } : {}), ...(image ? { image } : {}), ...(url && cta ? { cta } : {}) }]
+    // Label over the photo and ✓ lines (19/11/2026); same rule in api/admin.ts.
+    const tag = pageText(raw?.tag, 30)
+    const points = (Array.isArray(raw?.points) ? raw.points : []).map((p: unknown) => pageText(p, 80)).filter(Boolean).slice(0, 6)
+    return [{ title, description: pageText(raw?.description, 400), price: pageText(raw?.price, 40), ...(url ? { url } : {}), ...(image ? { image } : {}), ...(url && cta ? { cta } : {}), ...(tag ? { tag } : {}), ...(points.length ? { points } : {}) }]
   })
   const highlights = (Array.isArray(b.highlights) ? b.highlights : []).slice(0, 8).flatMap((raw: any) => {
     const title = pageText(raw?.title, 100)

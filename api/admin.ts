@@ -2812,7 +2812,10 @@ function readMemberPageInput(req: VercelRequest) {
     const url = cleanUrl(raw?.url, `The link of “${title}”`)
     const image = cleanUrl(raw?.image, `The image of “${title}”`)
     const cta = cleanText(raw?.cta, 40)
-    return [{ title, description: cleanText(raw?.description, 400), price: cleanText(raw?.price, 40), ...(url ? { url } : {}), ...(image ? { image } : {}), ...(url && cta ? { cta } : {}) }]
+    // Label over the photo and ✓ lines (19/11/2026); same rule in api/account.ts.
+    const tag = cleanText(raw?.tag, 30)
+    const points = (Array.isArray(raw?.points) ? raw.points : []).map((p: unknown) => cleanText(p, 80)).filter(Boolean).slice(0, 6)
+    return [{ title, description: cleanText(raw?.description, 400), price: cleanText(raw?.price, 40), ...(url ? { url } : {}), ...(image ? { image } : {}), ...(url && cta ? { cta } : {}), ...(tag ? { tag } : {}), ...(points.length ? { points } : {}) }]
   })
   const highlights = (Array.isArray(b.highlights) ? b.highlights : []).slice(0, 8).flatMap((raw: any) => {
     const title = cleanText(raw?.title, 100)

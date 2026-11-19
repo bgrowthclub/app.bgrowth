@@ -36,6 +36,10 @@ export interface MemberPageService {
   url?: string
   // Button text (default: "Learn more"/"Saiba mais").
   cta?: string
+  // Since 19/11/2026 (the owner's design): a short label over the photo
+  // ("Most popular", "Weekly") and up to 6 lines ticked with ✓.
+  tag?: string
+  points?: string[]
 }
 
 // Featured work — a product, a course, a portfolio piece.

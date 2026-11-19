@@ -713,6 +713,11 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
       case 'services':
         return (
           <div>
+            {/* The section's own title and sentence (19/11/2026). */}
+            <div className="mb-3 space-y-2">
+              <input value={d.title ?? ''} onChange={(e) => setBlockData(block.id, { title: e.target.value })} maxLength={120} className={INPUT} placeholder="Section title (default: Services)" aria-label="Section title" />
+              <textarea value={d.body ?? ''} onChange={(e) => setBlockData(block.id, { body: e.target.value })} rows={2} maxLength={300} className={INPUT} placeholder="A sentence under the title (optional)" aria-label="Sentence under the title" />
+            </div>
             <div className="space-y-2">
               {services.map((s, i) => (
                 <Row key={i} index={i} total={services.length} onMove={(dd) => setServices((l) => move(l, i, dd))} onRemove={() => setServices((l) => l.filter((_, j) => j !== i))}>
@@ -729,6 +734,15 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                       including the person who asked for it. A field nobody
                       can find is the same as a field that isn't there. */}
                   <input value={s.cta ?? ''} onChange={(e) => setService(i, { cta: e.target.value })} maxLength={40} className={INPUT} placeholder="Button text (default: Learn more)" aria-label="Service button text" />
+                  <input value={s.tag ?? ''} onChange={(e) => setService(i, { tag: e.target.value })} maxLength={30} className={INPUT} placeholder="Label over the photo (e.g. Most popular, Weekly — optional)" aria-label="Label over the photo" />
+                  <textarea
+                    value={(s.points ?? []).join('\n')}
+                    onChange={(e) => setService(i, { points: e.target.value.split('\n').slice(0, 6) })}
+                    rows={3}
+                    className={INPUT}
+                    placeholder={'What’s included, one per line — shown with ✓ (optional, up to 6)'}
+                    aria-label="What’s included"
+                  />
                   <div className="flex items-center gap-3">
                     {s.image && <img src={s.image} alt="" className="h-10 w-16 rounded-md object-cover" />}
                     <button type="button" disabled={uploading !== null} onClick={() => pickImage(`s${i}`, 1200, (url) => setService(i, { image: url }))} className={`${SMALL} inline-flex items-center gap-1.5 text-primary hover:bg-bg-soft`}>

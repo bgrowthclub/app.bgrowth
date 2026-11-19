@@ -1,4 +1,4 @@
-import { ArrowRight, BadgeCheck, Link2, MapPin, Quote } from 'lucide-react'
+import { ArrowRight, BadgeCheck, Check, Link2, MapPin, Quote } from 'lucide-react'
 import type { CSSProperties, MouseEvent, ReactNode } from 'react'
 import { MEMBER_LINK_ICONS } from './memberLinkIcons'
 import MemberLinkIcon from './MemberLinkIcon'
@@ -189,9 +189,11 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
   // `anchor` is the block's TYPE, so the hero button can point at
   // "#services" or "#contact" (10/11/2026). The key stays the block's own
   // id — two contact blocks on one page would otherwise share a React key.
-  const section = (key: string, children: ReactNode, band = false, anchor?: string) => (
+  // `wide` (19/11/2026): a section that takes the screen's width even on the
+  // narrow looks — the services cards.
+  const section = (key: string, children: ReactNode, band = false, anchor?: string, wide?: string) => (
     <section key={key} id={anchor} className={`${band && bandClass ? bandClass : ''} ${skin === 'service' ? 'scroll-mt-20' : 'scroll-mt-6'}`}>
-      <div className={`mx-auto ${look.wide} px-5 ${narrow ? 'py-6' : skin === 'service' ? 'py-16 md:py-24' : 'py-14 md:py-20'}`}>{children}</div>
+      <div className={`mx-auto ${wide ?? look.wide} px-5 ${narrow && !wide ? 'py-6' : skin === 'service' ? 'py-16 md:py-24' : narrow ? 'py-10 md:py-14' : 'py-14 md:py-20'}`}>{children}</div>
     </section>
   )
 
@@ -768,7 +770,10 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
         return section(
           block.id,
           <>
-            <h2 className={look.h2}>{t.services}</h2>
+            <div className={skin === 'creative' ? '' : 'mx-auto max-w-2xl text-center'}>
+              <h2 className={look.h2}>{d.title?.trim() || t.services}</h2>
+              {d.body?.trim() && <p className="mt-3 text-[15.5px] leading-relaxed text-navy/60">{d.body}</p>}
+            </div>
             {skin === 'creative' ? (
               <ul className="mt-8">
                 {page.services.map((s, i) => (
@@ -788,69 +793,65 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
                   </li>
                 ))}
               </ul>
-            ) : narrow ? (
-              // Link Page / Personal Card (19/11/2026): the column is a phone's
-              // width even on a computer, so three cards side by side came out
-              // tiny, with a fourth alone below. One card per row instead:
-              // photo on the left, text and button on the right.
-              <div className="mt-6 space-y-3">
-                {page.services.map((s, i) => (
-                  <div key={s.title + i} className={`flex overflow-hidden text-left ${look.card}`}>
-                    {s.image && <img src={s.image} alt="" className="w-28 shrink-0 object-cover sm:w-36" />}
-                    <div className="flex min-w-0 flex-1 flex-col p-4">
-                      <p className="text-[16px] font-semibold text-navy">{s.title}</p>
-                      {s.description && <p className="mt-1 text-[14px] leading-relaxed text-navy/60">{s.description}</p>}
-                      {s.price && <p className="mt-2 font-display font-bold text-primary">{s.price}</p>}
-                      {s.url && (
-                        <div className="mt-3">
-                          <a
-                            {...linkProps('website', s.url, `service:${s.title}`)}
-                            className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-xl bg-primary px-3.5 py-2 text-[14px] font-semibold text-white transition-colors hover:bg-primary/90"
-                          >
-                            {s.cta?.trim() || t.learnMore} <ArrowRight size={15} aria-hidden />
-                          </a>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
             ) : (
-              // Four services fill one row of four instead of three plus one alone.
+              // One services card for every site look (19/11/2026, the owner's
+              // design): photo with an optional label (or the price) over it,
+              // title, text, ✓ lines, and the button across the bottom — all
+              // cards the same height. One per row on a phone, two on a
+              // tablet, up to four across on a computer; on the narrow looks
+              // the section takes the screen's width.
               <div
-                className={`mt-8 grid gap-4 ${
-                  skin === 'professional' ? 'md:grid-cols-2' : page.services.length === 4 ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-2 lg:grid-cols-3'
+                className={`mt-8 grid gap-5 sm:grid-cols-2 ${
+                  page.services.length === 4 || page.services.length >= 7 ? 'lg:grid-cols-4' : page.services.length === 2 ? '' : 'lg:grid-cols-3'
                 }`}
               >
-                {page.services.map((s, i) => (
-                  // Same height in a row; each card's own button sits at the bottom
-                  // and opens that service's own address.
-                  <div key={s.title + i} className={`flex h-full flex-col overflow-hidden ${look.card} ${skin === 'personal' && i === 1 ? 'bg-gradient-to-br from-primary/20 to-primary/5' : ''}`}>
-                    {s.image && <img src={s.image} alt="" className="aspect-video w-full object-cover" />}
-                    <div className="flex flex-1 flex-col p-6">
-                      {skin === 'local' && <span className="mb-4 grid h-11 w-11 place-items-center rounded-full bg-primary/10 font-display font-bold text-primary">{i + 1}</span>}
-                      {skin === 'service' && <span className="mb-5 grid h-12 w-12 place-items-center rounded-xl bg-primary/10 font-display text-lg font-bold text-primary">{String(i + 1).padStart(2, '0')}</span>}
-                      <p className="text-[17px] font-semibold text-navy">{s.title}</p>
-                      {s.description && <p className="mt-2 text-[14.5px] leading-relaxed text-navy/60">{s.description}</p>}
-                      {s.price && <p className="mt-4 font-display text-lg font-bold text-primary">{s.price}</p>}
-                      {s.url && (
-                        <div className="mt-auto pt-5">
-                          <a
-                            {...linkProps('website', s.url, `service:${s.title}`)}
-                            className="inline-flex items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-[14.5px] font-semibold text-white transition-colors hover:bg-primary/90"
-                          >
-                            {s.cta?.trim() || t.learnMore} <ArrowRight size={16} aria-hidden />
-                          </a>
+                {page.services.map((s, i) => {
+                  const label = s.tag?.trim() || (s.image ? s.price?.trim() : '')
+                  return (
+                    <div
+                      key={s.title + i}
+                      className="group flex h-full flex-col overflow-hidden rounded-2xl border border-navy/[0.08] bg-white text-left shadow-softer transition duration-300 hover:-translate-y-1.5 hover:shadow-soft"
+                    >
+                      {s.image && (
+                        <div className="relative h-44 overflow-hidden bg-bg-soft">
+                          <img src={s.image} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" />
+                          {label && <span className="absolute left-3 top-3 rounded-lg bg-white/95 px-2.5 py-1 text-[11.5px] font-bold text-navy shadow-softer">{label}</span>}
                         </div>
                       )}
+                      <div className="flex flex-1 flex-col p-5">
+                        {!s.image && s.tag?.trim() && <span className="mb-3 self-start rounded-lg bg-primary/10 px-2.5 py-1 text-[11.5px] font-bold text-primary">{s.tag}</span>}
+                        <p className="font-display text-[17px] font-bold text-navy transition-colors group-hover:text-primary">{s.title}</p>
+                        {s.description && <p className="mt-2 text-[14px] leading-relaxed text-navy/60">{s.description}</p>}
+                        {s.price && !(s.image && !s.tag?.trim()) && <p className="mt-3 font-display text-lg font-bold text-primary">{s.price}</p>}
+                        {s.points?.length ? (
+                          <ul className="mt-4 space-y-2 border-t border-navy/[0.06] pt-4">
+                            {s.points.map((p) => (
+                              <li key={p} className="flex items-start gap-2 text-[13.5px] text-navy/75">
+                                <Check size={16} className="mt-0.5 shrink-0 text-emerald-600" aria-hidden /> {p}
+                              </li>
+                            ))}
+                          </ul>
+                        ) : null}
+                        {s.url && (
+                          <div className="mt-auto pt-5">
+                            <a
+                              {...linkProps('website', s.url, `service:${s.title}`)}
+                              className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-[14px] font-semibold text-white shadow-soft transition-colors hover:bg-primary/90"
+                            >
+                              {s.cta?.trim() || t.learnMore} <ArrowRight size={15} aria-hidden />
+                            </a>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  )
+                })}
               </div>
             )}
           </>,
           band,
           block.type,
+          narrow ? 'max-w-6xl' : undefined,
         )
       case 'about':
       case 'text': {

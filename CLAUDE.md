@@ -482,6 +482,14 @@ This repo is a **static, client-only MVP**:
   for it too); with nothing chosen: the products, else the services, else
   the first contact button. It used to always scroll to the products, so a
   page without products had a button that did nothing.
+  Since Sprint 282 (19/11/2026, the owner's design) every site look but
+  Creative Portfolio draws services as one card: photo with a label over it
+  (`MemberPageService.tag`, else the price), title, text, up to 6 ✓ lines
+  (`points`), the button across the bottom, a small lift on hover; 1 / 2 /
+  up to 4 per row. The services block's own `title`/`body` are the section
+  title and a sentence under it. On Link Page / Personal Card the services
+  section takes the screen's width (`section(..., wide)`). `tag`/`points` are
+  kept by both api/account.ts and api/admin.ts (same rule in each).
   **Since Sprint 251 a page model can be retired on a date** (decided by the
   owner 14/11/2026; no migration): Admin → Pages → Page models
   (`components/admin/AdminPageModelsPanel`, resources `page-templates`,
