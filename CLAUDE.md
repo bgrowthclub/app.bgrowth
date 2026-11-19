@@ -548,6 +548,12 @@ This repo is a **static, client-only MVP**:
   two facts from `components/systems/productFacts.ts` — moved there from
   StudioPurchaseCard —, real rating, "View …" in the kind's color), and 9 per
   page with "Showing n of m". Bundles and example systems keep their cards.
+  Since Sprint 294 (19/11/2026, the owner's design) /journeys has a centered
+  top (pill, two-tone title, three facts), search + sort + Life World chips
+  with counts in one card, cards `components/journeys/JourneyCatalogCard`
+  (dark top, Free + stage count, a segment per stage, the time estimate only
+  when given, who it's for) and a closing blue band. Only list_journeys()
+  data; `JourneyCard` is no longer used.
   **Since Sprint 251 a page model can be retired on a date** (decided by the
   owner 14/11/2026; no migration): Admin → Pages → Page models
   (`components/admin/AdminPageModelsPanel`, resources `page-templates`,
