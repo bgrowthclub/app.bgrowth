@@ -9,7 +9,9 @@ import MemberBenefitsSection from '../../components/platform/MemberBenefitsSecti
 
 export default function DashboardPage() {
   return (
-    <div className="space-y-14">
+    // Order since 19/11/2026 (the owner's design): the design's five parts
+    // first; Recommended and Recently added kept at the end, by her choice.
+    <div className="space-y-12">
       <SEO
         title="Dashboard"
         description="Your BGrowth Workspace — continue your Workspaces, discover what's next, and manage your membership."
@@ -18,10 +20,10 @@ export default function DashboardPage() {
       <WorkspaceHero />
       <ContinueBuildingSection />
       <MyBusinessSystemsSection />
-      <RecommendedSection />
-      <RecentlyAddedSection />
       <QuickActionsSection />
       <MemberBenefitsSection />
+      <RecommendedSection />
+      <RecentlyAddedSection />
     </div>
   )
 }

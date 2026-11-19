@@ -511,6 +511,16 @@ This repo is a **static, client-only MVP**:
   closing band with a pill, a light-blue part of the title and short facts.
   New text fields: `home.close.eyebrow`, `home.close.highlight`,
   `home.close.checks`, `home.story.secondary`. No invented numbers.
+  **Since Sprint 287 the member Dashboard follows the owner's design**
+  (19/11/2026): greeting with the first name in blue and two real cards (the
+  plan, how many products); "Continue your Workspace" = the product opened
+  most recently (`lastOpenedAt`, else the first) — progress only where real
+  (courses), else "last opened … ago" (`lib/timeAgo.ts`); My Workspaces as
+  cards with a colored top; four quick actions (Academy no longer locked);
+  benefits = the member's OWN plan's `features` (Admin → Plans), or on Free
+  the first offered plan's with "See the plans" — the old list promised
+  marketplace discounts and AI credits that don't exist. Section titles:
+  `DashboardSectionTitle`. Recommended and Recently added stay, at the end.
   **Since Sprint 251 a page model can be retired on a date** (decided by the
   owner 14/11/2026; no migration): Admin → Pages → Page models
   (`components/admin/AdminPageModelsPanel`, resources `page-templates`,
