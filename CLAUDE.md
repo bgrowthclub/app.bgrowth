@@ -554,6 +554,16 @@ This repo is a **static, client-only MVP**:
   (dark top, Free + stage count, a segment per stage, the time estimate only
   when given, who it's for) and a closing blue band. Only list_journeys()
   data; `JourneyCard` is no longer used.
+  Since Sprint 295 (19/11/2026, the owner's design) Account → Membership has
+  one plan card for each state — paid ("Active plan"/"Ending"/"Payment
+  issue", renew/end date, price), given by the team, and Free ("the screen
+  without a subscription") — with "Upgrade to <next plan>" / "See the plans",
+  three real tiles (billing + Purchases, support level + Open a ticket, plan
+  + Cancel/Keep), the plans as `components/account/MembershipPlanCard`
+  (used by `PlanChooser`: real yearly saving, "Title — detail" plan lines,
+  "Upgrade to"/"Switch to" by rank, "up to -N%" on Yearly) and a "Payment &
+  invoices" band that opens Stripe's billing page. No usage meters or card
+  details (we keep neither). `PricingTierCard` is no longer used by PlanChooser.
   **Since Sprint 251 a page model can be retired on a date** (decided by the
   owner 14/11/2026; no migration): Admin → Pages → Page models
   (`components/admin/AdminPageModelsPanel`, resources `page-templates`,

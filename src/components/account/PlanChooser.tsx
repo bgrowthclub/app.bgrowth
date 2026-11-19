@@ -1,7 +1,6 @@
 import { useState } from 'react'
-import PricingTierCard from '../ui/PricingTierCard'
-import Badge from '../ui/Badge'
-import { formatCents } from '../../modules/workspace/lib/bundlePrice'
+import MembershipPlanCard from './MembershipPlanCard'
+import type { PlanCardAction } from './MembershipPlanCard'
 import { planPrice } from '../../modules/account/planService'
 import type { BillingInterval, StoredPlan } from '../../modules/commerce/types/membership'
 
@@ -25,15 +24,44 @@ interface Props {
 
 // The plan cards with a Monthly | Yearly switch (shown only when some plan
 // has a yearly price). Used on the Pricing page and in Account → Membership.
+// Since 19/11/2026 the cards are MembershipPlanCard (the owner's design):
+// "Upgrade to …" for a higher plan, "Switch to …" for a lower one.
 export default function PlanChooser({ plans, currentPlanId, busyPlanId, actionLabel, onChoose, freeTo, requestTo, freeNote }: Props) {
   const hasYearly = plans.some((p) => !p.is_free && !p.price_on_request && p.yearly_cents != null)
   const [interval, setInterval] = useState<BillingInterval>('month')
+  const currentRank = plans.find((p) => p.id === currentPlanId)?.rank ?? null
+  // The biggest real yearly saving, for the "Yearly" pill (none = no pill).
+  const bestSaving = Math.max(
+    0,
+    ...plans.map((p) => {
+      const m = planPrice(p, 'month')
+      const y = planPrice(p, 'year')
+      return m && y && !p.is_free ? Math.round((1 - y.charged / (m.charged * 12)) * 100) : 0
+    }),
+  )
+
+  const actionFor = (plan: StoredPlan): PlanCardAction => {
+    const current = plan.id === currentPlanId || (currentPlanId === null && plan.is_free)
+    if (current) return { kind: 'current' }
+    if (plan.is_free) return freeNote ? { kind: 'note', text: freeNote } : { kind: 'link', label: 'Create Free Account', to: freeTo }
+    if (plan.price_on_request) return { kind: 'link', label: 'Talk to us', to: requestTo }
+    const chosen = planPrice(plan, interval) ? interval : interval === 'year' ? 'month' : 'year'
+    const upgrade = currentRank === null || plan.rank > currentRank
+    return {
+      kind: 'choose',
+      label: currentRank === null ? actionLabel : upgrade ? `Upgrade to ${plan.name}` : `Switch to ${plan.name}`,
+      upgrade,
+      busy: busyPlanId === plan.id,
+      disabled: busyPlanId !== null || !planPrice(plan, chosen),
+      onClick: () => onChoose(plan, chosen),
+    }
+  }
 
   return (
     <div>
       {hasYearly && (
         <div className="mb-8 flex justify-center">
-          <div className="inline-flex rounded-full bg-bg-soft p-1">
+          <div className="inline-flex rounded-xl bg-bg-soft p-1">
             {(
               [
                 ['month', 'Monthly'],
@@ -44,72 +72,30 @@ export default function PlanChooser({ plans, currentPlanId, busyPlanId, actionLa
                 key={id}
                 type="button"
                 onClick={() => setInterval(id)}
-                className={`rounded-full px-5 py-1.5 text-[13px] font-semibold transition-colors ${
-                  interval === id ? 'bg-white text-navy shadow-softer' : 'text-navy/55 hover:text-navy'
+                className={`inline-flex items-center gap-2 rounded-lg px-5 py-2 text-[13.5px] font-semibold transition-colors ${
+                  interval === id ? 'bg-primary text-white shadow-softer' : 'text-navy/55 hover:text-navy'
                 }`}
               >
                 {label}
+                {id === 'year' && bestSaving > 0 && (
+                  <span className="rounded-full bg-emerald-500 px-2 py-0.5 text-[10.5px] font-bold text-white">up to -{bestSaving}%</span>
+                )}
               </button>
             ))}
           </div>
         </div>
       )}
 
-      <div className={`mx-auto grid max-w-6xl gap-6 md:grid-cols-2 ${plans.length >= 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
-        {plans.map((plan) => {
-          const current = plan.id === currentPlanId || (currentPlanId === null && plan.is_free)
-          const badge = current ? <Badge variant="outline">Your plan</Badge> : plan.highlighted ? <Badge>Most popular</Badge> : undefined
-          if (plan.is_free) {
-            return (
-              <PricingTierCard
-                key={plan.id}
-                name={plan.name}
-                price="$0"
-                priceNote="forever"
-                description={plan.description}
-                features={plan.features}
-                ctaLabel={current ? 'Your plan' : freeNote ?? 'Create Free Account'}
-                {...(current || !freeNote ? { ctaTo: freeTo } : { onCtaClick: () => {}, ctaDisabled: true })}
-                highlighted={plan.highlighted}
-                badge={badge}
-              />
-            )
-          }
-          if (plan.price_on_request) {
-            return (
-              <PricingTierCard
-                key={plan.id}
-                name={plan.name}
-                price="Let’s talk"
-                description={plan.description}
-                features={plan.features}
-                ctaLabel={current ? 'Your plan' : 'Talk to us'}
-                ctaTo={requestTo}
-                highlighted={plan.highlighted}
-                badge={badge}
-              />
-            )
-          }
-          // A plan with no price for the chosen interval falls back to the other one.
-          const chosen = planPrice(plan, interval) ? interval : interval === 'year' ? 'month' : 'year'
-          const price = planPrice(plan, chosen)
-          return (
-            <PricingTierCard
-              key={plan.id}
-              name={plan.name}
-              price={price ? formatCents(price.charged) : '—'}
-              regularPrice={price && price.charged !== price.regular ? formatCents(price.regular) : undefined}
-              priceNote={chosen === 'year' ? '/ year' : '/ month'}
-              description={plan.description}
-              features={plan.features}
-              ctaLabel={current ? 'Your plan' : busyPlanId === plan.id ? 'One moment…' : actionLabel}
-              onCtaClick={() => onChoose(plan, chosen)}
-              ctaDisabled={current || busyPlanId !== null || !price}
-              highlighted={plan.highlighted}
-              badge={badge}
-            />
-          )
-        })}
+      <div className={`mx-auto grid max-w-6xl gap-6 pt-3 md:grid-cols-2 ${plans.length >= 4 ? 'lg:grid-cols-4' : 'lg:grid-cols-3'}`}>
+        {plans.map((plan) => (
+          <MembershipPlanCard
+            key={plan.id}
+            plan={plan}
+            interval={interval}
+            current={plan.id === currentPlanId || (currentPlanId === null && plan.is_free)}
+            action={actionFor(plan)}
+          />
+        ))}
       </div>
     </div>
   )
