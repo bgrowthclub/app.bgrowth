@@ -787,17 +787,69 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
           </div>
         )
       }
-      case 'testimonials':
+      case 'testimonials': {
+        // 19/11/2026, the owner's design: each testimonial can carry stars, a
+        // short headline and the service; the section a sentence and up to 3
+        // links to where the reviews live, a rating shown only beside its link.
+        const items = d.items ?? []
+        const reviews = d.reviews ?? []
+        const setItem = (i: number, patch: Partial<(typeof items)[number]>) =>
+          setBlockData(block.id, { items: items.map((x, j) => (j === i ? { ...x, ...patch } : x)) })
+        const setReview = (i: number, patch: Partial<(typeof reviews)[number]>) =>
+          setBlockData(block.id, { reviews: reviews.map((x, j) => (j === i ? { ...x, ...patch } : x)) })
+        return (
+          <div className="space-y-2">
+            <p className="text-[12.5px] text-navy/50">Only real words from real clients, with their permission.</p>
+            <input value={d.title ?? ''} onChange={(e) => setBlockData(block.id, { title: e.target.value })} maxLength={120} className={INPUT} placeholder="Section title" aria-label="Section title" />
+            <input value={d.body ?? ''} onChange={(e) => setBlockData(block.id, { body: e.target.value })} maxLength={300} className={INPUT} placeholder="A sentence under the title (optional)" aria-label="Sentence under the title" />
+            {items.map((item, i) => (
+              <Row key={i} index={i} total={items.length} onRemove={() => setBlockData(block.id, { items: items.filter((_, j) => j !== i) })}>
+                <div className="flex flex-wrap items-center gap-2">
+                  <select value={item.stars ?? ''} onChange={(e) => setItem(i, { stars: e.target.value ? Number(e.target.value) : undefined })} className={`${INPUT} !w-auto`} aria-label="Stars">
+                    <option value="">No stars</option>
+                    {[5, 4, 3, 2, 1].map((n) => (
+                      <option key={n} value={n}>
+                        {'★'.repeat(n)} ({n})
+                      </option>
+                    ))}
+                  </select>
+                  <input value={item.tag ?? ''} onChange={(e) => setItem(i, { tag: e.target.value })} maxLength={40} className={`${INPUT} min-w-0 flex-1`} placeholder="Service (optional), e.g. Deep Cleaning" aria-label="Service" />
+                </div>
+                <input value={item.headline ?? ''} onChange={(e) => setItem(i, { headline: e.target.value })} maxLength={120} className={INPUT} placeholder="Short headline (optional), e.g. Finally a cleaning service I trust" aria-label="Short headline" />
+                <textarea value={item.title} onChange={(e) => setItem(i, { title: e.target.value })} rows={3} maxLength={300} className={INPUT} placeholder="What they said" aria-label="What they said" />
+                <input value={item.body ?? ''} onChange={(e) => setItem(i, { body: e.target.value })} maxLength={600} className={INPUT} placeholder="Name" aria-label="Name" />
+              </Row>
+            ))}
+            <Add label="Add a testimonial" disabled={items.length >= 12} onClick={() => setBlockData(block.id, { items: [...items, { title: '', body: '' }] })} />
+            <div className="mt-3 rounded-xl bg-bg-soft p-3">
+              <p className="text-[12.5px] font-semibold text-navy/70">Where your reviews are (Google, Yelp…)</p>
+              <p className="mt-0.5 text-[12px] text-navy/50">Shows a button to that page. A rating and a number of reviews appear only next to their link, so visitors can check them.</p>
+              <div className="mt-2 space-y-2">
+                {reviews.map((r, i) => (
+                  <div key={i} className="flex flex-wrap items-center gap-2">
+                    <input value={r.url} onChange={(e) => setReview(i, { url: e.target.value.trim() })} maxLength={1000} className={`${INPUT} min-w-[12rem] flex-1`} placeholder="https://g.page/… or https://yelp.com/biz/…" aria-label="Reviews page address" />
+                    <input type="number" min={1} max={5} step={0.1} value={r.rating ?? ''} onChange={(e) => setReview(i, { rating: e.target.value ? Number(e.target.value) : undefined })} className={`${INPUT} !w-24`} placeholder="Rating" aria-label="Rating (1–5)" />
+                    <input type="number" min={1} step={1} value={r.count ?? ''} onChange={(e) => setReview(i, { count: e.target.value ? Number(e.target.value) : undefined })} className={`${INPUT} !w-28`} placeholder="How many" aria-label="Number of reviews" />
+                    <button type="button" onClick={() => setBlockData(block.id, { reviews: reviews.filter((_, j) => j !== i) })} className={`${SMALL} text-red-500 hover:bg-red-50`}>
+                      Remove
+                    </button>
+                  </div>
+                ))}
+                <Add label="Add a reviews page" disabled={reviews.length >= 3} onClick={() => setBlockData(block.id, { reviews: [...reviews, { url: '' }] })} />
+              </div>
+            </div>
+          </div>
+        )
+      }
       case 'credentials':
       case 'faq': {
         const items = d.items ?? []
-        const [first, second] = block.type === 'faq' ? ['Question', 'Answer'] : block.type === 'credentials' ? ['License or credential', 'Number, issuer, valid until (optional)'] : ['What they said', 'Name']
+        const [first, second] = block.type === 'faq' ? ['Question', 'Answer'] : block.type === 'credentials' ? ['License or credential', 'Number, issuer, valid until (optional)'] : ['', '']
         return (
           <div className="space-y-2">
             {block.type === 'credentials' && (
               <p className="text-[12.5px] text-navy/50">Shown as you state them, with a note that BGrowth has not verified them. Add only what is true and current.</p>
             )}
-            {block.type === 'testimonials' && <p className="text-[12.5px] text-navy/50">Only real words from real clients, with their permission.</p>}
             <input value={d.title ?? ''} onChange={(e) => setBlockData(block.id, { title: e.target.value })} maxLength={120} className={INPUT} placeholder="Section title" aria-label="Section title" />
             {items.map((item, i) => (
               <Row key={i} index={i} total={items.length} onRemove={() => setBlockData(block.id, { items: items.filter((_, j) => j !== i) })}>
@@ -805,7 +857,7 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                 <input value={item.body ?? ''} onChange={(e) => setBlockData(block.id, { items: items.map((x, j) => (j === i ? { ...x, body: e.target.value } : x)) })} maxLength={600} className={INPUT} placeholder={second} aria-label={second} />
               </Row>
             ))}
-            <Add label={block.type === 'faq' ? 'Add a question' : block.type === 'credentials' ? 'Add a credential' : 'Add a testimonial'} disabled={items.length >= 12} onClick={() => setBlockData(block.id, { items: [...items, { title: '', body: '' }] })} />
+            <Add label={block.type === 'faq' ? 'Add a question' : 'Add a credential'} disabled={items.length >= 12} onClick={() => setBlockData(block.id, { items: [...items, { title: '', body: '' }] })} />
           </div>
         )
       }

@@ -528,6 +528,18 @@ This repo is a **static, client-only MVP**:
   real progress only, "Opened … ago"; list view keeps `ProductLibraryCard`),
   12 per page with "Showing n of m"; the tabs show their counts. No
   favourites or share buttons (not built).
+  Since Sprint 289 (19/11/2026, the owner's design) testimonials look like
+  the page's own look (`components/find/MemberTestimonials`, used by both
+  views): quote mark, stars, bold headline, words, initials + name, service
+  tag. New optional data, kept by both api/account.ts and api/admin.ts:
+  `items[].stars` (1–5), `.headline`, `.tag`, and `reviews` (up to 3 links
+  to where the reviews live; a rating/count is shown ONLY beside its own
+  link; clicks counted as `reviews:<site>`). Decided: no style switch (the
+  page's look decides), no "most praised", no "verified client", no
+  "trained & insured"/"100% satisfaction" lines. Product page reviews use
+  the same card (`ReviewCard`): up to three side by side + "Show more
+  reviews", and how the reviewer had it (`created_from`: Verified purchase /
+  free trial / Verified access).
   **Since Sprint 251 a page model can be retired on a date** (decided by the
   owner 14/11/2026; no migration): Admin → Pages → Page models
   (`components/admin/AdminPageModelsPanel`, resources `page-templates`,

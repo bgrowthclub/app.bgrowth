@@ -2699,8 +2699,29 @@ function cleanPageBlocks(value: unknown) {
     if (Array.isArray(d.items)) {
       data.items = d.items
         .slice(0, 12)
-        .map((i: any) => ({ title: pageText(i?.title, 300), body: pageText(i?.body, 600) }))
+        .map((i: any) => ({
+          title: pageText(i?.title, 300),
+          body: pageText(i?.body, 600),
+          // testimonials (19/11/2026): stars 1–5, a short headline and the
+          // service, all optional and written by the page's owner. Same rule
+          // in api/account.ts and api/admin.ts — change both.
+          ...(type === 'testimonials' && Number.isInteger(i?.stars) && i.stars >= 1 && i.stars <= 5 ? { stars: i.stars } : {}),
+          ...(type === 'testimonials' && pageText(i?.headline, 120) ? { headline: pageText(i?.headline, 120) } : {}),
+          ...(type === 'testimonials' && pageText(i?.tag, 40) ? { tag: pageText(i?.tag, 40) } : {}),
+        }))
         .filter((i: { title: string }) => i.title)
+    }
+    // testimonials: where the reviews live (Google, Yelp…), up to 3. A rating
+    // and a count are shown only next to their link — the visitor can check.
+    if (type === 'testimonials' && Array.isArray(d.reviews)) {
+      const reviews = d.reviews.slice(0, 3).flatMap((r: any) => {
+        const url = pageText(r?.url, 1000)
+        if (!/^https:\/\/\S+$/.test(url)) return []
+        const rating = Number(r?.rating)
+        const count = Number(r?.count)
+        return [{ url, ...(rating >= 1 && rating <= 5 ? { rating: Math.round(rating * 10) / 10 } : {}), ...(Number.isInteger(count) && count > 0 ? { count: Math.min(count, 1000000) } : {}) }]
+      })
+      if (reviews.length) data.reviews = reviews
     }
     if (Array.isArray(d.images)) data.images = d.images.slice(0, 12).map(pageUrl).filter(Boolean)
     // Product picks (Sprint 131): links kept exactly as typed (affiliate codes).

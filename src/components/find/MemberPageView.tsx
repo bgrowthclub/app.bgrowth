@@ -6,6 +6,7 @@ import MemberPageSignupForm from './MemberPageSignupForm'
 import MemberPagePromo from './MemberPagePromo'
 import MemberEmailChooser from './MemberEmailChooser'
 import MemberLinkIcon from './MemberLinkIcon'
+import MemberTestimonials from './MemberTestimonials'
 import MemberFloatingButton from './MemberFloatingButton'
 import ReportPageLink from './ReportPageLink'
 import type { CSSProperties } from 'react'
@@ -245,20 +246,18 @@ function MemberPageBody({ page, preview = false, onLinkClick, onSearch, onCatego
         </section>
       ) : null
       case 'testimonials': {
-        const items = (d.items ?? []).filter((i) => i.title.trim())
-        if (!items.length) return null
+        if (!(d.items ?? []).some((i) => i.title.trim()) && !(d.reviews ?? []).length) return null
         return (
           <section className="mt-10">
-            {d.title && <h2 className="font-display text-lg font-bold text-navy">{d.title}</h2>}
-            <div className="mt-3 space-y-3">
-              {items.map((item, i) => (
-                <figure key={i} className="rounded-2xl border border-navy/[0.08] bg-white p-4 shadow-softer">
-                  <Quote size={18} className="text-primary" aria-hidden />
-                  <blockquote className="mt-2 text-[15px] leading-relaxed text-navy/75">{item.title}</blockquote>
-                  {item.body && <figcaption className="mt-2 text-[13px] font-semibold text-navy/50">— {item.body}</figcaption>}
-                </figure>
-              ))}
-            </div>
+            <MemberTestimonials
+              data={d}
+              language={page.language === 'pt' ? 'pt' : 'en'}
+              cardClass="rounded-2xl border border-navy/[0.08] bg-white shadow-softer"
+              titleClass="font-display text-lg font-bold text-navy"
+              narrow
+              preview={preview}
+              onLinkClick={onLinkClick}
+            />
           </section>
         )
       }

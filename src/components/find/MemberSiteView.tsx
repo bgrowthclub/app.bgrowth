@@ -2,6 +2,7 @@ import { ArrowRight, BadgeCheck, Check, Link2, MapPin, Quote } from 'lucide-reac
 import type { CSSProperties, MouseEvent, ReactNode } from 'react'
 import { MEMBER_LINK_ICONS } from './memberLinkIcons'
 import MemberLinkIcon from './MemberLinkIcon'
+import MemberTestimonials from './MemberTestimonials'
 import MemberProductPicks from './MemberProductPicks'
 import MemberPageSignupForm from './MemberPageSignupForm'
 import MemberPagePromo from './MemberPagePromo'
@@ -916,22 +917,19 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
         )
       }
       case 'testimonials': {
-        const items = (d.items ?? []).filter((i) => i.title.trim())
-        if (!items.length) return null
+        // Since 19/11/2026: MemberTestimonials, in this look's cards and titles.
+        if (!(d.items ?? []).some((i) => i.title.trim()) && !(d.reviews ?? []).length) return null
         return section(
           block.id,
-          <>
-            {d.title && <h2 className={`${look.h2} ${skin === 'creative' ? '' : 'text-center'}`}>{d.title}</h2>}
-            <div className={`mt-8 grid gap-4 ${items.length > 1 ? 'md:grid-cols-2 lg:grid-cols-3' : 'mx-auto max-w-2xl'}`}>
-              {items.map((item, i) => (
-                <figure key={i} className={`${look.card} p-6`}>
-                  <Quote size={20} className="text-primary" aria-hidden />
-                  <blockquote className="mt-3 text-[15.5px] leading-relaxed text-navy/75">{item.title}</blockquote>
-                  {item.body && <figcaption className="mt-3 text-[13.5px] font-semibold text-navy/55">— {item.body}</figcaption>}
-                </figure>
-              ))}
-            </div>
-          </>,
+          <MemberTestimonials
+            data={d}
+            language={page.language === 'pt' ? 'pt' : 'en'}
+            cardClass={look.card}
+            titleClass={look.h2}
+            narrow={narrow}
+            preview={preview}
+            onLinkClick={onLinkClick}
+          />,
           band,
           block.type,
         )

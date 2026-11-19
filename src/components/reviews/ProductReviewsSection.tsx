@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { ChevronLeft, ChevronRight, PenLine } from 'lucide-react'
+import { PenLine } from 'lucide-react'
 import Button from '../ui/Button'
 import ReviewCard from './ReviewCard'
 import ReviewSummaryLine from './ReviewSummaryLine'
@@ -19,15 +19,15 @@ interface Props {
 
 const BUTTON = '!rounded-xl !px-4 !py-2.5 !text-[13px]'
 
-// A Studio product's reviews on its product page: the average, one review at
-// a time with arrows, and — for a member who has it — writing or editing
+// A Studio product's reviews on its product page: the average, up to three
+// reviews side by side (one at a time with arrows until 19/11/2026), and — for a member who has it — writing or editing
 // their own. Since 16/11/2026 (the owner's choice) the section only appears
 // once there IS a review: an empty "No reviews yet" box made the page longer
 // for nothing. The first review is invited inside the product and by e-mail;
 // the e-mail's link (?review=1) still opens the form here.
 export default function ProductReviewsSection({ id, workspaceName, reviews, signedIn, requested, className }: Props) {
   const [open, setOpen] = useState(false)
-  const [at, setAt] = useState(0)
+  const [shown, setShown] = useState(3)
   const { summary, mine, canReview, loading } = reviews
 
   useEffect(() => {
@@ -62,8 +62,6 @@ export default function ProductReviewsSection({ id, workspaceName, reviews, sign
     ) : (
       <span id={id}>{dialog}</span>
     )
-  const i = Math.min(at, list.length - 1)
-
   return (
     <section id={id} className={className ?? 'scroll-mt-24 rounded-xl3 border border-navy/[0.06] bg-white p-5 shadow-softer md:p-7'}>
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -85,24 +83,20 @@ export default function ProductReviewsSection({ id, workspaceName, reviews, sign
           </Button>
         ) : null}
       </div>
-      <div className="mt-5 flex items-center gap-3">
-        <div className="min-w-0 flex-1">
-          <ReviewCard review={list[i]} />
-        </div>
-        {list.length > 1 && (
-          <div className="flex shrink-0 flex-col items-center gap-2">
-            <button type="button" aria-label="Previous review" title="Previous review" onClick={() => setAt((i - 1 + list.length) % list.length)} className="grid h-9 w-9 place-items-center rounded-full bg-bg-soft text-navy hover:bg-primary/10">
-              <ChevronLeft size={18} />
-            </button>
-            <span className="text-[11.5px] text-navy/45">
-              {i + 1}/{list.length}
-            </span>
-            <button type="button" aria-label="Next review" title="Next review" onClick={() => setAt((i + 1) % list.length)} className="grid h-9 w-9 place-items-center rounded-full bg-bg-soft text-navy hover:bg-primary/10">
-              <ChevronRight size={18} />
-            </button>
-          </div>
-        )}
+      {/* 19/11/2026, the owner's design: up to three cards side by side; more
+          with "Show more reviews". */}
+      <div className={`mt-6 grid gap-5 ${list.length === 1 ? 'max-w-2xl' : list.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-2 lg:grid-cols-3'}`}>
+        {list.slice(0, shown).map((r) => (
+          <ReviewCard key={r.id} review={r} />
+        ))}
       </div>
+      {list.length > shown && (
+        <div className="mt-6 text-center">
+          <button type="button" onClick={() => setShown((n) => n + 3)} className="rounded-xl border border-navy/10 bg-white px-5 py-2.5 text-[13.5px] font-semibold text-navy shadow-softer hover:border-primary/25 hover:text-primary">
+            Show more reviews ({list.length - shown})
+          </button>
+        </div>
+      )}
       {dialog}
     </section>
   )

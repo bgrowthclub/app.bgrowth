@@ -102,7 +102,11 @@ export interface MemberPageBlockData {
   title?: string
   body?: string
   // testimonials: quote + name; faq: question (title) + answer (body)
-  items?: { title: string; body?: string }[]
+  // testimonials (19/11/2026) also: stars (1–5), a short headline, the service.
+  items?: { title: string; body?: string; stars?: number; headline?: string; tag?: string }[]
+  // testimonials: where the reviews live (up to 3); rating/count shown only
+  // beside their own link, so a visitor can check them.
+  reviews?: { url: string; rating?: number; count?: number }[]
   // gallery
   images?: string[]
   // hero and cta: the button's text.
