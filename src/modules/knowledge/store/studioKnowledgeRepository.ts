@@ -26,7 +26,7 @@ interface ArticleRow {
   tags: string[] | null
   author_id: string
   blocks?: unknown
-  featured_options: { featured?: boolean; featuredOnHomepage?: boolean } | null
+  featured_options: { featured?: boolean; featuredOnHomepage?: boolean; mainHighlight?: boolean } | null
   publish_date: string | null
   published_at: string
   updated_at: string
@@ -249,6 +249,9 @@ export function createStudioKnowledgeRepository(): KnowledgeRepository {
     async loadFeaturedContent() {
       const featured: FeaturedContent[] = []
       ;(await loadRows()).forEach((row, i) => {
+        // "Main highlight on Knowledge" (Studio → Featured, 19/11/2026): the
+        // hub's top card. Rows come newest first, so the newest ticked wins.
+        if (row.featured_options?.mainHighlight) featured.push({ id: `${row.id}-hero`, articleSlug: row.slug, placement: 'hero', order: i })
         if (!(row.featured_options?.featured || row.featured_options?.featuredOnHomepage)) return
         const type = toType(row.content_type)
         const placement = type === 'Guide' ? 'featured-guides' : type === 'Video' ? 'featured-videos' : 'featured-articles'

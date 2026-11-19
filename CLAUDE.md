@@ -490,6 +490,17 @@ This repo is a **static, client-only MVP**:
   title and a sentence under it. On Link Page / Personal Card the services
   section takes the screen's width (`section(..., wide)`). `tag`/`points` are
   kept by both api/account.ts and api/admin.ts (same rule in each).
+  **Since Sprint 284 the Knowledge hub is one short page** (the owner's
+  design, 19/11/2026): top with search, "Popular" categories (most articles)
+  and the highlighted article (`KnowledgeHero`); categories as cards
+  (`KnowledgeCategoryCard`, look from `knowledgeCategoryLook()`); one
+  "Featured" article in a dark band (`KnowledgeSpotlight`, not the
+  highlight); the latest with filters (types with content + top 3
+  categories) and "Load more" (`KnowledgeCoverCard`); the newsletter in a
+  blue band. The highlight is the Studio's Featured → "Main highlight on
+  Knowledge" (`featured_options.mainHighlight` → placement `hero`, newest
+  ticked wins; none = the newest article). Numbers are counted, never
+  written. `ContentTypeTile` and `LearningPathCard` are no longer used.
   **Since Sprint 251 a page model can be retired on a date** (decided by the
   owner 14/11/2026; no migration): Admin → Pages → Page models
   (`components/admin/AdminPageModelsPanel`, resources `page-templates`,

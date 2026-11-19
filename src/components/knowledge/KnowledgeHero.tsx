@@ -1,141 +1,132 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { motion } from 'framer-motion'
-import SearchBar from '../ui/SearchBar'
-import Button from '../ui/Button'
-import { fadeUp, floatY } from '../../lib/motion'
+import { ArrowRight, BookOpen, Clock, Layers, Search, Sparkles, TrendingUp } from 'lucide-react'
+import { fadeUp } from '../../lib/motion'
+import type { KnowledgeArticleIndexEntry } from '../../modules/knowledge/types/article'
+import type { KnowledgeCategory } from '../../modules/knowledge/types/category'
 
-const SUGGESTED_TOPICS = [
-  'Start a Business',
-  'Cleaning Business',
-  'Mobile Notary',
-  'Bookkeeping',
-  'Taxes',
-  'Marketing',
-  'Personal Finance',
-  'Business Planning',
-]
+interface Props {
+  /** The article in the card beside the search ("Main highlight on Knowledge" in the Studio, else the newest). */
+  highlight?: KnowledgeArticleIndexEntry
+  /** Categories with the most articles — the "Popular" chips. */
+  popular: KnowledgeCategory[]
+  articleCount: number
+  categoryCount: number
+}
 
-// The Knowledge Home's hero — its own component (not a reuse of
-// sections/Hero.tsx, which is homepage-only per CLAUDE.md §6) so the
-// Homepage itself is never touched by anything Knowledge-specific.
-// Decorative-only: soft gradient blobs and floating brand-gradient shapes,
-// no stock photography, matching the Homepage Hero's visual language at a
-// smaller scale appropriate for an inner page.
-export default function KnowledgeHero() {
+// The Knowledge hub's top (19/11/2026, the owner's design): words, search and
+// popular topics on the left, the highlighted article on the right. Every
+// number on it is counted from what is published — nothing invented.
+export default function KnowledgeHero({ highlight, popular, articleCount, categoryCount }: Props) {
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
 
-  function goToSearch(q: string) {
-    const trimmed = q.trim()
-    navigate(trimmed ? `/knowledge/search?q=${encodeURIComponent(trimmed)}` : '/knowledge/search')
-  }
-
-  function handleSearch(e: React.FormEvent) {
+  function search(e: React.FormEvent) {
     e.preventDefault()
-    goToSearch(query)
+    const q = query.trim()
+    navigate(q ? `/knowledge/search?q=${encodeURIComponent(q)}` : '/knowledge/search')
   }
 
   return (
-    <section className="relative isolate overflow-hidden pb-14 pt-32 md:pb-20 md:pt-40">
-      <div className="pointer-events-none absolute inset-0 bg-grad-radial-soft" />
-      <motion.div
-        aria-hidden
-        className="pointer-events-none absolute -top-32 left-1/2 h-[420px] w-[720px] -translate-x-1/2 rounded-full opacity-25 blur-3xl"
-        style={{ background: 'radial-gradient(circle, rgba(47,128,255,0.18), rgba(255,255,255,0) 70%)' }}
-        animate={{ scale: [1, 1.05, 1], opacity: [0.25, 0.32, 0.25] }}
-        transition={{ duration: 9, repeat: Infinity, ease: 'easeInOut' }}
-      />
-      <motion.div
-        aria-hidden
-        className="pointer-events-none absolute -right-16 top-16 hidden h-24 w-24 rounded-3xl bg-grad-primary opacity-10 blur-md lg:block"
-        animate={{ y: floatY.animate.y }}
-        transition={{ duration: 6, repeat: Infinity, ease: 'easeInOut' }}
-      />
-      <motion.div
-        aria-hidden
-        className="pointer-events-none absolute -left-10 top-40 hidden h-16 w-16 rounded-2xl bg-grad-primary opacity-10 blur-md lg:block"
-        animate={{ y: floatY.animate.y }}
-        transition={{ duration: 7, repeat: Infinity, ease: 'easeInOut', delay: 0.6 }}
-      />
+    <section className="relative isolate overflow-hidden border-b border-navy/[0.06] bg-grad-radial-soft pb-16 pt-28 md:pb-20 md:pt-36">
+      <div className="container-px mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-[1.1fr_1fr]">
+        <div>
+          <motion.p variants={fadeUp} custom={0} initial="hidden" animate="show" className="eyebrow w-fit">
+            <Sparkles size={13} className="mr-1.5 inline" /> BGrowth Knowledge™
+          </motion.p>
+          <motion.h1
+            variants={fadeUp}
+            custom={1}
+            initial="hidden"
+            animate="show"
+            className="mt-5 font-display text-[34px] font-bold leading-[1.12] tracking-tight text-navy sm:text-[48px] md:text-[56px]"
+          >
+            What do you want to <span className="bg-grad-primary bg-clip-text text-transparent">learn today?</span>
+          </motion.h1>
+          <motion.p variants={fadeUp} custom={2} initial="hidden" animate="show" className="mt-5 max-w-xl text-[15.5px] leading-relaxed text-navy/60 sm:text-[17px]">
+            Practical business education — step-by-step guides, free resources and expert articles to help you start, run and grow.
+          </motion.p>
 
-      <div className="container-px relative mx-auto max-w-4xl text-center">
-        <motion.p variants={fadeUp} custom={0} initial="hidden" animate="show" className="eyebrow mx-auto w-fit">
-          BGrowth Knowledge™
-        </motion.p>
-
-        <motion.h1
-          variants={fadeUp}
-          custom={1}
-          initial="hidden"
-          animate="show"
-          className="mt-4 font-display text-[32px] font-bold leading-[1.2] tracking-tight text-navy sm:text-[48px] sm:leading-[1.15] md:text-[58px]"
-        >
-          What do you want to{' '}
-          <span className="bg-grad-primary bg-clip-text text-transparent">learn</span> next?
-        </motion.h1>
-
-        <motion.p
-          variants={fadeUp}
-          custom={2}
-          initial="hidden"
-          animate="show"
-          className="mx-auto mt-4 max-w-xl text-[15px] leading-relaxed text-navy/55 sm:text-[17px]"
-        >
-          Practical business education, free resources, and expert guidance — everything BGrowth
-          publishes to help you move forward, in one place.
-        </motion.p>
-
-        <motion.form
-          onSubmit={handleSearch}
-          variants={fadeUp}
-          custom={3}
-          initial="hidden"
-          animate="show"
-          className="mx-auto mt-8 max-w-[640px] px-3 sm:px-0"
-        >
-          <SearchBar
-            value={query}
-            onChange={setQuery}
-            placeholder="Search articles, guides, checklists, calculators…"
-            size="lg"
-            className="hover:shadow-glow focus-within:shadow-glow"
-          />
-        </motion.form>
-
-        <motion.div
-          variants={fadeUp}
-          custom={4}
-          initial="hidden"
-          animate="show"
-          className="mx-auto mt-6 flex max-w-md items-center justify-center gap-3 sm:max-w-none"
-        >
-          <Button onClick={() => goToSearch(query)} className="!px-7">
-            Start Learning
-          </Button>
-          <Button href="#browse-categories" variant="secondary" className="!px-7">
-            Browse Categories
-          </Button>
-        </motion.div>
-
-        <motion.div
-          variants={fadeUp}
-          custom={5}
-          initial="hidden"
-          animate="show"
-          className="mt-7 flex flex-wrap items-center justify-center gap-2"
-        >
-          {SUGGESTED_TOPICS.map((topic) => (
-            <button
-              key={topic}
-              type="button"
-              onClick={() => goToSearch(topic)}
-              className="rounded-full border border-navy/10 bg-white px-4 py-2 text-[12.5px] font-medium text-navy/60 shadow-softer transition-all duration-300 hover:-translate-y-0.5 hover:border-primary/20 hover:text-navy hover:shadow-soft"
-            >
-              {topic}
+          <motion.form
+            variants={fadeUp}
+            custom={3}
+            initial="hidden"
+            animate="show"
+            onSubmit={search}
+            className="mt-8 flex max-w-xl items-center gap-2 rounded-2xl border border-navy/[0.08] bg-white p-2 shadow-soft focus-within:shadow-glow"
+          >
+            <Search size={18} className="ml-3 shrink-0 text-navy/35" />
+            <input
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              aria-label="Search Knowledge"
+              placeholder="Search articles, guides, notary, taxes…"
+              className="min-w-0 flex-1 bg-transparent px-1 py-2.5 text-[15px] text-navy placeholder:text-navy/35 focus:outline-none"
+            />
+            <button type="submit" className="btn-primary shrink-0 !px-5 !py-2.5 text-[14px]">
+              <span className="hidden sm:inline">Search</span> <ArrowRight size={15} />
             </button>
-          ))}
-        </motion.div>
+          </motion.form>
+
+          {popular.length > 0 && (
+            <motion.div variants={fadeUp} custom={4} initial="hidden" animate="show" className="mt-5 flex flex-wrap items-center gap-2">
+              <span className="mr-1 inline-flex items-center gap-1 text-[12.5px] font-medium text-navy/45">
+                <TrendingUp size={13} /> Popular:
+              </span>
+              {popular.map((c) => (
+                <Link
+                  key={c.slug}
+                  to={`/knowledge/category/${c.slug}`}
+                  className="rounded-full border border-navy/10 bg-white px-3.5 py-1.5 text-[12.5px] font-medium text-navy/70 transition-colors hover:border-primary/25 hover:text-primary"
+                >
+                  {c.name}
+                </Link>
+              ))}
+            </motion.div>
+          )}
+
+          {articleCount > 0 && (
+            <motion.p variants={fadeUp} custom={5} initial="hidden" animate="show" className="mt-7 flex flex-wrap gap-5 text-[13px] text-navy/50">
+              <span className="inline-flex items-center gap-1.5">
+                <BookOpen size={14} className="text-primary" /> <strong className="text-navy">{articleCount}</strong> articles &amp; guides
+              </span>
+              <span className="inline-flex items-center gap-1.5">
+                <Layers size={14} className="text-primary" /> <strong className="text-navy">{categoryCount}</strong> topics
+              </span>
+            </motion.p>
+          )}
+        </div>
+
+        {highlight && (
+          <motion.div variants={fadeUp} custom={3} initial="hidden" animate="show">
+            <Link
+              to={`/knowledge/article/${highlight.slug}`}
+              className="group block overflow-hidden rounded-xl3 border border-navy/[0.06] bg-white p-3 shadow-glow transition-transform duration-300 hover:-translate-y-1"
+            >
+              <div className="relative aspect-[16/10] overflow-hidden rounded-2xl bg-navy">
+                {highlight.coverImage ? (
+                  <img src={highlight.coverImage} alt="" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
+                ) : (
+                  <div className="h-full w-full bg-grad-primary" />
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-navy/85 via-navy/20 to-transparent" />
+                <div className="absolute inset-x-0 bottom-0 p-5">
+                  <span className="rounded-full bg-primary px-2.5 py-1 text-[10.5px] font-bold uppercase tracking-wide text-white">Featured</span>
+                  <h2 className="mt-3 font-display text-[19px] font-bold leading-snug text-white sm:text-[21px]">{highlight.title}</h2>
+                </div>
+              </div>
+              <div className="flex items-center justify-between px-2 pb-1 pt-3.5 text-[13px]">
+                <span className="inline-flex items-center gap-1.5 text-navy/50">
+                  <Clock size={13} /> {highlight.readingTimeMinutes} min read
+                </span>
+                <span className="inline-flex items-center gap-1 font-semibold text-primary">
+                  Read article <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" />
+                </span>
+              </div>
+            </Link>
+          </motion.div>
+        )}
       </div>
     </section>
   )
