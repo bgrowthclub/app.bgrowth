@@ -75,7 +75,8 @@ export default function MemberTestimonials({ data, language, cardClass, titleCla
   const items = (data.items ?? []).filter((i) => i.title.trim())
   const reviews = data.reviews ?? []
   if (!items.length && !reviews.length) return null
-  const cols = narrow || items.length === 1 ? '' : items.length === 2 ? 'md:grid-cols-2' : 'md:grid-cols-2 lg:grid-cols-3'
+  // Two per row at most (19/11/2026, the owner's choice): wider cards read better.
+  const cols = narrow || items.length === 1 ? '' : 'md:grid-cols-2'
 
   return (
     <div>
@@ -112,7 +113,7 @@ export default function MemberTestimonials({ data, language, cardClass, titleCla
       </div>
 
       {items.length > 0 && (
-        <div className={`mt-9 grid gap-5 ${cols} ${narrow || items.length === 1 ? 'mx-auto max-w-2xl' : ''}`}>
+        <div className={`mt-9 grid gap-5 ${cols} ${narrow || items.length === 1 ? 'mx-auto max-w-2xl' : 'mx-auto max-w-5xl'}`}>
           {items.map((item, i) => (
             <figure key={i} className={`${cardClass} flex flex-col p-6 sm:p-7`}>
               <span className="grid h-10 w-10 place-items-center rounded-xl bg-primary/10 text-primary">
