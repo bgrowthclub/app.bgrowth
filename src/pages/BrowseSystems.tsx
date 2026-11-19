@@ -6,12 +6,13 @@ import { seoPage } from '../data/seoPages'
 import { motion } from 'framer-motion'
 import SearchToolbar from '../components/ui/SearchToolbar'
 import { recordCatalogSearch } from '../lib/searchStats'
-import { X } from 'lucide-react'
+import { CheckCircle2, Gift, X, Zap } from 'lucide-react'
 import FilterSelect from '../components/ui/FilterSelect'
 import ViewToggle from '../components/ui/ViewToggle'
 import type { CardView } from '../components/ui/ViewToggle'
 import BusinessSystemCard from '../components/systems/BusinessSystemCard'
-import StudioWorkspaceCard from '../components/systems/StudioWorkspaceCard'
+import CatalogProductCard from '../components/systems/CatalogProductCard'
+import Pagination from '../components/ui/Pagination'
 import BundleCard from '../components/systems/BundleCard'
 import { MODULE_TYPE_CONFIG } from '../components/systems/ModuleBadge'
 import EmptyState from '../components/ui/EmptyState'
@@ -67,6 +68,9 @@ export default function BrowseSystems() {
   const [tag, setTag] = useState(searchParams.get('tag') ?? 'All')
   const [sort, setSort] = useState('featured')
   const [view, setView] = useState<CardView>('grid')
+  // "Free" chip (19/11/2026, the owner's design) and 9 per page.
+  const [freeOnly, setFreeOnly] = useState(searchParams.get('free') === '1')
+  const [page, setPage] = useState(1)
 
   // The Workspace Catalog — reads the Runtime↔Product Engine connection's
   // Published Product Repository (via ProductService.getPublished())
@@ -170,6 +174,7 @@ export default function BrowseSystems() {
     const list = studioProducts.filter(
       (p) =>
         (kind === 'All' || kindOf(p) === kind) &&
+        (!freeOnly || p.basePrice === 0) &&
         (area === 'All' || p.category === area) &&
         (category === 'All' || p.industry === category) &&
         hasTag(p.id) &&
@@ -181,7 +186,7 @@ export default function BrowseSystems() {
       if (sort === 'name-asc') return a.title.localeCompare(b.title)
       return 0
     })
-  }, [studioProducts, query, category, area, moduleType, sort, tag, productTags, kind])
+  }, [studioProducts, query, category, area, moduleType, sort, tag, productTags, kind, freeOnly])
 
   // Same filters as the Workspaces; each bundle with the Workspaces it includes.
   const bundleResults = useMemo(() => {
@@ -193,6 +198,7 @@ export default function BrowseSystems() {
         (b) =>
           (area === 'All' || b.category === area) &&
           (category === 'All' || b.industry === category) &&
+          (!freeOnly || b.basePrice === 0) &&
           hasTag(b.id) &&
           matchesSearch(query, `${b.title} ${b.description} ${tagsOf(b.id).join(' ')}`),
       )
@@ -204,11 +210,12 @@ export default function BrowseSystems() {
         }),
       }))
       .filter(({ items }) => items.length > 0)
-  }, [bundles, studioProducts, query, category, area, moduleType, tag, productTags, kind])
+  }, [bundles, studioProducts, query, category, area, moduleType, tag, productTags, kind, freeOnly])
 
   const results = useMemo(() => {
     let list = publishedList.filter((s) => {
       if (tag !== 'All') return false
+      if (freeOnly && s.price !== 0) return false
       if (area !== 'All' && area !== 'business-entrepreneurship') return false
       const matchesCategory = category === 'All' || s.category === category
       const matchesModule = moduleType === 'All' || s.modules.some((m) => m.type === moduleType)
@@ -224,7 +231,7 @@ export default function BrowseSystems() {
     })
 
     return list
-  }, [publishedList, query, category, area, moduleType, sort, tag])
+  }, [publishedList, query, category, area, moduleType, sort, tag, freeOnly])
 
   // Records what was searched (Product Discovery data, Portal migration 0052)
   // once the visitor stops typing — counted against the whole catalog, not
@@ -243,8 +250,10 @@ export default function BrowseSystems() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [query, catalogLoaded])
 
-  const updateParams = (nextArea: string, nextCategory: string, nextTag = tag, nextKind = kind) => {
+  const updateParams = (nextArea: string, nextCategory: string, nextTag = tag, nextKind = kind, nextFree = freeOnly) => {
+    setPage(1)
     const params: Record<string, string> = {}
+    if (nextFree) params.free = '1'
     if (nextArea !== 'All') params.area = nextArea
     if (nextCategory !== 'All') params.category = nextCategory
     if (nextTag !== 'All') params.tag = nextTag
@@ -255,6 +264,11 @@ export default function BrowseSystems() {
   const handleKind = (k: string) => {
     setKind(k)
     updateParams(area, category, tag, k)
+  }
+
+  const handleFree = (on: boolean) => {
+    setFreeOnly(on)
+    updateParams(area, category, tag, kind, on)
   }
 
   const handleCategory = (c: string) => {
@@ -282,6 +296,7 @@ export default function BrowseSystems() {
   if (category !== 'All') activeFilters.push({ label: category, clear: () => handleCategory('All') })
   if (kind !== 'All') activeFilters.push({ label: kind === 'Download' ? 'Downloads' : `${kind}s`, clear: () => handleKind('All') })
   if (tag !== 'All') activeFilters.push({ label: tag, clear: () => handleTag('All') })
+  if (freeOnly) activeFilters.push({ label: 'Free', clear: () => handleFree(false) })
   if (moduleType !== 'All') {
     activeFilters.push({ label: MODULE_TYPE_CONFIG[moduleType].label, clear: () => setModuleType('All') })
   }
@@ -292,46 +307,43 @@ export default function BrowseSystems() {
     setKind('All')
     setTag('All')
     setModuleType('All')
+    setFreeOnly(false)
+    setPage(1)
     setSearchParams({})
   }
 
   // The result cards, built once and laid out either way below — the
   // list view must not fork this into a second copy of the same three
   // maps (07/11/2026).
+  const allCards = [
+    ...bundleResults.map(({ bundle, items }) => ({ key: bundle.id, node: <BundleCard bundle={bundle} items={items} /> })),
+    ...studioResults.map((product) => ({ key: product.id, node: <CatalogProductCard product={product} /> })),
+    ...results.map((sys) => ({ key: sys.slug, node: <BusinessSystemCard system={sys} /> })),
+  ]
+  const PAGE_SIZE = 9
+  const pageCount = Math.max(1, Math.ceil(allCards.length / PAGE_SIZE))
+  const currentPage = Math.min(page, pageCount)
+  const shownCards = allCards.slice((currentPage - 1) * PAGE_SIZE, currentPage * PAGE_SIZE)
+  // The result cards, built once and laid out either way below — the
+  // list view must not fork this into a second copy (07/11/2026).
   const resultCards = (
     <>
-          {bundleResults.map(({ bundle, items }, i) => (
-            <motion.div
-              key={bundle.id}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: (i % 6) * 0.06, duration: 0.5 }}
-            >
-              <BundleCard bundle={bundle} items={items} />
-            </motion.div>
-          ))}
-          {studioResults.map((product, i) => (
-            <motion.div
-              key={product.id}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: (i % 6) * 0.06, duration: 0.5 }}
-            >
-              <StudioWorkspaceCard product={product} />
-            </motion.div>
-          ))}
-          {results.map((sys, i) => (
-            <motion.div
-              key={sys.slug}
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: (i % 6) * 0.06, duration: 0.5 }}
-            >
-              <BusinessSystemCard system={sys} />
-            </motion.div>
-          ))}
+      {shownCards.map(({ key, node }, i) => (
+        <motion.div key={key} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: (i % 6) * 0.06, duration: 0.5 }}>
+          {node}
+        </motion.div>
+      ))}
     </>
   )
+  // Chip counts: the whole catalog of each kind, so a chip never says 0
+  // because of another filter.
+  const kindCount = (k: string) => studioProducts.filter((p) => kindOf(p) === k).length
+  const freeCount = studioProducts.filter((p) => p.basePrice === 0).length + bundles.filter((b) => b.basePrice === 0).length
+  const totalCount = studioProducts.length + bundles.length + publishedList.length
+  const chip = (active: boolean) =>
+    `inline-flex items-center gap-1.5 rounded-xl px-3.5 py-2 text-[13px] font-semibold transition-colors ${
+      active ? 'bg-primary text-white shadow-softer' : 'border border-navy/10 bg-white text-navy/65 hover:border-primary/25 hover:text-navy'
+    }`
 
   return (
     <section className="relative overflow-hidden bg-gradient-to-b from-primary/[0.06] via-bg to-bg pt-28 pb-24 md:pt-32">
@@ -344,13 +356,31 @@ export default function BrowseSystems() {
             Home hero does, so it reads as part of the page. */}
         <div className="grid items-center gap-8 lg:grid-cols-[minmax(0,1fr)_minmax(0,0.62fr)]">
           <div className="max-w-2xl">
-            <p className="eyebrow">Business Systems™</p>
+            <p className="inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-white/70 px-3 py-1 text-[11.5px] font-bold uppercase tracking-[0.14em] text-primary">
+              Business Systems™ catalog
+            </p>
             <h1 className="mt-3 font-display text-[34px] font-extrabold leading-[1.08] tracking-tight text-navy md:text-[44px]">
               Find the system built for <span className="text-primary">your business.</span>
             </h1>
             <p className="mt-4 max-w-xl text-[16px] leading-relaxed text-navy/60">
-              Explore courses, workspaces and step-by-step systems to start, organize and grow with confidence.
+              Explore interactive Workspaces, courses, calculators and downloads to start, organize and grow with confidence.
             </p>
+            {/* Only what is true: the count is the catalog's own. */}
+            {catalogLoaded && totalCount > 0 && (
+              <p className="mt-5 flex flex-wrap gap-x-5 gap-y-2 text-[13.5px] text-navy/60">
+                <span className="inline-flex items-center gap-1.5">
+                  <CheckCircle2 size={15} className="text-emerald-500" aria-hidden /> <strong className="text-navy">{totalCount}</strong> ready to use
+                </span>
+                <span className="inline-flex items-center gap-1.5">
+                  <Zap size={15} className="text-primary" aria-hidden /> Instant access
+                </span>
+                {freeCount > 0 && (
+                  <span className="inline-flex items-center gap-1.5">
+                    <Gift size={15} className="text-rose-500" aria-hidden /> <strong className="text-navy">{freeCount}</strong> free
+                  </span>
+                )}
+              </p>
+            )}
           </div>
 
           <img
@@ -362,11 +392,15 @@ export default function BrowseSystems() {
           />
         </div>
 
-        <div className="mt-8 flex items-center gap-3">
+        <div className="mt-10 rounded-[22px] border border-navy/[0.07] bg-white p-4 shadow-softer sm:p-5">
+          <div className="flex items-center gap-3">
           <div className="min-w-0 flex-1">
             <SearchToolbar
               query={query}
-              onQueryChange={setQuery}
+              onQueryChange={(v) => {
+                setQuery(v)
+                setPage(1)
+              }}
               sortValue={sort}
               onSortChange={setSort}
               sortOptions={SORT_OPTIONS}
@@ -385,7 +419,7 @@ export default function BrowseSystems() {
             and an industry arrives with every new Workspace. The dropdowns
             hide the options, so what IS filtered is shown back as the chips
             below, each clearable. */}
-        <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {areas.length > 1 && (
             <FilterSelect
               label="Area"
@@ -402,15 +436,6 @@ export default function BrowseSystems() {
               options={industries.map((c) => ({ value: c, label: c === 'All' ? 'All industries' : c }))}
             />
           )}
-          <FilterSelect
-            label="Type"
-            value={kind}
-            onChange={handleKind}
-            options={[
-              { value: 'All', label: 'All types' },
-              ...KINDS.map((k) => ({ value: k, label: k === 'Download' ? 'Downloads' : `${k}s` })),
-            ]}
-          />
           {tagChoices.length > 0 && (
             <FilterSelect
               label="Tag"
@@ -430,6 +455,25 @@ export default function BrowseSystems() {
               ]}
             />
           )}
+        </div>
+
+        {/* Type as chips with counts, and "Free" (19/11/2026, the owner's
+            design) — the Type dropdown became these. */}
+        <div className="mt-4 flex flex-wrap gap-2 border-t border-navy/[0.06] pt-4">
+          <button type="button" onClick={() => handleKind('All')} className={chip(kind === 'All')}>
+            All ({totalCount})
+          </button>
+          {KINDS.filter((k) => kindCount(k) > 0).map((k) => (
+            <button key={k} type="button" onClick={() => handleKind(k)} className={chip(kind === k)}>
+              {k === 'Download' ? 'Downloads' : `${k}s`} ({kindCount(k)})
+            </button>
+          ))}
+          {freeCount > 0 && (
+            <button type="button" onClick={() => handleFree(!freeOnly)} className={chip(freeOnly)}>
+              <Gift size={14} aria-hidden /> Free ({freeCount})
+            </button>
+          )}
+        </div>
         </div>
 
         {activeFilters.length > 0 && (
@@ -456,7 +500,7 @@ export default function BrowseSystems() {
           </div>
         )}
 
-        {bundleResults.length + studioResults.length + results.length > 0 ? (
+        {allCards.length > 0 ? (
           view === 'grid' ? (
             <Grid cols={3} className="mt-10">
               {resultCards}
@@ -467,6 +511,22 @@ export default function BrowseSystems() {
         ) : (
           <div className="mt-16">
             <EmptyState title="No systems match your search." description="Try a different keyword, industry, or module type." />
+          </div>
+        )}
+
+        {allCards.length > 0 && (
+          <div className="mt-10 flex flex-col items-center justify-between gap-3 border-t border-navy/[0.07] pt-5 text-[13.5px] text-navy/55 sm:flex-row">
+            <p>
+              Showing <strong className="text-navy">{shownCards.length}</strong> of <strong className="text-navy">{allCards.length}</strong>
+            </p>
+            <Pagination
+              page={currentPage}
+              pageCount={pageCount}
+              onChange={(n) => {
+                setPage(n)
+                window.scrollTo({ top: 0, behavior: 'smooth' })
+              }}
+            />
           </div>
         )}
       </div>

@@ -540,6 +540,14 @@ This repo is a **static, client-only MVP**:
   the same card (`ReviewCard`): up to three side by side + "Show more
   reviews", and how the reviewer had it (`created_from`: Verified purchase /
   free trial / Verified access).
+  Since Sprint 291 (19/11/2026, the owner's design) the catalog (/systems)
+  has a pill, real facts under the title (how many products, instant access,
+  how many free; the hero image stays), all filters in one white card, the
+  Type dropdown replaced by chips with counts plus a "Free" chip (`?free=1`),
+  cards `components/systems/CatalogProductCard` (dark top, kind tag + price,
+  two facts from `components/systems/productFacts.ts` — moved there from
+  StudioPurchaseCard —, real rating, "View …" in the kind's color), and 9 per
+  page with "Showing n of m". Bundles and example systems keep their cards.
   **Since Sprint 251 a page model can be retired on a date** (decided by the
   owner 14/11/2026; no migration): Admin → Pages → Page models
   (`components/admin/AdminPageModelsPanel`, resources `page-templates`,
