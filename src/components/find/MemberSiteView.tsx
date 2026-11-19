@@ -788,8 +788,40 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
                   </li>
                 ))}
               </ul>
+            ) : narrow ? (
+              // Link Page / Personal Card (19/11/2026): the column is a phone's
+              // width even on a computer, so three cards side by side came out
+              // tiny, with a fourth alone below. One card per row instead:
+              // photo on the left, text and button on the right.
+              <div className="mt-6 space-y-3">
+                {page.services.map((s, i) => (
+                  <div key={s.title + i} className={`flex overflow-hidden text-left ${look.card}`}>
+                    {s.image && <img src={s.image} alt="" className="w-28 shrink-0 object-cover sm:w-36" />}
+                    <div className="flex min-w-0 flex-1 flex-col p-4">
+                      <p className="text-[16px] font-semibold text-navy">{s.title}</p>
+                      {s.description && <p className="mt-1 text-[14px] leading-relaxed text-navy/60">{s.description}</p>}
+                      {s.price && <p className="mt-2 font-display font-bold text-primary">{s.price}</p>}
+                      {s.url && (
+                        <div className="mt-3">
+                          <a
+                            {...linkProps('website', s.url, `service:${s.title}`)}
+                            className="inline-flex items-center gap-1.5 whitespace-nowrap rounded-xl bg-primary px-3.5 py-2 text-[14px] font-semibold text-white transition-colors hover:bg-primary/90"
+                          >
+                            {s.cta?.trim() || t.learnMore} <ArrowRight size={15} aria-hidden />
+                          </a>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
             ) : (
-              <div className={`mt-8 grid gap-4 ${skin === 'professional' ? 'md:grid-cols-2' : 'sm:grid-cols-2 lg:grid-cols-3'}`}>
+              // Four services fill one row of four instead of three plus one alone.
+              <div
+                className={`mt-8 grid gap-4 ${
+                  skin === 'professional' ? 'md:grid-cols-2' : page.services.length === 4 ? 'sm:grid-cols-2 lg:grid-cols-4' : 'sm:grid-cols-2 lg:grid-cols-3'
+                }`}
+              >
                 {page.services.map((s, i) => (
                   // Same height in a row; each card's own button sits at the bottom
                   // and opens that service's own address.
