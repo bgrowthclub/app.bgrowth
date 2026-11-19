@@ -30,7 +30,7 @@ export default function KnowledgeHero({ highlight, popular, articleCount, catego
 
   return (
     <section className="relative isolate overflow-hidden border-b border-navy/[0.06] bg-grad-radial-soft pb-16 pt-28 md:pb-20 md:pt-36">
-      <div className="container-px mx-auto grid max-w-7xl items-center gap-12 lg:grid-cols-[1.1fr_1fr]">
+      <div className="container-px mx-auto grid max-w-7xl grid-cols-1 items-center gap-12 lg:grid-cols-[1.1fr_1fr]">
         <div>
           <motion.p variants={fadeUp} custom={0} initial="hidden" animate="show" className="eyebrow w-fit">
             <Sparkles size={13} className="mr-1.5 inline" /> BGrowth Knowledge™
