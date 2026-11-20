@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { AlertCircle, ArrowLeft, ArrowRight, Check, ChevronLeft, ChevronRight, Flag, PartyPopper, Route } from 'lucide-react'
+import { AlertCircle, ArrowLeft, ArrowRight, Check, ChevronLeft, ChevronRight, Clock, PartyPopper, Route } from 'lucide-react'
 import SEO from '../../components/seo/SEO'
 import EmptyState from '../../components/ui/EmptyState'
 import Button from '../../components/ui/Button'
-import JourneyNotice from '../../components/journeys/JourneyNotice'
+import JourneyNoticeBar from '../../components/journeys/JourneyNoticeBar'
+import JourneyLearnCard from '../../components/journeys/JourneyLearnCard'
+import JourneyStepList from '../../components/journeys/JourneyStepList'
 import JourneyActionCard from '../../components/journeys/JourneyActionCard'
-import JourneyStageMeta from '../../components/journeys/JourneyStageMeta'
+import { formatMinutes, STAGE_LEVEL_LABEL } from '../../modules/journeys/estimate'
 import { useIdentity } from '../../modules/identity/IdentityContext'
 import { journeyService } from '../../modules/journeys/journeyService'
 import { canMark } from '../../modules/journeys/progress'
@@ -45,7 +47,7 @@ export default function JourneyMemberPage() {
   }, [slug])
 
   const journey = load.state === 'ready' ? load.journey : null
-  const { state, summary, start, starting, toggle, saving, saveError } = useJourneyProgress(journey, user?.id)
+  const { state, summary, start, starting, toggle, completeStage, saving, saveError } = useJourneyProgress(journey, user?.id)
 
   // What this member can open: licenses, team access, plan (same rule as the
   // rest of the site); and, for paid products they can't open, which plan
@@ -94,86 +96,64 @@ export default function JourneyMemberPage() {
   const previousStage = stageIndex > 0 ? { ...journey.stages[stageIndex - 1], index: stageIndex - 1 } : null
   const nextStage = stageIndex >= 0 && stageIndex < journey.stages.length - 1 ? { ...journey.stages[stageIndex + 1], index: stageIndex + 1 } : null
   const progress = state.phase === 'ready' ? state.progress : null
-  const resumeAction = summary?.resumeActionId ? journey.stages.flatMap((s) => s.actions).find((a) => a.id === summary.resumeActionId) : undefined
 
   // From the buttons at the end of a stage: the next stage starts at its
   // own beginning, not where the last one left off.
   function goToStage(id: string) {
     setStageId(id)
-    window.scrollTo({ top: 0, behavior: 'smooth' })
+    // To the step itself (on a phone the list sits above it).
+    window.setTimeout(() => document.getElementById('journey-step')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 30)
   }
 
-  function goToResume() {
-    if (!summary?.resumeStageId || !summary.resumeActionId) return
-    setStageId(summary.resumeStageId)
-    window.setTimeout(() => document.getElementById(`action-${summary.resumeActionId}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 50)
+
+  const stageP = stageProgress.get(stage.id)
+  const openInStage = progress ? stage.actions.filter((a) => canMark(a) && !progress.done[a.id]).length : 0
+  const finishedStages = journey.stages.filter((s) => stageProgress.get(s.id)?.complete).length
+
+  function completeAndContinue() {
+    completeStage(stage.id)
+    if (nextStage) goToStage(nextStage.id)
   }
 
   return (
-    <div className="mx-auto max-w-6xl space-y-6">
+    <div className="mx-auto max-w-7xl space-y-6">
       <SEO title={journey.name} description={journey.shortDescription || journey.goal} path={`/platform/journeys/${slug}`} />
 
-      <Link to={`/journeys/${journey.slug}`} className="inline-flex items-center gap-1.5 text-[13px] font-semibold text-navy/50 hover:text-primary">
-        <ArrowLeft size={15} /> Journey overview
-      </Link>
-
-      <header className="rounded-xl3 border border-navy/[0.06] bg-white p-6 shadow-softer md:p-7">
-        <p className="eyebrow">Journey</p>
-        <h1 className="mt-2 font-display text-2xl font-bold tracking-tight text-navy md:text-3xl">{journey.name}</h1>
-        {journey.goal && (
-          <p className="mt-3 flex items-start gap-2 text-[15px] text-navy/70">
-            <Flag size={17} className="mt-0.5 shrink-0 text-primary" aria-hidden /> {journey.goal}
-          </p>
-        )}
-
+      {/* Top: where we are, and the Journey's progress */}
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+        <p className="flex min-w-0 items-center gap-2 text-[14px] text-navy/55">
+          <Link to="/journeys" className="inline-flex items-center gap-1.5 hover:text-primary">
+            <ArrowLeft size={15} aria-hidden /> Journeys
+          </Link>
+          <span aria-hidden>/</span>
+          <Link to={`/journeys/${journey.slug}`} className="truncate font-semibold text-navy hover:text-primary">
+            {journey.name}
+          </Link>
+        </p>
         {state.phase === 'ready' && summary && (
-          <div className="mt-6">
-            <div className="flex items-center justify-between text-[13px] font-semibold text-navy/60">
-              <span>
-                {summary.done} of {summary.total} steps done
+          <div className="w-full lg:w-80">
+            <p className="flex justify-between text-[13px] text-navy/55">
+              <span>Journey progress</span>
+              <span className="font-semibold text-navy">
+                {finishedStages} of {journey.stages.length} steps
               </span>
-              <span className="text-primary">{summary.percent}%</span>
-            </div>
+            </p>
             <div
-              className="mt-2 h-2.5 overflow-hidden rounded-full bg-navy/[0.06]"
+              className="mt-1.5 h-2 overflow-hidden rounded-full bg-navy/[0.07]"
               role="progressbar"
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={summary.percent}
               aria-label="Journey progress"
             >
-              <div className="h-full rounded-full bg-grad-primary transition-[width] duration-500" style={{ width: `${summary.percent}%` }} />
+              <div className="h-full rounded-full bg-primary transition-[width] duration-500" style={{ width: `${summary.percent}%` }} />
             </div>
-            <p className="mt-2 text-[12px] text-navy/40">
-              {saving ? 'Saving…' : 'Saved to your account.'} Steps that are coming soon or not available don’t count.
-            </p>
-            {!summary.complete && resumeAction && (
-              <button
-                type="button"
-                onClick={goToResume}
-                className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary/[0.07] px-4 py-2.5 text-left text-[13.5px] font-semibold text-primary hover:bg-primary/[0.12]"
-              >
-                Continue: {resumeAction.title} <ArrowRight size={15} aria-hidden />
-              </button>
-            )}
           </div>
         )}
-
-        {state.phase === 'not_started' && (
-          <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:items-center">
-            <Button onClick={() => void start()} disabled={starting}>
-              {starting ? 'Starting…' : 'Start this Journey'}
-            </Button>
-            <p className="text-[13px] text-navy/50">Free. Your progress is saved to your account.</p>
-          </div>
-        )}
-        {state.phase === 'loading' && <div className="mt-6 h-11 w-48 animate-pulse rounded-xl bg-bg-soft" />}
-        {state.phase === 'error' && <p className="mt-6 rounded-xl bg-red-50 px-4 py-3 text-[13.5px] text-red-600">{state.message}</p>}
-        {saveError && <p className="mt-4 rounded-xl bg-red-50 px-4 py-3 text-[13.5px] text-red-600">{saveError}</p>}
-      </header>
+      </div>
 
       {summary?.complete && (
-        <section className="rounded-xl3 border border-emerald-200 bg-emerald-50/70 p-6 text-center md:p-8">
+        <section className="rounded-[24px] border border-emerald-200 bg-emerald-50/70 p-6 text-center md:p-8">
           <PartyPopper size={30} className="mx-auto text-emerald-600" aria-hidden />
           <h2 className="mt-3 font-display text-2xl font-bold text-navy">Journey complete</h2>
           <p className="mx-auto mt-2 max-w-xl whitespace-pre-line text-[15px] leading-relaxed text-navy/65">
@@ -182,58 +162,54 @@ export default function JourneyMemberPage() {
         </section>
       )}
 
-      <JourneyNotice text={journey.notice} validatedStates={journey.validatedStates} />
+      {state.phase === 'not_started' && (
+        <section className="flex flex-col gap-4 rounded-[24px] border border-primary/15 bg-blue-50/60 p-6 sm:flex-row sm:items-center">
+          <div className="flex-1">
+            <h2 className="font-display text-[20px] font-bold text-navy">{journey.name}</h2>
+            {(journey.intro || journey.goal) && (
+              <p className="mt-1 whitespace-pre-line text-[14.5px] leading-relaxed text-navy/65">{journey.intro || journey.goal}</p>
+            )}
+          </div>
+          <div className="shrink-0">
+            <Button onClick={() => void start()} disabled={starting}>
+              {starting ? 'Starting…' : 'Start this Journey'}
+            </Button>
+            <p className="mt-2 text-[12.5px] text-navy/50">Free. Your progress is saved to your account.</p>
+          </div>
+        </section>
+      )}
+      {state.phase === 'error' && <p className="rounded-xl bg-red-50 px-4 py-3 text-[13.5px] text-red-600">{state.message}</p>}
+      {saveError && <p className="rounded-xl bg-red-50 px-4 py-3 text-[13.5px] text-red-600">{saveError}</p>}
 
-      {journey.intro && state.phase === 'not_started' && <p className="whitespace-pre-line text-[15px] leading-relaxed text-navy/70">{journey.intro}</p>}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[340px_minmax(0,1fr)]">
+        <div className="min-w-0 lg:sticky lg:top-24 lg:self-start">
+          <JourneyStepList
+            title="Your journey"
+            stages={journey.stages}
+            activeId={stage.id}
+            onSelect={goToStage}
+            progress={state.phase === 'ready' ? stageProgress : undefined}
+          />
+        </div>
 
-      <div className="grid gap-6 lg:grid-cols-[260px_minmax(0,1fr)]">
-        {/* min-w-0: a grid item defaults to min-width:auto, so without it
-            the stage list (whose titles don't wrap on a phone) stretched
-            this column to its full content width — 689px on a 390px phone.
-            Everything else in the grid inherited that width, which is why
-            a "full width" video ended up off the screen (30/10/2026). */}
-        <nav aria-label="Stages" className="min-w-0 lg:sticky lg:top-24 lg:self-start">
-          <ol className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1 lg:mx-0 lg:flex-col lg:overflow-visible lg:px-0">
-            {journey.stages.map((s, i) => {
-              const p = stageProgress.get(s.id)
-              const active = s.id === stage.id
-              return (
-                <li key={s.id} className="shrink-0 lg:shrink">
-                  <button
-                    type="button"
-                    onClick={() => setStageId(s.id)}
-                    aria-current={active ? 'step' : undefined}
-                    className={`flex w-full items-center gap-3 rounded-xl2 border px-3.5 py-2.5 text-left transition-colors ${
-                      active ? 'border-primary/30 bg-white shadow-softer' : 'border-transparent bg-white/60 hover:bg-white'
-                    }`}
-                  >
-                    <span
-                      className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-[12.5px] font-bold ${
-                        p?.complete ? 'bg-emerald-500 text-white' : active ? 'bg-primary text-white' : 'bg-primary/10 text-primary'
-                      }`}
-                    >
-                      {p?.complete ? <Check size={14} strokeWidth={3} aria-hidden /> : i + 1}
-                    </span>
-                    <span className="min-w-0">
-                      <span className="block whitespace-nowrap text-[13.5px] font-semibold text-navy lg:whitespace-normal">{s.title || `Stage ${i + 1}`}</span>
-                      {p && p.total > 0 && (
-                        <span className="block text-[11.5px] text-navy/45">
-                          {p.done}/{p.total} done
-                        </span>
-                      )}
-                    </span>
-                  </button>
-                </li>
-              )
-            })}
-          </ol>
-        </nav>
+        <section id="journey-step" aria-label={stage.title} className="min-w-0 scroll-mt-24 space-y-6">
+          <div>
+            <p className="w-fit rounded-lg bg-blue-50 px-3 py-1.5 text-[13.5px] font-semibold text-primary">
+              Step {stageIndex + 1}
+              {stage.level ? ` · ${STAGE_LEVEL_LABEL[stage.level]}` : ''}
+            </p>
+            <h1 className="mt-4 font-display text-[28px] font-extrabold leading-tight tracking-tight text-navy md:text-[36px]">
+              {stage.title || `Stage ${stageIndex + 1}`}
+            </h1>
+            {stage.summary && <p className="mt-3 max-w-3xl whitespace-pre-line text-[15.5px] leading-relaxed text-navy/65">{stage.summary}</p>}
+            {stage.estimatedMinutes > 0 && (
+              <p className="mt-3 inline-flex items-center gap-1.5 text-[14px] text-navy/55">
+                <Clock size={16} aria-hidden /> ~{formatMinutes(stage.estimatedMinutes)}
+              </p>
+            )}
+          </div>
 
-        <section aria-label={stage.title} className="min-w-0">
-          <h2 className="font-display text-xl font-bold text-navy">{stage.title}</h2>
-          <JourneyStageMeta stage={stage} className="mt-1.5" />
-          {stage.summary && <p className="mt-1 whitespace-pre-line text-[14.5px] leading-relaxed text-navy/60">{stage.summary}</p>}
-          <ul className="mt-5 space-y-3">
+          <ul className="space-y-3">
             {stage.actions.map((action) => (
               <JourneyActionCard
                 key={action.id}
@@ -246,24 +222,51 @@ export default function JourneyMemberPage() {
               />
             ))}
           </ul>
-          {state.phase === 'not_started' && <p className="mt-4 text-[13px] text-navy/45">Start the Journey to check off steps.</p>}
 
-          {/* Moving between stages used to be possible only from the list at
-              the top — which, after scrolling through a stage's steps on a
-              phone, is a long way back (30/10/2026). */}
+          {state.phase === 'ready' ? (
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:gap-6">
+              {openInStage > 0 ? (
+                <button
+                  type="button"
+                  onClick={completeAndContinue}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 text-[15px] font-semibold text-white shadow-soft transition-opacity hover:opacity-95"
+                >
+                  {nextStage ? 'Mark complete & continue' : 'Mark complete'} <ArrowRight size={17} aria-hidden />
+                </button>
+              ) : (
+                nextStage && (
+                  <button
+                    type="button"
+                    onClick={() => goToStage(nextStage.id)}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-primary px-6 py-3.5 text-[15px] font-semibold text-white shadow-soft transition-opacity hover:opacity-95"
+                  >
+                    Next step <ArrowRight size={17} aria-hidden />
+                  </button>
+                )
+              )}
+              <p className="inline-flex items-center gap-1.5 text-[13.5px] text-navy/50">
+                <Check size={15} className="text-emerald-600" aria-hidden />
+                {saving ? 'Saving…' : stageP?.complete ? 'This step is done. Your progress is saved.' : 'Your progress is saved automatically.'}
+              </p>
+            </div>
+          ) : (
+            state.phase === 'not_started' && <p className="text-[13.5px] text-navy/50">Start the Journey to check off steps.</p>
+          )}
+
+          <JourneyLearnCard outcomes={journey.outcomes} goal={journey.goal} />
+          <JourneyNoticeBar text={journey.notice} validatedStates={journey.validatedStates} />
+
           {journey.stages.length > 1 && (
-            <nav aria-label="Stages" className="mt-8 flex flex-col gap-3 border-t border-navy/[0.06] pt-6 sm:flex-row sm:items-stretch">
+            <nav aria-label="Stages" className="flex flex-col gap-3 border-t border-navy/[0.06] pt-6 sm:flex-row sm:items-stretch">
               {[previousStage, nextStage].map((target, i) => {
                 const isNext = i === 1
-                if (!target)
-                  // Keeps the other button on its side instead of letting it slide over.
-                  return <span key={isNext ? 'next' : 'previous'} className="hidden flex-1 sm:block" aria-hidden />
+                if (!target) return <span key={isNext ? 'next' : 'previous'} className="hidden flex-1 sm:block" aria-hidden />
                 return (
                   <button
                     key={isNext ? 'next' : 'previous'}
                     type="button"
                     onClick={() => goToStage(target.id)}
-                    className={`flex min-w-0 flex-1 items-center gap-2.5 rounded-xl2 border border-navy/10 bg-white px-4 py-3 transition-colors hover:border-primary/30 ${
+                    className={`flex min-w-0 flex-1 items-center gap-2.5 rounded-2xl border border-navy/10 bg-white px-4 py-3 transition-colors hover:border-primary/30 ${
                       isNext ? 'text-left sm:justify-end sm:text-right' : 'text-left'
                     }`}
                   >

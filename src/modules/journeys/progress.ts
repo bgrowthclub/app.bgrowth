@@ -111,3 +111,18 @@ export function toggleDone(outline: JourneyOutline, data: JourneyProgressData, a
   else next[actionId] = now
   return { ...data, done: next, lastActionId: actionId }
 }
+
+/**
+ * "Mark complete & continue" (20/11/2026, the owner's choice): marks every
+ * action of a stage the member can mark — optional ones too — as done.
+ * Already-done actions keep their date; nothing is ever unmarked here.
+ */
+export function markStageDone(outline: JourneyOutline, data: JourneyProgressData, stageId: string, now = new Date().toISOString()): JourneyProgressData {
+  const stage = outline.stages.find((s) => s.id === stageId)
+  if (!stage) return data
+  const open = stage.actions.filter((a) => canMark(a) && !data.done[a.id])
+  if (open.length === 0) return data
+  const next = { ...data.done }
+  for (const a of open) next[a.id] = now
+  return { ...data, done: next, lastActionId: open[open.length - 1].id }
+}

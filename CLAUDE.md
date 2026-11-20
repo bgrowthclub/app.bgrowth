@@ -654,6 +654,20 @@ This repo is a **static, client-only MVP**:
   access comes from the plan, lessons/time only for their own courses). No
   day streaks or "hours studied" (not measured). `ContinueLearningCard` is
   no longer used.
+  Since Sprint 310 (20/11/2026, the owner's design) both Journey pages follow
+  one look: `components/journeys/JourneyStepList` (stages with number, icon
+  from the first action's kind, time, ✓/current; a ring of finished stages
+  for the member), `JourneyLearnCard` (the Journey's own outcomes, on every
+  step) and `JourneyNoticeBar` (the notice as a line that opens). The
+  member's page (`/platform/journeys/:slug`) shows one step at a time —
+  "Step N · level", title, summary, time, the action cards — and "Mark
+  complete & continue" marks every markable action of the step done
+  (`markStageDone` in progress.ts, `completeStage` in useJourneyProgress;
+  the owner's choice B) and opens the next; the per-action ✓ stays. No
+  "Save for later" (progress saves itself). The public page (`/journeys/
+  :slug`) has the same step list with a read-only preview of each step and
+  the start panel. No longer used: `JourneyNotice`, `JourneyStageMeta` and
+  `JourneyStagePreview`'s default export (`ACTION_KIND` from it still is).
   **Since Sprint 251 a page model can be retired on a date** (decided by the
   owner 14/11/2026; no migration): Admin → Pages → Page models
   (`components/admin/AdminPageModelsPanel`, resources `page-templates`,

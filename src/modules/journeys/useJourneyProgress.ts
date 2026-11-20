@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { journeyService } from './journeyService'
 import type { JourneyProgressRecord } from './journeyService'
-import { readProgress, summarize, toggleDone } from './progress'
+import { markStageDone, readProgress, summarize, toggleDone } from './progress'
 import type { JourneyProgressData } from './progress'
 import type { JourneyOutline } from './types'
 
@@ -50,11 +50,10 @@ export function useJourneyProgress(journey: JourneyOutline | null, userId: strin
     }
   }, [journey, userId])
 
-  const toggle = useCallback(
-    (actionId: string) => {
-      if (!journey || state.phase !== 'ready') return
-      const next = toggleDone(journey, state.progress, actionId)
-      if (next === state.progress) return
+  // Saves a new state right away, one save at a time, always the latest.
+  const commit = useCallback(
+    (next: JourneyProgressData) => {
+      if (!journey || state.phase !== 'ready' || next === state.progress) return
       const record = state.record
       setState({ phase: 'ready', record, progress: next })
       setSaveError(null)
@@ -71,7 +70,24 @@ export function useJourneyProgress(journey: JourneyOutline | null, userId: strin
     [journey, state],
   )
 
+  const toggle = useCallback(
+    (actionId: string) => {
+      if (!journey || state.phase !== 'ready') return
+      commit(toggleDone(journey, state.progress, actionId))
+    },
+    [journey, state, commit],
+  )
+
+  /** Marks every action of a stage done (the stage's "Mark complete & continue"). */
+  const completeStage = useCallback(
+    (stageId: string) => {
+      if (!journey || state.phase !== 'ready') return
+      commit(markStageDone(journey, state.progress, stageId))
+    },
+    [journey, state, commit],
+  )
+
   const summary = useMemo(() => (journey && state.phase === 'ready' ? summarize(journey, state.progress) : null), [journey, state])
 
-  return { state, summary, start, starting, toggle, saving, saveError }
+  return { state, summary, start, starting, toggle, completeStage, saving, saveError }
 }
