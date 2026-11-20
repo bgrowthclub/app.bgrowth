@@ -668,6 +668,20 @@ This repo is a **static, client-only MVP**:
   :slug`) has the same step list with a read-only preview of each step and
   the start panel. No longer used: `JourneyNotice`, `JourneyStageMeta` and
   `JourneyStagePreview`'s default export (`ACTION_KIND` from it still is).
+  Since Sprint 311 (20/11/2026, the owner's design) the course page
+  (`components/academy/CourseRunner`) opens modules IN ORDER (the owner's
+  choice): a module opens once every lesson of the ones before is marked
+  done (`firstLocked`; empty modules never block); locked modules show a
+  lock and "Finish Module N to unlock", their lessons can't be opened, and
+  a last-opened lesson in a locked module falls back to the first open one.
+  New: the top card has the module as one segment per lesson, the index can
+  be collapsed on a computer ("Collapse" / "Show lessons", remembered in
+  localStorage), lessons show their minutes, labels read "Module N · title"
+  (unless the title already numbers itself) and a "Keep it up!" note shows
+  while the course is under way. `CourseQuiz` looks new (title "Knowledge
+  check", numbered questions, A/B/C/D options in two columns, "n questions
+  remaining") and still answers each question at once — a "Submit answers"
+  version waits for real exams (the owner's choice). Focus mode: not built.
   **Since Sprint 251 a page model can be retired on a date** (decided by the
   owner 14/11/2026; no migration): Admin → Pages → Page models
   (`components/admin/AdminPageModelsPanel`, resources `page-templates`,

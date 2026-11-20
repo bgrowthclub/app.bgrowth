@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Check, ChevronDown, ChevronLeft, ChevronRight, Clock, ListTree, Quote, StickyNote } from 'lucide-react'
+import { Award, Check, ChevronDown, ChevronLeft, ChevronRight, Clock, ListTree, Lock, PanelLeftClose, PanelLeftOpen, Quote, StickyNote } from 'lucide-react'
 import CourseCertificate from './CourseCertificate'
 import CourseLessonBody from './CourseLessonBody'
 import { CARD } from '../workspace/styles'
@@ -8,6 +8,11 @@ import { nextLessonId } from '../../modules/academy/progress'
 import { useCourseProgress } from '../../modules/academy/useCourseProgress'
 import type { CourseContent } from '../../modules/academy/types'
 import type { WorkspaceInstanceRow } from '../../modules/workspace/types/portal'
+
+// "Module 2 · Title", unless the title already says which module it is.
+function moduleLabel(n: number, title: string) {
+  return /^\s*(module|m[oó]dulo)\s*\d+/i.test(title) ? title : `Module ${n} · ${title}`
+}
 
 interface Props {
   course: CourseContent
@@ -35,6 +40,23 @@ export default function CourseRunner({ course, productId, userId, records, reloa
   // index itself is open. Only the module being read starts open.
   const [openModules, setOpenModules] = useState<string[]>([])
   const [indexOpen, setIndexOpen] = useState(false)
+  // "Collapse" (20/11/2026): hides the course index on a computer so the
+  // lesson takes the width. Remembered on this browser only.
+  const [collapsed, setCollapsed] = useState(() => {
+    try {
+      return window.localStorage.getItem('bgrowth.course.collapsed') === '1'
+    } catch {
+      return false
+    }
+  })
+  const setCollapse = (value: boolean) => {
+    setCollapsed(value)
+    try {
+      window.localStorage.setItem('bgrowth.course.collapsed', value ? '1' : '0')
+    } catch {
+      /* the preference just isn't kept */
+    }
+  }
   const lessonRef = useRef<HTMLDivElement | null>(null)
   const keepRef = useRef<HTMLButtonElement | null>(null)
 
@@ -78,10 +100,26 @@ export default function CourseRunner({ course, productId, userId, records, reloa
     }
   }, [picked, clearPick])
 
-  const current = all.find((l) => l.lesson.id === currentId) ?? all[0]
+  // Modules open in order (20/11/2026, the owner's choice): a module opens
+  // once every lesson of the ones before it is marked done. A module with
+  // no lessons never holds the next one back.
+  const firstLocked = (() => {
+    for (let i = 0; i < course.modules.length; i += 1) {
+      if (!course.modules[i].lessons.every((l) => data.done[l.id])) return i + 1
+    }
+    return course.modules.length
+  })()
+  const isLocked = (moduleId: string) => course.modules.findIndex((m) => m.id === moduleId) >= firstLocked
+  const firstOpen = all.find((l) => !data.done[l.lesson.id] && !isLocked(l.module.id)) ?? all[0]
+  const wanted = all.find((l) => l.lesson.id === currentId)
+  // A lesson in a locked module (an old "last opened") falls back to where
+  // the student can actually continue.
+  const current = wanted && !isLocked(wanted.module.id) ? wanted : firstOpen
   if (!current) return <p className={`${CARD} p-8 text-center text-[14px] text-navy/50`}>This course has no lessons yet.</p>
 
   const go = (id: string) => {
+    const target = all.find((l) => l.lesson.id === id)
+    if (target && isLocked(target.module.id)) return
     flushNote()
     setPicked(null)
     setIndexOpen(false)
@@ -122,37 +160,48 @@ export default function CourseRunner({ course, productId, userId, records, reloa
   const index = all.findIndex((l) => l.lesson.id === current.lesson.id)
   const previous = index > 0 ? all[index - 1].lesson.id : null
   const total = courseMinutes(all.map((l) => l.lesson))
+  const nextLocked = next ? isLocked(all.find((l) => l.lesson.id === next)?.module.id ?? '') : false
+  const moduleNumber = course.modules.findIndex((m) => m.id === current.module.id) + 1
+  const moduleLessons = current.module.lessons
+  const moduleDone = moduleLessons.filter((l) => data.done[l.id]).length
 
   return (
     <div>
-      {/* How far along they are — the first thing someone returning wants. */}
-      <div className={`${CARD} p-5`}>
-        <div className="flex flex-wrap items-baseline justify-between gap-2">
+      {/* How far along they are — the first thing someone returning wants:
+          the course in numbers, and the module being read as one segment
+          per lesson (20/11/2026, the owner's design). */}
+      <div className={`${CARD} flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between`}>
+        <div>
           <p className="text-[13.5px] font-semibold text-navy">
-            {summary?.done ?? 0} of {summary?.total ?? all.length} lessons
-          </p>
-          <p className="text-[12.5px] text-navy/45">
+            {summary?.done ?? 0} of {summary?.total ?? all.length} lessons ·{' '}
             {summary?.complete ? 'Course complete' : `${summary?.percent ?? 0}% done`}
-            {total > 0 && ` · ${formatMinutes(total)} in all`}
           </p>
+          {total > 0 && <p className="mt-0.5 text-[12.5px] text-navy/45">{formatMinutes(total)} in all</p>}
         </div>
-        <div className="mt-2.5 h-2 overflow-hidden rounded-full bg-navy/[0.07]">
-          <div className="h-full rounded-full bg-primary transition-[width] duration-500" style={{ width: `${summary?.percent ?? 0}%` }} />
+        <div className="sm:w-[22rem]">
+          <p className="text-[12.5px] text-navy/55 sm:text-right">
+            Module {moduleNumber} · {moduleDone} of {moduleLessons.length} complete
+          </p>
+          <div className="mt-2 flex gap-1" aria-hidden>
+            {moduleLessons.map((l) => (
+              <span key={l.id} className={`h-1.5 flex-1 rounded-full ${data.done[l.id] ? 'bg-primary' : 'bg-navy/[0.08]'}`} />
+            ))}
+          </div>
         </div>
-        {saveError && <p className="mt-2.5 text-[12.5px] text-red-500">{saveError}</p>}
+        {saveError && <p className="text-[12.5px] text-red-500">{saveError}</p>}
       </div>
 
       {course.intro && index === 0 && !isDone && (
         <p className="mt-5 whitespace-pre-line text-[15px] leading-relaxed text-navy/70">{course.intro}</p>
       )}
 
-      <div className="mt-6 grid gap-6 lg:grid-cols-[minmax(0,260px)_minmax(0,1fr)] lg:items-start">
+      <div className={`mt-6 grid gap-6 lg:items-start ${collapsed ? '' : 'lg:grid-cols-[minmax(0,300px)_minmax(0,1fr)]'}`}>
         {/* The map of the course. A long course was a wall of titles — and
             on a phone that wall came BEFORE the lesson. Now each module
             opens and closes (only the one being read is open), and on a
             phone the whole index hides behind a bar saying where you are
             (30/10/2026). */}
-        <div className="min-w-0 lg:sticky lg:top-24">
+        <div className={`min-w-0 lg:sticky lg:top-24 ${collapsed ? 'lg:hidden' : ''}`}>
           <button
             type="button"
             onClick={() => setIndexOpen((v) => !v)}
@@ -169,6 +218,13 @@ export default function CourseRunner({ course, productId, userId, records, reloa
             <ChevronDown size={17} className={`shrink-0 text-navy/40 transition-transform ${indexOpen ? 'rotate-180' : ''}`} aria-hidden />
           </button>
 
+          <button
+            type="button"
+            onClick={() => setCollapse(true)}
+            className={`${CARD} mb-3 hidden w-full items-center gap-2 px-4 py-2.5 text-left text-[13.5px] font-semibold text-navy/70 hover:text-navy lg:flex`}
+          >
+            <PanelLeftClose size={16} aria-hidden /> Collapse
+          </button>
           <nav
             className={`${CARD} mt-3 max-h-[70vh] overflow-y-auto p-2 lg:mt-0 lg:block ${indexOpen ? 'block' : 'hidden'}`}
             aria-label="Course contents"
@@ -176,24 +232,31 @@ export default function CourseRunner({ course, productId, userId, records, reloa
             {course.modules.map((module, mi) => {
               const mp = summary?.modules.find((m) => m.moduleId === module.id)
               const here = module.id === current.module.id
-              const expanded = openModules.includes(module.id)
+              const locked = mi >= firstLocked
+              const expanded = !locked && openModules.includes(module.id)
               return (
                 <div key={module.id} className={mi > 0 ? 'mt-1 border-t border-navy/[0.06] pt-1' : undefined}>
                   <button
                     type="button"
+                    disabled={locked}
                     onClick={() => setOpenModules((list) => (list.includes(module.id) ? list.filter((id) => id !== module.id) : [...list, module.id]))}
                     aria-expanded={expanded}
-                    className="flex w-full items-start gap-2 rounded-lg px-2 py-2.5 text-left transition-colors hover:bg-bg-soft"
+                    className="flex w-full items-start gap-2 rounded-lg px-2 py-2.5 text-left transition-colors hover:bg-bg-soft disabled:cursor-default disabled:hover:bg-transparent"
                   >
+                    {locked && <Lock size={14} className="mt-0.5 shrink-0 text-navy/35" aria-label="Locked" />}
                     <span className="min-w-0 flex-1">
-                      <span className={`block text-[13px] font-bold leading-snug ${here ? 'text-navy' : 'text-navy/70'}`}>{module.title}</span>
-                      {mp && mp.total > 0 && (
+                      <span className={`block text-[13px] font-bold leading-snug ${locked ? 'text-navy/45' : here ? 'text-navy' : 'text-navy/70'}`}>
+                        {moduleLabel(mi + 1, module.title)}
+                      </span>
+                      {locked ? (
+                        <span className="mt-0.5 block text-[11.5px] text-navy/40">Finish Module {mi} to unlock</span>
+                      ) : mp && mp.total > 0 && (
                         <span className={`mt-0.5 block text-[11.5px] ${mp.complete ? 'font-semibold text-emerald-600' : 'text-navy/45'}`}>
                           {mp.complete ? 'Done' : `${mp.done}/${mp.total} lessons`}
                         </span>
                       )}
                     </span>
-                    <ChevronDown size={15} className={`mt-0.5 shrink-0 text-navy/35 transition-transform ${expanded ? 'rotate-180' : ''}`} aria-hidden />
+                    {!locked && <ChevronDown size={15} className={`mt-0.5 shrink-0 text-navy/35 transition-transform ${expanded ? 'rotate-180' : ''}`} aria-hidden />}
                   </button>
                   {expanded && (
                     <ul className="mb-1 space-y-0.5 pl-1">
@@ -206,18 +269,19 @@ export default function CourseRunner({ course, productId, userId, records, reloa
                               type="button"
                               onClick={() => go(lesson.id)}
                               aria-current={reading ? 'true' : undefined}
-                              className={`flex w-full items-start gap-2 rounded-lg px-2 py-2 text-left text-[13.5px] transition-colors ${
+                              className={`flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left text-[13.5px] transition-colors ${
                                 reading ? 'bg-primary/[0.08] font-semibold text-navy' : 'text-navy/65 hover:bg-bg-soft'
                               }`}
                             >
                               <span
-                                className={`mt-0.5 grid h-4 w-4 shrink-0 place-items-center rounded-full border ${
-                                  done ? 'border-emerald-500 bg-emerald-500 text-white' : 'border-navy/20 text-transparent'
+                                className={`grid h-5 w-5 shrink-0 place-items-center rounded-full border ${
+                                  done ? 'border-emerald-600 bg-emerald-600 text-white' : 'border-navy/20 text-transparent'
                                 }`}
                               >
-                                <Check size={11} strokeWidth={3} aria-hidden />
+                                <Check size={12} strokeWidth={3} aria-hidden />
                               </span>
-                              <span className="min-w-0">{lesson.title}</span>
+                              <span className="min-w-0 flex-1">{lesson.title}</span>
+                              {lesson.minutes ? <span className="shrink-0 text-[11.5px] font-normal text-navy/40">{formatMinutes(lesson.minutes)}</span> : null}
                             </button>
                           </li>
                         )
@@ -231,7 +295,18 @@ export default function CourseRunner({ course, productId, userId, records, reloa
         </div>
 
         <article className={`${CARD} p-5 md:p-8`}>
-          <p className="text-[11.5px] font-bold uppercase tracking-wide text-primary/80">{current.module.title}</p>
+          {collapsed && (
+            <button
+              type="button"
+              onClick={() => setCollapse(false)}
+              className="mb-4 hidden items-center gap-2 rounded-xl border border-navy/10 px-3 py-2 text-[13px] font-semibold text-navy/70 hover:text-navy lg:inline-flex"
+            >
+              <PanelLeftOpen size={16} aria-hidden /> Show lessons
+            </button>
+          )}
+          <p className="text-[11.5px] font-bold uppercase tracking-wide text-primary/80">
+            {moduleLabel(moduleNumber, current.module.title)}
+          </p>
           <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
             <h2 className="font-display text-2xl font-bold leading-tight text-navy">{current.lesson.title}</h2>
             {current.lesson.minutes ? (
@@ -276,7 +351,12 @@ export default function CourseRunner({ course, productId, userId, records, reloa
             >
               <Check size={16} strokeWidth={3} aria-hidden /> {isDone ? 'Done' : 'Mark as done'}
             </button>
-            {next && (
+            {next && nextLocked && (
+              <span className="inline-flex items-center gap-1.5 rounded-xl border border-dashed border-navy/15 px-4 py-2.5 text-[13.5px] font-semibold text-navy/45">
+                <Lock size={14} aria-hidden /> Finish this module to unlock the next
+              </span>
+            )}
+            {next && !nextLocked && (
               <button
                 type="button"
                 onClick={() => go(next)}
@@ -328,6 +408,18 @@ export default function CourseRunner({ course, productId, userId, records, reloa
           </div>
         </article>
       </div>
+
+      {!summary?.complete && (summary?.done ?? 0) > 0 && (
+        <div className="no-print mt-6 flex items-center gap-4 rounded-2xl border border-primary/10 bg-blue-50/60 px-5 py-4">
+          <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-primary text-white">
+            <Award size={22} aria-hidden />
+          </span>
+          <div>
+            <p className="font-display text-[16px] font-bold text-navy">Keep it up!</p>
+            <p className="text-[13.5px] text-navy/60">You’re building a strong foundation. Review the content if anything feels unclear, then finish strong.</p>
+          </div>
+        </div>
+      )}
 
       {summary?.complete && (
         <p className="no-print mt-6 rounded-xl2 bg-emerald-50 px-5 py-4 text-center text-[14px] font-semibold text-emerald-700">
