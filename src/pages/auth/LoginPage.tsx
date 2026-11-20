@@ -37,7 +37,7 @@ export default function LoginPage() {
       <SEO title="Log In" description="Log in to your BGrowth account." path="/login" />
       <AuthCard
         title="Welcome back"
-        subtitle="Sign in to your BGrowth account."
+        subtitle="Sign in to continue to your workspace."
         footer={
           <>
             Don&rsquo;t have an account?{' '}
@@ -73,7 +73,7 @@ export default function LoginPage() {
           />
           {error && <p className="text-[13px] text-red-500">{error}</p>}
           <Button type="submit" className="w-full !py-4 !text-[15px]" disabled={busy} icon={<ArrowRight size={18} aria-hidden="true" />}>
-            {busy ? 'Signing in…' : 'Sign In'}
+            {busy ? 'Signing in…' : 'Sign in'}
           </Button>
         </form>
       </AuthCard>

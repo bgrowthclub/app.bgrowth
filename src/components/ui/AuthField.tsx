@@ -49,7 +49,7 @@ export default function AuthField({
           placeholder={placeholder}
           autoComplete={autoComplete}
           onChange={(e) => onChange(e.target.value)}
-          className={`w-full rounded-xl border border-navy/10 bg-bg-soft px-4 py-3.5 text-[15px] text-navy placeholder:text-navy/35 transition-colors focus:border-primary/40 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 ${isPassword ? 'pr-12' : ''}`}
+          className={`w-full rounded-xl border border-navy/10 bg-white px-4 py-3.5 text-[15px] text-navy placeholder:text-navy/35 transition-colors focus:border-primary/40 focus:bg-white focus:outline-none focus:ring-4 focus:ring-primary/10 ${isPassword ? 'pr-12' : ''}`}
         />
         {isPassword && (
           <button

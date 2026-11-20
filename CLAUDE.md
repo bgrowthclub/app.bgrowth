@@ -599,6 +599,12 @@ This repo is a **static, client-only MVP**:
   "Notify me" finally works: it puts the signed-in member on the newsletter
   (`newsletterService.getMine`/`saveMine`), where launches are announced. No
   date and no progress figure. Which feature was asked about isn't stored.
+  Since Sprint 304 (20/11/2026, the owner's design with our own photo) the
+  five auth pages share a new `AuthCard`: the photo panel carries the brand,
+  "Knowledge. Workspaces. Real Progress." and one sentence (no
+  "collaboration"/"intelligent" — not built), and the form sits in a white
+  card with the logo; `AuthField` inputs are white. The design's Google and
+  Microsoft buttons are NOT shown until that sign-in is set up (plan item).
   **Since Sprint 251 a page model can be retired on a date** (decided by the
   owner 14/11/2026; no migration): Admin → Pages → Page models
   (`components/admin/AdminPageModelsPanel`, resources `page-templates`,
