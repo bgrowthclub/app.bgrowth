@@ -1,17 +1,7 @@
-import SEO from '../../components/seo/SEO'
-import ProfileSettings from '../../components/account/ProfileSettings'
+import { Navigate } from 'react-router-dom'
 
-// My Profile (Sprint 110): name, e-mail address and password.
+// My Profile is a tab of Settings since 20/11/2026 (Sprint 313); the old
+// address keeps working.
 export default function ProfilePage() {
-  return (
-    <>
-      <SEO title="My Profile" description="Your name, e-mail address and password." path="/platform/profile" />
-      <p className="eyebrow">BGrowth Platform</p>
-      <h1 className="mt-2 font-display text-3xl font-bold tracking-tight text-navy md:text-4xl">My Profile</h1>
-      <p className="mt-3 max-w-lg text-[15px] leading-relaxed text-navy/55">Your name, e-mail address and password.</p>
-      <div className="mt-10">
-        <ProfileSettings />
-      </div>
-    </>
-  )
+  return <Navigate to="/platform/settings" replace />
 }

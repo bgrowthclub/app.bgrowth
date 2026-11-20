@@ -35,7 +35,7 @@ export default function UserMenu() {
       )}
     >
       <Link
-        to="/platform/profile"
+        to="/platform/settings"
         className="flex items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-medium text-navy/70 hover:bg-bg-soft"
       >
         <User size={15} />

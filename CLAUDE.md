@@ -687,6 +687,16 @@ This repo is a **static, client-only MVP**:
   TopBar while it is on — the same layout, not a third one); remembered in
   localStorage (`bgrowth.course.focus`), always switched off when the
   student leaves the course, with a fixed "Exit focus mode" button.
+  Since Sprint 313 (20/11/2026, the owner's design) Settings
+  (`pages/platform/SettingsPage`) has tabs in `?tab=` — Profile (name and
+  e-mail, `ProfileSettings`; `/platform/profile` now redirects here),
+  Notifications (`EmailUpdatesSettings`: the eight areas as boxes to tick,
+  "Stop all marketing e-mails" = unsubscribe, Save changes; all ticked is
+  saved as no list = every area), Security (`account/PasswordSettings`, the
+  password form moved out of ProfileSettings) and Billing (links to
+  Membership and Purchases) — and the Danger zone (`DeleteAccountSettings`,
+  new look) under them. No Integrations tab (there are none) and only the
+  site's eight areas (the owner's choice; more when they exist).
   **Since Sprint 251 a page model can be retired on a date** (decided by the
   owner 14/11/2026; no migration): Admin → Pages → Page models
   (`components/admin/AdminPageModelsPanel`, resources `page-templates`,

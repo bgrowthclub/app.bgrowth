@@ -1,3 +1,4 @@
+import { ShieldAlert, Trash2 } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import Button from '../ui/Button'
 import DeleteAccountDialog from './DeleteAccountDialog'
@@ -54,8 +55,12 @@ export default function DeleteAccountSettings() {
   const pending = request?.status === 'pending'
 
   return (
-    <section className="rounded-xl3 border border-red-100 bg-white p-6 shadow-softer md:p-8">
-      <h2 className="font-display text-xl font-bold text-navy">Delete account</h2>
+    <section className="flex flex-col gap-5 rounded-[24px] border border-red-200 bg-red-50/50 p-6 sm:flex-row sm:items-start md:p-8">
+      <span className="grid h-14 w-14 shrink-0 place-items-center rounded-full border border-red-200 bg-white text-red-600">
+        <ShieldAlert size={26} aria-hidden />
+      </span>
+      <div className="min-w-0 flex-1">
+      <h2 className="font-display text-xl font-bold text-red-700">Danger zone</h2>
       {request === undefined ? (
         <p className="mt-2 text-[14px] text-navy/40">Loading…</p>
       ) : pending ? (
@@ -86,13 +91,14 @@ export default function DeleteAccountSettings() {
               setDialogError(null)
               setOpen(true)
             }}
-            className={`${BUTTON} mt-4 !text-red-600`}
+            className={`${BUTTON} mt-4 !border-red-300 !bg-white !text-red-600`}
           >
-            Delete my account…
+            <Trash2 size={15} aria-hidden /> Delete account…
           </Button>
         </>
       )}
       {error && <p className="mt-3 text-[13px] text-red-500">{error}</p>}
+      </div>
       <DeleteAccountDialog open={open} busy={busy} error={dialogError} onSubmit={(r) => void submit(r)} onCancel={() => setOpen(false)} />
     </section>
   )
