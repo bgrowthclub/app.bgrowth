@@ -38,7 +38,9 @@ export default function KnowledgeCoverCard({ article, categoryName }: Props) {
       </div>
       <div className="flex flex-1 flex-col p-5">
         <h3 className="font-display text-[16px] font-bold leading-snug text-navy">{article.title}</h3>
-        <p className="mt-2 line-clamp-3 flex-1 text-[13.5px] leading-relaxed text-navy/55">{article.excerpt}</p>
+        <div className="flex-1">
+          <p className="mt-2 line-clamp-3 text-[13.5px] leading-relaxed text-navy/55">{article.excerpt}</p>
+        </div>
       </div>
       <div className="flex items-center justify-between border-t border-navy/[0.06] px-5 py-3.5 text-[12.5px]">
         <span className="inline-flex items-center gap-3 text-navy/45">

@@ -6,6 +6,23 @@ interface Props {
   onChange: (page: number) => void
 }
 
+// The page numbers to draw: all of them up to 7, else the first, the last and
+// the current one with its neighbours; 0 marks a gap ("…"), so many pages
+// still fit a phone (20/11/2026).
+function pages(page: number, count: number): number[] {
+  if (count <= 7) return Array.from({ length: count }, (_, i) => i + 1)
+  const keep = new Set([1, count, page - 1, page, page + 1].filter((n) => n >= 1 && n <= count))
+  if (page <= 3) [2, 3, 4].forEach((n) => keep.add(n))
+  if (page >= count - 2) [count - 3, count - 2, count - 1].forEach((n) => keep.add(n))
+  const sorted = [...keep].sort((a, b) => a - b)
+  const out: number[] = []
+  sorted.forEach((n, i) => {
+    if (i > 0 && n - sorted[i - 1] > 1) out.push(0)
+    out.push(n)
+  })
+  return out
+}
+
 // Generic, business-agnostic page-number control — any paginated grid
 // (Knowledge Category page today) can reuse this instead of hand-rolling
 // prev/next buttons.
@@ -24,7 +41,12 @@ export default function Pagination({ page, pageCount, onChange }: Props) {
         <ChevronLeft size={16} />
       </button>
 
-      {Array.from({ length: pageCount }, (_, i) => i + 1).map((n) => (
+      {pages(page, pageCount).map((n, i) =>
+        n === 0 ? (
+          <span key={`gap-${i}`} className="w-5 text-center text-[13px] text-navy/35" aria-hidden>
+            …
+          </span>
+        ) : (
         <button
           key={n}
           type="button"
@@ -36,7 +58,8 @@ export default function Pagination({ page, pageCount, onChange }: Props) {
         >
           {n}
         </button>
-      ))}
+        ),
+      )}
 
       <button
         type="button"
