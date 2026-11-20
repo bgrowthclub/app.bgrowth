@@ -564,6 +564,15 @@ This repo is a **static, client-only MVP**:
   "Upgrade to"/"Switch to" by rank, "up to -N%" on Yearly) and a "Payment &
   invoices" band that opens Stripe's billing page. No usage meters or card
   details (we keep neither). `PricingTierCard` is no longer used by PlanChooser.
+  Since Sprint 300 (19/11/2026, the owner's design) About follows the new
+  look: top with tag chips, "the problem" and "our mission" as two cards with
+  their own small boxes, the method as numbered cards, How it works as a dark
+  band with a picture, "Courses that end in tools" (it used to say we don't
+  build courses — the Academy sells them now), the vision and a dark closing
+  band with two buttons. Every text stays in Page texts; titles may have a
+  colored part (`about.*.highlight`, painted only if found in the title as
+  written). The How it works picture is `home-hero.webp` until there is a
+  real Workspace screenshot. No "40 hours" or other invented numbers.
   **Since Sprint 251 a page model can be retired on a date** (decided by the
   owner 14/11/2026; no migration): Admin → Pages → Page models
   (`components/admin/AdminPageModelsPanel`, resources `page-templates`,
