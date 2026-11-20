@@ -5,22 +5,11 @@ import SEO from '../../components/seo/SEO'
 import EmptyState from '../../components/ui/EmptyState'
 import Pagination from '../../components/ui/Pagination'
 import KnowledgeSearchCard from '../../components/knowledge/KnowledgeSearchCard'
-import { KNOWLEDGE_TYPE_ICONS } from '../../components/knowledge/knowledgeTypeIcons'
+import KnowledgeTypeFilter from '../../components/knowledge/KnowledgeTypeFilter'
 import { knowledgeService } from '../../modules/knowledge/services/KnowledgeService'
 import { KNOWLEDGE_TYPES, type KnowledgeType } from '../../modules/knowledge/types/knowledgeType'
 import type { KnowledgeArticleIndexEntry } from '../../modules/knowledge/types/article'
 import type { KnowledgeCategory } from '../../modules/knowledge/types/category'
-
-const PLURAL: Record<KnowledgeType, string> = {
-  Article: 'Articles',
-  Guide: 'Guides',
-  Checklist: 'Checklists',
-  Planner: 'Planners',
-  Calculator: 'Calculators',
-  Template: 'Templates',
-  Video: 'Videos',
-  Download: 'Downloads',
-}
 
 type Sort = 'newest' | 'oldest' | 'quickest'
 const SORTS: { value: Sort; label: string }[] = [
@@ -105,25 +94,6 @@ export default function KnowledgeSearchPage() {
     document.getElementById('knowledge-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
   }
 
-  const chip = (value: KnowledgeType | 'All', label: string, count: number) => {
-    const active = type === value
-    const Icon = value === 'All' ? null : KNOWLEDGE_TYPE_ICONS[value]
-    return (
-      <button
-        key={value}
-        type="button"
-        onClick={() => setType(value)}
-        aria-pressed={active}
-        className={`inline-flex items-center gap-1.5 rounded-xl border px-4 py-2 text-[13.5px] font-semibold transition-colors ${
-          active ? 'border-primary bg-primary text-white shadow-softer' : 'border-navy/10 bg-white text-navy/70 hover:border-primary/25 hover:text-navy'
-        }`}
-      >
-        {Icon && <Icon size={15} className={active ? 'text-white' : 'text-primary'} aria-hidden />}
-        {label} <span className={active ? 'text-white/80' : 'text-navy/40'}>({count})</span>
-      </button>
-    )
-  }
-
   return (
     <div className="pb-24">
       <SEO
@@ -165,12 +135,7 @@ export default function KnowledgeSearchPage() {
             </button>
           </form>
 
-          {types.length > 1 && (
-            <div className="mt-6 flex flex-wrap justify-center gap-2">
-              {chip('All', 'All', matching.length)}
-              {types.map((t) => chip(t, PLURAL[t], countOf(t)))}
-            </div>
-          )}
+          <KnowledgeTypeFilter types={types} value={type} onChange={setType} total={matching.length} countOf={countOf} className="mt-6" />
         </div>
       </section>
 

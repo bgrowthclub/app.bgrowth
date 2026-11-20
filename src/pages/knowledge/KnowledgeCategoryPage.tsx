@@ -1,49 +1,65 @@
 import { useEffect, useMemo, useState } from 'react'
-import { useParams, Navigate } from 'react-router-dom'
+import { Link, Navigate, useParams } from 'react-router-dom'
+import { ChevronRight, Search } from 'lucide-react'
 import SEO from '../../components/seo/SEO'
-import PageContainer from '../../components/layout/PageContainer'
-import SectionContainer from '../../components/layout/SectionContainer'
-import SearchToolbar from '../../components/ui/SearchToolbar'
-import FilterPill from '../../components/ui/FilterPill'
-import Grid from '../../components/layout/Grid'
 import EmptyState from '../../components/ui/EmptyState'
 import Pagination from '../../components/ui/Pagination'
-import KnowledgeArticleCard from '../../components/knowledge/KnowledgeArticleCard'
-import { KNOWLEDGE_CATEGORY_ICONS } from '../../components/knowledge/knowledgeCategoryIcons'
+import KnowledgeSearchCard from '../../components/knowledge/KnowledgeSearchCard'
+import KnowledgeTypeFilter from '../../components/knowledge/KnowledgeTypeFilter'
+import { knowledgeCategoryLook } from '../../components/knowledge/knowledgeCategoryIcons'
 import { knowledgeService } from '../../modules/knowledge/services/KnowledgeService'
-import { KNOWLEDGE_TYPES } from '../../modules/knowledge/types/knowledgeType'
-import type { KnowledgeType } from '../../modules/knowledge/types/knowledgeType'
+import { KNOWLEDGE_TYPES, type KnowledgeType } from '../../modules/knowledge/types/knowledgeType'
 import type { KnowledgeArticleIndexEntry } from '../../modules/knowledge/types/article'
 import type { KnowledgeCategory } from '../../modules/knowledge/types/category'
 
-const SORT_OPTIONS = [
-  { label: 'Latest', value: 'latest' },
-  { label: 'Oldest', value: 'oldest' },
-  { label: 'Quickest Read', value: 'reading-time' },
+type Sort = 'newest' | 'oldest' | 'quickest'
+const SORTS: { value: Sort; label: string }[] = [
+  { value: 'newest', label: 'Newest' },
+  { value: 'oldest', label: 'Oldest' },
+  { value: 'quickest', label: 'Quickest read' },
 ]
 
-const PAGE_SIZE = 6
+const PAGE_SIZE = 9
 
+// A Knowledge category (20/11/2026, in the look of Knowledge → Search, the
+// owner's go-ahead): a centered top with the category's icon, name, its own
+// description when it has one and how many articles it holds (counted), a
+// search inside it and the type buttons; then the results as
+// KnowledgeSearchCard, 9 per page, and the other categories to move on to.
 export default function KnowledgeCategoryPage() {
   const { slug } = useParams<{ slug: string }>()
   const [category, setCategory] = useState<KnowledgeCategory | null | undefined>(undefined)
   const [articles, setArticles] = useState<KnowledgeArticleIndexEntry[]>([])
+  const [others, setOthers] = useState<{ category: KnowledgeCategory; count: number }[]>([])
+  const [tags, setTags] = useState<Map<string, string>>(new Map())
   const [query, setQuery] = useState('')
   const [type, setType] = useState<KnowledgeType | 'All'>('All')
-  const [sort, setSort] = useState('latest')
+  const [sort, setSort] = useState<Sort>('newest')
   const [page, setPage] = useState(1)
 
   useEffect(() => {
     if (!slug) return
     let cancelled = false
     setCategory(undefined)
-    Promise.all([knowledgeService.getCategoryBySlug(slug), knowledgeService.listArticles({ categorySlug: slug })]).then(
-      ([foundCategory, foundArticles]) => {
-        if (cancelled) return
-        setCategory(foundCategory ?? null)
-        setArticles(foundArticles)
-      },
-    )
+    setQuery('')
+    setType('All')
+    Promise.all([
+      knowledgeService.getCategories(),
+      knowledgeService.listArticles({ categorySlug: slug }),
+      knowledgeService.getArticleCountByCategory(),
+      knowledgeService.getTags(),
+    ]).then(([all, found, counts, tagList]) => {
+      if (cancelled) return
+      setCategory(all.find((c) => c.slug === slug) ?? null)
+      setArticles(found)
+      setOthers(
+        all
+          .filter((c) => c.slug !== slug && counts[c.slug])
+          .map((c) => ({ category: c, count: counts[c.slug] }))
+          .sort((a, b) => b.count - a.count),
+      )
+      setTags(new Map(tagList.map((t) => [t.slug, t.name])))
+    })
     return () => {
       cancelled = true
     }
@@ -53,95 +69,175 @@ export default function KnowledgeCategoryPage() {
     setPage(1)
   }, [query, type, sort, slug])
 
+  const matching = useMemo(() => {
+    const q = query.trim().toLowerCase()
+    if (!q) return articles
+    return articles.filter(
+      (a) =>
+        a.title.toLowerCase().includes(q) ||
+        a.excerpt.toLowerCase().includes(q) ||
+        a.tagSlugs.some((tag) => tag.includes(q) || (tags.get(tag) ?? '').toLowerCase().includes(q)),
+    )
+  }, [articles, query, tags])
+
+  const types = useMemo(() => KNOWLEDGE_TYPES.filter((t) => articles.some((a) => a.type === t)), [articles])
+  const countOf = (t: KnowledgeType) => matching.filter((a) => a.type === t).length
+
   const results = useMemo(() => {
-    let list = articles.filter((a) => {
-      const matchesType = type === 'All' || a.type === type
-      const matchesQuery =
-        query.trim() === '' ||
-        a.title.toLowerCase().includes(query.toLowerCase()) ||
-        a.excerpt.toLowerCase().includes(query.toLowerCase())
-      return matchesType && matchesQuery
+    const list = type === 'All' ? matching : matching.filter((a) => a.type === type)
+    return [...list].sort((a, b) => {
+      if (sort === 'quickest') return a.readingTimeMinutes - b.readingTimeMinutes
+      const diff = new Date(a.publishedAt).getTime() - new Date(b.publishedAt).getTime()
+      return sort === 'oldest' ? diff : -diff
     })
-
-    list = [...list].sort((a, b) => {
-      if (sort === 'oldest') return new Date(a.publishedAt).getTime() - new Date(b.publishedAt).getTime()
-      if (sort === 'reading-time') return a.readingTimeMinutes - b.readingTimeMinutes
-      return new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
-    })
-
-    return list
-  }, [articles, query, type, sort])
+  }, [matching, type, sort])
 
   const pageCount = Math.max(1, Math.ceil(results.length / PAGE_SIZE))
   const pageResults = results.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE)
-  const availableTypes = useMemo(
-    () => KNOWLEDGE_TYPES.filter((t) => articles.some((a) => a.type === t)),
-    [articles],
-  )
 
   if (category === null) return <Navigate to="/knowledge" replace />
   // While it loads, hold the screen so the footer doesn't jump up under the menu.
   if (category === undefined) return <div className="min-h-screen" aria-busy="true" />
 
-  const Icon = KNOWLEDGE_CATEGORY_ICONS[category.slug] ?? KNOWLEDGE_CATEGORY_ICONS.Default
+  const { icon: Icon, tone } = knowledgeCategoryLook(category.slug)
+
+  function changePage(n: number) {
+    setPage(n)
+    document.getElementById('category-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
 
   return (
-    <div className="pb-24 pt-32 md:pt-40">
+    <div className="pb-24">
       <SEO
         title={`${category.name} Knowledge`}
         description={category.description ?? `Articles, guides, and free resources about ${category.name}.`}
         path={`/knowledge/category/${category.slug}`}
       />
 
-      <PageContainer>
-        <div className="flex items-center gap-4">
-          <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-grad-primary text-white shadow-soft">
-            <Icon size={26} strokeWidth={1.75} />
-          </div>
-          <div>
-            <p className="eyebrow">Knowledge™</p>
-            <h1 className="mt-1 font-display text-3xl font-bold tracking-tight text-navy md:text-4xl">
-              {category.name}
-            </h1>
-          </div>
-        </div>
-        {category.description && (
-          <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-navy/55">{category.description}</p>
-        )}
-      </PageContainer>
+      <section className="border-b border-navy/[0.06] bg-grad-radial-soft pb-12 pt-28 md:pb-14 md:pt-36">
+        <div className="container-px mx-auto max-w-3xl text-center">
+          <p className="mx-auto inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-white px-3 py-1 text-[11.5px] font-bold uppercase tracking-wide text-primary">
+            <Link to="/knowledge" className="hover:underline">
+              Knowledge
+            </Link>
+            <ChevronRight size={12} className="text-primary/50" aria-hidden /> Category
+          </p>
+          <span className={`mx-auto mt-5 grid h-14 w-14 place-items-center rounded-2xl shadow-softer ${tone}`}>
+            <Icon size={26} strokeWidth={1.8} aria-hidden />
+          </span>
+          <h1 className="mt-4 font-display text-[30px] font-bold leading-tight tracking-tight text-navy sm:text-[42px]">{category.name}</h1>
+          <p className="mx-auto mt-3 max-w-xl text-[15px] leading-relaxed text-navy/60 sm:text-[16px]">
+            {category.description ?? `Articles and guides about ${category.name}.`}
+          </p>
+          <p className="mt-2 text-[13.5px] font-semibold text-navy/45">
+            {articles.length} {articles.length === 1 ? 'article' : 'articles'}
+          </p>
 
-      <SectionContainer>
-        <SearchToolbar
-          query={query}
-          onQueryChange={setQuery}
-          sortValue={sort}
-          onSortChange={setSort}
-          sortOptions={SORT_OPTIONS}
-          placeholder={`Search ${category.name} resources…`}
-        >
-          <FilterPill label="All" active={type === 'All'} onClick={() => setType('All')} />
-          {availableTypes.map((t) => (
-            <FilterPill key={t} label={t} active={type === t} onClick={() => setType(t)} />
-          ))}
-        </SearchToolbar>
+          {articles.length > 0 && (
+            <form
+              role="search"
+              onSubmit={(e) => {
+                e.preventDefault()
+                ;(document.activeElement as HTMLElement | null)?.blur()
+                document.getElementById('category-results')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+              }}
+              className="mx-auto mt-7 flex max-w-2xl items-center gap-2 rounded-2xl border border-navy/[0.08] bg-white p-2 shadow-soft focus-within:shadow-glow"
+            >
+              <Search size={18} className="ml-3 shrink-0 text-navy/35" aria-hidden />
+              <input
+                type="search"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder={`Search in ${category.name}…`}
+                aria-label={`Search in ${category.name}`}
+                className="min-w-0 flex-1 bg-transparent py-2 text-[15px] text-navy placeholder:text-navy/35 focus:outline-none"
+              />
+              <button type="submit" className="shrink-0 rounded-xl bg-primary px-5 py-2.5 text-[14px] font-semibold text-white shadow-softer transition-opacity hover:opacity-95">
+                Search
+              </button>
+            </form>
+          )}
+
+          <KnowledgeTypeFilter types={types} value={type} onChange={setType} total={matching.length} countOf={countOf} className="mt-6" />
+        </div>
+      </section>
+
+      <section id="category-results" className="container-px mx-auto max-w-7xl scroll-mt-24 pt-10 md:pt-12">
+        <div className="mb-8 flex flex-wrap items-center justify-between gap-3 border-b border-navy/[0.06] pb-5">
+          <p className="text-[14px] text-navy/60">
+            Showing <span className="font-bold text-primary">{results.length}</span> {results.length === 1 ? 'result' : 'results'}
+            {query.trim() && (
+              <>
+                {' '}
+                for <span className="font-semibold text-navy">“{query.trim()}”</span>
+              </>
+            )}
+          </p>
+          <label className="flex items-center gap-2 text-[13px] text-navy/50">
+            Sort by
+            <select
+              value={sort}
+              onChange={(e) => setSort(e.target.value as Sort)}
+              className="rounded-xl border border-navy/10 bg-white px-3 py-2 text-[13.5px] font-semibold text-navy focus:border-primary/40 focus:outline-none"
+            >
+              {SORTS.map((s) => (
+                <option key={s.value} value={s.value}>
+                  {s.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
 
         {pageResults.length > 0 ? (
           <>
-            <Grid cols={3} className="mt-10">
+            <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
               {pageResults.map((article) => (
-                <KnowledgeArticleCard key={article.id} article={article} categoryName={category.name} />
+                <KnowledgeSearchCard
+                  key={article.id}
+                  article={article}
+                  categoryName={category.name}
+                  tagName={article.tagSlugs[0] ? tags.get(article.tagSlugs[0]) : undefined}
+                />
               ))}
-            </Grid>
+            </div>
             <div className="mt-12">
-              <Pagination page={page} pageCount={pageCount} onChange={setPage} />
+              <Pagination page={page} pageCount={pageCount} onChange={changePage} />
             </div>
           </>
         ) : (
-          <div className="mt-16">
-            <EmptyState title="No resources match your search." description="Try a different keyword or content type." />
-          </div>
+          <EmptyState title="Nothing here matches your search." description="Try a different word, or pick another type." />
         )}
-      </SectionContainer>
+      </section>
+
+      {others.length > 0 && (
+        <section className="container-px mx-auto max-w-7xl pt-16 md:pt-20">
+          <div className="rounded-[24px] border border-navy/[0.07] bg-white p-6 text-center shadow-softer sm:p-8">
+            <h2 className="font-display text-[20px] font-bold text-navy sm:text-[22px]">Explore other topics</h2>
+            <div className="mt-5 flex flex-wrap justify-center gap-2">
+              {others.map(({ category: c, count }) => {
+                const look = knowledgeCategoryLook(c.slug)
+                const OtherIcon = look.icon
+                return (
+                  <Link
+                    key={c.slug}
+                    to={`/knowledge/category/${c.slug}`}
+                    className="inline-flex items-center gap-2 rounded-xl border border-navy/10 bg-white px-3.5 py-2 text-[13.5px] font-semibold text-navy/75 transition-colors hover:border-primary/25 hover:text-navy"
+                  >
+                    <span className={`grid h-6 w-6 place-items-center rounded-md ${look.tone}`}>
+                      <OtherIcon size={14} aria-hidden />
+                    </span>
+                    {c.name} <span className="text-navy/40">({count})</span>
+                  </Link>
+                )
+              })}
+            </div>
+            <Link to="/knowledge/search" className="mt-5 inline-flex items-center gap-1 text-[13.5px] font-semibold text-primary hover:underline">
+              Search everything <ChevronRight size={14} aria-hidden />
+            </Link>
+          </div>
+        </section>
+      )}
     </div>
   )
 }
