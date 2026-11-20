@@ -1,27 +1,35 @@
 import { FormEvent, useState } from 'react'
-import { ArrowRight } from 'lucide-react'
-import Button from '../ui/Button'
+import { ArrowRight, Handshake, LifeBuoy, MessageCircle, Newspaper, Send, ShieldCheck, UserRound } from 'lucide-react'
+import type { LucideIcon } from 'lucide-react'
 import { getCaptchaToken } from '../../lib/captcha'
 
-export const CONTACT_CATEGORIES = ['General Questions', 'Support', 'Sales', 'Partnerships', 'Business Opportunities', 'Media']
+// The topics a visitor can pick (20/11/2026, the owner's choice). More come
+// as products open (apps, Marketplace…) — add a row here, nothing else.
+export const CONTACT_CATEGORIES: { label: string; icon: LucideIcon }[] = [
+  { label: 'General question', icon: MessageCircle },
+  { label: 'Account & billing', icon: UserRound },
+  { label: 'Help with a product', icon: LifeBuoy },
+  { label: 'Partnerships', icon: Handshake },
+  { label: 'Press & media', icon: Newspaper },
+]
 
 const inputClass =
-  'w-full rounded-2xl border border-navy/10 bg-white px-5 py-3.5 text-sm text-navy placeholder:text-navy/30 focus:border-primary/30'
+  'w-full rounded-xl border border-navy/10 bg-white px-4 py-3 text-[14.5px] text-navy placeholder:text-navy/30 transition-colors focus:border-primary/40 focus:outline-none focus:ring-4 focus:ring-primary/10'
 
 interface Props {
-  category: string
-  onCategoryChange: (category: string) => void
+  defaultName?: string
+  defaultEmail?: string
 }
 
-export default function ContactForm({ category, onCategoryChange }: Props) {
+// The contact form (new look 20/11/2026, the owner's design): the topic as
+// chips, name, e-mail, subject and message — all required. It sends through
+// api/ingles.ts?action=contact with the topic in the subject line, as before.
+export default function ContactForm({ defaultName = '', defaultEmail = '' }: Props) {
+  const [category, setCategory] = useState(CONTACT_CATEGORIES[0].label)
   const [sent, setSent] = useState(false)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  // Until 08/11/2026 this did NOTHING: pressing Send ran preventDefault and
-  // stopped there. The page looked complete, the visitor got no error and no
-  // thank-you, and the message reached nobody — worse than having no form,
-  // because it looks like someone is listening.
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault()
     const data = new FormData(e.currentTarget)
@@ -35,9 +43,8 @@ export default function ContactForm({ category, onCategoryChange }: Props) {
         body: JSON.stringify({
           name: String(data.get('name') ?? ''),
           email: String(data.get('email') ?? ''),
-          // The category is part of the subject so the team sees what it is
-          // about in the e-mail's own subject line, without opening anything.
-          subject: `[${String(data.get('category') ?? 'General')}] ${String(data.get('subject') ?? '')}`,
+          // The topic is part of the subject so the team sees it in the e-mail's subject line.
+          subject: `[${category}] ${String(data.get('subject') ?? '')}`,
           message: String(data.get('message') ?? ''),
           captchaToken,
         }),
@@ -52,85 +59,91 @@ export default function ContactForm({ category, onCategoryChange }: Props) {
     }
   }
 
-  if (sent) {
-    return (
-      <div className="rounded-xl3 border border-emerald-200 bg-emerald-50/70 p-6 sm:p-8">
-        <h3 className="font-display text-lg font-bold text-emerald-900">Your message is on its way.</h3>
-        <p className="mt-2 text-[14.5px] leading-relaxed text-emerald-900/80">
-          A real person reads these, and we usually reply within one or two business days. If you don’t hear from us,
-          check your spam folder before writing again — that is where we tend to end up.
-        </p>
-      </div>
-    )
-  }
-
   return (
-    <form onSubmit={handleSubmit} className="rounded-xl3 border border-navy/[0.06] bg-white p-6 shadow-softer sm:p-8">
-      <div className="grid gap-5 sm:grid-cols-2">
+    <div className="rounded-[24px] border border-navy/[0.07] bg-white p-6 shadow-softer sm:p-8">
+      <div className="flex items-start gap-4">
+        <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-grad-primary text-white shadow-soft">
+          <Send size={20} aria-hidden />
+        </span>
         <div>
-          <label htmlFor="contact-name" className="mb-1.5 block text-[13px] font-semibold text-navy">
-            Full Name
-          </label>
-          <input id="contact-name" name="name" type="text" required placeholder="Jane Cooper" className={inputClass} />
-        </div>
-
-        <div>
-          <label htmlFor="contact-email" className="mb-1.5 block text-[13px] font-semibold text-navy">
-            Email
-          </label>
-          <input id="contact-email" name="email" type="email" required placeholder="you@business.com" className={inputClass} />
-        </div>
-
-        <div className="sm:col-span-2">
-          <label htmlFor="contact-subject" className="mb-1.5 block text-[13px] font-semibold text-navy">
-            Subject
-          </label>
-          <input id="contact-subject" name="subject" type="text" required placeholder="How can we help?" className={inputClass} />
-        </div>
-
-        <div className="sm:col-span-2">
-          <label htmlFor="contact-category" className="mb-1.5 block text-[13px] font-semibold text-navy">
-            Category
-          </label>
-          <select
-            id="contact-category"
-            name="category"
-            required
-            value={category}
-            onChange={(e) => onCategoryChange(e.target.value)}
-            className={`${inputClass} appearance-none`}
-          >
-            <option value="" disabled>
-              Choose a category
-            </option>
-            {CONTACT_CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="sm:col-span-2">
-          <label htmlFor="contact-message" className="mb-1.5 block text-[13px] font-semibold text-navy">
-            Message
-          </label>
-          <textarea
-            id="contact-message"
-            name="message"
-            required
-            rows={5}
-            placeholder="Tell us a bit about what you need…"
-            className={`${inputClass} resize-none`}
-          />
+          <h2 className="font-display text-[21px] font-bold text-navy">Send us a message</h2>
+          <p className="mt-0.5 text-[14px] text-navy/55">Fill out the form and we’ll be in touch.</p>
         </div>
       </div>
 
-      {error && <p className="mt-5 rounded-2xl bg-red-50 px-4 py-3 text-[13.5px] text-red-600">{error}</p>}
+      {sent ? (
+        <div className="mt-7 rounded-2xl border border-emerald-200 bg-emerald-50/70 p-6">
+          <h3 className="font-display text-lg font-bold text-emerald-900">Your message is on its way.</h3>
+          <p className="mt-2 text-[14.5px] leading-relaxed text-emerald-900/80">
+            A real person reads these, and we usually reply within one or two business days. If you don’t hear from us,
+            check your spam folder before writing again — that is where we tend to end up.
+          </p>
+        </div>
+      ) : (
+        <form onSubmit={handleSubmit} className="mt-7 space-y-5">
+          <fieldset>
+            <legend className="mb-2 text-[13.5px] font-semibold text-navy">Topic</legend>
+            <div className="flex flex-wrap gap-2">
+              {CONTACT_CATEGORIES.map(({ label, icon: Icon }) => (
+                <button
+                  key={label}
+                  type="button"
+                  aria-pressed={category === label}
+                  onClick={() => setCategory(label)}
+                  className={`inline-flex items-center gap-2 rounded-xl border px-3.5 py-2.5 text-[13.5px] font-semibold transition-colors ${
+                    category === label ? 'border-primary/40 bg-blue-50 text-primary' : 'border-navy/10 text-navy/70 hover:border-primary/25 hover:text-navy'
+                  }`}
+                >
+                  <Icon size={16} aria-hidden /> {label}
+                </button>
+              ))}
+            </div>
+          </fieldset>
 
-      <Button type="submit" disabled={busy} className="mt-6 w-full sm:w-auto" icon={busy ? undefined : <ArrowRight size={15} />}>
-        {busy ? 'Sending…' : 'Send Message'}
-      </Button>
-    </form>
+          <div className="grid gap-5 sm:grid-cols-2">
+            <div>
+              <label htmlFor="contact-name" className="mb-1.5 block text-[13.5px] font-semibold text-navy">
+                Full name
+              </label>
+              <input id="contact-name" name="name" type="text" required defaultValue={defaultName} placeholder="e.g. Jane Cooper" className={inputClass} />
+            </div>
+            <div>
+              <label htmlFor="contact-email" className="mb-1.5 block text-[13.5px] font-semibold text-navy">
+                Email address
+              </label>
+              <input id="contact-email" name="email" type="email" required defaultValue={defaultEmail} placeholder="e.g. jane@company.com" className={inputClass} />
+            </div>
+          </div>
+
+          <div>
+            <label htmlFor="contact-subject" className="mb-1.5 block text-[13.5px] font-semibold text-navy">
+              Subject
+            </label>
+            <input id="contact-subject" name="subject" type="text" required placeholder="What can we help you with?" className={inputClass} />
+          </div>
+
+          <div>
+            <label htmlFor="contact-message" className="mb-1.5 block text-[13.5px] font-semibold text-navy">
+              Message
+            </label>
+            <textarea id="contact-message" name="message" required rows={5} placeholder="Tell us a little more so we can help…" className={`${inputClass} resize-y`} />
+            <p className="mt-1.5 text-[12.5px] text-navy/45">Share any details that will help our team assist you better.</p>
+          </div>
+
+          {error && <p className="rounded-xl bg-red-50 px-4 py-3 text-[13.5px] text-red-600">{error}</p>}
+
+          <button
+            type="submit"
+            disabled={busy}
+            className="flex w-full items-center justify-center gap-2 rounded-xl bg-grad-primary px-5 py-3.5 text-[15px] font-semibold text-white shadow-soft transition-opacity hover:opacity-95 disabled:opacity-60"
+          >
+            {busy ? 'Sending…' : 'Send message'} {!busy && <ArrowRight size={17} aria-hidden />}
+          </button>
+          <p className="flex items-center justify-center gap-1.5 text-[12.5px] text-navy/45">
+            <ShieldCheck size={14} aria-hidden /> We only use your details to reply to you.
+          </p>
+        </form>
+      )}
+    </div>
   )
 }

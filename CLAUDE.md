@@ -618,6 +618,16 @@ This repo is a **static, client-only MVP**:
   Edit, Remove). Duplicate saves a DRAFT copy through the existing save
   (the server gives it its own address). No sales/conversion figures — the
   owner left them out and bundle visits aren't counted.
+  Since Sprint 307 (20/11/2026, the owner's design) Contact is one screen: a
+  light top ("How can we help?", "Replies in 1–2 business days" — the time we
+  already promised), quick answers (FAQ), the e-mail (info@bgrowth.app) and
+  the pages that exist (Knowledge, Catalog, Pricing; Support for members) on
+  the left, the form on the right. `ContactForm` now takes the topic as chips
+  (`CONTACT_CATEGORIES`: General question, Account & billing, Help with a
+  product, Partnerships, Press & media — add a row when a product opens) and
+  pre-fills a member's name and e-mail; a signed-in member also sees
+  "Already a member? Get faster help in Support". Nothing invented: no help
+  center, status page or release notes. `ContactHero` is no longer used.
   **Since Sprint 251 a page model can be retired on a date** (decided by the
   owner 14/11/2026; no migration): Admin → Pages → Page models
   (`components/admin/AdminPageModelsPanel`, resources `page-templates`,

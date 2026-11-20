@@ -1,71 +1,40 @@
-import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import {
-  MessageCircle,
-  LifeBuoy,
-  DollarSign,
-  Handshake,
-  Briefcase,
-  Newspaper,
-  Mail,
-  ArrowRight,
-} from 'lucide-react'
+import { BookOpen, ChevronRight, Clock, HelpCircle, LifeBuoy, Mail } from 'lucide-react'
 import SEO from '../components/seo/SEO'
 import { seoPage } from '../data/seoPages'
-import SectionContainer from '../components/layout/SectionContainer'
-import SectionHeader from '../components/ui/SectionHeader'
 import FAQ from '../components/ui/FAQ'
-import PremiumCTA from '../components/ui/PremiumCTA'
-import ContactHero from '../components/contact/ContactHero'
-import ContactForm, { CONTACT_CATEGORIES } from '../components/contact/ContactForm'
+import ContactForm from '../components/contact/ContactForm'
 import { LEGAL_EMAIL } from '../data/legal'
-
-const HELP_REASONS = [
-  { icon: MessageCircle, title: 'General Questions', description: 'Not sure where to start? Ask us anything about BGrowth.', category: CONTACT_CATEGORIES[0] },
-  { icon: LifeBuoy, title: 'Support', description: 'Need help with a Business System or your account? We’ve got you.', category: CONTACT_CATEGORIES[1] },
-  { icon: DollarSign, title: 'Sales', description: 'Questions about pricing, plans, or membership.', category: CONTACT_CATEGORIES[2] },
-  { icon: Handshake, title: 'Partnerships', description: 'Interested in partnering with BGrowth? Let’s talk.', category: CONTACT_CATEGORIES[3] },
-  { icon: Briefcase, title: 'Business Opportunities', description: 'Bring us an idea, a collaboration, or a new opportunity.', category: CONTACT_CATEGORIES[4] },
-  { icon: Newspaper, title: 'Media', description: 'Press and media inquiries about BGrowth.', category: CONTACT_CATEGORIES[5] },
-]
+import { useIdentity } from '../modules/identity/IdentityContext'
 
 // Only real, confirmed contact details belong here — no placeholder phone
-// numbers, hours or social links. The contact e-mail is the one the owner
-// chose for customers (data/legal.ts), delivered to the same inbox as
-// info@benterprises.biz. Add a row (or a social-media card) only once the
-// real value exists.
-const CONTACT_INFO = [
-  { icon: Mail, label: 'Email', value: LEGAL_EMAIL },
-]
-
+// numbers, status pages or help centers that don't exist. The e-mail is the
+// one the owner chose for customers (data/legal.ts).
 const CONTACT_FAQ = [
-  { question: 'How quickly will I receive a reply?', answer: 'We typically respond within 1–2 business days. Support and sales inquiries are usually answered faster.' },
-  { question: 'Can I request a custom service?', answer: 'Yes. Tell us what you need using the Business Opportunities or Sales category, and our team will follow up with next steps.' },
-  { question: 'How do partnerships work?', answer: 'Partnerships are evaluated case by case. Send us a message with a few details about your business and what you have in mind.' },
-  { question: 'Where can I report an issue?', answer: 'Use the Support category on the form below, and our team will get back to you as quickly as possible.' },
-  { question: 'How can I contact support?', answer: 'Select Support when sending a message below — that routes your message straight to the right team.' },
+  { question: 'How quickly will I receive a reply?', answer: 'We typically respond within 1–2 business days.' },
+  { question: 'Can I request a custom service?', answer: 'Yes. Tell us what you need in the form, and our team will follow up with next steps.' },
+  { question: 'How do partnerships work?', answer: 'Partnerships are evaluated case by case. Choose Partnerships in the form and tell us a little about your business and what you have in mind.' },
+  {
+    question: 'How do I report a problem with a product?',
+    answer: 'If you have an account, open a conversation in Support inside your account — every product also has a “Need help with this?” button. Otherwise, choose “Help with a product” in the form.',
+  },
+  { question: 'Where can I find what’s new?', answer: 'Subscribe to our newsletter — we announce every new product and feature there.' },
 ]
 
-// `to` is omitted for destinations that don't have a real page yet —
-// those cards render inert with a "Coming soon" label instead of linking
-// somewhere unrelated. Wire each one up as its own route ships:
-// TODO: /academy
-// TODO: /marketplace
-// TODO: a dedicated /products catalog page (distinct from /systems)
-const COMMUNITY_LINKS: { title: string; description: string; to?: string }[] = [
-  { title: 'Knowledge', description: 'Free guides, articles and practical advice across business, career and more.', to: '/knowledge' },
-  { title: 'Academy', description: 'Structured courses and learning paths for going deeper on a skill.' },
-  { title: 'Marketplace', description: 'Templates, tools and resources from BGrowth and partner sellers.' },
-  { title: 'Products', description: 'The full BGrowth product catalog in one place.' },
+// Pages that exist today. Add one here when it opens.
+const RESOURCES = [
+  { label: 'Knowledge', to: '/knowledge' },
+  { label: 'Catalog', to: '/systems' },
+  { label: 'Pricing', to: '/pricing' },
 ]
 
+const CARD = 'rounded-[24px] border border-navy/[0.07] bg-white p-6 shadow-softer'
+
+// Contact (redesigned 20/11/2026, the owner's design): a light top with the
+// reply time we already promise, then quick answers, the e-mail and the
+// pages that may help on the left, and the form on the right.
 export default function ContactPage() {
-  const [category, setCategory] = useState('')
-
-  const handleHelpReason = (reasonCategory: string) => {
-    setCategory(reasonCategory)
-    document.getElementById('message')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-  }
+  const { user } = useIdentity()
 
   return (
     <div>
@@ -76,106 +45,93 @@ export default function ContactPage() {
         path="/contact"
       />
 
-      <ContactHero />
-
-      <SectionContainer aria-label="How Can We Help">
-        <SectionHeader eyebrow="How Can We Help?" title="Tell us what you need." className="mb-10" />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {HELP_REASONS.map((reason) => (
-            <div key={reason.title} className="flex flex-col rounded-xl3 border border-navy/[0.06] bg-white p-6 shadow-softer">
-              <div className="grid h-10 w-10 place-items-center rounded-xl bg-bg-soft text-primary">
-                <reason.icon size={17} strokeWidth={2} aria-hidden="true" />
-              </div>
-              <h3 className="mt-4 font-display text-[15px] font-bold text-navy">{reason.title}</h3>
-              <p className="mt-1.5 flex-1 text-[13.5px] leading-relaxed text-navy/50">{reason.description}</p>
-              <button
-                type="button"
-                onClick={() => handleHelpReason(reason.category)}
-                className="mt-5 inline-flex w-fit items-center gap-1 text-[12.5px] font-semibold text-primary"
-              >
-                Contact us
-                <ArrowRight size={13} aria-hidden="true" />
-              </button>
-            </div>
-          ))}
+      <section className="relative overflow-hidden bg-gradient-to-br from-blue-50 via-bg to-blue-50/60 pb-14 pt-32 md:pb-16 md:pt-40">
+        <div className="pointer-events-none absolute -right-24 top-10 h-80 w-80 rounded-full bg-primary/10 blur-3xl" aria-hidden />
+        <div className="container-px relative mx-auto max-w-page">
+          <h1 className="font-display text-[40px] font-extrabold leading-[1.05] tracking-tight text-navy sm:text-[60px]">How can we help?</h1>
+          <p className="mt-5 max-w-xl text-[16px] leading-relaxed text-navy/60 sm:text-[18px]">
+            We’re here to support you every step of the way. Tell us what you need and we’ll get back to you soon.
+          </p>
+          <p className="mt-6 inline-flex items-center gap-2 rounded-full border border-navy/[0.08] bg-white px-4 py-2 text-[14px] text-navy/70 shadow-softer">
+            <Clock size={16} className="text-primary" aria-hidden /> Replies in <strong className="font-semibold text-primary">1–2 business days</strong>
+          </p>
         </div>
-      </SectionContainer>
+      </section>
 
-      <SectionContainer background="soft" aria-label="Contact Information">
-        <SectionHeader eyebrow="Contact Information" title="Reach us directly." className="mb-10" />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-          {CONTACT_INFO.map((info) => (
-            <div key={info.label} className="rounded-xl3 border border-navy/[0.06] bg-white p-6 shadow-softer">
-              <div className="grid h-10 w-10 place-items-center rounded-xl bg-bg-soft text-primary">
-                <info.icon size={17} strokeWidth={2} aria-hidden="true" />
-              </div>
-              <p className="mt-4 text-[12px] font-semibold uppercase tracking-wide text-navy/40">{info.label}</p>
-              <a href={`mailto:${info.value}`} className="mt-1 block text-[14px] font-medium text-navy hover:text-primary">
-                {info.value}
-              </a>
-            </div>
-          ))}
-        </div>
-      </SectionContainer>
+      <section className="container-px mx-auto max-w-page pb-24 pt-10">
+        {user && (
+          <Link
+            to="/platform/support"
+            className="mb-6 flex items-center gap-3 rounded-2xl border border-primary/15 bg-blue-50 px-5 py-4 text-[14px] text-navy transition-colors hover:border-primary/30"
+          >
+            <LifeBuoy size={18} className="shrink-0 text-primary" aria-hidden />
+            <span className="flex-1">
+              <strong className="font-semibold">Already a member?</strong> Get faster help in Support, inside your account.
+            </span>
+            <ChevronRight size={17} className="text-primary" aria-hidden />
+          </Link>
+        )}
 
-      <SectionContainer id="message" width="narrow" aria-label="Send a Message">
-        <SectionHeader eyebrow="Send a Message" title="We’d love to hear from you." align="center" className="mx-auto mb-10" />
-        <ContactForm category={category} onCategoryChange={setCategory} />
-      </SectionContainer>
-
-      <SectionContainer background="soft" width="narrow" aria-label="Frequently Asked Questions">
-        <SectionHeader eyebrow="FAQ" title="Frequently asked questions." align="center" className="mx-auto mb-10" />
-        <FAQ items={CONTACT_FAQ} />
-      </SectionContainer>
-
-      <SectionContainer aria-label="Community">
-        <SectionHeader
-          eyebrow="Community"
-          title="Not sure where to look?"
-          description="Depending on what you need, one of these might get you there faster than waiting on a reply."
-          className="mb-10"
-        />
-        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-          {COMMUNITY_LINKS.map((link) =>
-            link.to ? (
-              <Link
-                key={link.title}
-                to={link.to}
-                className="group flex flex-col rounded-xl3 border border-navy/[0.06] bg-white p-6 shadow-softer transition-all duration-300 hover:-translate-y-1 hover:border-primary/15 hover:shadow-glow"
-              >
-                <h3 className="font-display text-[15px] font-bold text-navy">{link.title}</h3>
-                <p className="mt-1.5 flex-1 text-[13.5px] leading-relaxed text-navy/50">{link.description}</p>
-                <span className="mt-5 inline-flex items-center gap-1 text-[12.5px] font-semibold text-primary">
-                  Visit
-                  <ArrowRight
-                    size={13}
-                    className="transition-transform duration-300 group-hover:translate-x-0.5"
-                    aria-hidden="true"
-                  />
+        <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,0.9fr)_minmax(0,1.1fr)]">
+          <div className="space-y-6">
+            <div className={CARD}>
+              <div className="flex items-start gap-4">
+                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-grad-primary text-white">
+                  <HelpCircle size={22} aria-hidden />
                 </span>
-              </Link>
-            ) : (
-              <div key={link.title} className="flex flex-col rounded-xl3 border border-navy/[0.06] bg-white p-6 opacity-60">
-                <h3 className="font-display text-[15px] font-bold text-navy">{link.title}</h3>
-                <p className="mt-1.5 flex-1 text-[13.5px] leading-relaxed text-navy/50">{link.description}</p>
-                <span className="mt-5 w-fit text-[12.5px] font-semibold text-navy/40">Coming soon</span>
+                <div>
+                  <h2 className="font-display text-[19px] font-bold text-navy">Need a quick answer?</h2>
+                  <p className="mt-0.5 text-[13.5px] text-navy/55">Check our frequently asked questions.</p>
+                </div>
               </div>
-            ),
-          )}
-        </div>
-      </SectionContainer>
+              <div className="mt-5">
+                <FAQ items={CONTACT_FAQ} />
+              </div>
+            </div>
 
-      <SectionContainer aria-label="Ready to Grow With BGrowth" className="!pt-0">
-        <PremiumCTA
-          eyebrow="BGROWTH CLUB™"
-          title="Ready to Grow With BGrowth?"
-          description="Explore our products, join the community and discover practical solutions designed to help you learn, launch, work, manage and grow."
-          primaryLabel="Explore Products"
-          primaryTo="/systems"
-          secondaryLabel="Create Free Account"
-          secondaryTo="/register"
-        />
-      </SectionContainer>
+            <div className={`${CARD} flex items-start gap-4`}>
+              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-primary text-white">
+                <Mail size={20} aria-hidden />
+              </span>
+              <div>
+                <h2 className="font-display text-[19px] font-bold text-navy">Reach us directly</h2>
+                <p className="mt-0.5 text-[13.5px] text-navy/55">Prefer e-mail? Write to us anytime.</p>
+                <a href={`mailto:${LEGAL_EMAIL}`} className="mt-2 inline-block text-[15px] font-semibold text-primary hover:underline">
+                  {LEGAL_EMAIL}
+                </a>
+              </div>
+            </div>
+
+            <div className={CARD}>
+              <div className="flex items-start gap-4">
+                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-primary text-white">
+                  <BookOpen size={20} aria-hidden />
+                </span>
+                <div>
+                  <h2 className="font-display text-[19px] font-bold text-navy">Helpful pages</h2>
+                  <p className="mt-0.5 text-[13.5px] text-navy/55">Guides, articles, our products and plans.</p>
+                </div>
+              </div>
+              <div className="mt-5 flex flex-wrap gap-x-6 gap-y-2 border-t border-navy/[0.06] pt-4">
+                {RESOURCES.map((r) => (
+                  <Link key={r.to} to={r.to} className="inline-flex items-center gap-1 text-[14px] font-semibold text-primary hover:underline">
+                    {r.label} <ChevronRight size={15} aria-hidden />
+                  </Link>
+                ))}
+                {user && (
+                  <Link to="/platform/support" className="inline-flex items-center gap-1 text-[14px] font-semibold text-primary hover:underline">
+                    Support <ChevronRight size={15} aria-hidden />
+                  </Link>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div id="message" className="scroll-mt-28">
+            <ContactForm defaultName={user?.displayName ?? ''} defaultEmail={user?.email ?? ''} />
+          </div>
+        </div>
+      </section>
     </div>
   )
 }
