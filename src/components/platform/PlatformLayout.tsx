@@ -6,6 +6,7 @@ import Sidebar from './Sidebar'
 import TopBar from './TopBar'
 import { ComingSoonModalProvider } from './ComingSoonModalProvider'
 import { useNavBadges } from './useNavBadges'
+import { FocusModeContext } from './FocusMode'
 
 // Responsive decision for the sidebar (Milestone 4.1 review):
 // - Desktop (>=1024px, "lg"): persistent, expanded by default.
@@ -21,6 +22,8 @@ const TABLET_QUERY = '(min-width: 768px) and (max-width: 1023px)'
 export default function PlatformLayout() {
   const [collapsed, setCollapsed] = useState(() => window.matchMedia(TABLET_QUERY).matches)
   const [mobileOpen, setMobileOpen] = useState(false)
+  // Focus mode: a page (the course lesson) hides the menu and the top bar.
+  const [focus, setFocus] = useState(false)
   const userToggledRef = useRef(false)
   const badges = useNavBadges()
   const hasBadge = Object.values(badges).some((n) => (n ?? 0) > 0)
@@ -40,27 +43,29 @@ export default function PlatformLayout() {
   }
 
   return (
+    <FocusModeContext.Provider value={{ available: true, focus, setFocus }}>
     <ComingSoonModalProvider>
       <div className="flex min-h-screen bg-bg">
         <ScrollToTop />
-        <Sidebar
+        {!focus && <Sidebar
           collapsed={collapsed}
           onToggleCollapsed={handleToggleCollapsed}
           mobileOpen={mobileOpen}
           onCloseMobile={() => setMobileOpen(false)}
           badges={badges}
-        />
+        />}
 
         {/* overflow-x-clip: one too-wide item must never widen the whole page on a phone (Safari then zooms out). */}
         <div className="flex min-w-0 flex-1 flex-col overflow-x-clip">
-          <TopBar onOpenMobileSidebar={() => setMobileOpen(true)} menuBadge={hasBadge} />
+          {!focus && <TopBar onOpenMobileSidebar={() => setMobileOpen(true)} menuBadge={hasBadge} />}
           <main className="flex-1">
-            <PageContainer width="page" className="py-10">
+            <PageContainer width="page" className={focus ? 'py-6' : 'py-10'}>
               <Outlet />
             </PageContainer>
           </main>
         </div>
       </div>
     </ComingSoonModalProvider>
+    </FocusModeContext.Provider>
   )
 }

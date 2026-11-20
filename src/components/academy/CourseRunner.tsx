@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import { Award, Check, ChevronDown, ChevronLeft, ChevronRight, Clock, ListTree, Lock, PanelLeftClose, PanelLeftOpen, Quote, StickyNote } from 'lucide-react'
+import { Award, Check, ChevronDown, ChevronLeft, ChevronRight, Clock, ListTree, Lock, Minimize2, PanelLeftClose, PanelLeftOpen, Quote, StickyNote } from 'lucide-react'
 import CourseCertificate from './CourseCertificate'
 import CourseLessonBody from './CourseLessonBody'
+import { useFocusMode } from '../platform/FocusMode'
 import { CARD } from '../workspace/styles'
 import { courseLessons, courseMinutes, formatMinutes } from '../../modules/academy/types'
 import { nextLessonId } from '../../modules/academy/progress'
@@ -49,6 +50,29 @@ export default function CourseRunner({ course, productId, userId, records, reloa
       return false
     }
   })
+  // Focus mode (20/11/2026): hides the member area's menu and top bar while
+  // the student is in a lesson. Remembered on this browser; always switched
+  // off when they leave the course, so no other page opens without its menu.
+  const focusMode = useFocusMode()
+  const { setFocus } = focusMode
+  useEffect(() => {
+    let wanted = false
+    try {
+      wanted = window.localStorage.getItem('bgrowth.course.focus') === '1'
+    } catch {
+      wanted = false
+    }
+    if (wanted) setFocus(true)
+    return () => setFocus(false)
+  }, [setFocus])
+  const switchFocus = (on: boolean) => {
+    setFocus(on)
+    try {
+      window.localStorage.setItem('bgrowth.course.focus', on ? '1' : '0')
+    } catch {
+      /* the preference just isn't kept */
+    }
+  }
   const setCollapse = (value: boolean) => {
     setCollapsed(value)
     try {
@@ -166,7 +190,16 @@ export default function CourseRunner({ course, productId, userId, records, reloa
   const moduleDone = moduleLessons.filter((l) => data.done[l.id]).length
 
   return (
-    <div>
+    <div className={focusMode.focus ? 'pt-12' : undefined}>
+      {focusMode.focus && (
+        <button
+          type="button"
+          onClick={() => switchFocus(false)}
+          className="no-print fixed right-4 top-4 z-40 inline-flex items-center gap-2 rounded-xl border border-navy/10 bg-white px-4 py-2.5 text-[13.5px] font-semibold text-navy shadow-soft hover:border-primary/30"
+        >
+          <Minimize2 size={15} aria-hidden /> Exit focus mode
+        </button>
+      )}
       {/* How far along they are — the first thing someone returning wants:
           the course in numbers, and the module being read as one segment
           per lesson (20/11/2026, the owner's design). */}
@@ -292,6 +325,25 @@ export default function CourseRunner({ course, productId, userId, records, reloa
               )
             })}
           </nav>
+          {focusMode.available && (
+            <label className={`${CARD} mt-3 flex cursor-pointer items-center gap-3 px-4 py-3 text-[13.5px] font-semibold text-navy/75`}>
+              <Minimize2 size={16} className="text-navy/50" aria-hidden />
+              <span className="flex-1">Focus mode</span>
+              <input
+                type="checkbox"
+                role="switch"
+                checked={focusMode.focus}
+                onChange={(e) => switchFocus(e.target.checked)}
+                className="peer sr-only"
+              />
+              <span
+                aria-hidden
+                className={`relative h-6 w-11 rounded-full transition-colors ${focusMode.focus ? 'bg-primary' : 'bg-navy/15'}`}
+              >
+                <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${focusMode.focus ? 'left-[22px]' : 'left-0.5'}`} />
+              </span>
+            </label>
+          )}
         </div>
 
         <article className={`${CARD} p-5 md:p-8`}>

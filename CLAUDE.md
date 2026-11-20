@@ -681,7 +681,12 @@ This repo is a **static, client-only MVP**:
   while the course is under way. `CourseQuiz` looks new (title "Knowledge
   check", numbered questions, A/B/C/D options in two columns, "n questions
   remaining") and still answers each question at once — a "Submit answers"
-  version waits for real exams (the owner's choice). Focus mode: not built.
+  version waits for real exams (the owner's choice). Since Sprint 312 the
+  course page has a Focus mode switch: `components/platform/FocusMode`
+  (`FocusModeContext`, provided by `PlatformLayout`, which hides Sidebar and
+  TopBar while it is on — the same layout, not a third one); remembered in
+  localStorage (`bgrowth.course.focus`), always switched off when the
+  student leaves the course, with a fixed "Exit focus mode" button.
   **Since Sprint 251 a page model can be retired on a date** (decided by the
   owner 14/11/2026; no migration): Admin → Pages → Page models
   (`components/admin/AdminPageModelsPanel`, resources `page-templates`,
