@@ -643,6 +643,17 @@ This repo is a **static, client-only MVP**:
   `data/categoryPreviews.ts` (no dates), and an e-mail sign-up with source
   `world-<slug>`. `/preview/:category` redirects there. No longer used:
   `CategoryPreviewPage`, `BundleCover`.
+  Since Sprint 309 (20/11/2026, the owner's design) the member Academy
+  (`pages/platform/AcademyPage`) shows the member's real numbers — lessons
+  marked done and certificates (`modules/academy/useAcademyOverview`: their
+  courses' content, workspace_instances rows, `certificateService.mine`) —,
+  the course to pick back up with its module and next lesson, "Your
+  courses", Guided Journeys (Started/Available from their journey rows),
+  the Downloads they own, and every course with area chips
+  (`components/academy/AcademyCourseCard`: "Included in your plan" when
+  access comes from the plan, lessons/time only for their own courses). No
+  day streaks or "hours studied" (not measured). `ContinueLearningCard` is
+  no longer used.
   **Since Sprint 251 a page model can be retired on a date** (decided by the
   owner 14/11/2026; no migration): Admin → Pages → Page models
   (`components/admin/AdminPageModelsPanel`, resources `page-templates`,
