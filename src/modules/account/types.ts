@@ -24,6 +24,10 @@ export interface AccountOrder {
   productName: string | null
   isBundle: boolean
   receiptUrl: string | null
+  /** 'plan' = a payment of the member's plan; absent = a product order. */
+  kind?: 'plan'
+  /** The product's type (workspace, course, pdf, calculator, bundle), for its tag. */
+  productType?: string
 }
 
 // One access on the member's account (a license or a team grant) and where
@@ -37,6 +41,8 @@ export interface AccountAccess {
   startedAt: string | null
   endsAt: string | null
   status: 'active' | 'expired' | 'cancelled'
+  /** The product is included in some plan (an ended access says so). */
+  inPlans?: boolean
 }
 
 export interface AccountPurchases {

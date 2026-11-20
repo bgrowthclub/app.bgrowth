@@ -133,6 +133,11 @@ interface Order {
   productName: string | null
   isBundle: boolean
   receiptUrl: string | null
+  // 'plan' = a payment of the member's plan (19/11/2026: shown here too, so
+  // every payment is in one place); absent = a product order.
+  kind?: 'plan'
+  // The product's type (workspace, course, pdf, calculator, bundle), for its tag.
+  productType?: string
 }
 
 interface Access {
@@ -145,6 +150,8 @@ interface Access {
   startedAt: string | null
   endsAt: string | null
   status: 'active' | 'expired' | 'cancelled'
+  // The product is included in some plan (shown on an ended access).
+  inPlans?: boolean
 }
 
 async function stripeOrders(email: string, userId: string): Promise<{ orders: Order[]; available: boolean }> {
@@ -186,12 +193,64 @@ async function stripeOrders(email: string, userId: string): Promise<{ orders: Or
   }
 }
 
+// The member's plan payments (19/11/2026): paid Stripe invoices of their own
+// subscriptions (portal.member_plans), named after the plan. Read-only; the
+// invoice's own page is the receipt. Any failure = none shown, never an error.
+async function planPayments(db: Db, userId: string): Promise<Order[]> {
+  const key = process.env.STRIPE_SECRET_KEY
+  if (!key) return []
+  try {
+    const { data } = await db
+      .from('member_plans')
+      .select('plan_id, provider_subscription_id, provider_customer_id')
+      .eq('user_id', userId)
+      .eq('source', 'subscription')
+    const rows = ((data ?? []) as { plan_id: string; provider_subscription_id: string | null; provider_customer_id: string | null }[]).filter(
+      (r) => r.provider_subscription_id && r.provider_customer_id,
+    )
+    if (!rows.length) return []
+    const { data: plans } = await db.from('membership_plans').select('id, name').in('id', [...new Set(rows.map((r) => r.plan_id))])
+    const planName = new Map(((plans ?? []) as { id: string; name: string }[]).map((p) => [p.id, p.name]))
+    const planOfSub = new Map(rows.map((r) => [r.provider_subscription_id as string, r.plan_id]))
+    const stripe = new Stripe(key)
+    const out: Order[] = []
+    for (const customer of new Set(rows.map((r) => r.provider_customer_id as string))) {
+      const invoices = await stripe.invoices.list({ customer, status: 'paid', limit: 100 })
+      for (const inv of invoices.data) {
+        const anyInv = inv as unknown as { subscription?: string | { id: string } | null; parent?: { subscription_details?: { subscription?: string | { id: string } } } }
+        const raw = anyInv.subscription ?? anyInv.parent?.subscription_details?.subscription ?? null
+        const subId = typeof raw === 'string' ? raw : raw?.id
+        if (!subId || !planOfSub.has(subId) || !inv.amount_paid) continue
+        const name = planName.get(planOfSub.get(subId) as string)
+        out.push({
+          id: inv.id ?? `${subId}-${inv.created}`,
+          createdAt: new Date(inv.created * 1000).toISOString(),
+          amount: inv.amount_paid,
+          currency: inv.currency ?? 'usd',
+          refunded: null,
+          status: 'paid',
+          productSlug: null,
+          productName: name ? `${name} plan` : 'BGrowth plan',
+          isBundle: false,
+          receiptUrl: inv.hosted_invoice_url ?? null,
+          kind: 'plan',
+        })
+      }
+    }
+    return out
+  } catch (err) {
+    console.error('[account] purchases: plan invoices read failed:', err instanceof Error ? err.message : err)
+    return []
+  }
+}
+
 async function purchasesOf(db: Db, userId: string, email: string) {
-  const [{ orders, available }, licensesRes, grantsRes, teamRes] = await Promise.all([
+  const [{ orders, available }, licensesRes, grantsRes, teamRes, planOrders] = await Promise.all([
     stripeOrders(email.toLowerCase(), userId),
     db.from('licenses').select('id, product_id, type, status, access_policy, activated_at, expires_at').eq('user_id', userId),
     db.from('access_grants').select('id, scope, product_id, expires_at, created_at, revoked_at').eq('user_id', userId),
     db.from('admin_activity').select('target_product_id').eq('target_user_id', userId).eq('action', 'POST licenses'),
+    planPayments(db, userId),
   ])
   if (licensesRes.error) throw licensesRes.error
   if (grantsRes.error) throw grantsRes.error
@@ -224,6 +283,7 @@ async function purchasesOf(db: Db, userId: string, email: string) {
     const p = o.productSlug ? slugToProduct.get(o.productSlug) : undefined
     o.productName = p?.name ?? o.productSlug
     o.isBundle = p?.content_type === 'bundle'
+    if (p) o.productType = p.content_type
     if (p && o.status !== 'refunded') {
       orderOf.set(p.id, o)
       if (o.isBundle) bundleIds.push(p.id)
@@ -269,8 +329,21 @@ async function purchasesOf(db: Db, userId: string, email: string) {
       status: g.revoked_at ? 'cancelled' : expired ? 'expired' : 'active',
     })
   }
+  // Ended accesses: is the product in a plan? ("Included in plans" instead of "Buy".)
+  const endedIds = licenses
+    .filter((l) => accesses.some((a) => a.id === l.id && a.status !== 'active'))
+    .map((l) => l.product_id)
+  if (endedIds.length) {
+    const { data: inPlan } = await db.from('product_plan_access').select('product_id').in('product_id', endedIds)
+    const included = new Set(((inPlan ?? []) as { product_id: string }[]).map((r) => r.product_id))
+    for (const l of licenses) {
+      const a = accesses.find((x) => x.id === l.id)
+      if (a && a.status !== 'active' && included.has(l.product_id)) a.inPlans = true
+    }
+  }
   accesses.sort((a, b) => (b.startedAt ?? '').localeCompare(a.startedAt ?? ''))
-  return { orders, accesses, ordersAvailable: available }
+  const allOrders = [...orders, ...planOrders].sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+  return { orders: allOrders, accesses, ordersAvailable: available }
 }
 
 // ---------------------------------------------------------------------------

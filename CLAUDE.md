@@ -582,6 +582,15 @@ This repo is a **static, client-only MVP**:
   "Hi! I'd like to know more about <service>." / PT, e-mail with the service
   as subject). The rule `SERVICE_LINK_RE` is in memberPageService.ts,
   api/account.ts and api/admin.ts (`cleanServiceLink`) — change all three.
+  Since Sprint 302 (19/11/2026, the owner's design) Account → Purchases is
+  "Purchases & Access": counted numbers at the top (paid orders, active
+  access), orders with a tag per type and the Receipt button, accesses as
+  cards grouped by origin (Open; an ended one says "Included in plans" when
+  `product_plan_access` has it, else "Buy"), and a support band (no refunds,
+  no promised reply time). The plan's own payments now show here too
+  (`planPayments()` in api/account.ts: paid Stripe invoices of the member's
+  subscriptions, `kind: 'plan'`, the invoice page as receipt); orders carry
+  `productType`. No card digits or invoice numbers (the receipt has them).
   **Since Sprint 251 a page model can be retired on a date** (decided by the
   owner 14/11/2026; no migration): Admin → Pages → Page models
   (`components/admin/AdminPageModelsPanel`, resources `page-templates`,
