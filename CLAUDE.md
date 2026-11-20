@@ -605,6 +605,11 @@ This repo is a **static, client-only MVP**:
   "collaboration"/"intelligent" — not built), and the form sits in a white
   card with the logo; `AuthField` inputs are white. The design's Google and
   Microsoft buttons are NOT shown until that sign-in is set up (plan item).
+  Since Sprint 305 (20/11/2026, the owner's choice) `/pricing` is on again
+  (`pages/PricingPage`, it had redirected to /systems since Sprint 68): the
+  plans "Offered" in Admin → Plans through `PlanChooser`, a visitor's
+  "Subscribe" goes to /register?next=/pricing, a paying member's to
+  Membership; with no paid plan offered it shows the old one-time page.
   **Since Sprint 251 a page model can be retired on a date** (decided by the
   owner 14/11/2026; no migration): Admin → Pages → Page models
   (`components/admin/AdminPageModelsPanel`, resources `page-templates`,

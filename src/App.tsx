@@ -18,6 +18,7 @@ import JourneyPage from './pages/JourneyPage'
 import JourneyMemberPage from './pages/platform/JourneyMemberPage'
 import CategoryPreviewPage from './pages/CategoryPreviewPage'
 import ResourcesPage from './pages/ResourcesPage'
+import PricingPage from './pages/PricingPage'
 import AboutPage from './pages/AboutPage'
 import ContactPage from './pages/ContactPage'
 import PrivacyPage from './pages/PrivacyPage'
@@ -148,9 +149,9 @@ export default function App() {
         <Route path="/knowledge/article/:slug" element={KNOWLEDGE_LIVE ? <KnowledgeArticlePage /> : <KnowledgeComingSoonPage />} />
         <Route path="/knowledge/search" element={KNOWLEDGE_LIVE ? <KnowledgeSearchPage /> : <KnowledgeComingSoonPage />} />
 
-        {/* No Pricing page until Plans & Subscriptions exist (decided 09/10/2026);
-            PricingPage.tsx is kept for then. Old links land on the catalog. */}
-        <Route path="/pricing" element={<Navigate to="/systems" replace />} />
+        {/* Pricing is back on (20/11/2026, the owner's choice): the plans
+            "Offered" in Admin → Plans, for visitors and members alike. */}
+        <Route path="/pricing" element={<PricingPage />} />
         <Route path="/about" element={<AboutPage />} />
         {/* BGrowth Club was retired as a name (27/09/2026); /club stays
             reachable for old links. */}
