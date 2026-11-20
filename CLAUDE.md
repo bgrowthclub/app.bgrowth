@@ -610,6 +610,14 @@ This repo is a **static, client-only MVP**:
   plans "Offered" in Admin → Plans through `PlanChooser`, a visitor's
   "Subscribe" goes to /register?next=/pricing, a paying member's to
   Membership; with no paid plan offered it shows the old one-time page.
+  Since Sprint 306 (20/11/2026, the owner's design) Admin → Bundles has a
+  title with icon, one toolbar card (search by name/product, All/Published/
+  Draft with counts, CSV, New bundle), column headings and new rows
+  (`AdminBundleRow`: cover, short text, product chips, struck sum + price +
+  "% OFF", status, Edit and a "…" menu — View page, Copy link, Duplicate,
+  Edit, Remove). Duplicate saves a DRAFT copy through the existing save
+  (the server gives it its own address). No sales/conversion figures — the
+  owner left them out and bundle visits aren't counted.
   **Since Sprint 251 a page model can be retired on a date** (decided by the
   owner 14/11/2026; no migration): Admin → Pages → Page models
   (`components/admin/AdminPageModelsPanel`, resources `page-templates`,
