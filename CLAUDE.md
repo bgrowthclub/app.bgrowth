@@ -591,6 +591,14 @@ This repo is a **static, client-only MVP**:
   (`planPayments()` in api/account.ts: paid Stripe invoices of the member's
   subscriptions, `kind: 'plan'`, the invoice page as receipt); orders carry
   `productType`. No card digits or invoice numbers (the receipt has them).
+  Since Sprint 303 (20/11/2026, the owner's design, light version) the member
+  area's "Coming soon" modal names what is coming (`openComingSoon(label)` from
+  the side menu and quick actions; `PRODUCT_NAMES` maps a label to the
+  product's name), shows the 3D cube (`assets/coming-soon-cube.webp`; the
+  rocket is kept for the dark version, which waits for dark mode), and its
+  "Notify me" finally works: it puts the signed-in member on the newsletter
+  (`newsletterService.getMine`/`saveMine`), where launches are announced. No
+  date and no progress figure. Which feature was asked about isn't stored.
   **Since Sprint 251 a page model can be retired on a date** (decided by the
   owner 14/11/2026; no migration): Admin → Pages → Page models
   (`components/admin/AdminPageModelsPanel`, resources `page-templates`,

@@ -8,7 +8,7 @@ export default function QuickActionButton() {
   return (
     <button
       type="button"
-      onClick={openComingSoon}
+      onClick={() => openComingSoon()}
       aria-label="New — coming soon"
       title="New — coming soon"
       className="inline-flex items-center gap-1.5 rounded-xl bg-grad-primary px-3.5 py-2 text-[12.5px] font-semibold text-white opacity-60 shadow-softer transition-opacity duration-300 hover:opacity-80"

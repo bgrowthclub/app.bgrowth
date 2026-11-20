@@ -42,7 +42,7 @@ export default function SidebarItem({ item, collapsed = false, count = 0, onNavi
     return (
       <button
         type="button"
-        onClick={openComingSoon}
+        onClick={() => openComingSoon(label)}
         aria-label={`${label} — coming soon`}
         title={`${label} — coming soon`}
         className={`flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-[13.5px] font-medium text-navy/50 opacity-70 transition-colors hover:bg-bg-soft hover:opacity-100 ${

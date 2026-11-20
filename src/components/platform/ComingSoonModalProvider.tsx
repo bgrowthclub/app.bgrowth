@@ -3,7 +3,8 @@ import type { ReactNode } from 'react'
 import ComingSoonModal from './ComingSoonModal'
 
 interface ComingSoonModalContextValue {
-  openComingSoon: () => void
+  /** Opens the modal; `feature` names what is coming (a menu item's label). */
+  openComingSoon: (feature?: string) => void
 }
 
 const ComingSoonModalContext = createContext<ComingSoonModalContextValue | undefined>(undefined)
@@ -14,11 +15,19 @@ const ComingSoonModalContext = createContext<ComingSoonModalContextValue | undef
 // the exact same premium modal regardless of where it was clicked from.
 export function ComingSoonModalProvider({ children }: { children: ReactNode }) {
   const [open, setOpen] = useState(false)
+  const [feature, setFeature] = useState<string | undefined>()
 
   return (
-    <ComingSoonModalContext.Provider value={{ openComingSoon: () => setOpen(true) }}>
+    <ComingSoonModalContext.Provider
+      value={{
+        openComingSoon: (name?: string) => {
+          setFeature(typeof name === 'string' ? name : undefined)
+          setOpen(true)
+        },
+      }}
+    >
       {children}
-      <ComingSoonModal open={open} onClose={() => setOpen(false)} />
+      <ComingSoonModal open={open} feature={feature} onClose={() => setOpen(false)} />
     </ComingSoonModalContext.Provider>
   )
 }

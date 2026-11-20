@@ -55,7 +55,7 @@ export default function QuickActionsSection() {
             </>
           )
           return action.locked ? (
-            <button key={action.label} type="button" onClick={openComingSoon} className={`${cardClass} opacity-80 hover:opacity-100`}>
+            <button key={action.label} type="button" onClick={() => openComingSoon(action.label)} className={`${cardClass} opacity-80 hover:opacity-100`}>
               {inner}
             </button>
           ) : (
