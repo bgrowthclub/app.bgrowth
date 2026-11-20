@@ -34,3 +34,9 @@ export function useWorkspaceCategories(): WorkspaceCategory[] {
 export function categoryCatalogPath(category: WorkspaceCategory): string {
   return `/systems?area=${category.areas[0]}`
 }
+
+// Each Life World's own page (pages/LifeWorldPage, since 20/11/2026) —
+// every card leads there, live or not.
+export function lifeWorldPath(category: Pick<WorkspaceCategory, 'slug'>): string {
+  return `/workspaces/${category.slug}`
+}

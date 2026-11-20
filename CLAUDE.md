@@ -628,6 +628,21 @@ This repo is a **static, client-only MVP**:
   pre-fills a member's name and e-mail; a signed-in member also sees
   "Already a member? Get faster help in Support". Nothing invented: no help
   center, status page or release notes. `ContactHero` is no longer used.
+  Since Sprint 308 (20/11/2026, the owner's designs) the legal pages are the
+  Legal Hub (`components/legal/LegalDocument`, still /terms, /privacy,
+  /refund-policy): tabs, "On this page" built from the section headings
+  (anchors `<n>-<heading>`), Download PDF (print) and Copy link, the real
+  last-updated date — text unchanged, Refund still "all sales final". The
+  bundle page (`pages/BundlePage`) has the bundle's text, its products'
+  covers and a new `BundlePurchaseCard` look on top, each product with its
+  benefits and own price, and a closing band — no member counts or "who
+  it's for" (no such field). Life Worlds: `/workspaces` hub with search and
+  All/Live/Coming soon (`components/systems/LifeWorldCard`, colors in
+  `lifeWorldLook.ts`) and ONE page per world, `/workspaces/:slug`
+  (`pages/LifeWorldPage`): live products of its Areas, planned names from
+  `data/categoryPreviews.ts` (no dates), and an e-mail sign-up with source
+  `world-<slug>`. `/preview/:category` redirects there. No longer used:
+  `CategoryPreviewPage`, `BundleCover`.
   **Since Sprint 251 a page model can be retired on a date** (decided by the
   owner 14/11/2026; no migration): Admin → Pages → Page models
   (`components/admin/AdminPageModelsPanel`, resources `page-templates`,

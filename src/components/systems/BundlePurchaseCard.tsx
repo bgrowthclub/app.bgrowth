@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { ArrowRight, Check, Loader2 } from 'lucide-react'
+import { ArrowRight, CheckCircle2, Gift, Loader2 } from 'lucide-react'
 import Button from '../ui/Button'
 import { formatCents } from '../../modules/workspace/lib/bundlePrice'
 
@@ -23,13 +23,6 @@ interface Props {
   onBuy: () => void
   className?: string
 }
-
-const QUICK_SUMMARY = [
-  'Every Workspace™ in the bundle, yours to keep',
-  'Each one also appears on its own in My Workspaces',
-  'Save as many records as you need',
-  'Print or download as PDF',
-]
 
 // The buy box for a bundle — a sibling of StudioPurchaseCard (CLAUDE.md §6).
 // Presentational: the page (through useBundlePurchase) works out what the
@@ -57,7 +50,7 @@ export default function BundlePurchaseCard({
   const nothingToPay = amountDueCents === 0
 
   return (
-    <div className={`rounded-xl3 border border-navy/[0.06] bg-white p-6 shadow-glow ${className}`}>
+    <div className={`rounded-[28px] border border-navy/[0.06] bg-white p-6 shadow-glow sm:p-7 ${className}`}>
       {confirming ? (
         <div className="flex items-start gap-3 rounded-xl bg-bg-soft p-4">
           <Loader2 className="mt-0.5 h-4 w-4 shrink-0 animate-spin text-primary" />
@@ -74,35 +67,54 @@ export default function BundlePurchaseCard({
         </>
       ) : (
         <>
-          <div className="flex flex-wrap items-baseline gap-2">
-            <span className="font-display text-3xl font-bold text-navy">
-              {free ? 'Free' : formatCents(partial ? amountDueCents : priceCents)}
-            </span>
-            {!free && !partial && separateCents > priceCents && (
-              <span className="text-[15px] text-navy/35 line-through">{formatCents(separateCents)}</span>
+          <span className="grid h-14 w-14 place-items-center rounded-full bg-blue-50 text-primary">
+            <Gift size={24} aria-hidden />
+          </span>
+          <p className="mt-4 font-display text-[40px] font-bold leading-none text-navy">
+            {free ? 'Free' : formatCents(partial ? amountDueCents : priceCents)}
+            {!free && <span className="ml-2 text-[13px] font-medium text-navy/40">one-time</span>}
+          </p>
+          <ul className="mt-5 space-y-2.5">
+            <li className="flex items-center gap-2.5 text-[14px] text-navy/75">
+              <CheckCircle2 size={17} className="shrink-0 text-primary" aria-hidden /> Includes {workspaceCount}{' '}
+              {workspaceCount === 1 ? 'product' : 'products'}
+            </li>
+            {!partial && savingPercent > 0 && (
+              <li className="flex items-center gap-2.5 text-[14px] text-navy/75">
+                <CheckCircle2 size={17} className="shrink-0 text-primary" aria-hidden /> Save {savingPercent}%
+              </li>
             )}
-            {!free && <span className="text-[13px] text-navy/40">one-time</span>}
-          </div>
+            <li className="flex items-center gap-2.5 text-[14px] text-navy/75">
+              <CheckCircle2 size={17} className="shrink-0 text-primary" aria-hidden /> Each one opens in My Workspaces
+            </li>
+          </ul>
           {partial ? (
-            <p className="mt-2 text-[13px] leading-relaxed text-navy/60">
-              You already own {ownedCount} of the {workspaceCount} Workspaces, so you pay only for the rest
+            <p className="mt-5 border-t border-navy/[0.07] pt-4 text-[13px] leading-relaxed text-navy/60">
+              You already own {ownedCount} of the {workspaceCount}, so you pay only for the rest
               {!free && <> (full bundle {formatCents(priceCents)})</>}.
             </p>
           ) : (
-            savingPercent > 0 && (
-              <p className="mt-2 text-[13px] font-semibold text-primary">
-                {workspaceCount} Workspaces — save {savingPercent}% versus buying them one by one
-              </p>
+            separateCents > priceCents && (
+              <dl className="mt-5 space-y-1.5 border-t border-navy/[0.07] pt-4 text-[14px]">
+                <div className="flex items-center justify-between">
+                  <dt className="text-navy/55">Bought one by one</dt>
+                  <dd className="text-navy/40 line-through">{formatCents(separateCents)}</dd>
+                </div>
+                <div className="flex items-center justify-between">
+                  <dt className="font-semibold text-primary">Bundle price</dt>
+                  <dd className="font-display text-[22px] font-bold text-primary">{free ? '$0' : formatCents(priceCents)}</dd>
+                </div>
+              </dl>
             )
           )}
 
           {!signedIn ? (
             <>
               <Button to={signInTo} icon={<ArrowRight size={16} />} className="mt-5 w-full">
-                {free ? 'Sign In to Get It Free' : 'Sign In to Buy'}
+                {free ? 'Get the bundle free' : 'Sign in to buy'}
               </Button>
               <p className="mt-3 text-center text-[12px] text-navy/45">
-                New here? Create your free account in less than a minute.
+                {free ? 'No credit card required. ' : ''}New here? Create your free account in less than a minute.
               </p>
             </>
           ) : (
@@ -134,14 +146,6 @@ export default function BundlePurchaseCard({
 
       {error && <p className="mt-3 text-center text-[13px] text-red-500">{error}</p>}
 
-      <ul className="mt-6 space-y-2.5">
-        {QUICK_SUMMARY.map((item) => (
-          <li key={item} className="flex items-center gap-2.5 text-[13px] text-navy/60">
-            <Check size={14} className="shrink-0 text-primary" />
-            {item}
-          </li>
-        ))}
-      </ul>
     </div>
   )
 }

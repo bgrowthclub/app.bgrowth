@@ -16,7 +16,8 @@ import WorkspacesPage from './pages/WorkspacesPage'
 import JourneysPage from './pages/JourneysPage'
 import JourneyPage from './pages/JourneyPage'
 import JourneyMemberPage from './pages/platform/JourneyMemberPage'
-import CategoryPreviewPage from './pages/CategoryPreviewPage'
+import LifeWorldPage from './pages/LifeWorldPage'
+import LifeWorldPreviewRedirect from './pages/LifeWorldPreviewRedirect'
 import ResourcesPage from './pages/ResourcesPage'
 import PricingPage from './pages/PricingPage'
 import AboutPage from './pages/AboutPage'
@@ -134,10 +135,11 @@ export default function App() {
             visitor straight to /register with nothing explained first. */}
         <Route path="/pages" element={<PagesPage />} />
         <Route path="/workspaces" element={<WorkspacesPage />} />
+        <Route path="/workspaces/:slug" element={<LifeWorldPage />} />
         {/* BGrowth Journeys (Portal migration 0068) — this site only. */}
         <Route path="/journeys" element={<JourneysPage />} />
         <Route path="/journeys/:slug" element={<JourneyPage />} />
-        <Route path="/preview/:category" element={<CategoryPreviewPage />} />
+        <Route path="/preview/:category" element={<LifeWorldPreviewRedirect />} />
         <Route path="/resources" element={RESOURCES_LIVE ? <ResourcesPage /> : <KnowledgeComingSoonPage />} />
 
         {/* BGrowth Knowledge™ Foundation — the free-content hub, ready to

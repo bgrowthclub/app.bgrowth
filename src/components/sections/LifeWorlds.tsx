@@ -5,7 +5,7 @@ import { usePageTexts } from '../../lib/usePageTexts'
 import IndustryCard from '../systems/IndustryCard'
 import Card from '../ui/Card'
 import Button from '../ui/Button'
-import { categoryCatalogPath, useWorkspaceCategories } from '../../lib/useWorkspaceCategories'
+import { lifeWorldPath, useWorkspaceCategories } from '../../lib/useWorkspaceCategories'
 import { fadeUp, viewportOnce } from '../../lib/motion'
 
 export default function LifeWorlds() {
@@ -44,7 +44,7 @@ export default function LifeWorlds() {
               icon={category.icon}
               name={category.name}
               description={category.description}
-              to={category.count > 0 ? categoryCatalogPath(category) : `/preview/${category.slug}`}
+              to={lifeWorldPath(category)}
               index={i}
               count={category.count}
               ctaLabel={category.count > 0 ? 'Explore' : 'Preview'}
