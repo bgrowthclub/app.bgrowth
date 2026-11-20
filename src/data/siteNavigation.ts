@@ -52,7 +52,7 @@ export const DEFAULT_NAVIGATION: SiteNavigation = {
     { label: 'About', to: '/about' },
   ],
   footerLinks: [
-    { label: 'Business Systems', to: '/systems' },
+    { label: 'Catalog', to: '/systems' },
     { label: 'Life Worlds', to: '/workspaces' },
     { label: 'Journeys', to: '/journeys' },
     { label: 'Resources', to: '/resources' },
