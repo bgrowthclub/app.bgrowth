@@ -173,7 +173,8 @@ export default function ProductPage() {
   }, [slug])
 
   if (product === null) return <Navigate to="/systems" replace />
-  if (product === undefined) return null
+  // While it loads, hold the screen so the footer doesn't jump up under the menu.
+  if (product === undefined) return <div className="min-h-screen" aria-busy="true" />
   // A bundle has its own page.
   if (isBundleProduct(product)) return <Navigate to={bundlePath(product.slug)} replace />
 

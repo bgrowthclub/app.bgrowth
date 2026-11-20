@@ -90,7 +90,8 @@ export default function KnowledgeArticlePage() {
   }, [slug])
 
   if (article === null) return <Navigate to="/knowledge" replace />
-  if (article === undefined) return null
+  // While it loads, hold the screen so the footer doesn't jump up under the menu.
+  if (article === undefined) return <div className="min-h-screen" aria-busy="true" />
 
   const Icon = KNOWLEDGE_TYPE_ICONS[article.type]
   const headings = extractHeadings(article.body)

@@ -80,7 +80,8 @@ export default function KnowledgeCategoryPage() {
   )
 
   if (category === null) return <Navigate to="/knowledge" replace />
-  if (category === undefined) return null
+  // While it loads, hold the screen so the footer doesn't jump up under the menu.
+  if (category === undefined) return <div className="min-h-screen" aria-busy="true" />
 
   const Icon = KNOWLEDGE_CATEGORY_ICONS[category.slug] ?? KNOWLEDGE_CATEGORY_ICONS.Default
 
