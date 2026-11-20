@@ -117,6 +117,47 @@ export function isUsableLink(type: string, url: string): boolean {
  * button is then not drawn at all, because a button that goes nowhere is
  * worse than no button.
  */
+/**
+ * Where a service's button goes (19/11/2026, the owner's choice). Kept in the
+ * service's `url`, one of:
+ *   https://…           a website or booking page (new tab)
+ *   whatsapp:<digits>   a WhatsApp chat, opened with a message naming the service
+ *   tel:<+digits>       a phone call
+ *   mailto:<address>    an e-mail, with the service as the subject
+ *   contact:<type>      one of the page's own contact buttons
+ * THE SAME RULE IS COPIED in api/account.ts and api/admin.ts
+ * (`cleanServiceLink`, CLAUDE.md §13) — change all three.
+ */
+export const SERVICE_LINK_RE = /^(https:\/\/\S+|whatsapp:\d{8,15}|tel:\+?\d{6,15}|mailto:[^\s@?]+@[^\s@?]+\.[^\s@?]+|contact:[a-z_]+)$/
+
+export function serviceButtonProps(
+  url: string | undefined,
+  service: string,
+  links: MemberPageLink[],
+  language: string,
+  slug = '',
+): { href: string; target?: string; rel?: string } | null {
+  const value = (url ?? '').trim()
+  if (!value || !SERVICE_LINK_RE.test(value)) return null
+  const message = language === 'pt' ? `Olá! Gostaria de saber mais sobre ${service}.` : `Hi! I'd like to know more about ${service}.`
+  const whatsapp = (digits: string) => ({ href: `https://wa.me/${digits}?text=${encodeURIComponent(message)}`, target: '_blank', rel: 'noreferrer' })
+  const email = (address: string) => ({ href: `mailto:${address}?subject=${encodeURIComponent(service)}` })
+  if (value.startsWith('whatsapp:')) return whatsapp(value.slice('whatsapp:'.length))
+  if (value.startsWith('tel:')) return { href: value }
+  if (value.startsWith('mailto:')) return email(value.slice('mailto:'.length))
+  if (value.startsWith('contact:')) {
+    const type = value.slice('contact:'.length)
+    const found = links.find((l) => l.type === type && isUsableLink(l.type, l.url))
+    if (!found) return null
+    if (type === 'whatsapp' && !/^https?:\/\//.test(found.url.trim())) return whatsapp(found.url.replace(/\D/g, ''))
+    if (type === 'email') return email(found.url.trim().replace(/^mailto:/, ''))
+    return found.type === 'save_contact' || found.type === 'phone'
+      ? { href: memberLinkHref(found.type, found.url, slug) }
+      : { href: memberLinkHref(found.type, found.url), target: '_blank', rel: 'noreferrer' }
+  }
+  return { href: value, target: '_blank', rel: 'noreferrer' }
+}
+
 export function pageButtonProps(
   buttonLink: string | undefined,
   links: MemberPageLink[],

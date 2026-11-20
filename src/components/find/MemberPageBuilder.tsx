@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import ServiceLinkField from './ServiceLinkField'
 import type { ReactNode } from 'react'
 import { ArrowDown, ArrowLeft, ArrowUp, Banknote, Brush, Check, ChevronDown, ChevronRight, Eye, EyeOff, GraduationCap, Home, ImagePlus, LayoutTemplate, Link2, Lock, Monitor, Plus, ShoppingBag, Smartphone, Sparkles, Stamp, Tag, Trash2, UserRound, Video, X } from 'lucide-react'
 import type { LucideIcon } from 'lucide-react'
@@ -726,8 +727,13 @@ export default function MemberPageBuilder({ page, mode, upload, onSave, onCancel
                     <input value={s.price ?? ''} onChange={(e) => setService(i, { price: e.target.value })} maxLength={40} className={INPUT} placeholder="Price (optional)" aria-label="Price" />
                   </div>
                   <input value={s.description ?? ''} onChange={(e) => setService(i, { description: e.target.value })} maxLength={400} className={INPUT} placeholder="Short description (optional)" aria-label="Description" />
-                  <input value={s.url ?? ''} onChange={(e) => setService(i, { url: e.target.value })} className={INPUT} placeholder="Button link for this service (https://…, optional)" aria-label="Service link" />
-                  {s.url?.trim() && !/^https:\/\/\S+$/i.test(s.url.trim()) && <p className="text-[12.5px] text-red-500">Use a full address starting with https://</p>}
+                  <ServiceLinkField
+                    value={s.url ?? ''}
+                    onChange={(url) => setService(i, { url })}
+                    contacts={pageLinks().filter((l, k, all) => l.type !== 'save_contact' && all.findIndex((x) => x.type === l.type) === k)}
+                    labelOf={(l) => l.label?.trim() || LINK_TYPES.find((t) => t.id === l.type)?.label || l.type}
+                    inputClass={INPUT}
+                  />
                   {/* Always shown, like a contact button's own label
                       (09/11/2026). It used to appear only once a link had
                       been typed, which meant nobody knew it existed —

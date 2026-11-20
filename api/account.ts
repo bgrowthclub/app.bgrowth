@@ -1048,6 +1048,17 @@ function cleanPageLinks(value: unknown) {
   })
 }
 
+// Where a service's button goes (19/11/2026): https, whatsapp:<digits>,
+// tel:<+digits>, mailto:<address> or contact:<type>. COPY of SERVICE_LINK_RE
+// in src/modules/find/memberPageService.ts (and api/admin.ts) — change all three.
+const SERVICE_LINK_RE = /^(https:\/\/\S+|whatsapp:\d{8,15}|tel:\+?\d{6,15}|mailto:[^\s@?]+@[^\s@?]+\.[^\s@?]+|contact:[a-z_]+)$/
+const cleanServiceLink = (v: unknown) => {
+  const s = pageText(v, 500)
+  if (!SERVICE_LINK_RE.test(s)) return ''
+  if (s.startsWith('contact:') && !MEMBER_LINK_TYPES.includes(s.slice('contact:'.length))) return ''
+  return s
+}
+
 function readMyPage(b: Record<string, any>) {
   const displayName = pageText(b.displayName, 80)
   if (!displayName) throw new HttpError(400, 'Write the name shown on your page.')
@@ -1056,7 +1067,7 @@ function readMyPage(b: Record<string, any>) {
     const title = pageText(raw?.title, 100)
     if (!title) return []
     // Its own picture and button (Sprint 145): the button opens this service's address.
-    const url = pageUrl(raw?.url)
+    const url = cleanServiceLink(raw?.url)
     const image = pageUrl(raw?.image)
     const cta = pageText(raw?.cta, 40)
     // Label over the photo and ✓ lines (19/11/2026); same rule in api/admin.ts.

@@ -573,6 +573,15 @@ This repo is a **static, client-only MVP**:
   colored part (`about.*.highlight`, painted only if found in the title as
   written). The How it works picture is `home-hero.webp` until there is a
   real Workspace screenshot. No "40 hours" or other invented numbers.
+  Since Sprint 301 (19/11/2026, the owner's choice) a service's button can go
+  to WhatsApp, a phone call, an e-mail, a website, or one of the page's own
+  contact buttons — "Where does the button go?" in the editor
+  (`components/find/ServiceLinkField`). All kept in `MemberPageService.url`:
+  `https://…`, `whatsapp:<digits>`, `tel:<+digits>`, `mailto:<address>`,
+  `contact:<type>`; drawn by `serviceButtonProps()` (WhatsApp opens with
+  "Hi! I'd like to know more about <service>." / PT, e-mail with the service
+  as subject). The rule `SERVICE_LINK_RE` is in memberPageService.ts,
+  api/account.ts and api/admin.ts (`cleanServiceLink`) — change all three.
   **Since Sprint 251 a page model can be retired on a date** (decided by the
   owner 14/11/2026; no migration): Admin → Pages → Page models
   (`components/admin/AdminPageModelsPanel`, resources `page-templates`,

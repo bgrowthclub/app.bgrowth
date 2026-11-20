@@ -2486,6 +2486,20 @@ function cleanText(value: unknown, max: number) {
   return typeof value === 'string' ? value.trim().slice(0, max) : ''
 }
 
+// Where a service's button goes (19/11/2026): https, whatsapp:<digits>,
+// tel:<+digits>, mailto:<address> or contact:<type>. COPY of SERVICE_LINK_RE
+// in src/modules/find/memberPageService.ts (and api/account.ts) — change all three.
+const SERVICE_LINK_RE = /^(https:\/\/\S+|whatsapp:\d{8,15}|tel:\+?\d{6,15}|mailto:[^\s@?]+@[^\s@?]+\.[^\s@?]+|contact:[a-z_]+)$/
+function cleanServiceLink(value: unknown, field: string) {
+  const s = cleanText(value, 500)
+  // Left unfinished in the editor (only the prefix): no button, not an error.
+  if (!s || /^(https:\/\/|whatsapp:|tel:\+?|mailto:|contact:)$/.test(s)) return ''
+  if (!SERVICE_LINK_RE.test(s) || (s.startsWith('contact:') && !MEMBER_LINK_TYPES.includes(s.slice('contact:'.length)))) {
+    throw new HttpError(400, `${field} isn't a valid button destination.`)
+  }
+  return s
+}
+
 function cleanUrl(value: unknown, field: string) {
   const url = cleanText(value, 500)
   if (!url) return ''
@@ -2830,7 +2844,7 @@ function readMemberPageInput(req: VercelRequest) {
     const title = cleanText(raw?.title, 100)
     if (!title) return []
     // Its own picture and button (Sprint 145): the button opens this service's address.
-    const url = cleanUrl(raw?.url, `The link of “${title}”`)
+    const url = cleanServiceLink(raw?.url, `The button of “${title}”`)
     const image = cleanUrl(raw?.image, `The image of “${title}”`)
     const cta = cleanText(raw?.cta, 40)
     // Label over the photo and ✓ lines (19/11/2026); same rule in api/account.ts.

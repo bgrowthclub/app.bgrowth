@@ -12,7 +12,7 @@ import ReportPageLink from './ReportPageLink'
 import type { CSSProperties } from 'react'
 import { MEMBER_PAGE_LABELS, memberLinkHref, memberLinkLabel, videoEmbed } from '../../modules/find/memberPageService'
 import { blockLinks, pageBlocks, pageColors, pagePrimaryRgb, pageSkin } from '../../modules/find/memberPageTemplates'
-import { isUsableLink, pageButtonProps } from '../../modules/find/memberPageService'
+import { isUsableLink, pageButtonProps, serviceButtonProps } from '../../modules/find/memberPageService'
 import type { MemberPage, MemberPageBlock, MemberPageProductCategory } from '../../modules/find/types'
 
 const ICONS = MEMBER_LINK_ICONS
@@ -79,6 +79,14 @@ function MemberPageBody({ page, preview = false, onLinkClick, onSearch, onCatego
           ? // E-mail opens in place: a new tab for it was left blank.
             { href: memberLinkHref(type, url), onClick: () => onLinkClick?.(target) }
           : { href: memberLinkHref(type, url), target: '_blank', rel: 'noreferrer', onClick: () => onLinkClick?.(target) }
+
+  // A service's own button (19/11/2026): website, WhatsApp, phone, e-mail
+  // or one of the page's contact buttons — null when it leads nowhere.
+  const serviceLink = (s: { title: string; url?: string }) => {
+    const props = serviceButtonProps(s.url, s.title, [...(page.links ?? []), ...(page.blocks ?? []).flatMap((b) => (b.type === "contact" && b.data?.links) || [])], page.language, page.slug)
+    if (!props) return null
+    return preview ? { href: '#', onClick: (e: { preventDefault: () => void }) => e.preventDefault() } : { ...props, onClick: () => onLinkClick?.(`service:${s.title}`) }
+  }
 
   // A swatch or the member's own color (15/11/2026).
   const primaryRgb = pagePrimaryRgb(page.theme?.color)
@@ -226,8 +234,8 @@ function MemberPageBody({ page, preview = false, onLinkClick, onSearch, onCatego
                 <span className="min-w-0 flex-1">
                   <span className="block font-semibold text-navy">{s.title}</span>
                   {s.description && <span className="block text-[14px] text-navy/55">{s.description}</span>}
-                  {s.url && (
-                    <a {...linkProps('website', s.url, `service:${s.title}`)} className="mt-1.5 inline-flex items-center gap-1 text-[13.5px] font-semibold text-primary hover:underline">
+                  {serviceLink(s) && (
+                    <a {...serviceLink(s)!} className="mt-1.5 inline-flex items-center gap-1 text-[13.5px] font-semibold text-primary hover:underline">
                       {s.cta?.trim() || t.learnMore} <ArrowRight size={14} aria-hidden />
                     </a>
                   )}

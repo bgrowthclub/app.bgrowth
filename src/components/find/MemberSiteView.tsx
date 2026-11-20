@@ -10,7 +10,7 @@ import ReportPageLink from './ReportPageLink'
 import { usePageTexts } from '../../lib/usePageTexts'
 import { MEMBER_PAGE_LABELS, memberLinkHref, memberLinkLabel, videoEmbed } from '../../modules/find/memberPageService'
 import { blockLinks, pageBlocks, pageColors, pageDarkHex, pagePrimaryRgb } from '../../modules/find/memberPageTemplates'
-import { isUsableLink, pageButtonProps } from '../../modules/find/memberPageService'
+import { isUsableLink, pageButtonProps, serviceButtonProps } from '../../modules/find/memberPageService'
 import type { MemberPageSkin } from '../../modules/find/memberPageTemplates'
 import type { MemberPage, MemberPageBlock, MemberPageHighlight, MemberPageLink, MemberPageProductCategory } from '../../modules/find/types'
 
@@ -165,6 +165,14 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
           ? // E-mail opens in place: a new tab for it was left blank.
             { href: memberLinkHref(type, url), onClick: () => onLinkClick?.(target) }
           : { href: memberLinkHref(type, url), target: '_blank', rel: 'noreferrer', onClick: () => onLinkClick?.(target) }
+
+  // A service's own button (19/11/2026): website, WhatsApp, phone, e-mail
+  // or one of the page's contact buttons — null when it leads nowhere.
+  const serviceLink = (s: { title: string; url?: string }) => {
+    const props = serviceButtonProps(s.url, s.title, [...(page.links ?? []), ...(page.blocks ?? []).flatMap((b) => (b.type === "contact" && b.data?.links) || [])], page.language, page.slug)
+    if (!props) return null
+    return preview ? { href: '#', onClick: (e: { preventDefault: () => void }) => e.preventDefault() } : { ...props, onClick: () => onLinkClick?.(`service:${s.title}`) }
+  }
 
   const button = (link: MemberPageLink, kind: 'solid' | 'outline' | 'light', label?: string) => {    const cls =
       kind === 'solid'
@@ -784,8 +792,8 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
                       {s.image && <img src={s.image} alt="" className="mb-3 aspect-video w-full max-w-xs rounded-lg object-cover" />}
                       <span className="block font-semibold uppercase tracking-wide">{s.title}</span>
                       {s.description && <span className="mt-1 block text-[14px] text-navy/60">{s.description}</span>}
-                      {s.url && (
-                        <a {...linkProps('website', s.url, `service:${s.title}`)} className="mt-2 inline-flex items-center gap-1.5 text-[13px] font-semibold uppercase tracking-wide text-primary hover:underline">
+                      {serviceLink(s) && (
+                        <a {...serviceLink(s)!} className="mt-2 inline-flex items-center gap-1.5 text-[13px] font-semibold uppercase tracking-wide text-primary hover:underline">
                           {s.cta?.trim() || t.learnMore} <ArrowRight size={14} aria-hidden />
                         </a>
                       )}
@@ -833,10 +841,10 @@ export default function MemberSiteView({ page, skin, preview = false, onLinkClic
                             ))}
                           </ul>
                         ) : null}
-                        {s.url && (
+                        {serviceLink(s) && (
                           <div className="mt-auto pt-5">
                             <a
-                              {...linkProps('website', s.url, `service:${s.title}`)}
+                              {...serviceLink(s)!}
                               className="flex w-full items-center justify-center gap-1.5 rounded-xl bg-primary px-4 py-2.5 text-[14px] font-semibold text-white shadow-soft transition-colors hover:bg-primary/90"
                             >
                               {s.cta?.trim() || t.learnMore} <ArrowRight size={15} aria-hidden />
