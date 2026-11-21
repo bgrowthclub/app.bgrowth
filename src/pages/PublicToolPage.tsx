@@ -23,6 +23,9 @@ export default function PublicToolPage({ kind }: { kind: Kind }) {
   const valid = /^[A-Za-z0-9_-]{1,120}$/.test(code)
   const query = new URLSearchParams({ [kind]: code })
   if (kind === 'planner' && params.get('owner')) query.set('owner', params.get('owner') as string)
+  // ?layout=steps (21/11/2026): try a checklist in the Steps layout without
+  // changing the checklist's own setting in Studio.
+  if (kind === 'template' && params.get('layout') === 'steps') query.set('layout', 'steps')
   const src = `${STUDIO_URL}/?${query.toString()}`
 
   useEffect(() => {
