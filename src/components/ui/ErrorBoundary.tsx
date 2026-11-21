@@ -1,3 +1,4 @@
+import { isStaleChunkError, reloadForNewVersion } from '../../lib/staleChunk'
 import { Component } from 'react'
 import type { ErrorInfo, ReactNode } from 'react'
 
@@ -29,6 +30,8 @@ export default class ErrorBoundary extends Component<Props, State> {
   componentDidCatch(error: Error, info: ErrorInfo) {
     // The browser console is where this is actually read, so keep it whole.
     console.error('[BGrowth] render error', error, info.componentStack)
+    // A new version went live while this page was open: load it again (once).
+    if (isStaleChunkError(error)) reloadForNewVersion()
   }
 
   render() {
