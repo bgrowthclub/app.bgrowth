@@ -15,7 +15,7 @@ interface Props {
 // be opened from here — nothing is locked.
 export default function WorkspaceStepList({ sections, progress, activeId, onSelect }: Props) {
   return (
-    <ol className="space-y-0.5">
+    <ol>
       {sections.map((section, i) => {
         const p = progress[section.id]
         const active = section.id === activeId
@@ -26,7 +26,7 @@ export default function WorkspaceStepList({ sections, progress, activeId, onSele
               type="button"
               onClick={() => onSelect(section.id)}
               aria-current={active ? 'step' : undefined}
-              className={`flex w-full items-center gap-3 rounded-xl px-2.5 py-2.5 text-left transition-colors ${
+              className={`flex w-full items-center gap-3 rounded-lg px-2.5 py-[7px] text-left transition-colors ${
                 active ? 'bg-workspace-50' : 'hover:bg-bg-soft'
               }`}
             >
@@ -43,7 +43,7 @@ export default function WorkspaceStepList({ sections, progress, activeId, onSele
               </span>
               <span className="min-w-0 flex-1">
                 <span
-                  className={`block text-[12.5px] font-semibold uppercase leading-snug tracking-wide ${
+                  className={`block text-[13px] font-semibold leading-snug ${
                     active ? 'text-workspace-600' : 'text-navy/75'
                   }`}
                 >

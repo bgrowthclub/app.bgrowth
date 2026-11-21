@@ -255,32 +255,34 @@ export default function DocumentWorkspaceRenderer({ content, initialData, onSave
           </div>
 
           <div className="mt-4 grid gap-6 lg:mt-0 lg:grid-cols-[232px_minmax(0,1fr)] xl:grid-cols-[232px_minmax(0,1fr)_272px]">
-            <aside className="hidden space-y-5 lg:block">
+            <aside className="hidden self-start lg:sticky lg:top-24 lg:block">
               <div className={`${CARD} p-2`}>
-                <WorkspaceStepList sections={content.sections} progress={progress.sections} activeId={activeId} onSelect={open} />
-              </div>
-              <div className={`${CARD} flex items-center gap-4 p-4`}>
-                <span className="relative grid h-16 w-16 shrink-0 place-items-center">
-                  <svg viewBox="0 0 36 36" className="absolute inset-0 -rotate-90" aria-hidden>
-                    <circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" strokeWidth="3.2" className="text-navy/[0.07]" />
-                    <circle
-                      cx="18"
-                      cy="18"
-                      r="15.5"
-                      fill="none"
-                      stroke="currentColor"
-                      strokeWidth="3.2"
-                      strokeLinecap="round"
-                      className="text-workspace-500 transition-all duration-500"
-                      strokeDasharray={`${(progress.percent / 100) * 97.4} 97.4`}
-                    />
-                  </svg>
-                  <span className="text-[14px] font-bold text-navy">{progress.percent}%</span>
-                </span>
-                <span className="text-[12.5px] leading-snug text-navy/55">
-                  <span className="block font-semibold text-navy/75">Workspace progress</span>
-                  Step {activeIndex + 1} of {total}
-                </span>
+                <div className="flex items-center gap-3 border-b border-navy/[0.06] px-2.5 pb-3 pt-1.5">
+                  <span className="relative grid h-11 w-11 shrink-0 place-items-center">
+                    <svg viewBox="0 0 36 36" className="absolute inset-0 -rotate-90" aria-hidden>
+                      <circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" strokeWidth="3.4" className="text-navy/[0.07]" />
+                      <circle
+                        cx="18"
+                        cy="18"
+                        r="15.5"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="3.4"
+                        strokeLinecap="round"
+                        className="text-workspace-500 transition-all duration-500"
+                        strokeDasharray={`${(progress.percent / 100) * 97.4} 97.4`}
+                      />
+                    </svg>
+                    <span className="text-[11px] font-bold text-navy">{progress.percent}%</span>
+                  </span>
+                  <span className="text-[12px] leading-snug text-navy/55">
+                    <span className="block font-semibold text-navy/80">Workspace progress</span>
+                    Step {activeIndex + 1} of {total}
+                  </span>
+                </div>
+                <div className="mt-1.5">
+                  <WorkspaceStepList sections={content.sections} progress={progress.sections} activeId={activeId} onSelect={open} />
+                </div>
               </div>
             </aside>
 
@@ -308,7 +310,7 @@ export default function DocumentWorkspaceRenderer({ content, initialData, onSave
               )}
             </div>
 
-            <aside className="space-y-5 lg:col-start-2 xl:col-start-auto">
+            <aside className="space-y-5 self-start lg:col-start-2 xl:sticky xl:top-24 xl:col-start-auto">
               <WorkspaceGlanceCard content={content} data={data} />
               {proTip && (
                 <section className={`${CARD} p-5`}>

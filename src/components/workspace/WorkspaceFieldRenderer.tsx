@@ -17,7 +17,7 @@ export default function WorkspaceFieldRenderer({ field, value, onChange }: Props
 
   if (field.type === 'title') {
     return (
-      <div className="border-b border-navy/[0.06] pb-1 pt-4 first:pt-0 sm:col-span-2">
+      <div className="border-b border-navy/[0.06] pb-1 pt-2 first:pt-0 sm:col-span-2">
         <h3 className="text-base font-bold tracking-tight text-navy">{field.label}</h3>
       </div>
     )
