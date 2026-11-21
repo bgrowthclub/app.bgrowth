@@ -1,16 +1,19 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { flushSync } from 'react-dom'
-import { Printer, Download, RotateCcw, ChevronDown } from 'lucide-react'
+import { Printer, Download, RotateCcw, ChevronDown, Lightbulb } from 'lucide-react'
 import type { WorkspaceContent, WorkspaceData } from '../../modules/workspace/types/content'
 import { applyWorkspaceTheme } from '../../modules/workspace/lib/theme'
 import { downloadElementAsPdf } from '../../modules/workspace/lib/pdf'
 import { useWorkspaceProgress } from '../../modules/workspace/hooks/useWorkspaceProgress'
 import Popover from '../platform/Popover'
-import Button from '../ui/Button'
-import WorkspaceAccordion from './WorkspaceAccordion'
+import WorkspaceStepList from './WorkspaceStepList'
+import WorkspaceStepCard from './WorkspaceStepCard'
+import WorkspaceSectionFields from './WorkspaceSectionFields'
+import WorkspaceGlanceCard from './WorkspaceGlanceCard'
+import WorkspaceSaveBar from './WorkspaceSaveBar'
 import WorkspaceCompletionPanel from './WorkspaceCompletionPanel'
 import DocumentPrintSummary from './DocumentPrintSummary'
-import { CARD, SMALL_BUTTON, WORKSPACE_BUTTON } from './styles'
+import { CARD } from './styles'
 
 interface Props {
   content: WorkspaceContent
@@ -19,6 +22,8 @@ interface Props {
   // on this screen only (the viewer page offers "New Record" to save).
   onSave?: (data: WorkspaceData) => Promise<void>
   instanceLabel?: string
+  /** When the open record was last saved (its updated_at). */
+  savedAt?: string
   // Where the completion panel's "Back to …" goes.
   back: { to: string; label: string }
 }
@@ -38,7 +43,7 @@ function ActionMenu({ icon, label, items }: { icon: React.ReactNode; label: stri
         <button
           type="button"
           onClick={toggle}
-          className="inline-flex w-full items-center justify-center gap-2 rounded-xl border border-navy/10 bg-white px-4 py-2.5 text-[13px] font-semibold text-navy shadow-softer transition-colors hover:border-primary/20 sm:w-auto"
+          className="inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl border border-navy/10 bg-white px-3.5 py-2.5 text-[13px] font-semibold text-navy shadow-softer transition-colors hover:border-primary/20"
         >
           {icon}
           {label}
@@ -63,80 +68,81 @@ function ActionMenu({ icon, label, items }: { icon: React.ReactNode; label: stri
 
 // Document V1 — the Studio Workspace runtime, ported from the Portal
 // (features/workspace-viewer/document-v1/DocumentWorkspaceRenderer.tsx):
-// same step-by-step fill flow, progress rules, save points, and the same
-// print/PDF document. On screen it uses this site's look (tokens); the
-// accent comes from the Workspace's own brand color.
-export default function DocumentWorkspaceRenderer({ content, initialData, onSave, instanceLabel, back }: Props) {
+// same progress rules, save points, and the same print/PDF document. On
+// screen (21/11/2026, the owner's design) it is one step at a time: the steps
+// on the left (a "Step n of m" button on a phone), the open step in the
+// middle, "At a glance" and the Workspace's Pro tip on the right, and a save
+// bar fixed at the bottom. The accent comes from the Workspace's brand color.
+export default function DocumentWorkspaceRenderer({ content, initialData, onSave, instanceLabel, savedAt, back }: Props) {
   const [data, setData] = useState<WorkspaceData>(initialData ?? {})
   const [activeId, setActiveId] = useState(content.sections[0]?.id ?? '')
   const [hasReachedEnd, setHasReachedEnd] = useState(false)
-  const [isSaving, setIsSaving] = useState(false)
-  const [justSaved, setJustSaved] = useState(false)
+  const [saving, setSaving] = useState<'none' | 'save' | 'continue'>('none')
   const [saveError, setSaveError] = useState<string | null>(null)
-  const [isSectionSaving, setIsSectionSaving] = useState(false)
-  const [sectionSaveError, setSectionSaveError] = useState<string | null>(null)
+  const [lastSaved, setLastSaved] = useState<string | null>(savedAt ?? null)
+  const [savedSnapshot, setSavedSnapshot] = useState(() => JSON.stringify(initialData ?? {}))
+  const [stepsOpen, setStepsOpen] = useState(false)
   const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
   // True only while a blank print/PDF is being captured — the document
   // renders `{}` instead of `data` for that moment.
   const [isBlankPrintPending, setIsBlankPrintPending] = useState(false)
   const rootRef = useRef<HTMLDivElement>(null)
   const printableRef = useRef<HTMLDivElement>(null)
-  const activeSectionRef = useRef<HTMLDivElement>(null)
-  const completionRef = useRef<HTMLDivElement>(null)
+  const stepTopRef = useRef<HTMLDivElement>(null)
 
   const progress = useWorkspaceProgress(content, data)
+  const dirty = useMemo(() => JSON.stringify(data) !== savedSnapshot, [data, savedSnapshot])
+  const total = content.sections.length
+  const activeIndex = Math.max(0, content.sections.findIndex((s) => s.id === activeId))
+  const active = content.sections[activeIndex]
+  const proTip = content.footer?.proTip?.trim()
 
   useEffect(() => {
     if (rootRef.current) applyWorkspaceTheme(content.brand.primaryColor, rootRef.current)
   }, [content.brand.primaryColor])
 
-  useEffect(() => {
-    if (!hasReachedEnd) return
-    requestAnimationFrame(() => completionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
-  }, [hasReachedEnd])
+  function toTop() {
+    requestAnimationFrame(() => {
+      const el = stepTopRef.current
+      if (el && el.getBoundingClientRect().top < 0) el.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    })
+  }
+
+  function open(id: string) {
+    setActiveId(id)
+    setHasReachedEnd(false)
+    setStepsOpen(false)
+    toTop()
+  }
 
   function handleSectionValueChange(sectionId: string, value: WorkspaceData[string]) {
     setData((prev) => ({ ...prev, [sectionId]: value }))
   }
 
-  function advance(sectionId: string) {
-    const index = content.sections.findIndex((s) => s.id === sectionId)
-    const next = content.sections[index + 1]
-    if (next) {
-      setActiveId(next.id)
-      requestAnimationFrame(() => activeSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
-    } else {
-      setHasReachedEnd(true)
-    }
-  }
-
-  async function handleContinue(sectionId: string) {
-    setSectionSaveError(null)
-    if (!onSave) return advance(sectionId)
-    setIsSectionSaving(true)
-    try {
-      await onSave(data)
-      advance(sectionId)
-    } catch (err) {
-      setSectionSaveError(err instanceof Error ? err.message : 'Couldn’t save your progress. Please try again.')
-    } finally {
-      setIsSectionSaving(false)
-    }
-  }
-
-  async function handleSave() {
-    if (!onSave) return
-    setIsSaving(true)
-    setJustSaved(false)
+  async function save(kind: 'save' | 'continue'): Promise<boolean> {
+    if (!onSave) return true
+    setSaving(kind)
     setSaveError(null)
     try {
       await onSave(data)
-      setJustSaved(true)
-      window.setTimeout(() => setJustSaved(false), 2500)
+      setSavedSnapshot(JSON.stringify(data))
+      setLastSaved(new Date().toISOString())
+      return true
     } catch (err) {
       setSaveError(err instanceof Error ? err.message : 'Couldn’t save. Please try again.')
+      return false
     } finally {
-      setIsSaving(false)
+      setSaving('none')
+    }
+  }
+
+  async function handleContinue() {
+    if (!(await save('continue'))) return
+    const next = content.sections[activeIndex + 1]
+    if (next) open(next.id)
+    else {
+      setHasReachedEnd(true)
+      toTop()
     }
   }
 
@@ -183,37 +189,26 @@ export default function DocumentWorkspaceRenderer({ content, initialData, onSave
   }
 
   return (
-    <div ref={rootRef} className="flex flex-col gap-8">
-      <div className="no-print flex flex-col gap-8">
-        <div className={`${CARD} flex flex-col gap-4 p-6 lg:flex-row lg:items-center lg:justify-between`}>
-          <div>
-            <p className="text-xs font-semibold uppercase tracking-wider text-workspace-600">{content.brand.companyLabel}</p>
-            <h2 className="mt-1 font-display text-xl font-bold text-navy">{content.brand.name}</h2>
-          </div>
-          <div className="flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
-            <div className="flex items-center gap-3">
-              <div className="h-2 w-32 overflow-hidden rounded-full bg-navy/10">
-                <div
-                  className="h-full rounded-full bg-workspace-500 transition-all duration-300"
-                  style={{ width: `${progress.percent}%` }}
-                />
-              </div>
-              <span className="text-sm font-semibold text-navy/75">{progress.percent}%</span>
+    <div ref={rootRef} className="flex flex-col gap-6">
+      <div className="no-print flex flex-col gap-6">
+        <div className={`${CARD} flex flex-col gap-4 px-5 py-4 lg:flex-row lg:items-center`}>
+          <div className="flex min-w-0 flex-1 items-center gap-4">
+            <p className="shrink-0 text-[13.5px] font-semibold text-navy">
+              Step {activeIndex + 1} of {total} <span className="text-navy/30">·</span> {progress.percent}% complete
+            </p>
+            <div className="h-2 min-w-0 flex-1 overflow-hidden rounded-full bg-navy/[0.08]">
+              <div className="h-full rounded-full bg-workspace-500 transition-all duration-300" style={{ width: `${progress.percent}%` }} />
             </div>
-            {onSave && (
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  onClick={handleSave}
-                  disabled={isSaving}
-                  className={`${SMALL_BUTTON} ${WORKSPACE_BUTTON} w-full sm:w-auto`}
-                >
-                  {isSaving ? 'Saving…' : 'Save'}
-                </Button>
-                {justSaved && <span className="text-xs font-medium text-emerald-600">Saved ✓</span>}
-                {saveError && <span className="text-xs font-medium text-red-500">{saveError}</span>}
-              </div>
-            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <ActionMenu
+              icon={<Download className="h-4 w-4" />}
+              label={isGeneratingPdf ? 'Preparing…' : 'Export PDF'}
+              items={[
+                { label: 'Download PDF', description: 'Includes your current answers', onSelect: () => void downloadPdf('') },
+                { label: 'Download blank PDF', description: 'An empty copy to fill by hand', onSelect: () => void handleDownloadBlankPdf() },
+              ]}
+            />
             <ActionMenu
               icon={<Printer className="h-4 w-4" />}
               label="Print"
@@ -222,49 +217,124 @@ export default function DocumentWorkspaceRenderer({ content, initialData, onSave
                 { label: 'Print blank', description: 'An empty copy to fill by hand', onSelect: handlePrintBlank },
               ]}
             />
-            <ActionMenu
-              icon={<Download className="h-4 w-4" />}
-              label={isGeneratingPdf ? 'Preparing…' : 'PDF'}
-              items={[
-                { label: 'Download PDF', description: 'Includes your current answers', onSelect: () => void downloadPdf('') },
-                { label: 'Download blank PDF', description: 'An empty copy to fill by hand', onSelect: () => void handleDownloadBlankPdf() },
-              ]}
-            />
-            <Button
+            <button
               type="button"
-              variant="secondary"
               onClick={handleReset}
-              icon={<RotateCcw className="h-4 w-4" />}
-              className={`${SMALL_BUTTON} w-full sm:w-auto`}
+              title="Reset — clear the answers you haven’t saved"
+              className="inline-flex items-center gap-2 rounded-xl px-3 py-2.5 text-[13px] font-semibold text-navy/50 transition-colors hover:bg-bg-soft hover:text-navy"
             >
-              Reset
-            </Button>
+              <RotateCcw className="h-4 w-4" aria-hidden />
+              <span className="sr-only sm:not-sr-only">Reset</span>
+            </button>
           </div>
         </div>
 
-        {hasReachedEnd && (
-          <div ref={completionRef} className="scroll-mt-24">
-            <WorkspaceCompletionPanel
-              workspaceName={content.brand.name}
-              saved={Boolean(onSave)}
-              back={back}
-              onReviewSections={() => setHasReachedEnd(false)}
-            />
+        <div ref={stepTopRef} className="scroll-mt-24">
+          {/* Phone and tablet: the steps behind one button. */}
+          <div className="lg:hidden">
+            <button
+              type="button"
+              onClick={() => setStepsOpen((v) => !v)}
+              aria-expanded={stepsOpen}
+              className={`${CARD} flex w-full items-center gap-3 px-4 py-3.5 text-left`}
+            >
+              <span className="grid h-7 w-7 shrink-0 place-items-center rounded-full bg-workspace-500 text-[12px] font-bold text-white">{activeIndex + 1}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block text-[11.5px] font-bold uppercase tracking-wide text-workspace-600">
+                  Step {activeIndex + 1} of {total}
+                </span>
+                <span className="block truncate text-[14px] font-semibold text-navy">{active?.title}</span>
+              </span>
+              <ChevronDown className={`h-4 w-4 shrink-0 text-navy/40 transition-transform ${stepsOpen ? 'rotate-180' : ''}`} aria-hidden />
+            </button>
+            {stepsOpen && (
+              <div className={`${CARD} mt-2 p-2`}>
+                <WorkspaceStepList sections={content.sections} progress={progress.sections} activeId={activeId} onSelect={open} />
+              </div>
+            )}
           </div>
-        )}
 
-        <WorkspaceAccordion
-          content={content}
-          data={data}
-          activeId={activeId}
-          onSelect={setActiveId}
-          onContinue={handleContinue}
-          onSectionValueChange={handleSectionValueChange}
-          progressBySection={progress.sections}
-          isContinueSaving={isSectionSaving}
-          continueError={sectionSaveError}
-          activeSectionRef={activeSectionRef}
-        />
+          <div className="mt-4 grid gap-6 lg:mt-0 lg:grid-cols-[232px_minmax(0,1fr)] xl:grid-cols-[232px_minmax(0,1fr)_272px]">
+            <aside className="hidden space-y-5 lg:block">
+              <div className={`${CARD} p-2`}>
+                <WorkspaceStepList sections={content.sections} progress={progress.sections} activeId={activeId} onSelect={open} />
+              </div>
+              <div className={`${CARD} flex items-center gap-4 p-4`}>
+                <span className="relative grid h-16 w-16 shrink-0 place-items-center">
+                  <svg viewBox="0 0 36 36" className="absolute inset-0 -rotate-90" aria-hidden>
+                    <circle cx="18" cy="18" r="15.5" fill="none" stroke="currentColor" strokeWidth="3.2" className="text-navy/[0.07]" />
+                    <circle
+                      cx="18"
+                      cy="18"
+                      r="15.5"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="3.2"
+                      strokeLinecap="round"
+                      className="text-workspace-500 transition-all duration-500"
+                      strokeDasharray={`${(progress.percent / 100) * 97.4} 97.4`}
+                    />
+                  </svg>
+                  <span className="text-[14px] font-bold text-navy">{progress.percent}%</span>
+                </span>
+                <span className="text-[12.5px] leading-snug text-navy/55">
+                  <span className="block font-semibold text-navy/75">Workspace progress</span>
+                  Step {activeIndex + 1} of {total}
+                </span>
+              </div>
+            </aside>
+
+            <div className="min-w-0">
+              {hasReachedEnd ? (
+                <WorkspaceCompletionPanel
+                  workspaceName={content.brand.name}
+                  saved={Boolean(onSave)}
+                  back={back}
+                  onReviewSections={() => open(content.sections[0]?.id ?? '')}
+                />
+              ) : (
+                active && (
+                  <WorkspaceStepCard
+                    number={activeIndex + 1}
+                    totalSteps={total}
+                    title={active.title}
+                    description={active.description}
+                    whyItMatters={active.whyItMatters}
+                    tip={active.tip}
+                  >
+                    <WorkspaceSectionFields section={active} data={data} onSectionValueChange={handleSectionValueChange} />
+                  </WorkspaceStepCard>
+                )
+              )}
+            </div>
+
+            <aside className="space-y-5 lg:col-start-2 xl:col-start-auto">
+              <WorkspaceGlanceCard content={content} data={data} />
+              {proTip && (
+                <section className={`${CARD} p-5`}>
+                  <h2 className="flex items-center gap-2 text-[14.5px] font-bold text-navy">
+                    <Lightbulb className="h-[18px] w-[18px] text-workspace-500" aria-hidden />
+                    Pro tip
+                  </h2>
+                  <p className="mt-3 whitespace-pre-line text-[13px] leading-relaxed text-navy/65">{proTip}</p>
+                </section>
+              )}
+            </aside>
+          </div>
+        </div>
+
+        {!hasReachedEnd && (
+          <WorkspaceSaveBar
+            canSave={Boolean(onSave)}
+            dirty={dirty}
+            savedAt={lastSaved}
+            saving={saving}
+            error={saveError}
+            isLast={activeIndex === total - 1}
+            onSave={() => void save('save')}
+            onContinue={() => void handleContinue()}
+          />
+        )}
       </div>
 
       <div className="printable-summary-container">

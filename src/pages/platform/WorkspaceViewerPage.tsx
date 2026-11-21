@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, Lock } from 'lucide-react'
+import { ArrowLeft, ChevronRight, Lock } from 'lucide-react'
 import SEO from '../../components/seo/SEO'
 import Button from '../../components/ui/Button'
 import DocumentWorkspaceRenderer from '../../components/workspace/DocumentWorkspaceRenderer'
@@ -169,13 +169,26 @@ export default function WorkspaceViewerPage() {
     void ws.reloadRecords()
   }
 
+  // A Workspace is laid out in steps across the page (21/11/2026); a
+  // calculator keeps its narrower column.
+  const isDocument = product.content_type !== 'calculator'
   return (
-    <div className="mx-auto max-w-5xl">
+    <div className={`mx-auto ${isDocument ? 'max-w-[1320px]' : 'max-w-5xl'}`}>
       <SEO title={product.name} description={product.short_description} path={`/platform/workspace/${slug}`} />
 
       <div className="no-print flex flex-wrap items-end justify-between gap-4">
         <div className="min-w-0">
-          {backLink}
+          {isDocument ? (
+            <nav aria-label="Breadcrumb" className="flex flex-wrap items-center gap-1.5 text-[12.5px] text-navy/45">
+              <Link to={back.to} className="font-medium hover:text-primary">
+                {back.label}
+              </Link>
+              <ChevronRight className="h-3.5 w-3.5 text-navy/25" aria-hidden />
+              <span className="font-semibold text-navy/70">{product.name}</span>
+            </nav>
+          ) : (
+            backLink
+          )}
           <h1 className="mt-2 break-words font-display text-2xl font-bold text-navy md:text-3xl">{product.name}</h1>
           <p className="mt-1 text-[13px] text-navy/45">
             {instance ? `Record: ${instance.label}` : 'Blank copy — create a record to save your answers.'}
@@ -210,6 +223,7 @@ export default function WorkspaceViewerPage() {
             initialData={instance?.data as WorkspaceData | undefined}
             onSave={instance ? handleSave : undefined}
             instanceLabel={instance?.label}
+            savedAt={instance?.updated_at}
             back={back}
           />
         ) : (
