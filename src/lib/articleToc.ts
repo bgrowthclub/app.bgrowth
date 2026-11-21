@@ -17,6 +17,6 @@ export function slugifyHeading(text: string, index: number): string {
 // drift apart.
 export function extractHeadings(body: KnowledgeBodyBlock[]): TocHeading[] {
   return body
-    .map((block, index) => (block.kind === 'heading' ? { id: slugifyHeading(block.text, index), text: block.text } : null))
-    .filter((h): h is TocHeading => Boolean(h))
+    .map((block, index) => (block.kind === 'heading' ? { id: slugifyHeading(block.text, index), text: block.text, level: (block.level === 3 ? 3 : 2) as 2 | 3 } : null))
+    .filter((h): h is NonNullable<typeof h> => Boolean(h))
 }

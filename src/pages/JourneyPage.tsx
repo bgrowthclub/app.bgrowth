@@ -1,15 +1,13 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { AlertCircle, ArrowLeft, Clock, Flag, Route } from 'lucide-react'
+import { AlertCircle, ArrowLeft, CalendarCheck, CheckCircle2, Clock, Route, Target, Users } from 'lucide-react'
 import SEO from '../components/seo/SEO'
 import EmptyState from '../components/ui/EmptyState'
 import Button from '../components/ui/Button'
-import JourneyAudience from '../components/journeys/JourneyAudience'
 import JourneyNoticeBar from '../components/journeys/JourneyNoticeBar'
 import JourneyLearnCard from '../components/journeys/JourneyLearnCard'
-import JourneyStepList from '../components/journeys/JourneyStepList'
-import { ACTION_KIND } from '../components/journeys/JourneyStagePreview'
-import { formatMinutes, STAGE_LEVEL_LABEL } from '../modules/journeys/estimate'
+import JourneyTimeline from '../components/journeys/JourneyTimeline'
+import { formatMinutes } from '../modules/journeys/estimate'
 import JourneyStartPanel from '../components/journeys/JourneyStartPanel'
 import { journeyService } from '../modules/journeys/journeyService'
 import { lifeWorldResolver } from '../modules/journeys/lifeWorld'
@@ -19,7 +17,8 @@ import type { PortalCategoryRow } from '../modules/workspace/types/portal'
 
 type Load = { state: 'loading' } | { state: 'missing' } | { state: 'error' } | { state: 'ready'; journey: JourneyOutline; categories: PortalCategoryRow[] }
 
-// /journeys/:slug — a published Journey's public overview: goal,
+// /journeys/:slug — a published Journey's public overview (every step at
+// once since 21/11/2026, JourneyTimeline): goal,
 // introduction, who it's for and what you'll have at the end, the general
 // notice and its stages in order (with level and estimated time when set). Read only: the
 // database returns published Journeys only, with unpublished resources
@@ -29,7 +28,6 @@ type Load = { state: 'loading' } | { state: 'missing' } | { state: 'error' } | {
 export default function JourneyPage() {
   const { slug = '' } = useParams()
   const [load, setLoad] = useState<Load>({ state: 'loading' })
-  const [stageId, setStageId] = useState<string | null>(null)
   const path = `/journeys/${slug}`
 
   useEffect(() => {
@@ -76,8 +74,6 @@ export default function JourneyPage() {
   const { journey } = load
   const actionCount = journey.stages.reduce((n, s) => n + s.actions.length, 0)
   const WorldIcon = world?.icon
-  const stage = journey.stages.find((s) => s.id === stageId) ?? journey.stages[0]
-  const stageIndex = Math.max(0, journey.stages.findIndex((s) => s.id === stage?.id))
   const startPanel = (
     <JourneyStartPanel path={path} stageCount={journey.stages.length} actionCount={actionCount} estimatedMinutes={journey.estimatedMinutes} isFree={journey.isFree} memberPath={`/platform/journeys/${journey.slug}`} />
   )
@@ -119,15 +115,6 @@ export default function JourneyPage() {
                 </span>
               )}
             </p>
-            {journey.goal && (
-              <div className="mt-6 flex gap-3 rounded-2xl bg-primary/[0.06] p-5">
-                <Flag size={20} className="mt-0.5 shrink-0 text-primary" aria-hidden />
-                <div>
-                  <p className="text-[12px] font-semibold uppercase tracking-wide text-primary">Your goal</p>
-                  <p className="mt-1 text-[15.5px] font-medium leading-relaxed text-navy">{journey.goal}</p>
-                </div>
-              </div>
-            )}
             {journey.intro && <p className="mt-6 max-w-3xl whitespace-pre-line text-[15px] leading-relaxed text-navy/70">{journey.intro}</p>}
           </div>
           <div className="lg:sticky lg:top-28">
@@ -138,55 +125,66 @@ export default function JourneyPage() {
           </div>
         </section>
 
-        {/* The steps */}
-        {stage && (
-          <section className="grid grid-cols-1 gap-6 lg:grid-cols-[340px_minmax(0,1fr)]">
-            <div className="min-w-0 lg:self-start">
-              <JourneyStepList title="The steps" stages={journey.stages} activeId={stage.id} onSelect={setStageId} />
-            </div>
-            <div className="min-w-0 rounded-[24px] border border-navy/[0.07] bg-white p-6 shadow-softer sm:p-8">
-              <p className="w-fit rounded-lg bg-blue-50 px-3 py-1.5 text-[13.5px] font-semibold text-primary">
-                Step {stageIndex + 1}
-                {stage.level ? ` · ${STAGE_LEVEL_LABEL[stage.level]}` : ''}
-              </p>
-              <h2 className="mt-4 font-display text-[26px] font-bold leading-tight text-navy md:text-[30px]">{stage.title || `Stage ${stageIndex + 1}`}</h2>
-              {stage.summary && <p className="mt-3 whitespace-pre-line text-[15px] leading-relaxed text-navy/65">{stage.summary}</p>}
-              {stage.estimatedMinutes > 0 && (
-                <p className="mt-3 inline-flex items-center gap-1.5 text-[14px] text-navy/55">
-                  <Clock size={16} aria-hidden /> ~{formatMinutes(stage.estimatedMinutes)}
-                </p>
-              )}
-              <ul className="mt-6 space-y-2.5">
-                {stage.actions.map((action) => {
-                  const kind = ACTION_KIND[action.kind]
-                  const Icon = kind.icon
-                  return (
-                    <li key={action.id} className="flex items-center gap-3 rounded-2xl border border-navy/[0.07] px-4 py-3">
-                      <span className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-blue-50 text-primary">
-                        <Icon size={18} aria-label={kind.label} />
-                      </span>
-                      <span className="min-w-0 flex-1">
-                        <span className="block text-[14.5px] font-semibold text-navy">{action.title}</span>
-                        <span className="block text-[12.5px] text-navy/45">
-                          {kind.label}
-                          {action.estimatedMinutes != null ? ` · ${formatMinutes(action.estimatedMinutes)}` : ''}
-                          {action.optional ? ' · Optional' : ''}
-                          {action.states.length > 0 ? ` · ${action.states.join(', ')} only` : ''}
-                        </span>
-                      </span>
-                      {action.state === 'coming_soon' && <span className="shrink-0 rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-semibold text-amber-700">Coming soon</span>}
-                      {action.state === 'unavailable' && <span className="shrink-0 rounded-full bg-navy/[0.05] px-2 py-0.5 text-[11px] font-semibold text-navy/45">Unavailable</span>}
+        {/* At a glance: who it's for, what you'll achieve, the numbers — each only when there is something to say */}
+        <section>
+          <h2 className="font-display text-[22px] font-bold text-navy">At a glance</h2>
+          <div className="mt-4 grid gap-4 md:grid-cols-3">
+            {journey.audience && (
+              <div className="flex gap-4 rounded-[20px] border border-navy/[0.07] bg-white p-5 shadow-softer">
+                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-primary text-white">
+                  <Users size={21} aria-hidden />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[15px] font-bold text-navy">Who it’s for</p>
+                  <p className="mt-1 whitespace-pre-line text-[13.5px] leading-relaxed text-navy/60">{journey.audience}</p>
+                </div>
+              </div>
+            )}
+            {journey.goal && (
+              <div className="flex gap-4 rounded-[20px] border border-navy/[0.07] bg-white p-5 shadow-softer">
+                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-primary text-white">
+                  <Target size={21} aria-hidden />
+                </span>
+                <div className="min-w-0">
+                  <p className="text-[15px] font-bold text-navy">What you’ll achieve</p>
+                  <p className="mt-1 text-[13.5px] leading-relaxed text-navy/60">{journey.goal}</p>
+                </div>
+              </div>
+            )}
+            <div className="flex gap-4 rounded-[20px] border border-navy/[0.07] bg-white p-5 shadow-softer">
+              <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-primary text-white">
+                <CalendarCheck size={21} aria-hidden />
+              </span>
+              <div className="min-w-0">
+                <p className="text-[15px] font-bold text-navy">Journey details</p>
+                <ul className="mt-1.5 space-y-1 text-[13.5px] text-navy/65">
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 size={15} className="text-primary" aria-hidden /> {journey.stages.length} {journey.stages.length === 1 ? 'step' : 'steps'}
+                  </li>
+                  <li className="flex items-center gap-2">
+                    <CheckCircle2 size={15} className="text-primary" aria-hidden /> {actionCount} {actionCount === 1 ? 'action' : 'actions'}
+                  </li>
+                  {journey.estimatedMinutes > 0 && (
+                    <li className="flex items-center gap-2">
+                      <CheckCircle2 size={15} className="text-primary" aria-hidden /> ~{formatMinutes(journey.estimatedMinutes)} in all
                     </li>
-                  )
-                })}
-              </ul>
-              <p className="mt-5 text-[13px] text-navy/50">Start the Journey to open each resource and check off your steps.</p>
+                  )}
+                </ul>
+              </div>
             </div>
-          </section>
-        )}
+          </div>
+        </section>
+
+        {/* Every step at once (21/11/2026, the owner's choice for the public page) */}
+        <section>
+          <h2 className="font-display text-[22px] font-bold text-navy">Your journey, step by step</h2>
+          <p className="mt-1 text-[14px] text-navy/55">Start the Journey to open each resource and check off your steps.</p>
+          <div className="mt-5">
+            <JourneyTimeline stages={journey.stages} />
+          </div>
+        </section>
 
         <JourneyLearnCard outcomes={journey.outcomes} />
-        {journey.audience && <JourneyAudience audience={journey.audience} outcomes={[]} />}
         <JourneyNoticeBar text={journey.notice} validatedStates={journey.validatedStates} />
       </div>
     </div>
