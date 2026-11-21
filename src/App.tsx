@@ -80,6 +80,7 @@ import AdminRoute from './modules/identity/routing/AdminRoute'
 // Lazy: the Workspace viewer carries the full icon set and the PDF engine,
 // so it loads only when a member actually opens a Workspace.
 const WorkspaceViewerPage = lazy(() => import('./pages/platform/WorkspaceViewerPage'))
+const WorkspaceRecordsPage = lazy(() => import('./pages/platform/WorkspaceRecordsPage'))
 import LoginPage from './pages/auth/LoginPage'
 import RegisterPage from './pages/auth/RegisterPage'
 import ForgotPasswordPage from './pages/auth/ForgotPasswordPage'
@@ -217,6 +218,15 @@ export default function App() {
           element={
             <Suspense fallback={null}>
               <WorkspaceViewerPage />
+            </Suspense>
+          }
+        />
+        {/* A Workspace's saved records (21/11/2026). */}
+        <Route
+          path="workspace/:slug/records"
+          element={
+            <Suspense fallback={null}>
+              <WorkspaceRecordsPage />
             </Suspense>
           }
         />

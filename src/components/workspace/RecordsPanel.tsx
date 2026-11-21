@@ -7,6 +7,8 @@ import { CARD, SMALL_BUTTON } from './styles'
 interface Props {
   records: WorkspaceInstanceRow[]
   recordPath: (instanceId?: string) => string
+  /** The Workspace's records page. */
+  allPath: string
   onNew: () => void
 }
 
@@ -20,7 +22,7 @@ function formatDate(iso: string) {
 // Workspace starts higher on the screen): "one record per client or job",
 // New record, and the latest saved records as small links — the Records menu
 // and My Documents have them all.
-export default function RecordsPanel({ records, recordPath, onNew }: Props) {
+export default function RecordsPanel({ records, recordPath, allPath, onNew }: Props) {
   const latest = [...records]
     .sort((a, b) => b.updated_at.localeCompare(a.updated_at))
     .slice(0, VISIBLE)
@@ -52,11 +54,9 @@ export default function RecordsPanel({ records, recordPath, onNew }: Props) {
               <ArrowRight className="h-3.5 w-3.5 shrink-0 text-navy/30 group-hover:text-primary" />
             </Link>
           ))}
-          {records.length > VISIBLE && (
-            <Link to="/platform/documents" className="px-1 text-[13px] font-semibold text-primary hover:underline">
-              See all {records.length}
-            </Link>
-          )}
+          <Link to={allPath} className="px-1 text-[13px] font-semibold text-primary hover:underline">
+            See all records ({records.length})
+          </Link>
         </div>
       )}
     </section>

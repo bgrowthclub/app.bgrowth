@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams, useSearchParams } from 'react-router-dom'
-import { ArrowLeft, ChevronRight, Lock } from 'lucide-react'
+import { ArrowLeft, ChevronRight, FileText, Lock } from 'lucide-react'
 import SEO from '../../components/seo/SEO'
 import Button from '../../components/ui/Button'
 import DocumentWorkspaceRenderer from '../../components/workspace/DocumentWorkspaceRenderer'
@@ -17,7 +17,7 @@ import { useIdentity } from '../../modules/identity/IdentityContext'
 import { useStudioWorkspace } from '../../modules/workspace/hooks/useStudioWorkspace'
 import { useProductReviews } from '../../modules/workspace/hooks/useProductReviews'
 import { studioWorkspaceService } from '../../modules/workspace/services/studioWorkspaceService'
-import { coursePath, workspaceViewerPath } from '../../modules/workspace/config'
+import { coursePath, workspaceRecordsPath, workspaceViewerPath } from '../../modules/workspace/config'
 import type { WorkspaceData } from '../../modules/workspace/types/content'
 import { isCalculatorConfig } from '../../modules/calculator/types'
 import type { CalculatorSavedData } from '../../modules/calculator/types'
@@ -194,17 +194,28 @@ export default function WorkspaceViewerPage() {
             {instance ? `Record: ${instance.label}` : 'Blank copy — create a record to save your answers.'}
           </p>
         </div>
-        <RecordSwitcher
-          records={ws.records}
-          currentId={instance?.id ?? null}
-          recordPath={recordPath}
-          onNew={() => setNaming(true)}
-        />
+        {isDocument ? (
+          <Link
+            to={workspaceRecordsPath(product.slug)}
+            className="inline-flex items-center gap-2 rounded-xl border border-navy/10 bg-white px-4 py-2.5 text-[13px] font-semibold text-navy shadow-softer hover:border-primary/20"
+          >
+            <FileText className="h-4 w-4 text-primary" aria-hidden />
+            Records
+            <span className="rounded-full bg-bg-soft px-2 py-0.5 text-[11px] text-primary">{ws.records.length}</span>
+          </Link>
+        ) : (
+          <RecordSwitcher
+            records={ws.records}
+            currentId={instance?.id ?? null}
+            recordPath={recordPath}
+            onNew={() => setNaming(true)}
+          />
+        )}
       </div>
 
       {!instance && (
         <div className="mt-6">
-          <RecordsPanel records={ws.records} recordPath={recordPath} onNew={() => setNaming(true)} />
+          <RecordsPanel records={ws.records} recordPath={recordPath} allPath={workspaceRecordsPath(product.slug)} onNew={() => setNaming(true)} />
         </div>
       )}
 

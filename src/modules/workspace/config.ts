@@ -16,6 +16,11 @@ export function coursePath(slug: string) {
 }
 
 // The customer-area route that opens a Studio-published Workspace.
+/** A Workspace's saved records list (21/11/2026). */
+export function workspaceRecordsPath(slug: string) {
+  return `/platform/workspace/${encodeURIComponent(slug)}/records`
+}
+
 export function workspaceViewerPath(slug: string, instanceId?: string) {
   const base = `/platform/workspace/${encodeURIComponent(slug)}`
   return instanceId ? `${base}?instance=${encodeURIComponent(instanceId)}` : base
