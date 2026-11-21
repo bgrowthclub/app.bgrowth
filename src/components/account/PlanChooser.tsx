@@ -2,6 +2,7 @@ import { useState } from 'react'
 import MembershipPlanCard from './MembershipPlanCard'
 import type { PlanCardAction } from './MembershipPlanCard'
 import { planPrice } from '../../modules/account/planService'
+import { formatCents } from '../../modules/workspace/lib/bundlePrice'
 import type { BillingInterval, StoredPlan } from '../../modules/commerce/types/membership'
 
 interface Props {
@@ -40,6 +41,16 @@ export default function PlanChooser({ plans, currentPlanId, busyPlanId, actionLa
     }),
   )
 
+  // The most a plan really saves a year by paying yearly (dollars).
+  const bestYearly = Math.max(
+    0,
+    ...plans.map((p) => {
+      const m = planPrice(p, 'month')
+      const y = planPrice(p, 'year')
+      return m && y && !p.is_free ? m.charged * 12 - y.charged : 0
+    }),
+  )
+
   const actionFor = (plan: StoredPlan): PlanCardAction => {
     const current = plan.id === currentPlanId || (currentPlanId === null && plan.is_free)
     if (current) return { kind: 'current' }
@@ -60,7 +71,7 @@ export default function PlanChooser({ plans, currentPlanId, busyPlanId, actionLa
   return (
     <div>
       {hasYearly && (
-        <div className="mb-8 flex justify-center">
+        <div className="mb-8 flex flex-col items-center">
           <div className="inline-flex rounded-xl bg-bg-soft p-1">
             {(
               [
@@ -83,6 +94,11 @@ export default function PlanChooser({ plans, currentPlanId, busyPlanId, actionLa
               </button>
             ))}
           </div>
+          {bestYearly > 0 && (
+            <p className="mt-2.5 text-center text-[12.5px] text-navy/50">
+              Paying yearly saves up to {formatCents(bestYearly)} a year compared with monthly billing.
+            </p>
+          )}
         </div>
       )}
 

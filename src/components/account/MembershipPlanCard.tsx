@@ -14,7 +14,8 @@ export type PlanCardAction =
 // owner's design): a small tag, the name, the description, the price for
 // the chosen interval (a yearly price also shows its monthly share and, when
 // there is one, the real saving against twelve monthly payments), the plan's
-// own lines from Admin → Plans ("Title — detail" shows the detail under it),
+// own lines from Admin → Plans under "What's included" (the highlighted plan
+// says "Recommended" — our advice, the owner's choice 21/11/2026) ("Title — detail" shows the detail under it),
 // and one button. Everything comes from the plan; nothing is added here.
 export default function MembershipPlanCard({
   plan,
@@ -31,12 +32,12 @@ export default function MembershipPlanCard({
   const price = plan.is_free || plan.price_on_request ? null : planPrice(plan, chosen)
   const monthly = planPrice(plan, 'month')
   const saving = chosen === 'year' && price && monthly ? monthly.charged * 12 - price.charged : 0
-  const tag = plan.is_free ? 'Free · no card needed' : plan.highlighted ? 'Most popular' : null
+  const tag = plan.is_free ? 'Free · no card needed' : plan.highlighted ? 'Recommended' : null
 
   return (
     <div
       className={`relative flex flex-col rounded-[22px] bg-white p-6 sm:p-7 ${
-        current ? 'border-2 border-primary/40 shadow-glow' : 'border border-navy/[0.08] shadow-softer'
+        current ? 'border-2 border-primary/40 shadow-glow' : plan.highlighted ? 'border-2 border-primary shadow-glow' : 'border border-navy/[0.08] shadow-softer'
       }`}
     >
       {current && (
@@ -71,7 +72,8 @@ export default function MembershipPlanCard({
         )}
       </div>
 
-      <ul className="mt-5 flex-1 space-y-3">
+      {plan.features.length > 0 && <p className="mt-5 text-[11.5px] font-bold uppercase tracking-wide text-navy/60">What’s included</p>}
+      <ul className="mt-3 flex-1 space-y-3">
         {plan.features.map((f) => {
           const at = f.indexOf(' — ')
           const title = at > 0 ? f.slice(0, at) : f

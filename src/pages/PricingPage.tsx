@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
+import { ArrowRight, Check, Gift, LayoutGrid, RefreshCcw, Sparkles, Zap } from 'lucide-react'
 import { Link, useNavigate } from 'react-router-dom'
 import SEO from '../components/seo/SEO'
 import SectionHeader from '../components/ui/SectionHeader'
@@ -9,6 +10,9 @@ import { MEMBERSHIP_PLANS, formatPlanPrice } from '../data/membershipPlans'
 import { useIdentity } from '../modules/identity/IdentityContext'
 import { useMemberPlan } from '../modules/account/useMemberPlan'
 import { planService } from '../modules/account/planService'
+import { loadBundleProducts, loadStudioWorkspaceProducts } from '../lib/publishedCatalog'
+import { useNewsletterSignup } from '../modules/newsletter/useNewsletterSignup'
+import SignupInterests from '../components/newsletter/SignupInterests'
 import type { BillingInterval, StoredPlan } from '../modules/commerce/types/membership'
 
 // What BGrowth really sells today (09/10/2026): a free account, Workspaces
@@ -92,6 +96,10 @@ const PLAN_FAQ = [
     answer: 'Yes, in Account → Membership. The price difference is adjusted on your next bill.',
   },
   {
+    question: 'How do I pay?',
+    answer: 'Through Stripe’s secure checkout. The payment options shown there depend on your country and device. We never see or keep your card details.',
+  },
+  {
     question: 'Do I keep the Workspaces I bought if I cancel?',
     answer: 'Yes. Workspaces and bundles bought one-time are yours to keep, with or without a plan.',
   },
@@ -107,6 +115,21 @@ export default function PricingPage() {
   const { plans, current, subscription } = useMemberPlan()
   const [busy, setBusy] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const signup = useNewsletterSignup('pricing')
+  // Counted from the published catalog (21/11/2026) — never written by hand.
+  const [catalog, setCatalog] = useState<{ products: number; free: number } | null>(null)
+  useEffect(() => {
+    let cancelled = false
+    Promise.all([loadStudioWorkspaceProducts(), loadBundleProducts().catch(() => [])])
+      .then(([products, bundles]) => {
+        if (cancelled) return
+        setCatalog({ products: products.length, free: products.filter((p) => p.basePrice === 0).length + bundles.filter((b) => b.basePrice === 0).length })
+      })
+      .catch(() => undefined)
+    return () => {
+      cancelled = true
+    }
+  }, [])
   // Plans are sold once at least one paid plan is "Offered" in Admin → Plans
   // (Sprint 122); until then the page stays as before.
   const offered = plans.filter((p) => p.status === 'active')
@@ -134,25 +157,38 @@ export default function PricingPage() {
   }
 
   if (selling) {
+    const facts = [
+      catalog && { icon: LayoutGrid, value: String(catalog.products), label: catalog.products === 1 ? 'Product in the catalog' : 'Products in the catalog' },
+      catalog && catalog.free > 0 && { icon: Gift, value: String(catalog.free), label: catalog.free === 1 ? 'Free to start with' : 'Free to start with' },
+      { icon: Zap, value: 'Instant', label: 'Access right after you join' },
+      { icon: RefreshCcw, value: 'Anytime', label: 'Cancel or change your plan' },
+    ].filter(Boolean) as { icon: typeof Zap; value: string; label: string }[]
+
     return (
-      <div className="pb-24 pt-32 md:pt-40">
+      <div className="pb-24">
         <SEO
           title="Pricing"
           description="BGrowth plans — start free, subscribe for more, or buy a Workspace once and keep it."
           keywords={['bgrowth pricing', 'bgrowth plans', 'workspace pricing']}
           path="/pricing"
         />
-        <section className="container-px mx-auto max-w-page text-center">
-          <p className="eyebrow">Pricing</p>
-          <h1 className="mx-auto mt-2 max-w-xl font-display text-3xl font-bold tracking-tight text-navy md:text-4xl">
-            Choose the plan that fits you.
-          </h1>
-          <p className="mx-auto mt-3 max-w-lg text-[15px] leading-relaxed text-navy/55">
-            Start free. Subscribe when you want more — cancel anytime.
-          </p>
+        <section className="bg-grad-radial-soft pb-10 pt-28 text-center md:pb-12 md:pt-36">
+          <div className="container-px mx-auto max-w-3xl">
+            <p className="mx-auto inline-flex items-center gap-1.5 rounded-full border border-primary/15 bg-white px-3.5 py-1.5 text-[11.5px] font-bold uppercase tracking-wide text-primary">
+              <Sparkles size={13} aria-hidden /> Plans &amp; one-time options
+            </p>
+            <h1 className="mt-5 font-display text-[34px] font-bold leading-[1.1] tracking-tight text-navy sm:text-[50px]">
+              Choose the plan that
+              <br />
+              <span className="text-primary">fits your growth.</span>
+            </h1>
+            <p className="mx-auto mt-4 max-w-xl text-[15.5px] leading-relaxed text-navy/60 sm:text-[17px]">
+              Start free. Subscribe when you want more — cancel anytime. Or buy a single Workspace once and keep it.
+            </p>
+          </div>
         </section>
 
-        <section className="section-py">
+        <section className="pb-14">
           <div className="container-px mx-auto max-w-page">
             {error && <p className="mx-auto mb-6 max-w-xl rounded-xl bg-red-50 px-4 py-3 text-center text-[13.5px] text-red-600">{error}</p>}
             <PlanChooser
@@ -167,15 +203,77 @@ export default function PricingPage() {
           </div>
         </section>
 
-        <section className="section-py pt-0">
-          <div className="container-px mx-auto max-w-page">
-            <SectionHeader eyebrow="One-time" title="Prefer to pay once?" align="center" className="mx-auto mb-10" />
-            <div className="mx-auto grid max-w-3xl gap-6 md:grid-cols-2">
-              {oneTime.map((option) => (
-                <PricingTierCard key={option.name} {...option} highlighted={false} />
+        <section className="border-y border-navy/[0.06] bg-bg-soft py-10">
+          <div className="container-px mx-auto grid max-w-page grid-cols-2 gap-6 md:grid-cols-4">
+            {facts.map(({ icon: Icon, value, label }) => (
+              <div key={label} className="flex flex-col items-center text-center">
+                <Icon size={20} className="text-primary" aria-hidden />
+                <p className="mt-2 font-display text-[26px] font-bold text-navy">{value}</p>
+                <p className="text-[13px] text-navy/55">{label}</p>
+              </div>
+            ))}
+          </div>
+        </section>
+
+        <section className="py-16 md:py-20">
+          <div className="container-px mx-auto max-w-5xl">
+            <div className="text-center">
+              <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-primary">One-time options</p>
+              <h2 className="mt-2 font-display text-[28px] font-bold text-navy sm:text-[36px]">Prefer to pay once?</h2>
+              <p className="mx-auto mt-3 max-w-xl text-[15px] leading-relaxed text-navy/55">
+                Buy the Workspace you need, or a bundle of them, with lifetime access and no subscription.
+              </p>
+            </div>
+            <div className="mt-10 grid gap-6 md:grid-cols-2">
+              {oneTime.map((option, i) => (
+                <div
+                  key={option.name}
+                  className={`flex flex-col rounded-[22px] bg-white p-6 sm:p-7 ${i === 1 ? 'border-2 border-indigo-500/70 shadow-glow' : 'border border-navy/[0.08] shadow-softer'}`}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <span className={`rounded-md px-2 py-1 text-[11px] font-bold uppercase tracking-wide ${i === 1 ? 'bg-indigo-50 text-indigo-600' : 'bg-blue-50 text-primary'}`}>
+                      {i === 1 ? 'Bundles' : 'One-time access'}
+                    </span>
+                    <span className="text-right">
+                      <span className="block font-display text-[22px] font-bold text-navy">{option.price}</span>
+                      <span className="block text-[12px] text-navy/45">{option.priceNote}</span>
+                    </span>
+                  </div>
+                  <h3 className="mt-4 font-display text-[20px] font-bold text-navy">{option.name}</h3>
+                  <p className="mt-1.5 text-[14px] text-navy/55">{option.description}</p>
+                  <ul className="mt-5 flex-1 space-y-2.5">
+                    {option.features.map((f) => (
+                      <li key={f} className="flex gap-2.5 text-[14px] text-navy/75">
+                        <Check size={16} className={`mt-0.5 shrink-0 ${i === 1 ? 'text-indigo-600' : 'text-primary'}`} aria-hidden />
+                        {f}
+                      </li>
+                    ))}
+                  </ul>
+                  <Link
+                    to={option.ctaTo}
+                    className={`mt-6 flex items-center justify-center gap-1.5 rounded-xl px-4 py-3 text-[14px] font-semibold transition-opacity ${
+                      i === 1 ? 'bg-indigo-600 text-white shadow-softer hover:opacity-95' : 'border border-navy/10 bg-white text-navy hover:border-primary/25'
+                    }`}
+                  >
+                    {option.ctaLabel} <ArrowRight size={15} aria-hidden />
+                  </Link>
+                </div>
               ))}
             </div>
-            <p className="mt-8 text-center text-[13.5px] text-navy/45">
+          </div>
+        </section>
+
+        <section className="bg-bg-soft py-16 md:py-20">
+          <div className="container-px mx-auto max-w-3xl">
+            <div className="text-center">
+              <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-primary">Frequently asked questions</p>
+              <h2 className="mt-2 font-display text-[28px] font-bold text-navy sm:text-[36px]">Good to know</h2>
+              <p className="mt-3 text-[15px] text-navy/55">Billing, cancelling, and what stays yours.</p>
+            </div>
+            <div className="mt-10">
+              <FAQ items={PLAN_FAQ} />
+            </div>
+            <p className="mt-6 text-center text-[13.5px] text-navy/45">
               <Link to="/refund-policy" className="underline hover:text-navy">
                 Refund Policy
               </Link>
@@ -183,10 +281,37 @@ export default function PricingPage() {
           </div>
         </section>
 
-        <section className="section-py bg-bg-soft">
-          <div className="container-px mx-auto max-w-narrow">
-            <SectionHeader eyebrow="FAQ" title="Good to know" align="center" className="mx-auto mb-10" />
-            <FAQ items={PLAN_FAQ} />
+        <section className="pt-16">
+          <div className="container-px mx-auto max-w-5xl">
+            <div className="flex flex-col gap-6 rounded-[28px] bg-gradient-to-r from-primary to-indigo-600 p-7 text-white shadow-glow sm:p-10 md:flex-row md:items-center md:justify-between">
+              <div className="max-w-md">
+                <p className="w-fit rounded-full bg-white/15 px-3 py-1 text-[11px] font-bold uppercase tracking-wide">Newsletter</p>
+                <h2 className="mt-3 font-display text-[24px] font-bold leading-tight sm:text-[28px]">Get new Workspaces and guides first</h2>
+                <p className="mt-2 text-[14.5px] text-white/80">News from BGrowth in the areas you pick. Unsubscribe anytime.</p>
+              </div>
+              <div className="w-full md:max-w-sm">
+                <form onSubmit={signup.submit} className="flex flex-col gap-2.5 sm:flex-row">
+                  <input
+                    type="email"
+                    required
+                    value={signup.email}
+                    onChange={(e) => signup.setEmail(e.target.value)}
+                    aria-label="E-mail address"
+                    placeholder="Your e-mail address"
+                    className="min-w-0 flex-1 rounded-xl border-0 bg-white px-4 py-3 text-[14px] text-navy placeholder:text-navy/35 focus:outline-none focus:ring-2 focus:ring-white/60"
+                  />
+                  <button type="submit" className="shrink-0 rounded-xl bg-navy px-5 py-3 text-[14px] font-semibold text-white hover:bg-navy/90">
+                    {signup.state === 'sending' ? 'Sending…' : signup.done ? 'Subscribed' : 'Subscribe'}
+                  </button>
+                </form>
+                {signup.message && <p className="mt-2 text-[13px] text-white/85">{signup.message}</p>}
+                {signup.token && (
+                  <div className="mt-3 rounded-xl bg-white p-3 text-navy">
+                    <SignupInterests token={signup.token} />
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         </section>
       </div>
