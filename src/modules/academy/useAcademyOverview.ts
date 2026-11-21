@@ -18,6 +18,8 @@ export interface CourseOverview {
   /** The lesson the course opens on, its module and position. */
   nextLesson: { title: string; minutes: number; moduleTitle: string; moduleNumber: number } | null
   moduleCount: number
+  /** Minutes of the lessons not marked done yet (0 = no times given). */
+  minutesLeft: number
 }
 
 export interface AcademyOverview {
@@ -44,6 +46,7 @@ function overviewOf(course: CourseContent, raw: unknown): CourseOverview {
     started: summary.done > 0 || Boolean(data.lastLessonId),
     complete: summary.complete,
     moduleCount: course.modules.length,
+    minutesLeft: courseMinutes(all.filter((l) => !data.done[l.lesson.id]).map((l) => l.lesson)),
     nextLesson: at
       ? {
           title: at.lesson.title,

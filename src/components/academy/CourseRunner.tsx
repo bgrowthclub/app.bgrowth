@@ -89,6 +89,15 @@ export default function CourseRunner({ course, productId, userId, records, reloa
     if (currentId === null && summary?.resumeLessonId) setCurrentId(summary.resumeLessonId)
   }, [currentId, summary])
 
+  // My Courses' "Certificate" button (21/11/2026) opens the course at
+  // #certificate: once the course is drawn, go there.
+  const wentToCertificate = useRef(false)
+  useEffect(() => {
+    if (wentToCertificate.current || !summary?.complete || window.location.hash !== '#certificate') return
+    wentToCertificate.current = true
+    requestAnimationFrame(() => document.getElementById('certificate')?.scrollIntoView({ behavior: 'smooth', block: 'start' }))
+  }, [summary])
+
   // The module being read is the one open in the index; the others stay
   // closed until the student opens them.
   useEffect(() => {
@@ -482,7 +491,11 @@ export default function CourseRunner({ course, productId, userId, records, reloa
       {/* The certificate (02/11/2026). Shown once every lesson is ticked;
           whether it is actually earned — the quizzes too — is decided on the
           server, not here. */}
-      {summary?.complete && <CourseCertificate productId={productId} />}
+      {summary?.complete && (
+        <div id="certificate" className="scroll-mt-24">
+          <CourseCertificate productId={productId} />
+        </div>
+      )}
     </div>
   )
 }
