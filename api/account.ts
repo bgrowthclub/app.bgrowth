@@ -1627,7 +1627,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const planResource = ['plan-checkout', 'plan-switch', 'plan-cancel', 'plan-resume', 'plan-portal'].includes(resource)
     const pageResource =
       resource === 'my-page' || resource === 'my-page-image' || resource === 'my-page-signups' || resource === 'my-pages-keep'
-    if (!planResource && !pageResource && resource !== 'deletion' && resource !== 'announcements-seen' && resource !== 'download' && resource !== 'profile' && resource !== 'purchases' && resource !== 'certificates')
+    if (!planResource && !pageResource && resource !== 'deletion' && resource !== 'announcements-seen' && resource !== 'download' && resource !== 'profile' && resource !== 'purchases' && resource !== 'certificates' && resource !== 'early-access')
       throw new HttpError(404, 'Unknown action.')
     const url = process.env.SUPABASE_URL
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY
