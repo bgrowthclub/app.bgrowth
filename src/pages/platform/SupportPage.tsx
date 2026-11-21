@@ -1,17 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
-import { useSearchParams } from 'react-router-dom'
-import { ArrowLeft, LifeBuoy, Plus } from 'lucide-react'
+import { Link, useSearchParams } from 'react-router-dom'
+import { ArrowLeft, ArrowRight, BookOpen, Headphones, LifeBuoy, Plus, Receipt, Sparkles } from 'lucide-react'
 import SEO from '../../components/seo/SEO'
-import SectionHeader from '../../components/ui/SectionHeader'
 import EmptyState from '../../components/ui/EmptyState'
-import Button from '../../components/ui/Button'
-import SupportStatusBanner from '../../components/support/SupportStatusBanner'
-import SupportConversationList from '../../components/support/SupportConversationList'
+import SupportRecentList, { splitSupportSubject } from '../../components/support/SupportRecentList'
 import SupportMessageList from '../../components/support/SupportMessageList'
 import SupportComposer from '../../components/support/SupportComposer'
 import NewSupportConversation from '../../components/support/NewSupportConversation'
 import { supportService } from '../../modules/support/supportService'
-import { isSupportOnline } from '../../modules/support/hours'
+import { describeSupportHours, isSupportOnline } from '../../modules/support/hours'
 import { usePoll } from '../../modules/support/usePoll'
 import type { SupportState, SupportThread } from '../../modules/support/types'
 
@@ -23,6 +20,10 @@ function message(err: unknown) {
 
 // Support Center — the member side: live chat during support hours, a
 // ticket answered by e-mail outside them; one conversation either way.
+// New look 21/11/2026 (the owner's design): recent conversations on the
+// left, a new one (Topic, Subject, Message) or the open one on the right,
+// and links to Knowledge, Purchases and Membership. Nothing invented: no
+// reply-time figure, attachments, videos or community (on the site plan).
 export default function SupportPage() {
   const [params, setParams] = useSearchParams()
   const selectedId = params.get('c')
@@ -33,7 +34,6 @@ export default function SupportPage() {
   const [status, setStatus] = useState<'loading' | 'ready' | 'error'>('loading')
   const [loadError, setLoadError] = useState<string>()
   const [thread, setThread] = useState<SupportThread | null>(null)
-  const [composing, setComposing] = useState(Boolean(about))
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [online, setOnline] = useState(false)
@@ -71,7 +71,6 @@ export default function SupportPage() {
   usePoll(() => selectedId && void loadThread(selectedId).catch(() => undefined), online ? 4_000 : 30_000, Boolean(selectedId))
 
   function open(id: string | null) {
-    setComposing(false)
     setParams(id ? { c: id } : {}, { replace: false })
   }
 
@@ -106,112 +105,143 @@ export default function SupportPage() {
   }
 
   const conversations = state?.conversations ?? []
-  const showDetail = composing || Boolean(selectedId) || conversations.length === 0
+  const showForm = !selectedId
+
+  const helpCards = [
+    { to: '/knowledge', icon: BookOpen, tone: 'bg-primary text-white', title: 'Knowledge base', text: 'Articles and guides to help you start, run and grow.', cta: 'Browse articles' },
+    { to: '/platform/purchases', icon: Receipt, tone: 'bg-emerald-600 text-white', title: 'Your purchases', text: 'Orders, receipts and every access on your account.', cta: 'See purchases' },
+    { to: '/platform/membership', icon: Sparkles, tone: 'bg-violet-600 text-white', title: 'Membership', text: 'Your plan, what it includes, and how to change it.', cta: 'See your plan' },
+  ]
 
   return (
-    <div className="mx-auto max-w-6xl">
+    <div className="mx-auto max-w-6xl pb-10">
       <SEO title="Support" description="Talk to the BGrowth team." path="/platform/support" />
-      <SectionHeader eyebrow="Help" title="Support" description="Questions about your account or a Workspace? Talk to the BGrowth team." className="mb-6" />
+
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p className="text-[12px] font-bold uppercase tracking-[0.16em] text-primary">Help</p>
+          <h1 className="mt-2 font-display text-[28px] font-bold leading-tight text-navy md:text-[36px]">Support &amp; Help Center</h1>
+          <p className="mt-2 text-[14.5px] text-navy/55">Questions about your account or a Workspace? We’re here to help.</p>
+        </div>
+        {state && (
+          <div className="text-right">
+            <span
+              className={`inline-flex items-center gap-2 rounded-xl border px-3.5 py-2 text-[13px] font-semibold ${
+                online ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : 'border-navy/10 bg-white text-navy/60'
+              }`}
+            >
+              <span className={`h-2.5 w-2.5 rounded-full ${online ? 'bg-emerald-500' : 'bg-navy/30'}`} aria-hidden />
+              {online ? 'We’re online · live chat now' : 'Offline · we reply next business day'}
+            </span>
+            <p className="mt-1 text-[11.5px] text-navy/40">Hours: {describeSupportHours(state.hours)}</p>
+          </div>
+        )}
+      </div>
 
       {status === 'loading' ? (
         <p className="py-16 text-center text-[14px] text-navy/40">Loading…</p>
       ) : status === 'error' || !state ? (
-        <EmptyState icon={LifeBuoy} title="We couldn’t load Support." description={loadError} />
+        <div className="mt-6">
+          <EmptyState icon={LifeBuoy} title="We couldn’t load Support." description={loadError} />
+        </div>
       ) : (
-        <div className="space-y-5">
-          <SupportStatusBanner online={online} hours={state.hours} />
-
-          <div className="grid gap-5 lg:grid-cols-[320px_1fr]">
-            {/* Conversations — hidden on phones while one is open */}
-            <aside className={`${CARD} h-fit overflow-hidden ${showDetail ? 'hidden lg:block' : ''}`}>
-              <div className="flex items-center justify-between border-b border-navy/[0.06] px-4 py-3">
-                <p className="text-[13px] font-semibold text-navy">Your conversations</p>
-                <button
-                  type="button"
-                  onClick={() => {
-                    setParams({})
-                    setComposing(true)
-                  }}
-                  className="inline-flex items-center gap-1 rounded-lg px-2 py-1 text-[12.5px] font-semibold text-primary hover:bg-bg-soft"
-                >
-                  <Plus size={14} /> New
-                </button>
+        <>
+          <div className="mt-6 grid gap-5 lg:grid-cols-2">
+            {/* Recent conversations — under the open conversation on phones */}
+            <section className={`${CARD} flex flex-col p-5 sm:p-6 ${selectedId ? 'order-2 lg:order-1' : ''}`}>
+              <div className="flex items-center justify-between gap-3">
+                <h2 className="font-display text-[20px] font-bold text-navy">Recent conversations</h2>
+                {selectedId && (
+                  <button type="button" onClick={() => open(null)} className="inline-flex items-center gap-1 text-[13px] font-semibold text-primary hover:underline">
+                    <Plus size={14} /> New conversation
+                  </button>
+                )}
               </div>
               {conversations.length === 0 ? (
-                <p className="px-4 py-6 text-[13px] text-navy/45">No conversations yet.</p>
+                <p className="mt-4 rounded-xl bg-bg-soft px-4 py-5 text-[13.5px] text-navy/55">No conversations yet. Start one on the right — we answer here.</p>
               ) : (
-                <SupportConversationList
-                  activeId={selectedId}
-                  onSelect={open}
-                  items={conversations.map((c) => ({
-                    id: c.id,
-                    title: c.subject,
-                    subtitle: c.status === 'closed' ? 'Closed' : c.last_sender === 'staff' ? 'BGrowth replied' : 'Waiting for our reply',
-                    time: c.last_message_at,
-                    badge: c.unread ? 'New reply' : undefined,
-                    muted: c.status === 'closed',
-                  }))}
-                />
-              )}
-            </aside>
-
-            <section className={`${CARD} flex min-h-[420px] flex-col p-5 ${showDetail ? '' : 'hidden lg:flex'}`}>
-              {composing || (!selectedId && conversations.length === 0) ? (
-                <NewSupportConversation
-                  busy={busy}
-                  error={error}
-                  onSubmit={start}
-                  onCancel={conversations.length > 0 ? () => setComposing(false) : undefined}
-                  defaultSubject={about ? `Help with ${about}` : undefined}
-                />
-              ) : selectedId ? (
-                thread ? (
-                  <>
-                    <div className="mb-4 flex items-center gap-3 border-b border-navy/[0.06] pb-3">
-                      <button
-                        type="button"
-                        onClick={() => open(null)}
-                        aria-label="Back to conversations"
-                        className="grid h-8 w-8 place-items-center rounded-full text-navy/50 hover:bg-bg-soft lg:hidden"
-                      >
-                        <ArrowLeft size={16} />
-                      </button>
-                      <h2 className="min-w-0 flex-1 truncate font-display text-lg font-bold text-navy">{thread.conversation.subject}</h2>
-                      {thread.conversation.status === 'closed' && (
-                        <span className="rounded-full bg-navy/[0.05] px-2.5 py-1 text-[11px] font-semibold text-navy/50">Closed</span>
-                      )}
-                    </div>
-                    <div className="max-h-[55vh] flex-1 overflow-y-auto pr-1">
-                      <SupportMessageList messages={thread.messages} mine="customer" />
-                    </div>
-                    <div className="mt-4 border-t border-navy/[0.06] pt-4">
-                      {thread.conversation.status === 'closed' && (
-                        <p className="mb-2 text-[12.5px] text-navy/45">This conversation was closed. Writing again reopens it.</p>
-                      )}
-                      {error && <p className="mb-2 text-[13px] text-red-500">{error}</p>}
-                      <SupportComposer
-                        busy={busy}
-                        onSend={send}
-                        placeholder={online ? 'Write a message…' : 'Leave a message — we’ll answer on the next business day.'}
-                      />
-                    </div>
-                  </>
-                ) : error ? (
-                  <p className="text-[13px] text-red-500">{error}</p>
-                ) : (
-                  <p className="py-16 text-center text-[14px] text-navy/40">Loading conversation…</p>
-                )
-              ) : (
-                <div className="m-auto text-center">
-                  <p className="text-[14px] text-navy/50">Pick a conversation, or start a new one.</p>
-                  <Button type="button" onClick={() => setComposing(true)} icon={<Plus size={15} />} className="mt-4 !rounded-xl !px-4 !py-2.5 !text-[13px]">
-                    New conversation
-                  </Button>
+                <div className="mt-3 max-h-[440px] overflow-y-auto pr-1">
+                  <SupportRecentList items={conversations} activeId={selectedId} onSelect={(id) => open(id)} />
                 </div>
+              )}
+              <div className="mt-auto flex items-start gap-4 border-t border-navy/[0.06] pt-5">
+                <span className="grid h-12 w-12 shrink-0 place-items-center rounded-full bg-blue-50 text-primary">
+                  <Headphones size={22} aria-hidden />
+                </span>
+                <div>
+                  <p className="text-[15px] font-bold text-navy">Can’t find what you need?</p>
+                  <p className="mt-0.5 text-[13px] text-navy/55">Browse our articles and guides, or start a new conversation.</p>
+                  <Link to="/knowledge" className="mt-1.5 inline-flex items-center gap-1 text-[13.5px] font-semibold text-primary hover:underline">
+                    Browse Knowledge <ArrowRight size={14} aria-hidden />
+                  </Link>
+                </div>
+              </div>
+            </section>
+
+            <section className={`${CARD} flex min-h-[420px] flex-col p-5 sm:p-6 ${selectedId ? 'order-1 lg:order-2' : ''}`}>
+              {showForm ? (
+                <NewSupportConversation busy={busy} error={error} onSubmit={start} defaultSubject={about ? `Help with ${about}` : undefined} />
+              ) : thread ? (
+                <>
+                  <div className="mb-4 flex items-center gap-3 border-b border-navy/[0.06] pb-3">
+                    <button
+                      type="button"
+                      onClick={() => open(null)}
+                      aria-label="Back to a new conversation"
+                      className="grid h-8 w-8 shrink-0 place-items-center rounded-full text-navy/50 hover:bg-bg-soft"
+                    >
+                      <ArrowLeft size={16} />
+                    </button>
+                    <div className="min-w-0 flex-1">
+                      <h2 className="truncate font-display text-lg font-bold text-navy">{splitSupportSubject(thread.conversation.subject).title}</h2>
+                      {splitSupportSubject(thread.conversation.subject).topic && (
+                        <p className="text-[12px] text-navy/45">{splitSupportSubject(thread.conversation.subject).topic}</p>
+                      )}
+                    </div>
+                    {thread.conversation.status === 'closed' && (
+                      <span className="rounded-full bg-navy/[0.05] px-2.5 py-1 text-[11px] font-semibold text-navy/50">Closed</span>
+                    )}
+                  </div>
+                  <div className="max-h-[50vh] flex-1 overflow-y-auto pr-1">
+                    <SupportMessageList messages={thread.messages} mine="customer" />
+                  </div>
+                  <div className="mt-4 border-t border-navy/[0.06] pt-4">
+                    {thread.conversation.status === 'closed' && (
+                      <p className="mb-2 text-[12.5px] text-navy/45">This conversation was closed. Writing again reopens it.</p>
+                    )}
+                    {error && <p className="mb-2 text-[13px] text-red-500">{error}</p>}
+                    <SupportComposer
+                      busy={busy}
+                      onSend={send}
+                      placeholder={online ? 'Write a message…' : 'Leave a message — we’ll answer on the next business day.'}
+                    />
+                  </div>
+                </>
+              ) : error ? (
+                <p className="text-[13px] text-red-500">{error}</p>
+              ) : (
+                <p className="py-16 text-center text-[14px] text-navy/40">Loading conversation…</p>
               )}
             </section>
           </div>
-        </div>
+
+          <div className="mt-6 grid gap-4 md:grid-cols-3">
+            {helpCards.map(({ to, icon: Icon, tone, title, text, cta }) => (
+              <Link key={to} to={to} className={`${CARD} group flex items-start gap-4 p-5 transition-colors hover:border-primary/20`}>
+                <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-full ${tone}`}>
+                  <Icon size={21} aria-hidden />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-[15.5px] font-bold text-navy">{title}</span>
+                  <span className="mt-1 block text-[13px] leading-relaxed text-navy/55">{text}</span>
+                  <span className="mt-2 inline-flex items-center gap-1 text-[13.5px] font-semibold text-primary">
+                    {cta} <ArrowRight size={14} className="transition-transform group-hover:translate-x-0.5" aria-hidden />
+                  </span>
+                </span>
+              </Link>
+            ))}
+          </div>
+        </>
       )}
     </div>
   )
